@@ -3,7 +3,11 @@
   artifacts.store.attic = {
 
     # represents a file on the target system
-    files.env = { };
+    files.env = {
+      owner = "atticd";
+      group = "atticd";
+      path = "/var/lib/attic/secrets/env";
+    };
 
     # used to generate secrets based for rotation
     generator = {
