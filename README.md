@@ -1,5 +1,8 @@
 # Artifacts Store
 
+Inspired by [clan vars](https://docs.clan.lol/guides/vars-backend/) and
+[this pull-request](https://github.com/NixOS/nixpkgs/pull/370444)
+
 ```mermaid
 graph LR
     A[prompt] --> B[generator]
