@@ -61,13 +61,13 @@ with types;
 
             serialize = mkOption {
               type = package;
-              default = config.artifacts.backend.default.serialize;
+              default = config.artifacts.default.backend.serialize;
               description = "Serialization definition";
             };
 
             deserialize = mkOption {
               type = package;
-              default = config.artifacts.backend.default.deserialize;
+              default = config.artifacts.default.backend.deserialize;
               description = "Deserialization definition";
             };
 

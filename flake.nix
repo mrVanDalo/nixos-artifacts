@@ -10,11 +10,12 @@
   };
 
   outputs =
-    inputs@{ flake-parts, ... }:
+    inputs@{ flake-parts, self, ... }:
     flake-parts.lib.mkFlake { inherit inputs; } {
       imports = [
         ./nix/formatter.nix
         ./nix/devshells.nix
+        ./flake-module.nix
       ];
       systems = [
         "x86_64-linux"
@@ -38,9 +39,41 @@
           packages.default = pkgs.hello;
         };
       flake = {
-        # The usual flake attributes can be defined here, including system-
-        # agnostic ones like nixosModule and system-enumerating ones, although
-        # those are more easily expressed in perSystem.
+
+        nixosModules.default = {
+          imports = [ ./modules ];
+        };
+
+        nixosConfigurations.example = inputs.nixpkgs.lib.nixosSystem {
+          system = "x86_64-linux";
+          modules = [
+            self.nixosModules.default
+            (
+              { pkgs, config, ... }:
+              {
+                artifacts.default.backend = config.artifacts.backend.passage;
+                artifacts.store.anotherTest = {
+                  files.secret = { };
+                  files.anotherSecret = { };
+                  prompts.test = "test input";
+                  prompts.something = "this is another file type";
+                  generator = pkgs.writers.writeBash "test" ''
+                    test
+                  '';
+                };
+                artifacts.store.test = {
+                  files.secret = { };
+                  files.anotherSecret = { };
+                  prompts.test = "test input";
+                  prompts.something = "this is another file type";
+                  generator = pkgs.writers.writeBash "test" ''
+                    test
+                  '';
+                };
+              }
+            )
+          ];
+        };
       };
     };
 }

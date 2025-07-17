@@ -1,4 +1,5 @@
 {
+  pkgs,
   lib,
   ...
 }:
@@ -25,6 +26,18 @@ with types;
   # $out -> program
 
   options = {
+
+    artifacts.default.backend = {
+      serialize = mkOption {
+        type = package;
+        description = "script for serialization";
+      };
+      deserialize = mkOption {
+        type = package;
+        description = "script for deserialization";
+      };
+    };
+
     artifacts.backend = mkOption {
       type = attrsOf (submodule {
         options = {
