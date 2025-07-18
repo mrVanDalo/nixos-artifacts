@@ -37,20 +37,16 @@
                 artifacts.default.backend = config.artifacts.backend.passage;
                 artifacts.store.anotherTest = {
                   files.secret = { };
-                  files.anotherSecret = { };
                   prompts.test.description = "test input";
-                  prompts.something.description = "this is another file type";
                   generator = pkgs.writers.writeBash "test" ''
-                    test
+                    cat $prompts/test > $out/secret
                   '';
                 };
                 artifacts.store.test = {
                   files.secret = { };
-                  files.anotherSecret = { };
                   prompts.test.description = "test input";
-                  prompts.something.description = "this is another file type";
                   generator = pkgs.writers.writeBash "test" ''
-                    test
+                    cat $prompts/test > $out/secret
                   '';
                 };
               }
