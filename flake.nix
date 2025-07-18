@@ -21,23 +21,6 @@
         "x86_64-linux"
         "aarch64-linux"
       ];
-      perSystem =
-        {
-          config,
-          self',
-          inputs',
-          pkgs,
-          system,
-          ...
-        }:
-        {
-          # Per-system attributes can be defined here. The self' and inputs'
-          # module parameters provide easy access to attributes of the same
-          # system.
-
-          # Equivalent to  inputs'.nixpkgs.legacyPackages.hello;
-          packages.default = pkgs.hello;
-        };
       flake = {
 
         nixosModules.default = {
@@ -55,8 +38,8 @@
                 artifacts.store.anotherTest = {
                   files.secret = { };
                   files.anotherSecret = { };
-                  prompts.test = "test input";
-                  prompts.something = "this is another file type";
+                  prompts.test.description = "test input";
+                  prompts.something.description = "this is another file type";
                   generator = pkgs.writers.writeBash "test" ''
                     test
                   '';
@@ -64,8 +47,8 @@
                 artifacts.store.test = {
                   files.secret = { };
                   files.anotherSecret = { };
-                  prompts.test = "test input";
-                  prompts.something = "this is another file type";
+                  prompts.test.description = "test input";
+                  prompts.something.description = "this is another file type";
                   generator = pkgs.writers.writeBash "test" ''
                     test
                   '';

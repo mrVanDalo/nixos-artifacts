@@ -20,49 +20,40 @@
         { nixosConfiguration, ... }:
         let
 
+          promptCmd = {
+            hidden = "read -sr prompt_value";
+            line = "read -r prompt_value";
+            multiline = ''
+              echo 'press control-d to finish'
+              prompt_value=$(cat)
+            '';
+          };
+
           storeArtifacts = nixosConfiguration.options.artifacts.store.value;
 
-          generatorScripts = mapAttrsToList (
-            artifactName:
-            {
-              files,
-              prompts,
-              generator,
-              deserialize,
-              serialize,
-              ...
-            }:
-            ''
+          stepPrompt =
+            artifact:
+            pkgs.writers.writeBash "prompt-${artifact.name}" ''
+              ${lib.concatMapStringsSep "\n" (prompt: ''
+                echo ${lib.escapeShellArg prompt.description}
+                ${promptCmd.${prompt.type}}
+                echo -n "$prompt_value" > "$prompts"/${prompt.name}
+              '') (lib.attrValues artifact.prompts)}
+            '';
 
-              echo generate ${artifactName}
-              export out=$( mktemp -d )
-              export input=$( mktemp -d )
+          generatorScripts = map (artifact: ''
+            echo "Prompt : ${artifact.name}" | boxes -d ansi-rounded
 
-              # create prompts
-              ${concatStringsSep "" (
-                mapAttrsToList (key: text: ''
-                  echo "${text}"
-                  read > $input/${key}
-                '') prompts
-              )}
+            prompts=$(mktemp -d)
+            trap 'rm -rf $prompts' EXIT
+            export prompts
 
-              # try to deserialize
-              ${deserialize}
-              # todo check if all files are created
-              # => output_is_ok=true
+            ${stepPrompt artifact}
 
-              if [[ $output_is_ok -eq false ]]; then
-                ${generator}
-                # todo check if all files are created
-                ${serialize}
-              fi
+            echo "Generating artifacts for ${artifact.name}"
 
-              # todo copy secrets to final $out/${artifactName}/<filename>
-
-              # clean up
-              rm -rf $out $input
-            ''
-          ) storeArtifacts;
+            rm -rf $prompts
+          '') (lib.attrValues storeArtifacts);
 
         in
         concatStringsSep "\n" (flatten generatorScripts);
@@ -73,19 +64,26 @@
           ...
         }:
         pkgs.writers.writeBashBin "artifact-store" ''
-          cat <<EOF
+          export PATH=${
+            lib.makeBinPath [
+              pkgs.coreutils
+              pkgs.boxes
+            ]
+          }
           ${allGeneratorScripts { inherit nixosConfiguration; }}
-          EOF
         '';
     in
     {
 
       apps = {
-        echo = {
+        default = {
           type = "app";
           program = asdf { nixosConfiguration = self.nixosConfigurations.example; };
         };
       };
+
+      packages.default = asdf { nixosConfiguration = self.nixosConfigurations.example; };
+
     };
 
 }

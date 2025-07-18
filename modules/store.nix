@@ -12,6 +12,13 @@ with types;
         {
           options = {
 
+            name = mkOption {
+              type = str;
+              default = artifactName;
+              readOnly = true;
+              description = "The name of the artifact";
+            };
+
             shared = mkOption {
               type = bool;
               default = false;
@@ -54,7 +61,38 @@ with types;
             };
 
             prompts = mkOption {
-              type = attrsOf str;
+              type = attrsOf (
+                submodule (
+                  { name, ... }:
+                  let
+                    promptName = name;
+                  in
+                  {
+                    options = {
+                      name = mkOption {
+                        type = str;
+                        default = promptName;
+                        readOnly = true;
+                        description = "The name of the prompt";
+                      };
+
+                      description = mkOption {
+                        type = str;
+                        description = "description shown during prompt entry";
+                      };
+                      type = mkOption {
+                        type = enum [
+                          "hidden"
+                          "line"
+                          "multiline"
+                        ];
+                        default = "line";
+                        description = "Type of prompt input";
+                      };
+                    };
+                  }
+                )
+              );
               default = { };
               description = "Prompts end up in $prompt/<name> in the generator script";
             };
