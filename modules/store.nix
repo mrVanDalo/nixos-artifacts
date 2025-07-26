@@ -34,6 +34,14 @@ with types;
                   in
                   {
                     options = {
+
+                      name = mkOption {
+                        type = str;
+                        default = fileName;
+                        readOnly = true;
+                        description = "The name of the filehandle";
+                      };
+
                       path = mkOption {
                         type = str;
                         default = "/run/secrets/${artifactName}/${fileName}";

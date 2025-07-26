@@ -91,7 +91,7 @@ with types;
             # Remove the $input prefix to get the relative path
             relative_path=''${file#$input/}
             echo "Deserialize: $relative_path"
-            passage show  "artifacts/per-machine/$machine/artifact/$relative_path" > $out/$relative_path
+            passage show  "artifacts/per-machine/$machine/$artifact/$relative_path" > $out/$relative_path
         done
       '';
     };
