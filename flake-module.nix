@@ -12,9 +12,6 @@
     }:
     with lib;
     let
-      nixosConfigurationsToVerify = filterAttrs (
-        machine: configuration: builtins.hasAttr "artifacts" configuration.options
-      ) self.nixosConfigurations;
 
       artifactScript =
         { nixosConfiguration, machineName, ... }:
@@ -162,7 +159,7 @@
           machineName,
           ...
         }:
-        pkgs.writers.writeBashBin "artifact-store" ''
+        pkgs.writers.writeBash "artifact-store" ''
           export PATH=${
             lib.makeBinPath [
               pkgs.coreutils
@@ -176,16 +173,24 @@
           echo "final_output=$final_output"
           ${artifactScript { inherit nixosConfiguration machineName; }}
         '';
+
+      nixosConfigurationsToVerify = filterAttrs (
+        machine: configuration: builtins.hasAttr "artifacts" configuration.options
+      ) self.nixosConfigurations;
+
+      app = lib.concatStringsSep "\n" (
+        lib.mapAttrsToList (
+          machineName: nixosConfiguration: asdf { inherit machineName nixosConfiguration; }
+        ) nixosConfigurationsToVerify
+      );
+
     in
     {
 
       apps = {
         default = {
           type = "app";
-          program = asdf {
-            nixosConfiguration = self.nixosConfigurations.example;
-            machineName = "example";
-          };
+          program = pkgs.writers.writeBashBin "artifacts-run-all" app;
         };
       };
 
