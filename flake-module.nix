@@ -55,12 +55,12 @@
               '') (lib.attrValues artifact.files)}
 
               if [ $all_files_present = true ]; then
-                echo "All secrets for ${artifact.name} are present"
+                echo "All artifacts for ${artifact.name} are present"
                 exit 0
               fi
 
               if [ $all_files_missing = true ]; then
-                echo "No secretes for ${artifact.name} are present"
+                echo "No artifacts for ${artifact.name} are present"
                 exit 1
               fi
 
@@ -87,6 +87,7 @@
               elif [ $exit_code -ne 1 ]; then
                   exit 2
               fi
+              exit 1
             '';
 
           artifactSteps =
@@ -131,19 +132,24 @@
               ${stepCheckOutput artifact}
               exit_code=$?
               if [ $exit_code -eq 0 ]; then
-                  ${artifact.serialize}
-                  mkdir -p $original_final_output/per-machine/${machineName}/${artifact.name}/
-                  cp -r $out/* $original_final_output/per-machine/${machineName}/${artifact.name}/
-                  exit 0
+                ${artifact.serialize}
+                exit_code=$?
+                if [ $exit_code -ne 0 ]; then
+                    exit 2
+                fi
+
+                mkdir -p $original_final_output/per-machine/${machineName}/${artifact.name}/
+                cp -r $out/* $original_final_output/per-machine/${machineName}/${artifact.name}/
+                exit 0
               elif [ $exit_code -ne 0 ]; then
-                  exit 2
+                exit 2
               fi
             '';
 
           generatorScripts = map artifactSteps (lib.attrValues storeArtifacts);
 
         in
-        concatStringsSep "\n" (flatten generatorScripts);
+        concatStringsSep "\n echo exit=$?\n" (flatten generatorScripts);
 
       asdf =
         {
