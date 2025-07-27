@@ -55,3 +55,40 @@ enabled it will be `shared/`
 
 > You can **skip** serialization/deserialization, which ends up generating a new
 > artifact every time
+
+## Options and conventions
+
+### `artifacts.store`
+
+This is where you define what artifacts are and how they work:
+
+- Contains the basic building blocks (abstractions) that users need to define
+- Includes generators that create artifacts
+- Specifies where artifacts should appear on the target system
+
+### `artifacts.backend`
+
+This handles the technical details of saving and loading artifacts:
+
+- Contains the code that converts artifacts to/from storage formats
+  (serialization/deserialization)
+- Has built-in opinions about how things should work
+- Follows a specific folder structure:
+  - `per-machine/<machine>/<artifact>/<filename>` - for machine-specific
+    artifacts
+  - `shared/<artifact>/<filename>` - for artifacts shared across machines
+
+### `artifacts.config`
+
+This is for customizing how backends behave:
+
+- Used to set up and configure the backends
+- Should be documented and provided by whoever creates the backend
+
+---
+
+**Think of it like this:**
+
+- **store** = "What are artifacts and where do they go?"
+- **backend** = "How do we save and load artifacts?"
+- **config** = "How do we customize the saving/loading behavior?"
