@@ -79,6 +79,11 @@
               )}
               # run deserialization script
               ${artifact.deserialize}
+              exit_code=$?
+              if [ $exit_code -ne 0 ]; then
+                  exit 1
+              fi
+
               # check if deserialisation went well
               ${stepCheckOutput artifact}
               exit_code=$?
@@ -116,7 +121,7 @@
               rm -rf $out
               unset $out
 
-              echo "Prompt : ${artifact.name}" | boxes -d ansi-rounded
+              echo "${artifact.name}" | boxes -d ansi-rounded
 
               export prompts=$(mktemp -d)
               trap 'rm -rf $prompts' EXIT

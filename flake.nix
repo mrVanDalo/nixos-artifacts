@@ -29,28 +29,19 @@
           imports = [ ./modules ];
         };
 
+        nixosModules.examples = {
+          imports = [ ./examples ];
+        };
+
         nixosConfigurations.example = inputs.nixpkgs.lib.nixosSystem {
           system = "x86_64-linux";
           modules = [
             self.nixosModules.default
+            self.nixosModules.examples
             (
               { pkgs, config, ... }:
               {
                 artifacts.default.backend = config.artifacts.backend.passage;
-                artifacts.store.anotherTest = {
-                  files.secret = { };
-                  prompts.test.description = "test input";
-                  generator = pkgs.writers.writeBash "test" ''
-                    cat $prompts/test > $out/secret
-                  '';
-                };
-                artifacts.store.test = {
-                  files.secret = { };
-                  prompts.test.description = "test input";
-                  generator = pkgs.writers.writeBash "test" ''
-                    cat $prompts/test > $out/secret
-                  '';
-                };
               }
             )
           ];
