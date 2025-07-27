@@ -23,6 +23,8 @@
       ];
       flake = {
 
+        flakeModules.default = ./flake-module.nix;
+
         nixosModules.default = {
           imports = [ ./modules ];
         };

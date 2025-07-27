@@ -77,6 +77,7 @@ with types;
                   in
                   {
                     options = {
+
                       name = mkOption {
                         type = str;
                         default = promptName;
@@ -88,6 +89,7 @@ with types;
                         type = str;
                         description = "description shown during prompt entry";
                       };
+
                       type = mkOption {
                         type = enum [
                           "hidden"
@@ -97,6 +99,7 @@ with types;
                         default = "line";
                         description = "Type of prompt input";
                       };
+
                     };
                   }
                 )
