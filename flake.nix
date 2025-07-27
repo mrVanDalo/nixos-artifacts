@@ -33,19 +33,6 @@
           imports = [ ./examples ];
         };
 
-        nixosConfigurations.example = inputs.nixpkgs.lib.nixosSystem {
-          system = "x86_64-linux";
-          modules = [
-            self.nixosModules.default
-            self.nixosModules.examples
-            (
-              { pkgs, config, ... }:
-              {
-                artifacts.default.backend = config.artifacts.backend.passage;
-              }
-            )
-          ];
-        };
       };
     };
 }
