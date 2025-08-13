@@ -86,9 +86,9 @@ flowchart TD
 
 The artifacts system is organized into three main parts:
 
-- **store** = "What are artifacts and where do they go?"
-- **backend** = "How do we save and load artifacts?"
-- **config** = "How do we customize the saving/loading behavior?"
+- `artifacts.store` = "What are artifacts and where do they go?"
+- `artifacts.backend` = "How do we save and load artifacts?"
+- `artifacts.config` = "How do we customize the saving/loading behavior?"
 
 ### 1. `artifacts.store`
 
@@ -100,19 +100,19 @@ The artifacts system is organized into three main parts:
 - Contains generators for artifact creation
 - Specifies the destination paths on target systems
 
-#### prompt
+#### `artifacts.store.<artifact-name>.prompt`
 
 > multiple times per artifact
 
 `prompt.<name>` ends up as `$prompt/<name>` in the generator script.
 
-#### file
+#### `artifacts.store.<artifact-name>.file`
 
 > multiple times per artifact
 
 `file.<name>.path` will be the handle of the file on the target system.
 
-#### `serialize` Option
+#### `artifacts.store.<artifact-name>.serialize`
 
 **Cardinality:** Once per artifact
 
@@ -120,7 +120,7 @@ The artifacts system is organized into three main parts:
 
 **Purpose:** Defines how the artifact is serialized for storage
 
-#### `deserialize` Option
+#### `artifacts.store.<artifact-name>.deserialize`
 
 **Cardinality:** Once per artifact
 
@@ -128,7 +128,7 @@ The artifacts system is organized into three main parts:
 
 **Purpose:** Defines how the artifact is deserialized from storage
 
-#### `shared` Option
+#### `artifacts.store.<artifact-name>.shared`
 
 **Cardinality:** Once per artifact
 
