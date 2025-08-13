@@ -1,94 +1,166 @@
-# Artifacts Store
+# NixOS Artifacts Store
 
-Inspired by [clan vars](https://docs.clan.lol/guides/vars-backend/) and
-[this pull-request](https://github.com/NixOS/nixpkgs/pull/370444)
+## Overview
+
+Nixos-artifacts is a framework to unify artifacts and secrets in NixOS flakes.
+
+Inspired by:
+
+- [Clan vars](https://docs.clan.lol/guides/vars-backend/)
+- [NixOS PR #370444](https://github.com/NixOS/nixpkgs/pull/370444)
+
+> **Note:** This project is currently in the design phase.
+
+## Core Concept
+
+NixOS-artifacts provides an abstraction layer over various secret management
+backends, including:
+
+- [agenix](https://github.com/ryantm/agenix)
+- [sops-nix](https://github.com/Mic92/sops-nix) (not yet)
+- [colmena](https://github.com/zhaofengli/colmena) (not yet)
+
+### Key Features
+
+- **Standardized Interface**: Common API for defining and managing secrets
+- **Secret Rotation**: Built-in workflow for secret generation and rotation
+- **Multi-Backend Support**: Mix different backends within the same
+  configuration. You can choose different backends for each artifact.
+
+### Limitations
+
+To maintain compatibility across backends, some specialized features of
+individual backends may not be accessible directly (e.g., public vars in
+[clan](https://docs.clan.lol/concepts/generators/)).
+
+### Implementation
+
+Each backend is provided as a separate flake that you can add to your
+configuration as needed.
+
+## Artifact Workflow
+
+The diagram below illustrates the process of artifact generation, validation,
+and serialization.
 
 ```mermaid
-graph LR
-    A[prompt] --> B[generator]
-    B --> C[serialize]
-    C --> D[deserialize]
+flowchart TD
+  start["Start"] --> mkdir["mkdir **$final_out**"]
+  mkdir --> init["Initialize: for **$artifact** in **$machine**.artifacts"]
+  init --> deserialize["**$out** := deserialize-secrets(**$machine**, **$artifact**)"]
+  deserialize --> check1{"All secrets in **$out** are present?"}
+  check1 -->|Yes| move1["move **$out**/* to **$final_out**/**$machine**/**$artifact**/"]
+  move1 --> continue1["continue to next artifact"]
+  check1 -->|No| prompt["**$prompts** := provide_prompts(**$machine**,**$artifact**)"]
+  prompt --> generate["**$out** := generator_script(**$machine**,**$artifact**,**$prompts**)"]
+  generate --> check2{"All secrets in **$out** are present?"}
+  check2 -->|Yes| serialize["serialize(**$machine**,**$artifact**,**$out**)"]
+  serialize --> move2["move **$out**/* to **$final_out**/**$machine**/**$artifact**/"]
+  move2 --> continue2["continue to next artifact"]
+  check2 -->|No| error["Error"]
+  continue1 --> more{"More artifacts?"}
+  continue2 --> more
+  more -->|Yes| deserialize
+  more -->|No| finish["End - All artifacts processed"]
+
+  style finish fill:#E8F5E8
+  style error fill:#F5E8E8
+  style continue1 fill:#E8F0F5
+  style continue2 fill:#E8F0F5
+  style prompt stroke:#333,stroke-width:3px
+  style deserialize fill:#F0E8F0,stroke:#333,stroke-width:3px
+  style generate fill:#F5F0E8,stroke:#333,stroke-width:3px
+  style serialize fill:#F0E8F0,stroke:#333,stroke-width:3px
 ```
 
-### prompt
+### Legend
+
+- Green: Success completion state
+- Red: Error state
+- Blue: Flow control operations
+- Purple: Core artifact operations (deserialize, serialize) (defined by the
+  backend)
+- Yellow: User defined
+
+## Configuration Reference
+
+The artifacts system is organized into three main parts:
+
+- **store** = "What are artifacts and where do they go?"
+- **backend** = "How do we save and load artifacts?"
+- **config** = "How do we customize the saving/loading behavior?"
+
+### 1. `artifacts.store`
+
+**Purpose:** Defines artifact specifications and target system locations
+
+**Capabilities:**
+
+- Provides the foundational abstractions for defining artifacts
+- Contains generators for artifact creation
+- Specifies the destination paths on target systems
+
+#### prompt
 
 > multiple times per artifact
 
 `prompt.<name>` ends up as `$prompt/<name>` in the generator script.
 
-### file
+#### file
 
 > multiple times per artifact
 
 `file.<name>.path` will be the handle of the file on the target system.
 
-### serialize
+#### `serialize` Option
 
-> once per artifact
+**Cardinality:** Once per artifact
 
-Defaults to `artifacts.config.serialize.default`, but can be overwritten.
+**Default:** `artifacts.config.serialize.default`
 
-### deserialize
+**Purpose:** Defines how the artifact is serialized for storage
 
-> once per artifact
+#### `deserialize` Option
 
-Defaults to `artifacts.config.deserialize.default`, but can be overwritten.
+**Cardinality:** Once per artifact
 
-### shared
+**Default:** `artifacts.config.deserialize.default`
 
-> once per artifact
+**Purpose:** Defines how the artifact is deserialized from storage
 
-handles what the `$out` variable will be usually it will be
-`machines/<machine>/` from `nixosConfigurations.<machine>`, but with this
-enabled it will be `shared/`
+#### `shared` Option
 
-## Queue
+**Cardinality:** Once per artifact
 
-- Check if you can deserialize all artifacts `=> $out/<artifact>/<files>`
-  - if all artifacts exist the end up in `$out/<artifact>/<files>`
-  - if not all artifacts are possible to deserialize, run the generator
-    - generate `$out/<artifact>/<files>`
-    - serialize generated secrets
-      `$out/<artifacts>/<files> => $serialized/<artifacts>/<files>`
-- copy
-  `$out/<artifacts>/<files> => target-system/<artifact-store>/<artifact>/<files>`
+**Effect:** Determines the output directory structure:
 
-> You can **skip** serialization/deserialization, which ends up generating a new
-> artifact every time
+- When disabled: `machines/<machine>/` from `nixosConfigurations.<machine>`
+- When enabled: `shared/`
 
-## Options and conventions
+### 2. `artifacts.backend`
 
-### `artifacts.store`
+**Purpose:** Implements the technical infrastructure for artifact storage
 
-This is where you define what artifacts are and how they work:
+**Responsibilities:**
 
-- Contains the basic building blocks (abstractions) that users need to define
-- Includes generators that create artifacts
-- Specifies where artifacts should appear on the target system
+- Provides serialization/deserialization implementations
+- Defines backend-specific operational logic
+- Manages the physical storage of artifacts
 
-### `artifacts.backend`
+**Directory Structure:**
 
-This handles the technical details of saving and loading artifacts:
+- Machine-specific artifacts: `per-machine/<machine>/<artifact>/<filename>`
+- Shared artifacts: `shared/<artifact>/<filename>`
 
-- Contains the code that converts artifacts to/from storage formats
-  (serialization/deserialization)
-- Has built-in opinions about how things should work
-- Follows a specific folder structure:
-  - `per-machine/<machine>/<artifact>/<filename>` - for machine-specific
-    artifacts
-  - `shared/<artifact>/<filename>` - for artifacts shared across machines
+### 3. `artifacts.config`
 
-### `artifacts.config`
+**Purpose:** Configures backend behavior and settings
 
-This is for customizing how backends behave:
+**Responsibilities:**
 
-- Used to set up and configure the backends
-- Should be documented and provided by whoever creates the backend
+- Provides customization options for backends
+- Defines default serialization/deserialization methods
+- Sets global behavior patterns
 
----
-
-**Think of it like this:**
-
-- **store** = "What are artifacts and where do they go?"
-- **backend** = "How do we save and load artifacts?"
-- **config** = "How do we customize the saving/loading behavior?"
+**Documentation:** Backend authors should provide comprehensive documentation
+for their config options
