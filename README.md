@@ -86,9 +86,9 @@ flowchart TD
 
 The artifacts system is organized into three main parts:
 
-- `artifacts.store` = "What are artifacts and where do they go?"
-- `artifacts.backend` = "How do we save and load artifacts?"
-- `artifacts.config` = "How do we customize the saving/loading behavior?"
+- `artifacts.store` "Which are artifacts and where should they end up?"
+- `artifacts.backend` "How do we save and load artifacts?"
+- `artifacts.config` "How do we customize the saving/loading behavior?"
 
 ### 1. `artifacts.store`
 
