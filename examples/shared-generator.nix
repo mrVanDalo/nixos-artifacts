@@ -16,7 +16,7 @@
   };
 
   config = lib.mkIf config.artifacts.example.shared.enable {
-    artifacts.store.nextcloud-odic = {
+    artifacts.store.nextcloud-oidc = {
       shared = true;
 
       files.secret = { };
