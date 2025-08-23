@@ -1,5 +1,6 @@
 //! Secret generation helpers (stub)
 
+#[allow(dead_code)]
 pub fn execute_generator_script(
     _script: &str,
     _prompts_dir: &str,

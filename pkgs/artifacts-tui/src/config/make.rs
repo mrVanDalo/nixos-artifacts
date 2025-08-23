@@ -31,5 +31,5 @@ pub struct ArtifactDef {
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct MakeConfig {
     #[serde(default)]
-    pub artifacts: Vec<ArtifactDef>,
+    pub machines: Vec<ArtifactDef>,
 }

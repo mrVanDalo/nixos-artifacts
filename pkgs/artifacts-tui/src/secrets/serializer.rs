@@ -1,5 +1,6 @@
 //! Serialization helpers (stub)
 
+#[allow(dead_code)]
 pub fn execute_serialize_script(
     _script: &str,
     _out_dir: &str,

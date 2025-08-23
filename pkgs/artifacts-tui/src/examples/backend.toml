@@ -1,0 +1,4 @@
+[test]
+serialize = "./test_serialize.sh"
+deserialize = "./test_deseraialize.sh"
+

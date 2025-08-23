@@ -1,5 +1,6 @@
 //! Deserialization helpers (stub)
 
+#[allow(dead_code)]
 pub fn execute_deserialize_script(
     _script: &str,
     _out_dir: &str,

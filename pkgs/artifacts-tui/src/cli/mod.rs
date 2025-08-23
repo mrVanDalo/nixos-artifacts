@@ -2,7 +2,7 @@ pub mod args;
 pub mod commands;
 
 use anyhow::Result;
-use clap::{CommandFactory, Parser};
+use clap::Parser;
 
 pub fn run() -> Result<()> {
     let cli = args::Cli::parse();

@@ -1,6 +1,7 @@
 use thiserror::Error;
 
 #[derive(Debug, Error)]
+#[allow(dead_code)]
 pub enum AppError {
     #[error("Configuration error: {0}")]
     Config(String),
@@ -12,4 +13,5 @@ pub enum AppError {
     Other(String),
 }
 
+#[allow(dead_code)]
 pub type Result<T> = std::result::Result<T, anyhow::Error>;
