@@ -11,7 +11,7 @@ cargo build -q
 
 # Run the generate command with the provided example configs
 echo "[test-generate] Running generate with example configs..."
-cmd=(cargo run --quiet -- generate src/examples/backend.toml src/examples/make.json)
+cmd=(cargo run --quiet -- generate examples/backend.toml examples/make.json)
 echo "> ${cmd[*]}"
 "${cmd[@]}"
 
