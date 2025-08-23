@@ -7,18 +7,15 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-fn resolve_path(base: &Path, p: &str) -> PathBuf {
-    let pp = Path::new(p);
-    if pp.is_absolute() {
-        pp.to_path_buf()
+fn resolve_path(base_dir: &Path, relative_path: &str) -> PathBuf {
+    let path = Path::new(relative_path);
+    if path.is_absolute() {
+        path.to_path_buf()
     } else {
-        base.join(pp)
+        base_dir.join(path)
     }
 }
-
-/// Generate plan: read make.json and backend config and print scripts to run.
-pub fn run(backend_toml: &Path, make_json: &Path) -> Result<()> {
-    // Load backend config (TOML), paths relative to file location
+fn read_backend_config(backend_toml: &Path) -> Result<(BackendConfig, PathBuf)> {
     let backend_text = fs::read_to_string(backend_toml)
         .with_context(|| format!("reading backend config {}", backend_toml.display()))?;
     let backend_cfg: BackendConfig = toml::from_str(&backend_text)
@@ -27,18 +24,22 @@ pub fn run(backend_toml: &Path, make_json: &Path) -> Result<()> {
         .parent()
         .map(|p| p.to_path_buf())
         .unwrap_or_else(|| PathBuf::from("."));
+    Ok((backend_cfg, backend_base))
+}
 
-    // Load make.json. The format is: { "<machine-name>": [ArtifactDef, ...], ... }
+fn read_make_config(make_json: &Path) -> Result<(HashMap<String, Vec<ArtifactDef>>, PathBuf)> {
     let make_text = fs::read_to_string(make_json)
         .with_context(|| format!("reading make config {}", make_json.display()))?;
-    let mut make_map: HashMap<String, Vec<ArtifactDef>> = json_from_str(&make_text)
+    let make_map: HashMap<String, Vec<ArtifactDef>> = json_from_str(&make_text)
         .with_context(|| format!("parsing make config {}", make_json.display()))?;
     let make_base = make_json
         .parent()
         .map(|p| p.to_path_buf())
         .unwrap_or_else(|| PathBuf::from("."));
+    Ok((make_map, make_base))
+}
 
-    // Prepare temp dirs used by scripts; we still only print the plan and do not execute.
+fn prepare_temp_dirs() -> Result<(PathBuf, PathBuf, PathBuf)> {
     let now = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap()
@@ -48,21 +49,28 @@ pub fn run(backend_toml: &Path, make_json: &Path) -> Result<()> {
     let out = base.join("out");
     fs::create_dir_all(&prompts).context("creating prompts directory")?;
     fs::create_dir_all(&out).context("creating out directory")?;
+    Ok((base, prompts, out))
+}
 
-    println!("[generate] backend: {}", backend_toml.display());
-    println!("[generate] make: {}", make_json.display());
-    println!("[generate] prompts dir: {}", prompts.display());
-    println!("[generate] out dir: {}", out.display());
-
-    // Iterate machines and artifacts
+fn process_plan(
+    mut make_map: HashMap<String, Vec<ArtifactDef>>,
+    make_base: &Path,
+    backend_cfg: &BackendConfig,
+    backend_base: &Path,
+    prompts: &Path,
+    out: &Path,
+    backend_toml: &Path,
+) {
     for (machine, artifacts) in make_map.drain() {
         println!("[generate] machine: {}", machine);
-        for art in artifacts {
-            println!("  - artifact: {}", art.name);
-            // Prompts to collect
-            if !art.prompts.is_empty() {
-                println!("    prompts to collect -> {} entries", art.prompts.len());
-                for p in &art.prompts {
+        for artifact in artifacts {
+            println!("  - artifact: {}", artifact.name);
+            if !artifact.prompts.is_empty() {
+                println!(
+                    "    prompts to collect -> {} entries",
+                    artifact.prompts.len()
+                );
+                for p in &artifact.prompts {
                     println!(
                         "      - {}{}",
                         p.name,
@@ -73,11 +81,10 @@ pub fn run(backend_toml: &Path, make_json: &Path) -> Result<()> {
                     );
                 }
             }
-            // Files to produce
-            if !art.files.is_empty() {
-                println!("    files to produce -> {} files", art.files.len());
-                for f in &art.files {
-                    let resolved = resolve_path(&make_base, &f.path);
+            if !artifact.files.is_empty() {
+                println!("    files to produce -> {} files", artifact.files.len());
+                for f in &artifact.files {
+                    let resolved = resolve_path(make_base, &f.path);
                     println!(
                         "      - {} => {}{}{}",
                         f.name,
@@ -94,9 +101,8 @@ pub fn run(backend_toml: &Path, make_json: &Path) -> Result<()> {
                 }
             }
 
-            // Generator script (from make.json), relative to make.json
-            if let Some(generator_script) = art.generator.as_ref() {
-                let gen_path = resolve_path(&make_base, generator_script);
+            if let Some(generator_script) = artifact.generator.as_ref() {
+                let gen_path = resolve_path(make_base, generator_script);
                 let gen_abs = fs::canonicalize(&gen_path).unwrap_or_else(|_| gen_path.clone());
                 println!(
                     "    would run generator: env prompt=\"{}\" out=\"{}\" {}\n",
@@ -113,11 +119,10 @@ pub fn run(backend_toml: &Path, make_json: &Path) -> Result<()> {
                 println!("    no generator defined");
             }
 
-            // Serialization backend
-            if let Some(backend_name) = art.serialization.as_ref() {
+            if let Some(backend_name) = artifact.serialization.as_ref() {
                 match backend_cfg.get(backend_name) {
                     Some(BackendEntry { serialize, .. }) => {
-                        let ser_path = resolve_path(&backend_base, serialize);
+                        let ser_path = resolve_path(backend_base, serialize);
                         let ser_abs =
                             fs::canonicalize(&ser_path).unwrap_or_else(|_| ser_path.clone());
                         println!(
@@ -144,6 +149,34 @@ pub fn run(backend_toml: &Path, make_json: &Path) -> Result<()> {
             }
         }
     }
+}
+
+/// Generate plan: read make.json and backend config and print scripts to run.
+pub fn run(backend_toml: &Path, make_json: &Path) -> Result<()> {
+    // Load backend config (TOML), paths relative to file location
+    let (backend_cfg, backend_base) = read_backend_config(backend_toml)?;
+
+    // Load make.json. The format is: { "<machine-name>": [ArtifactDef, ...], ... }
+    let (make_map, make_base) = read_make_config(make_json)?;
+
+    // Prepare temp dirs used by scripts; we still only print the plan and do not execute.
+    let (base, prompts, out) = prepare_temp_dirs()?;
+
+    println!("[generate] backend: {}", backend_toml.display());
+    println!("[generate] make: {}", make_json.display());
+    println!("[generate] prompts dir: {}", prompts.display());
+    println!("[generate] out dir: {}", out.display());
+
+    // Iterate machines and artifacts
+    process_plan(
+        make_map,
+        &make_base,
+        &backend_cfg,
+        &backend_base,
+        &prompts,
+        &out,
+        backend_toml,
+    );
 
     // For now, just verify directories exist and then clean up
     if !prompts.is_dir() || !out.is_dir() {
