@@ -194,7 +194,7 @@
         };
       };
 
-      packages.default = asdf {
+      packages.asdf = asdf {
         nixosConfiguration = self.nixosConfigurations.example;
         machineName = "example";
       };

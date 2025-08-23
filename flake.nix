@@ -17,10 +17,17 @@
         ./nix/devshells.nix
         ./flake-module.nix
       ];
+      perSystem =
+        { pkgs, self', ... }:
+        {
+          packages.default = self'.packages.artifacts-tui;
+          packages.artifacts-tui = pkgs.callPackage ./pkgs/artifacts-tui { };
+        };
       systems = [
         "x86_64-linux"
         "aarch64-linux"
       ];
+
       flake = {
 
         flakeModules.default = ./flake-module.nix;
