@@ -184,3 +184,15 @@ artifacts-tui should have the following workflow for the `generate` command:
     - `out` directory injected as environment variable `$out`
     - `machine` and `artifact` injected as environment variables
   - remove the temporary folders
+
+## Linting
+
+This project uses Clippy for linting. Treat warnings as errors.
+
+- Run locally:
+  - cargo lint
+  - or ./test-lint.sh
+
+Ensure you have the clippy component installed (via rustup):
+
+- rustup component add clippy

@@ -1,0 +1,3 @@
+[alias]
+# Run clippy and fail on any warnings
+lint = "clippy -- -D warnings"
