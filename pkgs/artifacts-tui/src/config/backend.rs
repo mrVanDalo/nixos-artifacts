@@ -6,6 +6,7 @@ pub struct BackendSettings(pub HashMap<String, serde_json::Value>);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BackendEntry {
+    pub check_serialization: String,
     pub deserialize: String,
     pub serialize: String,
     #[serde(default)]

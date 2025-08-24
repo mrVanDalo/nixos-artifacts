@@ -1,4 +1,4 @@
-use crate::config::backend::{BackendConfig, BackendEntry};
+use crate::config::backend::BackendConfig;
 use crate::config::make::ArtifactDef;
 use anyhow::{Context, Result, bail};
 use serde_json::from_str as json_from_str;
@@ -101,6 +101,104 @@ fn process_plan(
                 }
             }
 
+            // If a serialization backend is defined, run its check_serialization first.
+            let mut skip_rest = false;
+            if let Some(backend_name) = artifact.serialization.as_ref() {
+                match backend_cfg.get(backend_name) {
+                    Some(entry) => {
+                        // Create per-artifact inputs dir and populate with JSON files
+                        let now = SystemTime::now()
+                            .duration_since(SystemTime::UNIX_EPOCH)
+                            .unwrap()
+                            .as_millis();
+                        let safe_art = artifact
+                            .name
+                            .chars()
+                            .map(|c| if c.is_ascii_alphanumeric() { c } else { '_' })
+                            .collect::<String>();
+                        let inputs = std::env::temp_dir()
+                            .join(format!("artifacts-tui-{}-{}-inputs", now, safe_art));
+                        if let Err(e) = fs::create_dir_all(&inputs) {
+                            println!("    ERROR: failed to create inputs dir {}: {}", inputs.display(), e);
+                        } else {
+                            for f in &artifact.files {
+                                let resolved_path = resolve_path(make_base, &f.path);
+                                let file_name = f
+                                    .name
+                                    .chars()
+                                    .map(|c| if c.is_ascii_alphanumeric() { c } else { '_' })
+                                    .collect::<String>();
+                                let json_path = inputs.join(format!("{}.json", file_name));
+                                let obj = serde_json::json!({
+                                    "path": resolved_path,
+                                    "owner": f.owner,
+                                    "group": f.group,
+                                });
+                                match serde_json::to_string_pretty(&obj) {
+                                    Ok(text) => {
+                                        if let Err(e) = fs::write(&json_path, text) {
+                                            println!("    WARN: failed to write {}: {}", json_path.display(), e);
+                                        }
+                                    }
+                                    Err(e) => println!(
+                                        "    WARN: failed to serialize JSON for {}: {}",
+                                        json_path.display(),
+                                        e
+                                    ),
+                                }
+                            }
+
+                            // Run check_serialization
+                            let check_path = resolve_path(backend_base, &entry.check_serialization);
+                            let check_abs = fs::canonicalize(&check_path).unwrap_or_else(|_| check_path.clone());
+                            println!(
+                                "    running check_serialization: env inputs=\"{}\" machine=\"{}\" artifact=\"{}\" {}",
+                                inputs.display(),
+                                machine,
+                                artifact.name,
+                                check_abs.display()
+                            );
+                            let status = std::process::Command::new(&check_abs)
+                                .env("inputs", &inputs)
+                                .env("machine", &machine)
+                                .env("artifact", &artifact.name)
+                                .status();
+                            match status {
+                                Ok(s) => {
+                                    if s.success() {
+                                        println!("    check_serialization: OK (exit 0) -> skipping generation/serialization for this artifact");
+                                        skip_rest = true;
+                                    } else {
+                                        println!("    check_serialization: failed with status {} -> continuing with generation", s);
+                                    }
+                                }
+                                Err(e) => {
+                                    println!("    ERROR running check_serialization: {} -> continuing with generation", e);
+                                }
+                            }
+
+                            // Cleanup inputs dir
+                            if let Err(e) = fs::remove_dir_all(&inputs) {
+                                println!("    WARN: failed to remove inputs dir {}: {}", inputs.display(), e);
+                            }
+                        }
+                    }
+                    None => {
+                        println!(
+                            "    WARN: backend '{}' not found in {}",
+                            backend_name,
+                            backend_toml.display()
+                        );
+                    }
+                }
+            } else {
+                println!("    no serialization backend defined");
+            }
+
+            if skip_rest {
+                continue;
+            }
+
             if let Some(generator_script) = artifact.generator.as_ref() {
                 let gen_path = resolve_path(make_base, generator_script);
                 let gen_abs = fs::canonicalize(&gen_path).unwrap_or_else(|_| gen_path.clone());
@@ -121,13 +219,14 @@ fn process_plan(
 
             if let Some(backend_name) = artifact.serialization.as_ref() {
                 match backend_cfg.get(backend_name) {
-                    Some(BackendEntry { serialize, .. }) => {
-                        let ser_path = resolve_path(backend_base, serialize);
-                        let ser_abs =
-                            fs::canonicalize(&ser_path).unwrap_or_else(|_| ser_path.clone());
+                    Some(entry) => {
+                        let ser_path = resolve_path(backend_base, &entry.serialize);
+                        let ser_abs = fs::canonicalize(&ser_path).unwrap_or_else(|_| ser_path.clone());
                         println!(
-                            "    would run serialize: env out=\"{}\" {}\n",
+                            "    would run serialize: env out=\"{}\" machine=\"{}\" artifact=\"{}\" {}\n",
                             out.display(),
+                            machine,
+                            artifact.name,
                             ser_abs.display()
                         );
                         println!("    serialize script path: {}", ser_abs.display());

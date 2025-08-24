@@ -32,6 +32,7 @@ artifacts through configurable backends.
 
 ```toml
 [backend_name]
+check_serialization = "/path/to/check/script"
 deserialize = "/path/to/deserialize/script"
 serialize = "/path/to/serialize/script"
 
@@ -171,6 +172,14 @@ artifacts-tui should have the following commands:
 artifacts-tui should have the following workflow for the `generate` command:
 
 - for each artifact
+  - create a temporary directory which will be referenced as `inputs`
+  - create a file for every `file` entry of the artifact in a `inputs` temporary
+    - containing json with `path`, `owner`, and `group`
+  - call the `check_serialization` script
+    - `inputs` directory injected as environment variable `$inputs`
+    - `machine` and `artifact` injected as environment variables
+  - if the `check_serialization` script succeeded with exit code 0, continue with the next artifact
+  - if the `check_serialization` script failes with exit code different to 0, continue with the following steps
   - create a temporary directory which will be referenced as `prompts`
   - create a temporary directory which will be referenced as `out`
   - prompt the user for input for each prompt and save them in a file in a
