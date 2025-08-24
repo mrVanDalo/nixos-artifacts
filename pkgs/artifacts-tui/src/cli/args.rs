@@ -18,17 +18,3 @@ pub enum Command {
         make: PathBuf,
     },
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use clap::CommandFactory;
-
-    #[test]
-    fn help_contains_generate() {
-        let mut help = Vec::new();
-        let _ = Cli::command().write_long_help(&mut help);
-        let text = String::from_utf8(help).unwrap();
-        assert!(text.contains("generate"));
-    }
-}

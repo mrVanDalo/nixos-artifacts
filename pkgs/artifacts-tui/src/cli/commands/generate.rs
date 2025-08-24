@@ -40,11 +40,20 @@ fn read_make_config(make_json: &Path) -> Result<(HashMap<String, Vec<ArtifactDef
 }
 
 fn prepare_temp_dirs() -> Result<(PathBuf, PathBuf, PathBuf)> {
-    let now = SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap()
-        .as_millis();
-    let base = std::env::temp_dir().join(format!("artifacts-tui-{}", now));
+    // In tests we want deterministic paths to produce stable snapshots.
+    let base = if std::env::var("ARTIFACTS_TUI_TEST_FIXED_TMP").is_ok() {
+        let base = std::env::temp_dir().join("artifacts-tui-test");
+        // Clean up any leftovers from previous runs
+        let _ = fs::remove_dir_all(&base);
+        fs::create_dir_all(&base).context("creating test base directory")?;
+        base
+    } else {
+        let now = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_millis();
+        std::env::temp_dir().join(format!("artifacts-tui-{}", now))
+    };
     let prompts = base.join("prompts");
     let out = base.join("out");
     fs::create_dir_all(&prompts).context("creating prompts directory")?;
@@ -127,7 +136,11 @@ fn maybe_run_check_serialization(
         .chars()
         .map(|c| if c.is_ascii_alphanumeric() { c } else { '_' })
         .collect::<String>();
-    let inputs = std::env::temp_dir().join(format!("artifacts-tui-{}-{}-inputs", now, safe_art));
+    let inputs = if std::env::var("ARTIFACTS_TUI_TEST_FIXED_TMP").is_ok() {
+        std::env::temp_dir().join(format!("artifacts-tui-test-{}-inputs", safe_art))
+    } else {
+        std::env::temp_dir().join(format!("artifacts-tui-{}-{}-inputs", now, safe_art))
+    };
 
     let mut skip_rest = false;
 

@@ -1,0 +1,23 @@
+---
+source: tests/command_tests.rs
+info:
+  program: artifacts-cli
+  args:
+    - generate
+    - "--help"
+---
+success: true
+exit_code: 0
+----- stdout -----
+Generate artifacts
+
+Usage: artifacts-cli generate <BACKEND> <MAKE>
+
+Arguments:
+  <BACKEND>  Path to backend configuration file (backend.toml)
+  <MAKE>     Path to make configuration file (make.json)
+
+Options:
+  -h, --help  Print help
+
+----- stderr -----
