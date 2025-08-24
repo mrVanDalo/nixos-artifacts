@@ -129,7 +129,9 @@ mod tests {
 ```
 src/
 ├── snapshots/           # insta-cmd Snapshots for testing
-├── main.rs              # Entry point
+├── bin/                 # Binaries
+│   ├── artifacts_cli.rs # Entry point for CLI
+│   └── artifacts_tui.rs # Entry point for TUI
 ├── cli/                 # Command-line interface
 │   ├── mod.rs
 │   ├── commands/        # Individual commands
@@ -148,6 +150,7 @@ src/
 │   ├── generator.rs     # Secret generation
 │   ├── serializer.rs    # Serialization
 │   └── deserializer.rs  # Deserialization
+├── tests/               # Tests
 └── error.rs             # Error types
 ```
 

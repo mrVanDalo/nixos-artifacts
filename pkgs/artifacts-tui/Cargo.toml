@@ -14,3 +14,11 @@ toml = "0.8"
 [dev-dependencies]
 insta-cmd = "0.5"
 
+[[bin]]
+name = "artifacts-cli"
+path = "src/bin/artifacts_cli.rs"
+
+[[bin]]
+name = "artifacts-tui"
+path = "src/bin/artifacts_tui.rs"
+

@@ -31,6 +31,6 @@ pkgs.rustPlatform.buildRustPackage rec {
     license = licenses.mit; # adjust if different
     maintainers = [ ];
     platforms = platforms.unix;
-    mainProgram = "artifacts-tui";
+    mainProgram = "artifacts-cli";
   };
 }
