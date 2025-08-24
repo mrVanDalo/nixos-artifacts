@@ -68,6 +68,13 @@ structure:
 
 ## Development Standards
 
+### Coding Guidelines
+
+- fail fast
+- don't use abbreviations
+- when functions get log, try to split them up in a sequence of smaller
+  functions
+
 ### Rust Guidelines
 
 1. **Language Version**: Use Rust 1.87.0
@@ -128,6 +135,12 @@ mod tests {
 ### Project Structure
 
 ```
+examples/
+└── scenarioA            # Scenario A
+    ├── make.json        # make.json for scenario A
+    ├── backend.toml     # backend.toml for scenario A
+    ├── scriptA.sh       # referenced in make.json or backend.toml
+    └── scriptB.sh       # referenced in make.json or backend.toml
 src/
 ├── snapshots/           # insta-cmd Snapshots for testing
 ├── bin/                 # Binaries
@@ -151,7 +164,7 @@ src/
 │   ├── generator.rs     # Secret generation
 │   ├── serializer.rs    # Serialization
 │   └── deserializer.rs  # Deserialization
-├── tests/               # Tests
+├── tests/               # insta-cmd Tests
 └── error.rs             # Error types
 ```
 
@@ -178,8 +191,10 @@ artifacts-tui should have the following workflow for the `generate` command:
   - call the `check_serialization` script
     - `inputs` directory injected as environment variable `$inputs`
     - `machine` and `artifact` injected as environment variables
-  - if the `check_serialization` script succeeded with exit code 0, continue with the next artifact
-  - if the `check_serialization` script failes with exit code different to 0, continue with the following steps
+  - if the `check_serialization` script succeeded with exit code 0, continue
+    with the next artifact
+  - if the `check_serialization` script failes with exit code different to 0,
+    continue with the following steps
   - create a temporary directory which will be referenced as `prompts`
   - create a temporary directory which will be referenced as `out`
   - prompt the user for input for each prompt and save them in a file in a
