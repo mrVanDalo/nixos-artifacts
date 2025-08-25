@@ -7,8 +7,9 @@ info:
     - /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/scenario_simple/backend.toml
     - /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/scenario_simple/make.json
   env:
-    TMPDIR: /tmp/artifacts-tui-ci
     ARTIFACTS_TUI_TEST_FIXED_TMP: "1"
+    TMPDIR: /tmp/artifacts-tui-ci
+  stdin: "one\ntwo\n"
 ---
 success: true
 exit_code: 0
@@ -24,10 +25,10 @@ exit_code: 0
       - simple-secrets => /run/secrets/simple-secrets owner=deployer group=deployer
     running check_serialization: env inputs="/tmp/artifacts-tui-ci/artifacts-tui-test-test_artifact-inputs" machine="machine-name" artifact="test-artifact" /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/scenario_simple/test_check.sh
     check_serialization: failed with status exit status: 1 -> continuing with generation
- (secret number 1)
-enter prompt secret1
- (secret number 2)
-enter prompt secret2
+secret number 1
+enter prompt secret1: 
+secret number 2
+enter prompt secret2: 
 === Content of /tmp/artifacts-tui-ci/artifacts-tui-test/out/simple-secrets ===
 two
 =========================

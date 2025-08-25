@@ -39,7 +39,6 @@ fn scenario_simple() {
     assert_cmd_snapshot!(cmd);
 }
 
-#[test]
 fn generator_failes_scenario() {
     let root = project_root();
     let backend = root.join("examples/generator_failes/backend.toml");

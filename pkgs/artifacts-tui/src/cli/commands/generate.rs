@@ -231,99 +231,89 @@ fn maybe_run_check_serialization(
 
 fn run_generator(artifact: &ArtifactDef, make_base: &Path, prompts: &Path, out: &Path) {
     if let Some(generator_script) = artifact.generator.as_ref() {
-        let gen_path = resolve_path(make_base, generator_script);
-        let gen_abs = fs::canonicalize(&gen_path).unwrap_or_else(|_| gen_path.clone());
+        let generator_script_path = resolve_path(make_base, generator_script);
+        let generator_script_absolut_path = fs::canonicalize(&generator_script_path)
+            .unwrap_or_else(|_| generator_script_path.clone());
 
-        // Prefer running the generator under a nix shell to ensure bubblewrap is available.
-        // Fallback to direct bwrap if available, then to plain sh.
-        let mut status_res: Result<std::process::ExitStatus, std::io::Error> =
-            Err(std::io::Error::from(std::io::ErrorKind::NotFound));
+        // Only use nix-shell. If it fails, crash the program.
+        let nix_shell = which::which("nix-shell")
+            .expect("nix-shell is required to run the generator but was not found in PATH");
 
-        // 1) Try nix shell: nix shell nixpkgs#bash nixpkgs#bubblewrap -c bwrap ... -- /bin/sh gen_abs
-        if let Ok(nix_path) = which::which("nix") {
-            let mut cmd = std::process::Command::new(nix_path);
-            cmd.arg("shell")
-                .arg("nixpkgs#bash")
-                .arg("nixpkgs#bubblewrap")
-                .arg("-c")
-                .arg("bwrap")
-                .arg("--ro-bind")
-                .arg("/nix/store")
-                .arg("/nix/store")
-                .arg("--tmpfs")
-                .arg("/usr/lib/systemd")
-                .arg("--dev")
-                .arg("/dev")
-                .arg("--bind")
-                .arg(prompts)
-                .arg(prompts)
-                .arg("--bind")
-                .arg(out)
-                .arg(out);
-            if let Some(gen_dir) = gen_abs.parent() {
-                cmd.arg("--ro-bind").arg(gen_dir).arg(gen_dir);
-            }
-            if Path::new("/bin").exists() {
-                cmd.arg("--ro-bind").arg("/bin").arg("/bin");
-            }
-            if Path::new("/usr/bin").exists() {
-                cmd.arg("--ro-bind").arg("/usr/bin").arg("/usr/bin");
-            }
-            cmd.arg("--unshare-all")
-                .arg("--unshare-user")
-                .arg("--uid")
-                .arg("1000")
-                .arg("--")
-                .arg("/bin/sh")
-                .arg(&gen_abs);
-            cmd.env("prompt", prompts);
-            cmd.env("out", out);
-            status_res = cmd.status();
+        // Build the bwrap command as a single string for nix-shell --run
+        let mut arguments: Vec<String> = Vec::new();
+        arguments.push("bwrap".to_string());
+        arguments.push("--ro-bind".to_string());
+        arguments.push("/nix/store".to_string());
+        arguments.push("/nix/store".to_string());
+        arguments.push("--tmpfs".to_string());
+        arguments.push("/usr/lib/systemd".to_string());
+        arguments.push("--dev".to_string());
+        arguments.push("/dev".to_string());
+        arguments.push("--bind".to_string());
+        arguments.push(prompts.display().to_string());
+        arguments.push(prompts.display().to_string());
+        arguments.push("--bind".to_string());
+        arguments.push(out.display().to_string());
+        arguments.push(out.display().to_string());
+        if let Some(gen_dir) = generator_script_absolut_path.parent() {
+            arguments.push("--ro-bind".to_string());
+            arguments.push(gen_dir.display().to_string());
+            arguments.push(gen_dir.display().to_string());
         }
+        if Path::new("/bin").exists() {
+            arguments.push("--ro-bind".to_string());
+            arguments.push("/bin".to_string());
+            arguments.push("/bin".to_string());
+        }
+        if Path::new("/usr/bin").exists() {
+            arguments.push("--ro-bind".to_string());
+            arguments.push("/usr/bin".to_string());
+            arguments.push("/usr/bin".to_string());
+        }
+        arguments.push("--unshare-all".to_string());
+        arguments.push("--unshare-user".to_string());
+        arguments.push("--uid".to_string());
+        arguments.push("1000".to_string());
+        arguments.push("--".to_string());
+        arguments.push("/bin/sh".to_string());
+        arguments.push(generator_script_absolut_path.display().to_string());
+        let bwrap_command = arguments.join(" ");
 
-        // 2) Fallback to direct bwrap if nix failed
-        if status_res.is_err() {
-            if let Ok(bwrap_path) = which::which("bwrap") {
-                let mut cmd = std::process::Command::new(bwrap_path);
-                cmd.arg("--ro-bind").arg("/nix/store").arg("/nix/store");
-                if Path::new("/bin").exists() {
-                    cmd.arg("--ro-bind").arg("/bin").arg("/bin");
+        // Ensure that our 'out' and 'prompt' override any nix-shell provided 'out'
+        fn sh_escape_single_quoted(s: &str) -> String {
+            // Replace ' with '\'' for safe single-quoting
+            s.replace('\'', "'\\''")
+        }
+        let out_quoted = sh_escape_single_quoted(&out.display().to_string());
+        let prompt_quoted = sh_escape_single_quoted(&prompts.display().to_string());
+        let nix_shell_run_command = format!(
+            "export out='{}'; export prompt='{}'; {}",
+            out_quoted, prompt_quoted, bwrap_command
+        );
+
+        let mut generator_command = std::process::Command::new(nix_shell);
+        generator_command.arg("-p")
+            .arg("bash")
+            .arg("bubblewrap")
+            .arg("--run")
+            .arg(&nix_shell_run_command);
+
+        // Do not pass 'out' or 'prompt' here to avoid being overridden by nix-shell internals
+        match generator_command.status() {
+            Ok(status) => {
+                if !status.success() {
+                    panic!(
+                        "generator failed inside nix-shell with exit status: {}",
+                        status
+                    );
                 }
-                if Path::new("/usr/bin").exists() {
-                    cmd.arg("--ro-bind").arg("/usr/bin").arg("/usr/bin");
-                }
-                cmd.arg("--tmpfs").arg("/usr/lib/systemd");
-                cmd.arg("--dev").arg("/dev");
-                cmd.arg("--bind").arg(prompts).arg(prompts);
-                cmd.arg("--bind").arg(out).arg(out);
-                if let Some(gen_dir) = gen_abs.parent() {
-                    cmd.arg("--ro-bind").arg(gen_dir).arg(gen_dir);
-                }
-                cmd.arg("--unshare-all");
-                cmd.arg("--unshare-user");
-                cmd.arg("--uid").arg("1000");
-                cmd.arg("--");
-                cmd.arg("/bin/sh").arg(&gen_abs);
-                cmd.env("prompt", prompts);
-                cmd.env("out", out);
-                status_res = cmd.status();
+            }
+            Err(e) => {
+                panic!("failed to start generator in nix-shell: {}", e);
             }
         }
-
-        // 3) Final fallback: plain sh without sandboxing
-        if status_res.is_err() {
-            status_res = std::process::Command::new("sh")
-                .arg(&gen_abs)
-                .env("prompt", prompts)
-                .env("out", out)
-                .status();
-        }
-
-        let _ = status_res.map_err(|e| {
-            eprintln!("    ERROR running generator: {}", e);
-        });
     } else {
-        println!("    no generator defined");
+        panic!("no generator defined");
     }
 }
 
