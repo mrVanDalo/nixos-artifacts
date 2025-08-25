@@ -21,6 +21,7 @@
             pkgs.jetbrains.rust-rover
             pkgs.rustup
             pkgs.cargo-insta
+            pkgs.bubblewrap
           ];
         };
       };
