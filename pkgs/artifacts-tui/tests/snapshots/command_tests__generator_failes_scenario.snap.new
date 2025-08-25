@@ -1,0 +1,41 @@
+---
+source: tests/command_tests.rs
+assertion_line: 63
+info:
+  program: artifacts-cli
+  args:
+    - generate
+    - /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/generator_failes/backend.toml
+    - /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/generator_failes/make.json
+  env:
+    ARTIFACTS_TUI_TEST_FIXED_TMP: "1"
+    TMPDIR: /tmp/artifacts-tui-ci
+  stdin: "one\ntwo\n"
+---
+success: true
+exit_code: 0
+----- stdout -----
+[generate] backend: /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/generator_failes/backend.toml
+[generate] make: /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/generator_failes/make.json
+[generate] prompts dir: /tmp/artifacts-tui-ci/artifacts-tui-test/prompts
+[generate] out dir: /tmp/artifacts-tui-ci/artifacts-tui-test/out
+[generate] machine: machine-name
+  - artifact: test-artifact
+    files to produce -> 2 files
+      - very-simple-secrets => /run/secrets/very-simple-secrets
+      - simple-secrets => /run/secrets/simple-secrets owner=deployer group=deployer
+    running check_serialization: env inputs="/tmp/artifacts-tui-ci/artifacts-tui-test-test_artifact-inputs" machine="machine-name" artifact="test-artifact" /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/generator_failes/test_check.sh
+    check_serialization: failed with status exit status: 1 -> continuing with generation
+    WARN: failed to remove inputs dir /tmp/artifacts-tui-ci/artifacts-tui-test-test_artifact-inputs: No such file or directory (os error 2)
+ (secret number 1)
+enter prompt secret1
+ (secret number 2)
+enter prompt secret2
+=== Content of /tmp/artifacts-tui-ci/artifacts-tui-test/out/simple-secrets ===
+two
+=========================
+=== Content of /tmp/artifacts-tui-ci/artifacts-tui-test/out/very-simple-secrets ===
+one
+=========================
+
+----- stderr -----

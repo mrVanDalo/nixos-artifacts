@@ -1,0 +1,38 @@
+---
+source: tests/command_tests.rs
+assertion_line: 39
+info:
+  program: artifacts-cli
+  args:
+    - generate
+    - /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/scenario_simple/backend.toml
+    - /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/scenario_simple/make.json
+  env:
+    ARTIFACTS_TUI_TEST_FIXED_TMP: "1"
+    TMPDIR: /tmp/artifacts-tui-ci
+  stdin: "one\ntwo\n"
+---
+success: false
+exit_code: 1
+----- stdout -----
+[generate] backend: /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/scenario_simple/backend.toml
+[generate] make: /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/scenario_simple/make.json
+[generate] prompts dir: /tmp/artifacts-tui-ci/artifacts-tui-test/prompts
+[generate] out dir: /tmp/artifacts-tui-ci/artifacts-tui-test/out
+[generate] machine: machine-name
+  - artifact: test-artifact
+    files to produce -> 2 files
+      - very-simple-secrets => /run/secrets/very-simple-secrets
+      - simple-secrets => /run/secrets/simple-secrets owner=deployer group=deployer
+    running check_serialization: env inputs="/tmp/artifacts-tui-ci/artifacts-tui-test-test_artifact-inputs" machine="machine-name" artifact="test-artifact" /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/scenario_simple/test_check.sh
+    check_serialization: failed with status exit status: 1 -> continuing with generation
+ (secret number 1)
+enter prompt secret1
+ (secret number 2)
+enter prompt secret2
+=== Content of /tmp/artifacts-tui-ci/artifacts-tui-test/out/simple-secrets ===
+=========================
+
+----- stderr -----
+cat: /tmp/artifacts-tui-ci/artifacts-tui-test/out/simple-secrets: No such file or directory
+error: failed to prepare temporary directories
