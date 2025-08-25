@@ -382,20 +382,32 @@ fn ensure_prompt_files(artifact: &ArtifactDef, prompts_dir: &Path) {
         );
 
         let stdin = io::stdin();
-        // If not a TTY, prepare a line iterator
-        let mut lines = Some(stdin.lock().lines());
-
-        let value = if let Some(ref mut it) = lines {
-            match it.next() {
-                Some(Ok(line)) => format!("{}\n", line),
-                _ => String::from("\n"), // empty line if no input provided
+        let value = if stdin.is_terminal() {
+            // Interactive mode - read line directly
+            let mut input = String::new();
+            match stdin.read_line(&mut input) {
+                Ok(_) => input,
+                Err(e) => {
+                    eprintln!("Error reading input: {}", e);
+                    String::from("should never happen\n")
+                }
             }
         } else {
-            // Fallback for interactive (TTY) sessions: keep previous behavior
-            String::from("dummy\n")
+            // Non-interactive mode - use buffered reading
+            let mut reader = stdin.lock();
+            let mut input = String::new();
+            match reader.read_line(&mut input) {
+                Ok(_) => input,
+                Err(e) => {
+                    eprintln!("Error reading input: {}", e);
+                    String::from("should really never happen\n")
+                }
+            }
         };
 
-        let _ = fs::write(&path, value);
+        if let Err(e) = fs::write(&path, value) {
+            eprintln!("Error writing prompt to file: {}", e);
+        }
     }
 }
 

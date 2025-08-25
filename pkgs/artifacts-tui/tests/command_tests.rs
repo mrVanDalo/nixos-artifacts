@@ -1,9 +1,13 @@
-use insta_cmd::{Spawn, SpawnExt, assert_cmd_snapshot, get_cargo_bin, write_stdin};
+use insta_cmd::{Spawn, SpawnExt, StdinCommand, assert_cmd_snapshot, get_cargo_bin};
 use std::path::PathBuf;
 use std::process::Command;
 
 fn cli() -> Command {
     Command::new(get_cargo_bin("artifacts-cli"))
+}
+
+fn sdtin_cli(stdin: &str) -> StdinCommand {
+    StdinCommand::new(get_cargo_bin("artifacts-cli"), stdin)
 }
 
 fn project_root() -> PathBuf {
@@ -22,14 +26,15 @@ fn scenario_simple() {
     let _ = std::fs::remove_dir_all(&fixed_tmp);
     std::fs::create_dir_all(&fixed_tmp).unwrap();
 
-    let mut cmd = cli();
+    let mut cmd = sdtin_cli("one\ntwo\n");
 
     cmd.env("TMPDIR", &fixed_tmp)
         .env("ARTIFACTS_TUI_TEST_FIXED_TMP", "1")
         .arg("generate")
         .arg(backend)
         .arg(make)
-        .pass_stdin("test");
+        .pass_stdin("one")
+        .pass_stdin("two");
 
     assert_cmd_snapshot!(cmd);
 }
