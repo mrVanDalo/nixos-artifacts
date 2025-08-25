@@ -1,4 +1,4 @@
-use insta_cmd::{assert_cmd_snapshot, get_cargo_bin};
+use insta_cmd::{Spawn, SpawnExt, assert_cmd_snapshot, get_cargo_bin, write_stdin};
 use std::path::PathBuf;
 use std::process::Command;
 
@@ -23,11 +23,13 @@ fn scenario_simple() {
     std::fs::create_dir_all(&fixed_tmp).unwrap();
 
     let mut cmd = cli();
+
     cmd.env("TMPDIR", &fixed_tmp)
         .env("ARTIFACTS_TUI_TEST_FIXED_TMP", "1")
         .arg("generate")
         .arg(backend)
-        .arg(make);
+        .arg(make)
+        .pass_stdin("test");
 
     assert_cmd_snapshot!(cmd);
 }

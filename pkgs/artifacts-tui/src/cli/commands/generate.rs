@@ -235,7 +235,8 @@ fn run_generator(artifact: &ArtifactDef, make_base: &Path, prompts: &Path, out: 
 
         // Prefer running the generator under a nix shell to ensure bubblewrap is available.
         // Fallback to direct bwrap if available, then to plain sh.
-        let mut status_res: Result<std::process::ExitStatus, std::io::Error> = Err(std::io::Error::from(std::io::ErrorKind::NotFound));
+        let mut status_res: Result<std::process::ExitStatus, std::io::Error> =
+            Err(std::io::Error::from(std::io::ErrorKind::NotFound));
 
         // 1) Try nix shell: nix shell nixpkgs#bash nixpkgs#bubblewrap -c bwrap ... -- /bin/sh gen_abs
         if let Ok(nix_path) = which::which("nix") {
@@ -245,21 +246,35 @@ fn run_generator(artifact: &ArtifactDef, make_base: &Path, prompts: &Path, out: 
                 .arg("nixpkgs#bubblewrap")
                 .arg("-c")
                 .arg("bwrap")
-                .arg("--ro-bind").arg("/nix/store").arg("/nix/store")
-                .arg("--tmpfs").arg("/usr/lib/systemd")
-                .arg("--dev").arg("/dev")
-                .arg("--bind").arg(prompts).arg(prompts)
-                .arg("--bind").arg(out).arg(out);
+                .arg("--ro-bind")
+                .arg("/nix/store")
+                .arg("/nix/store")
+                .arg("--tmpfs")
+                .arg("/usr/lib/systemd")
+                .arg("--dev")
+                .arg("/dev")
+                .arg("--bind")
+                .arg(prompts)
+                .arg(prompts)
+                .arg("--bind")
+                .arg(out)
+                .arg(out);
             if let Some(gen_dir) = gen_abs.parent() {
                 cmd.arg("--ro-bind").arg(gen_dir).arg(gen_dir);
             }
-            if Path::new("/bin").exists() { cmd.arg("--ro-bind").arg("/bin").arg("/bin"); }
-            if Path::new("/usr/bin").exists() { cmd.arg("--ro-bind").arg("/usr/bin").arg("/usr/bin"); }
+            if Path::new("/bin").exists() {
+                cmd.arg("--ro-bind").arg("/bin").arg("/bin");
+            }
+            if Path::new("/usr/bin").exists() {
+                cmd.arg("--ro-bind").arg("/usr/bin").arg("/usr/bin");
+            }
             cmd.arg("--unshare-all")
                 .arg("--unshare-user")
-                .arg("--uid").arg("1000")
+                .arg("--uid")
+                .arg("1000")
                 .arg("--")
-                .arg("/bin/sh").arg(&gen_abs);
+                .arg("/bin/sh")
+                .arg(&gen_abs);
             cmd.env("prompt", prompts);
             cmd.env("out", out);
             status_res = cmd.status();
@@ -270,13 +285,19 @@ fn run_generator(artifact: &ArtifactDef, make_base: &Path, prompts: &Path, out: 
             if let Ok(bwrap_path) = which::which("bwrap") {
                 let mut cmd = std::process::Command::new(bwrap_path);
                 cmd.arg("--ro-bind").arg("/nix/store").arg("/nix/store");
-                if Path::new("/bin").exists() { cmd.arg("--ro-bind").arg("/bin").arg("/bin"); }
-                if Path::new("/usr/bin").exists() { cmd.arg("--ro-bind").arg("/usr/bin").arg("/usr/bin"); }
+                if Path::new("/bin").exists() {
+                    cmd.arg("--ro-bind").arg("/bin").arg("/bin");
+                }
+                if Path::new("/usr/bin").exists() {
+                    cmd.arg("--ro-bind").arg("/usr/bin").arg("/usr/bin");
+                }
                 cmd.arg("--tmpfs").arg("/usr/lib/systemd");
                 cmd.arg("--dev").arg("/dev");
                 cmd.arg("--bind").arg(prompts).arg(prompts);
                 cmd.arg("--bind").arg(out).arg(out);
-                if let Some(gen_dir) = gen_abs.parent() { cmd.arg("--ro-bind").arg(gen_dir).arg(gen_dir); }
+                if let Some(gen_dir) = gen_abs.parent() {
+                    cmd.arg("--ro-bind").arg(gen_dir).arg(gen_dir);
+                }
                 cmd.arg("--unshare-all");
                 cmd.arg("--unshare-user");
                 cmd.arg("--uid").arg("1000");
@@ -342,17 +363,39 @@ fn run_serialize(
 }
 
 fn ensure_prompt_files(artifact: &ArtifactDef, prompts_dir: &Path) {
+    use std::io::{self, BufRead, IsTerminal};
+
     if artifact.prompts.is_empty() {
         return;
     }
+
     for p in &artifact.prompts {
         let path = prompts_dir.join(&p.name);
-        // If a value is already present, do not overwrite it
-        if path.exists() {
-            continue;
-        }
-        // Provide a simple default value; tests don't depend on actual content
-        let _ = fs::write(&path, "dummy\n");
+
+        println!(
+            "{}\nenter prompt {}",
+            p.description
+                .as_ref()
+                .map(|d| format!(" ({})", d))
+                .unwrap_or_default(),
+            p.name,
+        );
+
+        let stdin = io::stdin();
+        // If not a TTY, prepare a line iterator
+        let mut lines = Some(stdin.lock().lines());
+
+        let value = if let Some(ref mut it) = lines {
+            match it.next() {
+                Some(Ok(line)) => format!("{}\n", line),
+                _ => String::from("\n"), // empty line if no input provided
+            }
+        } else {
+            // Fallback for interactive (TTY) sessions: keep previous behavior
+            String::from("dummy\n")
+        };
+
+        let _ = fs::write(&path, value);
     }
 }
 
@@ -369,7 +412,7 @@ fn process_plan(
         println!("[generate] machine: {}", machine);
         for artifact in artifacts {
             println!("  - artifact: {}", artifact.name);
-            print_prompts(&artifact);
+            // Do not print prompts to stdout; inputs are read from stdin and stored in $prompt
             print_files(&artifact, make_base);
 
             // First, check if we can skip generation/serialization
