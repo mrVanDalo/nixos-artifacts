@@ -33,6 +33,6 @@ enter prompt secret2:
 ----- stderr -----
 /bin/sh: /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/generator_missing/./not_there_test_generator.sh: No such file or directory
 
-thread 'main' panicked at src/cli/commands/generate.rs:305:21:
+thread 'main' panicked at src/cli/commands/generate.rs:306:21:
 generator failed inside nix-shell with exit status: exit status: 127
 note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
