@@ -16,8 +16,13 @@
       ],
       "prompts": [
         {
-          "name": "secret",
-          "description": "Output directory path",
+          "name": "secret1",
+          "description": "secret number 1",
+          "type": "line"
+        },
+        {
+          "name": "secret2",
+          "description": "secret number 2",
           "type": "line"
         }
       ],
