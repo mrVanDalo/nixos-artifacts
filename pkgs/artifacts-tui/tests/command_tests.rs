@@ -39,6 +39,31 @@ fn scenario_simple() {
     assert_cmd_snapshot!(cmd);
 }
 
+#[test]
+fn generator_missing_scenario() {
+    let root = project_root();
+    let backend = root.join("examples/generator_missing/backend.toml");
+    let make = root.join("examples/generator_missing/make.json");
+
+    // Stabilize temp directory paths for deterministic snapshots
+    let fixed_tmp = PathBuf::from("/tmp/artifacts-tui-ci");
+    let _ = std::fs::remove_dir_all(&fixed_tmp);
+    std::fs::create_dir_all(&fixed_tmp).unwrap();
+
+    let mut cmd = sdtin_cli("one\ntwo\n");
+
+    cmd.env("TMPDIR", &fixed_tmp)
+        .env("ARTIFACTS_TUI_TEST_FIXED_TMP", "1")
+        .arg("generate")
+        .arg(backend)
+        .arg(make)
+        .pass_stdin("one")
+        .pass_stdin("two");
+
+    assert_cmd_snapshot!(cmd);
+    // todo : test if temp folder still exists
+}
+
 fn generator_failes_scenario() {
     let root = project_root();
     let backend = root.join("examples/generator_failes/backend.toml");

@@ -292,7 +292,8 @@ fn run_generator(artifact: &ArtifactDef, make_base: &Path, prompts: &Path, out: 
         );
 
         let mut generator_command = std::process::Command::new(nix_shell);
-        generator_command.arg("-p")
+        generator_command
+            .arg("-p")
             .arg("bash")
             .arg("bubblewrap")
             .arg("--run")
