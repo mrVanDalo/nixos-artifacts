@@ -1,11 +1,12 @@
 use crate::config::backend::BackendConfig;
-use crate::config::make::ArtifactDef;
+use crate::config::make::{ArtifactDef, PromptDef};
 use anyhow::{Context, Result, bail};
 use serde_json::from_str as json_from_str;
 use std::collections::HashMap;
-use std::fs;
+use std::io::{BufRead, IsTerminal};
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
+use std::{fs, io};
 
 fn resolve_path(base_dir: &Path, relative_path: &str) -> PathBuf {
     let path = Path::new(relative_path);
@@ -363,52 +364,49 @@ fn run_serialize(
 }
 
 fn ensure_prompt_files(artifact: &ArtifactDef, prompts_dir: &Path) {
-    use std::io::{self, BufRead, IsTerminal};
-
     if artifact.prompts.is_empty() {
         return;
     }
 
-    for p in &artifact.prompts {
-        let path = prompts_dir.join(&p.name);
-
-        println!(
-            "{}\nenter prompt {}",
-            p.description
-                .as_ref()
-                .map(|d| format!(" ({})", d))
-                .unwrap_or_default(),
-            p.name,
-        );
-
-        let stdin = io::stdin();
-        let value = if stdin.is_terminal() {
-            // Interactive mode - read line directly
-            let mut input = String::new();
-            match stdin.read_line(&mut input) {
-                Ok(_) => input,
-                Err(e) => {
-                    eprintln!("Error reading input: {}", e);
-                    String::from("should never happen\n")
-                }
-            }
-        } else {
-            // Non-interactive mode - use buffered reading
-            let mut reader = stdin.lock();
-            let mut input = String::new();
-            match reader.read_line(&mut input) {
-                Ok(_) => input,
-                Err(e) => {
-                    eprintln!("Error reading input: {}", e);
-                    String::from("should really never happen\n")
-                }
-            }
-        };
-
-        if let Err(e) = fs::write(&path, value) {
+    for prompt_element in &artifact.prompts {
+        let path = prompts_dir.join(&prompt_element.name);
+        let prompt_value = read_prompt(prompt_element);
+        if let Err(e) = fs::write(&path, prompt_value) {
             eprintln!("Error writing prompt to file: {}", e);
         }
     }
+}
+
+fn read_prompt(prompt_element: &PromptDef) -> String {
+    if let Some(description) = &prompt_element.description {
+        println!("{}", description);
+    }
+    println!("enter prompt {}: ", prompt_element.name);
+
+    let stdin = io::stdin();
+    let value = if stdin.is_terminal() {
+        // Interactive mode - read line directly
+        let mut input = String::new();
+        match stdin.read_line(&mut input) {
+            Ok(_) => input,
+            Err(e) => {
+                eprintln!("Error reading input: {}", e);
+                String::from("should never happen\n")
+            }
+        }
+    } else {
+        // Non-interactive mode - use buffered reading
+        let mut reader = stdin.lock();
+        let mut input = String::new();
+        match reader.read_line(&mut input) {
+            Ok(_) => input,
+            Err(e) => {
+                eprintln!("Error reading input: {}", e);
+                String::from("should really never happen\n")
+            }
+        }
+    };
+    value
 }
 
 fn process_plan(
