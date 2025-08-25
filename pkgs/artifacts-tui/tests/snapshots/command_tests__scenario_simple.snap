@@ -7,8 +7,8 @@ info:
     - /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/scenario_simple/backend.toml
     - /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/scenario_simple/make.json
   env:
-    ARTIFACTS_TUI_TEST_FIXED_TMP: "1"
     TMPDIR: /tmp/artifacts-tui-ci
+    ARTIFACTS_TUI_TEST_FIXED_TMP: "1"
 ---
 success: true
 exit_code: 0
@@ -26,22 +26,8 @@ exit_code: 0
       - simple-secrets => /run/secrets/simple-secrets owner=deployer group=deployer
     running check_serialization: env inputs="/tmp/artifacts-tui-ci/artifacts-tui-test-test_artifact-inputs" machine="machine-name" artifact="test-artifact" /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/scenario_simple/test_check.sh
     check_serialization: failed with status exit status: 1 -> continuing with generation
-    would run generator: env prompt="/tmp/artifacts-tui-ci/artifacts-tui-test/prompts" out="/tmp/artifacts-tui-ci/artifacts-tui-test/out" /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/scenario_simple/test_generator.sh
-
-    generator script path: /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/scenario_simple/test_generator.sh
-    generator script content:
-#!/usr/bin/env bash
-
-cat $prompt/secret > $out/very-simple-secrets
-cat $prompt/secret > $out/simple-secrets
-
-    would run serialize: env out="/tmp/artifacts-tui-ci/artifacts-tui-test/out" machine="machine-name" artifact="test-artifact" /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/scenario_simple/test_serialize.sh
-
-    serialize script path: /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/scenario_simple/test_serialize.sh
-    serialize script content:
-#!/usr/bin/env bash
-
-echo "$out"
-ls "$out"
+/tmp/artifacts-tui-ci/artifacts-tui-test/out
+simple-secrets
+very-simple-secrets
 
 ----- stderr -----
