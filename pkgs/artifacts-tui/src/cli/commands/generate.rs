@@ -33,6 +33,23 @@ fn read_make_config(make_json: &Path) -> Result<(HashMap<String, Vec<ArtifactDef
     Ok((make_map, make_base))
 }
 
+struct CleanupGuard {
+    base: PathBuf,
+}
+
+impl CleanupGuard {
+    fn new(base: PathBuf) -> Self {
+        Self { base }
+    }
+}
+
+impl Drop for CleanupGuard {
+    fn drop(&mut self) {
+        // Best-effort cleanup; ignore errors so Drop never panics
+        let _ = fs::remove_dir_all(&self.base);
+    }
+}
+
 fn prepare_temp_dirs() -> Result<(PathBuf, PathBuf, PathBuf)> {
     // In tests we want deterministic paths to produce stable snapshots.
     let base = if std::env::var("ARTIFACTS_TUI_TEST_FIXED_TMP").is_ok() {
@@ -306,6 +323,8 @@ pub fn run(backend_toml: &Path, make_json: &Path) -> Result<()> {
 
     // Prepare temp dirs used by scripts; we still only print the plan and do not execute.
     let (base, prompts, out) = prepare_temp_dirs()?;
+    // Install a cleanup guard that will remove the base directory (and its contents)
+    let _cleanup = CleanupGuard::new(base.clone());
 
     println!("[generate] backend: {}", backend_toml.display());
     println!("[generate] make: {}", make_json.display());
@@ -323,15 +342,11 @@ pub fn run(backend_toml: &Path, make_json: &Path) -> Result<()> {
         backend_toml,
     );
 
-    // For now, just verify directories exist and then clean up
+    // For now, just verify directories exist; guard ensures cleanup even on error
     if !prompts.is_dir() || !out.is_dir() {
         bail!("failed to prepare temporary directories");
     }
 
-    fs::remove_dir_all(&out).with_context(|| format!("removing temp base {}", out.display()))?;
-    fs::remove_dir_all(&prompts)
-        .with_context(|| format!("removing temp base {}", prompts.display()))?;
-    fs::remove_dir_all(&base).with_context(|| format!("removing temp base {}", base.display()))?;
-
+    // Explicit cleanup is no longer required; handled by guard Drop
     Ok(())
 }

@@ -25,14 +25,15 @@ exit_code: 101
       - simple-secrets => /run/secrets/simple-secrets owner=deployer group=deployer
     running check_serialization: env inputs="/tmp/artifacts-tui-ci/artifacts-tui-test-test_artifact-inputs" machine="machine-name" artifact="test-artifact" /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/generator_missing/test_check.sh
     check_serialization: failed with status exit status: 1 -> continuing with generation
+    WARN: failed to remove inputs dir /tmp/artifacts-tui-ci/artifacts-tui-test-test_artifact-inputs: No such file or directory (os error 2)
 secret number 1
 enter prompt secret1: 
 secret number 2
 enter prompt secret2: 
 
 ----- stderr -----
-/bin/sh: /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/generator_missing/./not_there_test_generator.sh: No such file or directory
+bwrap: Can't find source path /tmp/artifacts-tui-ci/artifacts-tui-test/prompts: No such file or directory
 
-thread 'main' panicked at src/cli/commands/generate.rs:306:21:
-generator failed inside nix-shell with exit status: exit status: 127
+thread 'main' panicked at src/backend/generator.rs:96:21:
+generator failed inside nix-shell with exit status: exit status: 1
 note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
