@@ -1,5 +1,6 @@
 ---
 source: tests/command_tests.rs
+assertion_line: 109
 info:
   program: artifacts-cli
   args:
@@ -12,7 +13,7 @@ info:
   stdin: "one\ntwo\n"
 ---
 success: false
-exit_code: 101
+exit_code: 1
 ----- stdout -----
 [generate] machine: machine-name
   - artifact: test-artifact
@@ -28,7 +29,4 @@ enter prompt secret2:
 
 ----- stderr -----
 /bin/sh: /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/generator_missing/./not_there_test_generator.sh: No such file or directory
-
-thread 'main' panicked at src/backend/generator.rs:94:21:
-generator failed inside nix-shell with exit status: exit status: 127
-note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+error: running generator script: generator failed inside nix-shell with exit status: exit status: 127

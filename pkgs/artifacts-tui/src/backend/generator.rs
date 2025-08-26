@@ -1,5 +1,6 @@
 use crate::backend::resolve_path;
 use crate::config::make::ArtifactDef;
+use anyhow::{Context, Result, bail};
 use std::fs;
 use std::path::Path;
 
@@ -17,15 +18,15 @@ impl GeneratorManger {
         make_base: &Path,
         prompts: &Path,
         out: &Path,
-    ) {
+    ) -> Result<()> {
         let generator_script = artifact.generator.as_ref();
         let generator_script_path = resolve_path(make_base, generator_script);
         let generator_script_absolut_path = fs::canonicalize(&generator_script_path)
             .unwrap_or_else(|_| generator_script_path.clone());
 
-        // Only use nix-shell. If it fails, crash the program.
+        // Only use nix-shell. If it fails, return an error to stop the program gracefully.
         let nix_shell = which::which("nix-shell")
-            .expect("nix-shell is required to run the generator but was not found in PATH");
+            .context("nix-shell is required to run the generator but was not found in PATH")?;
 
         // Build the bwrap command as a single string for nix-shell --run
         // Start with the always-present arguments using vec![] to appease clippy
@@ -93,15 +94,16 @@ impl GeneratorManger {
         match generator_command.status() {
             Ok(status) => {
                 if !status.success() {
-                    panic!(
+                    bail!(
                         "generator failed inside nix-shell with exit status: {}",
                         status
                     );
                 }
             }
             Err(e) => {
-                panic!("failed to start generator in nix-shell: {}", e);
+                return Err(e).context("failed to start generator in nix-shell");
             }
         }
+        Ok(())
     }
 }

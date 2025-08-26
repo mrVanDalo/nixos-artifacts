@@ -278,7 +278,7 @@ fn process_plan(
     backend_cfg: &BackendConfig,
     backend_base: &Path,
     backend_toml: &Path,
-) {
+) -> Result<()> {
     let prompt_manager = PromptManager::new();
     let generator_manager = crate::backend::generator::GeneratorManger::new();
 
@@ -325,7 +325,12 @@ fn process_plan(
                 eprintln!("Error writing prompt files: {}", e);
             }
 
-            generator_manager.run_generator_script(&artifact, make_base, &prompts, &out);
+            if let Err(e) =
+                generator_manager.run_generator_script(&artifact, make_base, &prompts, &out)
+            {
+                // Stop the program with an error if the generator (nix-shell) fails
+                return Err(e).context("running generator script");
+            }
 
             run_serialize(
                 &artifact,
@@ -338,6 +343,7 @@ fn process_plan(
             // _cleanup guard drops here and removes the per-artifact temp dir
         }
     }
+    Ok(())
 }
 
 /// Generate plan: read make.json and backend config and print scripts to run.
@@ -355,7 +361,7 @@ pub fn run(backend_toml: &Path, make_json: &Path) -> Result<()> {
         &backend_cfg,
         &backend_base,
         backend_toml,
-    );
+    )?;
 
     Ok(())
 }
