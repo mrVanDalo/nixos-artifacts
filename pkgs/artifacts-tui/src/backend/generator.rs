@@ -28,21 +28,23 @@ impl GeneratorManger {
             .expect("nix-shell is required to run the generator but was not found in PATH");
 
         // Build the bwrap command as a single string for nix-shell --run
-        let mut arguments: Vec<String> = Vec::new();
-        arguments.push("bwrap".to_string());
-        arguments.push("--ro-bind".to_string());
-        arguments.push("/nix/store".to_string());
-        arguments.push("/nix/store".to_string());
-        arguments.push("--tmpfs".to_string());
-        arguments.push("/usr/lib/systemd".to_string());
-        arguments.push("--dev".to_string());
-        arguments.push("/dev".to_string());
-        arguments.push("--bind".to_string());
-        arguments.push(prompts.display().to_string());
-        arguments.push(prompts.display().to_string());
-        arguments.push("--bind".to_string());
-        arguments.push(out.display().to_string());
-        arguments.push(out.display().to_string());
+        // Start with the always-present arguments using vec![] to appease clippy
+        let mut arguments: Vec<String> = vec![
+            "bwrap".to_string(),
+            "--ro-bind".to_string(),
+            "/nix/store".to_string(),
+            "/nix/store".to_string(),
+            "--tmpfs".to_string(),
+            "/usr/lib/systemd".to_string(),
+            "--dev".to_string(),
+            "/dev".to_string(),
+            "--bind".to_string(),
+            prompts.display().to_string(),
+            prompts.display().to_string(),
+            "--bind".to_string(),
+            out.display().to_string(),
+            out.display().to_string(),
+        ];
         if let Some(gen_dir) = generator_script_absolut_path.parent() {
             arguments.push("--ro-bind".to_string());
             arguments.push(gen_dir.display().to_string());
