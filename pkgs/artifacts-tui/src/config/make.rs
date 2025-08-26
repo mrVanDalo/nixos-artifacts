@@ -18,13 +18,20 @@ pub struct PromptDef {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ArtifactDef {
+    /// artifact name
     pub name: String,
+    /// is artifact shared across machines
+    /// (not implemented yet)
     pub shared: Option<bool>,
+    /// files to be created
     #[serde(default)]
     pub files: Vec<FileDef>,
+    /// prompts to be asked
     #[serde(default)]
     pub prompts: Vec<PromptDef>,
-    pub generator: Option<String>,
+    /// generator script to be run to generate secrets
+    pub generator: String,
+    /// serialization script to be run to serialize secrets
     pub serialization: Option<String>, // backend reference name
 }
 
