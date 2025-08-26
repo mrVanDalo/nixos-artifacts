@@ -1,9 +1,7 @@
 use crate::backend::resolve_path;
 use crate::config::make::ArtifactDef;
 use std::fs;
-use std::path::{Path, PathBuf};
-
-pub struct GeneratorScript {}
+use std::path::Path;
 
 // A thin wrapper around the existing run_generator function, similar in spirit to PromptManager
 pub struct GeneratorManger {}

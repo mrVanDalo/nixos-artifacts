@@ -1,5 +1,5 @@
 #[allow(deprecated)]
-use insta_cmd::{Spawn, SpawnExt, StdinCommand, assert_cmd_snapshot, get_cargo_bin};
+use insta_cmd::{SpawnExt, StdinCommand, assert_cmd_snapshot, get_cargo_bin};
 use serial_test::serial;
 use std::path::{Path, PathBuf};
 use std::process::Command;

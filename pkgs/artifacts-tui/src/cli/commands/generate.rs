@@ -2,7 +2,7 @@ use crate::backend::prompt::PromptManager;
 use crate::backend::resolve_path;
 use crate::config::backend::BackendConfig;
 use crate::config::make::ArtifactDef;
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result};
 use serde_json::from_str as json_from_str;
 use std::collections::HashMap;
 use std::fs;
