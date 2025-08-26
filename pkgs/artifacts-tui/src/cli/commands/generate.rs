@@ -1,12 +1,12 @@
+use super::prompt::PromptManager;
 use crate::config::backend::BackendConfig;
-use crate::config::make::{ArtifactDef, PromptDef};
+use crate::config::make::ArtifactDef;
 use anyhow::{Context, Result, bail};
 use serde_json::from_str as json_from_str;
 use std::collections::HashMap;
-use std::io::{BufRead, IsTerminal};
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
-use std::{fs, io};
 
 fn resolve_path(base_dir: &Path, relative_path: &str) -> PathBuf {
     let path = Path::new(relative_path);
@@ -60,26 +60,6 @@ fn prepare_temp_dirs() -> Result<(PathBuf, PathBuf, PathBuf)> {
     fs::create_dir_all(&prompts).context("creating prompts directory")?;
     fs::create_dir_all(&out).context("creating out directory")?;
     Ok((base, prompts, out))
-}
-
-fn print_prompts(artifact: &ArtifactDef) {
-    if artifact.prompts.is_empty() {
-        return;
-    }
-    println!(
-        "    prompts to collect -> {} entries",
-        artifact.prompts.len()
-    );
-    for p in &artifact.prompts {
-        println!(
-            "      - {}{}",
-            p.name,
-            p.description
-                .as_ref()
-                .map(|d| format!(" ({})", d))
-                .unwrap_or_default()
-        );
-    }
 }
 
 fn print_files(artifact: &ArtifactDef, make_base: &Path) {
@@ -354,52 +334,6 @@ fn run_serialize(
     }
 }
 
-fn ensure_prompt_files(artifact: &ArtifactDef, prompts_dir: &Path) {
-    if artifact.prompts.is_empty() {
-        return;
-    }
-
-    for prompt_element in &artifact.prompts {
-        let path = prompts_dir.join(&prompt_element.name);
-        let prompt_value = read_prompt(prompt_element);
-        if let Err(e) = fs::write(&path, prompt_value) {
-            eprintln!("Error writing prompt to file: {}", e);
-        }
-    }
-}
-
-fn read_prompt(prompt_element: &PromptDef) -> String {
-    if let Some(description) = &prompt_element.description {
-        println!("{}", description);
-    }
-    println!("enter prompt {}: ", prompt_element.name);
-
-    let stdin = io::stdin();
-    let value = if stdin.is_terminal() {
-        // Interactive mode - read line directly
-        let mut input = String::new();
-        match stdin.read_line(&mut input) {
-            Ok(_) => input,
-            Err(e) => {
-                eprintln!("Error reading input: {}", e);
-                String::from("should never happen\n")
-            }
-        }
-    } else {
-        // Non-interactive mode - use buffered reading
-        let mut reader = stdin.lock();
-        let mut input = String::new();
-        match reader.read_line(&mut input) {
-            Ok(_) => input,
-            Err(e) => {
-                eprintln!("Error reading input: {}", e);
-                String::from("should really never happen\n")
-            }
-        }
-    };
-    value
-}
-
 fn process_plan(
     mut make_map: HashMap<String, Vec<ArtifactDef>>,
     make_base: &Path,
@@ -409,6 +343,8 @@ fn process_plan(
     out: &Path,
     backend_toml: &Path,
 ) {
+    let prompt_manager = PromptManager::new();
+
     for (machine, artifacts) in make_map.drain() {
         println!("[generate] machine: {}", machine);
         for artifact in artifacts {
@@ -429,9 +365,20 @@ fn process_plan(
                 continue;
             }
 
-            // Prepare prompt files (non-interactive default content) and run generator/serializer
-            ensure_prompt_files(&artifact, prompts);
+            let prompt_results = match prompt_manager.query_prompts(&artifact) {
+                Ok(results) => results,
+                Err(e) => {
+                    eprintln!("Error could not query all prompts: {}", e);
+                    continue;
+                }
+            };
+
+            if let Err(e) = prompt_results.write_prompts_to_files(prompts) {
+                eprintln!("Error writing prompt files: {}", e);
+            }
+
             run_generator(&artifact, make_base, prompts, out);
+
             run_serialize(
                 &artifact,
                 backend_cfg,
