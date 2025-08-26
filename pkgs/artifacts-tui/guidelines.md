@@ -91,7 +91,6 @@ structure:
 - `insta_cmd` for snapshot testing
 - `anyhow` for error handling
 - `thiserror` for error handling
-- `tokio` for asynchronous I/O
 - `ratatui` for TUI components
 
 ### Testing Strategy
@@ -107,6 +106,7 @@ structure:
 - Test user interactions with the TUI
 - Use `#[cfg(test)]` modules
 - use the following pattern
+- tests should run in serial order
 
 ```
 #[cfg(test)]
@@ -120,11 +120,13 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_main_no_arguments() {
         assert_cmd_snapshot!(cli());
     }
 
     #[test]
+    #[serial]
     fn test_main_help() {
         assert_cmd_snapshot!(cli().arg("--help"));
     }

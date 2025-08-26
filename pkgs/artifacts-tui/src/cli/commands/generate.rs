@@ -326,10 +326,10 @@ pub fn run(backend_toml: &Path, make_json: &Path) -> Result<()> {
     // Install a cleanup guard that will remove the base directory (and its contents)
     let _cleanup = CleanupGuard::new(base.clone());
 
-    println!("[generate] backend: {}", backend_toml.display());
-    println!("[generate] make: {}", make_json.display());
-    println!("[generate] prompts dir: {}", prompts.display());
-    println!("[generate] out dir: {}", out.display());
+    // println!("[generate] backend: {}", backend_toml.display());
+    // println!("[generate] make: {}", make_json.display());
+    // println!("[generate] prompts dir: {}", prompts.display());
+    // println!("[generate] out dir: {}", out.display());
 
     // Iterate machines and artifacts
     process_plan(

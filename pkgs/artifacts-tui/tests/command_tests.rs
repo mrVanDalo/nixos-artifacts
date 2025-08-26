@@ -1,4 +1,5 @@
 use insta_cmd::{Spawn, SpawnExt, StdinCommand, assert_cmd_snapshot, get_cargo_bin};
+use serial_test::serial;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -63,6 +64,7 @@ impl TempTestEnv {
 }
 
 #[test]
+#[serial]
 fn scenario_simple() {
     let root = project_root();
     let backend = root.join("examples/scenario_simple/backend.toml");
@@ -86,6 +88,7 @@ fn scenario_simple() {
 }
 
 #[test]
+#[serial]
 fn generator_missing_scenario() {
     let root = project_root();
     let backend = root.join("examples/generator_missing/backend.toml");
@@ -108,6 +111,7 @@ fn generator_missing_scenario() {
 }
 
 #[test]
+#[serial]
 fn generator_failes_scenario() {
     let root = project_root();
     let backend = root.join("examples/generator_failes/backend.toml");
@@ -131,6 +135,7 @@ fn generator_failes_scenario() {
 }
 
 #[test]
+#[serial]
 fn scenario_help() {
     let mut cmd = cli();
     cmd.arg("generate").arg("--help");

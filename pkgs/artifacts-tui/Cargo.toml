@@ -14,6 +14,7 @@ which = "6"
 
 [dev-dependencies]
 insta-cmd = "0.6"
+serial_test = "3"
 
 [[bin]]
 name = "artifacts-cli"

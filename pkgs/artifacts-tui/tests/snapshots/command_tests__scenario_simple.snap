@@ -14,10 +14,6 @@ info:
 success: true
 exit_code: 0
 ----- stdout -----
-[generate] backend: /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/scenario_simple/backend.toml
-[generate] make: /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/scenario_simple/make.json
-[generate] prompts dir: /tmp/artifacts-tui-ci/artifacts-tui-test/prompts
-[generate] out dir: /tmp/artifacts-tui-ci/artifacts-tui-test/out
 [generate] machine: machine-name
   - artifact: test-artifact
     files to produce -> 2 files
