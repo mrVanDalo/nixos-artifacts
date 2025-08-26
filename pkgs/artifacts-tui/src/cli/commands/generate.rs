@@ -1,3 +1,5 @@
+use crate::backend::cleanup::CleanupGuard;
+use crate::backend::generator::GeneratorManger;
 use crate::backend::prompt::PromptManager;
 use crate::backend::resolve_path;
 use crate::config::backend::BackendConfig;
@@ -31,23 +33,6 @@ fn read_make_config(make_json: &Path) -> Result<(HashMap<String, Vec<ArtifactDef
         .map(|p| p.to_path_buf())
         .unwrap_or_else(|| PathBuf::from("."));
     Ok((make_map, make_base))
-}
-
-struct CleanupGuard {
-    base: PathBuf,
-}
-
-impl CleanupGuard {
-    fn new(base: PathBuf) -> Self {
-        Self { base }
-    }
-}
-
-impl Drop for CleanupGuard {
-    fn drop(&mut self) {
-        // Best-effort cleanup; ignore errors so Drop never panics
-        let _ = fs::remove_dir_all(&self.base);
-    }
 }
 
 fn sanitize_component(s: &str) -> String {
@@ -280,7 +265,7 @@ fn process_plan(
     backend_toml: &Path,
 ) -> Result<()> {
     let prompt_manager = PromptManager::new();
-    let generator_manager = crate::backend::generator::GeneratorManger::new();
+    let generator_manager = GeneratorManger::new();
 
     for (machine, artifacts) in make_map.drain() {
         println!("[generate] machine: {}", machine);
@@ -311,6 +296,7 @@ fn process_plan(
                         continue;
                     }
                 };
+
             let _cleanup = CleanupGuard::new(base.clone());
 
             let prompt_results = match prompt_manager.query_prompts(&artifact) {

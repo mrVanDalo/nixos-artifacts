@@ -1,5 +1,6 @@
 use std::path::{Path, PathBuf};
 
+pub mod cleanup;
 pub mod generator;
 pub mod prompt;
 
