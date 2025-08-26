@@ -77,9 +77,7 @@ fn scenario_simple() {
     env.apply_env(&mut cmd)
         .arg("generate")
         .arg(backend)
-        .arg(make)
-        .pass_stdin("one")
-        .pass_stdin("two");
+        .arg(make);
 
     // Verify and cleanup
     env.finish().expect("temp folder not empty at end of test");
@@ -101,9 +99,28 @@ fn generator_missing_scenario() {
     env.apply_env(&mut cmd)
         .arg("generate")
         .arg(backend)
-        .arg(make)
-        .pass_stdin("one")
-        .pass_stdin("two");
+        .arg(make);
+
+    // Verify and cleanup
+    env.finish().expect("temp folder not empty at end of test");
+    assert_cmd_snapshot!(cmd);
+}
+
+#[test]
+#[serial]
+fn two_artifacts_scenario() {
+    let root = project_root();
+    let backend = root.join("examples/2_artifacts/backend.toml");
+    let make = root.join("examples/2_artifacts/make.json");
+
+    let env = TempTestEnv::new();
+
+    let mut cmd = sdtin_cli("one\ntwo\n");
+
+    env.apply_env(&mut cmd)
+        .arg("generate")
+        .arg(backend)
+        .arg(make);
 
     // Verify and cleanup
     env.finish().expect("temp folder not empty at end of test");
