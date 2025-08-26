@@ -1,3 +1,4 @@
+#[allow(deprecated)]
 use insta_cmd::{Spawn, SpawnExt, StdinCommand, assert_cmd_snapshot, get_cargo_bin};
 use serial_test::serial;
 use std::path::{Path, PathBuf};
@@ -7,6 +8,7 @@ fn cli() -> Command {
     Command::new(get_cargo_bin("artifacts-cli"))
 }
 
+#[allow(deprecated)]
 fn sdtin_cli(stdin: &str) -> StdinCommand {
     StdinCommand::new(get_cargo_bin("artifacts-cli"), stdin)
 }
@@ -24,6 +26,7 @@ struct TempTestEnv {
     path: PathBuf,
 }
 
+#[allow(deprecated)]
 impl TempTestEnv {
     fn new() -> Self {
         let path = PathBuf::from("/tmp/artifacts-tui-ci");
