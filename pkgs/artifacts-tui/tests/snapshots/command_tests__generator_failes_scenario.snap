@@ -25,7 +25,7 @@ secret number 1
 enter prompt secret1: 
 secret number 2
 enter prompt secret2: 
-=== Content of /tmp/artifacts-tui-ci/artifacts-tui-test/out/simple-secrets ===
+=== Content of /tmp/artifacts-tui-ci/artifacts-tui-test-machine_name-test_artifact/out/simple-secrets ===
 two
 =========================
 

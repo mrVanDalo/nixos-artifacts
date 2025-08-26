@@ -20,7 +20,7 @@ exit_code: 0
       - first-secret => /run/secrets/first-secret
     running check_serialization: env inputs="/tmp/artifacts-tui-ci/artifacts-tui-test-artifact_one-inputs" machine="machine-name" artifact="artifact-one" /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/2_artifacts/test_check.sh
     check_serialization: failed with status exit status: 1 -> continuing with generation
-=== Content of /tmp/artifacts-tui-ci/artifacts-tui-test/out/first-secret ===
+=== Content of /tmp/artifacts-tui-ci/artifacts-tui-test-machine_name-artifact_one/out/first-secret ===
 one
 =========================
   - artifact: artifact-two
@@ -28,7 +28,7 @@ one
       - second-secret => /run/secrets/second-secret
     running check_serialization: env inputs="/tmp/artifacts-tui-ci/artifacts-tui-test-artifact_two-inputs" machine="machine-name" artifact="artifact-two" /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/2_artifacts/test_check.sh
     check_serialization: failed with status exit status: 1 -> continuing with generation
-=== Content of /tmp/artifacts-tui-ci/artifacts-tui-test/out/second-secret ===
+=== Content of /tmp/artifacts-tui-ci/artifacts-tui-test-machine_name-artifact_two/out/second-secret ===
 two
 =========================
 

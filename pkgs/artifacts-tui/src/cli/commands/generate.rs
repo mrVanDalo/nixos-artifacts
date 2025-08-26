@@ -50,20 +50,37 @@ impl Drop for CleanupGuard {
     }
 }
 
-fn prepare_temp_dirs() -> Result<(PathBuf, PathBuf, PathBuf)> {
+fn sanitize_component(s: &str) -> String {
+    s.chars()
+        .map(|c| if c.is_ascii_alphanumeric() { c } else { '_' })
+        .collect::<String>()
+}
+
+fn prepare_temp_dirs_for_artifact(
+    machine: &str,
+    artifact_name: &str,
+) -> Result<(PathBuf, PathBuf, PathBuf)> {
     // In tests we want deterministic paths to produce stable snapshots.
+    let safe_machine = sanitize_component(machine);
+    let safe_artifact = sanitize_component(artifact_name);
     let base = if std::env::var("ARTIFACTS_TUI_TEST_FIXED_TMP").is_ok() {
-        let base = std::env::temp_dir().join("artifacts-tui-test");
-        // Clean up any leftovers from previous runs
+        let base = std::env::temp_dir().join(format!(
+            "artifacts-tui-test-{}-{}",
+            safe_machine, safe_artifact
+        ));
+        // Clean up any leftovers from previous runs of this specific artifact
         let _ = fs::remove_dir_all(&base);
-        fs::create_dir_all(&base).context("creating test base directory")?;
+        fs::create_dir_all(&base).context("creating per-artifact test base directory")?;
         base
     } else {
         let now = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
             .unwrap()
             .as_millis();
-        std::env::temp_dir().join(format!("artifacts-tui-{}", now))
+        std::env::temp_dir().join(format!(
+            "artifacts-tui-{}-{}-{}",
+            now, safe_machine, safe_artifact
+        ))
     };
     let prompts = base.join("prompts");
     let out = base.join("out");
@@ -260,8 +277,6 @@ fn process_plan(
     make_base: &Path,
     backend_cfg: &BackendConfig,
     backend_base: &Path,
-    prompts: &Path,
-    out: &Path,
     backend_toml: &Path,
 ) {
     let prompt_manager = PromptManager::new();
@@ -287,6 +302,17 @@ fn process_plan(
                 continue;
             }
 
+            // Prepare per-artifact temp dirs and ensure cleanup after serialization
+            let (base, prompts, out) =
+                match prepare_temp_dirs_for_artifact(&machine, &artifact.name) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        eprintln!("Error preparing temp dirs: {}", e);
+                        continue;
+                    }
+                };
+            let _cleanup = CleanupGuard::new(base.clone());
+
             let prompt_results = match prompt_manager.query_prompts(&artifact) {
                 Ok(results) => results,
                 Err(e) => {
@@ -295,20 +321,21 @@ fn process_plan(
                 }
             };
 
-            if let Err(e) = prompt_results.write_prompts_to_files(prompts) {
+            if let Err(e) = prompt_results.write_prompts_to_files(&prompts) {
                 eprintln!("Error writing prompt files: {}", e);
             }
 
-            generator_manager.run_generator_script(&artifact, make_base, prompts, out);
+            generator_manager.run_generator_script(&artifact, make_base, &prompts, &out);
 
             run_serialize(
                 &artifact,
                 backend_cfg,
                 backend_base,
-                out,
+                &out,
                 &machine,
                 backend_toml,
             );
+            // _cleanup guard drops here and removes the per-artifact temp dir
         }
     }
 }
@@ -321,32 +348,14 @@ pub fn run(backend_toml: &Path, make_json: &Path) -> Result<()> {
     // Load make.json. The format is: { "<machine-name>": [ArtifactDef, ...], ... }
     let (make_map, make_base) = read_make_config(make_json)?;
 
-    // Prepare temp dirs used by scripts; we still only print the plan and do not execute.
-    let (base, prompts, out) = prepare_temp_dirs()?;
-    // Install a cleanup guard that will remove the base directory (and its contents)
-    let _cleanup = CleanupGuard::new(base.clone());
-
-    // println!("[generate] backend: {}", backend_toml.display());
-    // println!("[generate] make: {}", make_json.display());
-    // println!("[generate] prompts dir: {}", prompts.display());
-    // println!("[generate] out dir: {}", out.display());
-
-    // Iterate machines and artifacts
+    // Iterate machines and artifacts; per-artifact temp dirs are prepared inside process_plan
     process_plan(
         make_map,
         &make_base,
         &backend_cfg,
         &backend_base,
-        &prompts,
-        &out,
         backend_toml,
     );
 
-    // For now, just verify directories exist; guard ensures cleanup even on error
-    if !prompts.is_dir() || !out.is_dir() {
-        bail!("failed to prepare temporary directories");
-    }
-
-    // Explicit cleanup is no longer required; handled by guard Drop
     Ok(())
 }
