@@ -16,11 +16,14 @@ which = "6"
 insta-cmd = "0.6"
 serial_test = "3"
 
+# Disable test harness for binaries so `cargo test` only runs real tests in tests/
 [[bin]]
 name = "artifacts-cli"
 path = "src/bin/artifacts_cli.rs"
+test = false
 
 [[bin]]
 name = "artifacts-tui"
 path = "src/bin/artifacts_tui.rs"
+test = false
 
