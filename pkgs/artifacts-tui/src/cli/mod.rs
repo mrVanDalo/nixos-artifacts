@@ -60,6 +60,17 @@ fn init_logger() {
 pub fn run() -> Result<()> {
     init_logger();
     let cli = args::Cli::parse();
+
+    // Configure log level based on CLI argument (default is Debug from init, but override if provided)
+    let level_filter = match cli.log_level {
+        args::LogLevel::Error => LevelFilter::Error,
+        args::LogLevel::Warning => LevelFilter::Warn,
+        args::LogLevel::Info => LevelFilter::Info,
+        args::LogLevel::Debug => LevelFilter::Debug,
+        args::LogLevel::Trace => LevelFilter::Trace,
+    };
+    log::set_max_level(level_filter);
+
     match cli.command {
         args::Command::Generate { backend, make } => commands::generate::run(&backend, &make)?,
     }

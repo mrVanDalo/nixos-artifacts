@@ -3,9 +3,10 @@ source: tests/command_tests.rs
 info:
   program: artifacts-cli
   args:
+    - "--log-level=debug"
     - generate
-    - /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/generator_failes/backend.toml
-    - /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/generator_failes/make.json
+    - /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/generator_incomplete/backend.toml
+    - /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/generator_incomplete/make.json
   env:
     TMPDIR: /tmp/artifacts-tui-ci
   stdin: "one\ntwo\n"
@@ -19,7 +20,7 @@ artifact: test-artifact
 DEBUG:     files to produce -> 2 files
 DEBUG:       - very-simple-secrets => /run/secrets/very-simple-secrets
 DEBUG:       - simple-secrets => /run/secrets/simple-secrets owner=deployer group=deployer
-DEBUG:     running check_serialization: env inputs="/tmp/artifacts-tui-ci/inputs-test_artifact" machine="machine-name" artifact="test-artifact" /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/generator_failes/test_check.sh
+DEBUG:     running check_serialization: env inputs="/tmp/artifacts-tui-ci/inputs-test_artifact" machine="machine-name" artifact="test-artifact" /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/generator_incomplete/test_check.sh
 DEBUG:     check_serialization: failed with status exit status: 1 -> continuing with generation
 secret number 1
 enter prompt secret1: 

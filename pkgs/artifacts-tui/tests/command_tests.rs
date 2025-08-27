@@ -10,7 +10,13 @@ fn cli() -> Command {
 
 #[allow(deprecated)]
 fn sdtin_cli(stdin: &str) -> StdinCommand {
-    StdinCommand::new(get_cargo_bin("artifacts-cli"), stdin)
+    let mut cmd = StdinCommand::new(get_cargo_bin("artifacts-cli"), stdin);
+    // StdinCommand::env returns &mut Command; we don't need the return value here.
+    let _ = cmd
+        .env("TMPDIR", "/tmp/artifacts-tui-ci")
+        .arg("--log-level=debug");
+    // let _ = cmd.env("ARTIFACTS_TUI_TEST_FIXED_TMP", "1");
+    cmd
 }
 
 fn project_root() -> PathBuf {
@@ -33,13 +39,6 @@ impl TempTestEnv {
         let _ = std::fs::remove_dir_all(&path);
         std::fs::create_dir_all(&path).expect("failed to create fixed tmp dir");
         TempTestEnv { path }
-    }
-
-    fn apply_env<'a>(&self, cmd: &'a mut StdinCommand) -> &'a mut StdinCommand {
-        // StdinCommand::env returns &mut Command; we don't need the return value here.
-        let _ = cmd.env("TMPDIR", &self.path);
-        // let _ = cmd.env("ARTIFACTS_TUI_TEST_FIXED_TMP", "1");
-        cmd
     }
 
     fn is_empty_dir(path: &Path) -> std::io::Result<bool> {
@@ -77,10 +76,7 @@ fn scenario_simple() {
 
     let mut cmd = sdtin_cli("one\ntwo\n");
 
-    env.apply_env(&mut cmd)
-        .arg("generate")
-        .arg(backend)
-        .arg(make);
+    cmd.arg("generate").arg(backend).arg(make);
 
     // Verify and cleanup
     env.finish().expect("temp folder not empty at end of test");
@@ -99,10 +95,7 @@ fn generator_missing_scenario() {
 
     let mut cmd = sdtin_cli("one\ntwo\n");
 
-    env.apply_env(&mut cmd)
-        .arg("generate")
-        .arg(backend)
-        .arg(make);
+    cmd.arg("generate").arg(backend).arg(make);
 
     // Verify and cleanup
     env.finish().expect("temp folder not empty at end of test");
@@ -120,10 +113,7 @@ fn two_artifacts_scenario() {
 
     let mut cmd = sdtin_cli("one\ntwo\n");
 
-    env.apply_env(&mut cmd)
-        .arg("generate")
-        .arg(backend)
-        .arg(make);
+    cmd.arg("generate").arg(backend).arg(make);
 
     // Verify and cleanup
     env.finish().expect("temp folder not empty at end of test");
@@ -132,24 +122,22 @@ fn two_artifacts_scenario() {
 
 #[test]
 #[serial]
-fn generator_failes_scenario() {
+fn generator_incomplete_scenario() {
     let root = project_root();
-    let backend = root.join("examples/generator_failes/backend.toml");
-    let make = root.join("examples/generator_failes/make.json");
+    let backend = root.join("examples/generator_incomplete/backend.toml");
+    let make = root.join("examples/generator_incomplete/make.json");
 
     let env = TempTestEnv::new();
 
     let mut cmd = sdtin_cli("one\ntwo\n");
 
-    env.apply_env(&mut cmd)
-        .arg("generate")
-        .arg(backend)
-        .arg(make);
+    cmd.arg("generate").arg(backend).arg(make);
 
     // Verify and cleanup
     env.finish().expect("temp folder not empty at end of test");
 
     assert_cmd_snapshot!(cmd);
+    assert!(false, "generator output is not checked yet")
 }
 
 #[test]
@@ -163,10 +151,7 @@ fn missing_generator_scenario() {
 
     let mut cmd = sdtin_cli("");
 
-    env.apply_env(&mut cmd)
-        .arg("generate")
-        .arg(backend)
-        .arg(make);
+    cmd.arg("generate").arg(backend).arg(make);
 
     // Verify and cleanup
     env.finish().expect("temp folder not empty at end of test");

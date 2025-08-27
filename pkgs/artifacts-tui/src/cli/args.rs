@@ -1,9 +1,22 @@
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 use std::path::PathBuf;
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
+pub enum LogLevel {
+    Error,
+    Warning,
+    Info,
+    Debug,
+    Trace,
+}
 
 #[derive(Debug, Parser)]
 #[command(name = "artifacts-tui", version, about = "TUI for managing NixOS artifacts", long_about = None)]
 pub struct Cli {
+    /// Set the logging level (error, warning, info, debug, trace)
+    #[arg(long = "log-level", value_enum, default_value_t = LogLevel::Info)]
+    pub log_level: LogLevel,
+
     #[command(subcommand)]
     pub command: Command,
 }
