@@ -1,5 +1,6 @@
 use crate::config::make::{ArtifactDef, PromptDef};
 use anyhow::{Context, Result};
+use log::info;
 use std::collections::HashMap;
 use std::io::{BufRead, IsTerminal};
 use std::path::Path;
@@ -49,8 +50,8 @@ impl PromptManager {
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("No description provided for prompt"))?;
 
-        println!("{}", description);
-        println!("enter prompt {}: ", prompt_element.name);
+        info!("{}", description);
+        info!("enter prompt {}: ", prompt_element.name);
 
         let stdin = io::stdin();
         let value = if stdin.is_terminal() {

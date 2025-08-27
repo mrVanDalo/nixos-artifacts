@@ -5,6 +5,7 @@ use crate::backend::temp_dir::create_temp_dir;
 use crate::config::backend::{BackendConfig, BackendConfiguration, BackendEntry};
 use crate::config::make::ArtifactDef;
 use anyhow::{Context, Result};
+use log::{debug, error, info, trace, warn};
 use serde_json::{from_str as json_from_str, json, to_string_pretty};
 use std::collections::HashMap;
 use std::fs;
@@ -57,10 +58,10 @@ fn print_files(artifact: &ArtifactDef, make_base: &Path) {
     if artifact.files.is_empty() {
         return;
     }
-    println!("    files to produce -> {} files", artifact.files.len());
+    debug!("    files to produce -> {} files", artifact.files.len());
     for f in &artifact.files {
         let resolved = resolve_path(make_base, &f.path);
-        println!(
+        debug!(
             "      - {} => {}{}{}",
             f.name,
             resolved.display(),
@@ -111,7 +112,7 @@ fn maybe_run_check_serialization(
     let check_path = resolve_path(&backend.base_path, &backend_entry.check_serialization);
     let check_abs = fs::canonicalize(&check_path).unwrap_or_else(|_| check_path.clone());
 
-    println!(
+    debug!(
         "    running check_serialization: env inputs=\"{}\" machine=\"{}\" artifact=\"{}\" {}",
         inputs.path_buf.display(),
         machine,
@@ -127,12 +128,12 @@ fn maybe_run_check_serialization(
     {
         Ok(status) => {
             if status.success() {
-                println!(
+                debug!(
                     "    check_serialization: OK (exit 0) -> skipping generation and serialization for this artifact"
                 );
                 Ok(true)
             } else {
-                println!(
+                debug!(
                     "    check_serialization: failed with status exit status: {} -> continuing with generation",
                     status.code().unwrap_or(0)
                 );
@@ -163,7 +164,7 @@ fn run_serialize(
         .env("artifact", &artifact.name)
         .status()
         .map_err(|e| {
-            eprintln!("    ERROR running serialize: {}", e);
+            error!("    ERROR running serialize: {}", e);
         });
     Ok(())
 }
@@ -178,9 +179,10 @@ fn process_plan(
     let generator_manager = GeneratorManger::new();
 
     for (machine, artifacts) in make_map.drain() {
-        println!("[generate] machine: {}", machine);
+        info!("[generate]");
+        info!("machine: {}", machine);
         for artifact in artifacts {
-            println!("  - artifact: {}", artifact.name);
+            info!("artifact: {}", artifact.name);
             // Do not print prompts to stdout; inputs are read from stdin and stored in $prompt
             print_files(&artifact, make_file_base_path);
 
@@ -194,7 +196,7 @@ fn process_plan(
             let prompt_results = match prompt_manager.query_prompts(&artifact) {
                 Ok(results) => results,
                 Err(e) => {
-                    eprintln!("Error could not query all prompts: {}", e);
+                    error!("Error could not query all prompts: {}", e);
                     continue;
                 }
             };
@@ -202,7 +204,7 @@ fn process_plan(
             let prompt = create_temp_dir(Some(&format!("prompt-{}", artifact.name)))?;
 
             if let Err(e) = prompt_results.write_prompts_to_files(&prompt.path_buf) {
-                eprintln!("Error writing prompt files: {}", e);
+                error!("Error writing prompt files: {}", e);
             }
 
             let out = create_temp_dir(Some(&format!("out-{}", artifact.name)))?;

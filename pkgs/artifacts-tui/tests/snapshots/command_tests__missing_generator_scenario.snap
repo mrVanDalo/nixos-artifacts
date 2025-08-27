@@ -15,4 +15,4 @@ exit_code: 1
 ----- stdout -----
 
 ----- stderr -----
-error: parsing make config /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/missing_generator/make.json: missing field `generator` at line 12 column 5
+ERROR: parsing make config /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/missing_generator/make.json: missing field `generator` at line 12 column 5
