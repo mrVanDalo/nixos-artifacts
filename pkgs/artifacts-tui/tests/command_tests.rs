@@ -1,5 +1,5 @@
 #[allow(deprecated)]
-use insta_cmd::{SpawnExt, StdinCommand, assert_cmd_snapshot, get_cargo_bin};
+use insta_cmd::{StdinCommand, assert_cmd_snapshot, get_cargo_bin};
 use serial_test::serial;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -144,9 +144,29 @@ fn generator_failes_scenario() {
     env.apply_env(&mut cmd)
         .arg("generate")
         .arg(backend)
-        .arg(make)
-        .pass_stdin("one")
-        .pass_stdin("two");
+        .arg(make);
+
+    // Verify and cleanup
+    env.finish().expect("temp folder not empty at end of test");
+
+    assert_cmd_snapshot!(cmd);
+}
+
+#[test]
+#[serial]
+fn missing_generator_scenario() {
+    let root = project_root();
+    let backend = root.join("examples/missing_generator/backend.toml");
+    let make = root.join("examples/missing_generator/make.json");
+
+    let env = TempTestEnv::new();
+
+    let mut cmd = sdtin_cli("");
+
+    env.apply_env(&mut cmd)
+        .arg("generate")
+        .arg(backend)
+        .arg(make);
 
     // Verify and cleanup
     env.finish().expect("temp folder not empty at end of test");

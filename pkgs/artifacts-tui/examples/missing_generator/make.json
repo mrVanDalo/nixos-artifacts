@@ -1,0 +1,14 @@
+{
+  "machine-name": [
+    {
+      "name": "artifact",
+      "files": [
+        {
+          "name": "first-secret",
+          "path": "/run/secrets/first-secret"
+        }
+      ],
+      "serialization": "test"
+    }
+  ]
+}

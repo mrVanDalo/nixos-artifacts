@@ -5,10 +5,25 @@ use crate::backend::temp_dir::create_temp_dir;
 use crate::config::backend::BackendConfig;
 use crate::config::make::ArtifactDef;
 use anyhow::{Context, Result};
-use serde_json::from_str as json_from_str;
+use serde_json::{from_str as json_from_str, json, to_string_pretty};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
+
+/// Converts a string into a safe filename by replacing non-alphanumeric characters with underscores.
+///
+/// # Arguments
+///
+/// * `name` - The string to sanitize
+///
+/// # Returns
+///
+/// A new String containing only ASCII alphanumeric characters and underscores.
+fn sanitize_name(name: &str) -> String {
+    name.chars()
+        .map(|c| if c.is_ascii_alphanumeric() { c } else { '_' })
+        .collect()
+}
 
 fn read_backend_config(backend_toml: &Path) -> Result<(BackendConfig, PathBuf)> {
     let backend_text = fs::read_to_string(backend_toml)
@@ -79,31 +94,20 @@ fn maybe_run_check_serialization(
         return Ok(false);
     };
 
-    // Create per-artifact inputs dir and populate with JSON files
-    let safe_art = artifact
-        .name
-        .chars()
-        .map(|c| if c.is_ascii_alphanumeric() { c } else { '_' })
-        .collect::<String>();
-
-    let inputs = create_temp_dir(Some(&format!("inputs-{}", safe_art)))?;
+    let artifact_name = sanitize_name(&artifact.name);
+    let inputs = create_temp_dir(Some(&format!("inputs-{}", artifact_name)))?;
 
     let mut skip_rest = false;
 
-    for f in &artifact.files {
-        let resolved_path = resolve_path(make_base, &f.path);
-        let file_name = f
-            .name
-            .chars()
-            .map(|c| if c.is_ascii_alphanumeric() { c } else { '_' })
-            .collect::<String>();
-        let json_path = inputs.path_buf.join(format!("{}.json", file_name));
-        let obj = serde_json::json!({
+    for file in &artifact.files {
+        let file_name = sanitize_name(&file.name);
+        let resolved_path = resolve_path(make_base, &file.path);
+        let json_path = inputs.path_buf.join(file_name);
+        match to_string_pretty(&json!({
             "path": resolved_path,
-            "owner": f.owner,
-            "group": f.group,
-        });
-        match serde_json::to_string_pretty(&obj) {
+            "owner": file.owner,
+            "group": file.group,
+        })) {
             Ok(text) => {
                 if let Err(e) = fs::write(&json_path, text) {
                     println!("    WARN: failed to write {}: {}", json_path.display(), e);
