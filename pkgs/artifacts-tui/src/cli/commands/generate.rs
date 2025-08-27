@@ -1,7 +1,7 @@
 use crate::backend::generator::GeneratorManger;
 use crate::backend::prompt::PromptManager;
 use crate::backend::resolve_path;
-use crate::backend::temp_dir::TempManager;
+use crate::backend::temp_dir::create_temp_dir;
 use crate::config::backend::BackendConfig;
 use crate::config::make::ArtifactDef;
 use anyhow::{Context, Result};
@@ -86,8 +86,7 @@ fn maybe_run_check_serialization(
         .map(|c| if c.is_ascii_alphanumeric() { c } else { '_' })
         .collect::<String>();
 
-    let temp_manager = TempManager::new();
-    let inputs = temp_manager.create_temp_dir(Some(&format!("inputs-{}", safe_art)))?;
+    let inputs = create_temp_dir(Some(&format!("inputs-{}", safe_art)))?;
 
     let mut skip_rest = false;
 
@@ -203,7 +202,6 @@ fn process_plan(
 ) -> Result<()> {
     let prompt_manager = PromptManager::new();
     let generator_manager = GeneratorManger::new();
-    let temp_manager = TempManager::new();
 
     for (machine, artifacts) in make_map.drain() {
         println!("[generate] machine: {}", machine);
@@ -233,14 +231,13 @@ fn process_plan(
                 }
             };
 
-            let prompt =
-                temp_manager.create_temp_dir(Some(&format!("prompt-{}", artifact.name)))?;
+            let prompt = create_temp_dir(Some(&format!("prompt-{}", artifact.name)))?;
 
             if let Err(e) = prompt_results.write_prompts_to_files(&prompt.path_buf) {
                 eprintln!("Error writing prompt files: {}", e);
             }
 
-            let out = temp_manager.create_temp_dir(Some(&format!("out-{}", artifact.name)))?;
+            let out = create_temp_dir(Some(&format!("out-{}", artifact.name)))?;
 
             if let Err(e) = generator_manager.run_generator_script(
                 &artifact,
