@@ -1,6 +1,9 @@
+use anyhow::Context;
+use anyhow::Result;
 #[allow(deprecated)]
 use insta_cmd::{StdinCommand, assert_cmd_snapshot, get_cargo_bin};
 use serial_test::serial;
+use std::fs::remove_dir_all;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -32,11 +35,18 @@ struct TempTestEnv {
     path: PathBuf,
 }
 
+impl Drop for TempTestEnv {
+    fn drop(&mut self) {
+        // Best-effort cleanup; ignore errors so Drop never panics
+        let _ = remove_dir_all(&self.path);
+    }
+}
+
 #[allow(deprecated)]
 impl TempTestEnv {
     fn new() -> Self {
         let path = PathBuf::from("/tmp/artifacts-tui-ci");
-        let _ = std::fs::remove_dir_all(&path);
+        let _ = remove_dir_all(&path);
         std::fs::create_dir_all(&path).expect("failed to create fixed tmp dir");
         TempTestEnv { path }
     }
@@ -46,22 +56,12 @@ impl TempTestEnv {
         Ok(entries.next().is_none())
     }
 
-    /// Check emptiness, then delete directory. Returns Ok(()) if empty,
-    /// Err(msg) if not empty. In both cases the directory is removed.
-    fn finish(self) -> Result<(), String> {
-        let empty = match Self::is_empty_dir(&self.path) {
-            Ok(v) => v,
-            Err(e) => return Err(format!("failed to read tmp dir: {}", e)),
-        };
-        // Always attempt deletion
-        if let Err(e) = std::fs::remove_dir_all(&self.path) {
-            return Err(format!("failed to remove tmp dir: {}", e));
-        }
-        if empty {
-            Ok(())
-        } else {
-            Err("temporary directory not empty before cleanup".to_string())
-        }
+    fn finish(self) -> Result<()> {
+        Self::is_empty_dir(&self.path)
+            .context("failed to read tmp dir")?
+            .then_some(())
+            .ok_or_else(|| anyhow::anyhow!("temporary directory not empty before cleanup"))?;
+        Ok(())
     }
 }
 

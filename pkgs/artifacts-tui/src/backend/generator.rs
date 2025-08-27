@@ -12,6 +12,7 @@ impl GeneratorManger {
         Self {}
     }
 
+    // todo: get rid of nix-shell and use bwrap directly (brwap must be part of the nix-package)
     pub fn run_generator_script(
         &self,
         artifact: &ArtifactDef,
@@ -91,19 +92,17 @@ impl GeneratorManger {
             .arg(&nix_shell_run_command);
 
         // Do not pass 'out' or 'prompt' here to avoid being overridden by nix-shell internals
-        match generator_command.status() {
-            Ok(status) => {
-                if !status.success() {
-                    bail!(
-                        "generator failed inside nix-shell with exit status: {}",
-                        status
-                    );
-                }
-            }
-            Err(e) => {
-                return Err(e).context("failed to start generator in nix-shell");
-            }
+        let status = generator_command
+            .status()
+            .context("failed to start generator in nix-shell")?;
+
+        if !status.success() {
+            bail!(
+                "generator failed inside nix-shell with exit status: {}",
+                status
+            );
         }
+
         Ok(())
     }
 }

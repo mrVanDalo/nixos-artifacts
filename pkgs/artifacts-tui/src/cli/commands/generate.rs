@@ -5,7 +5,7 @@ use crate::backend::temp_dir::create_temp_dir;
 use crate::config::backend::BackendConfiguration;
 use crate::config::make::{ArtifactDef, MakeConfiguration};
 use anyhow::{Context, Result};
-use log::{debug, error, info};
+use log::{debug, info};
 use serde_json::{json, to_string_pretty};
 use std::collections::HashSet;
 use std::fs;
@@ -71,13 +71,7 @@ fn run_check_serialization(
             "group": file.group,
         }))?;
 
-        if let Err(e) = fs::write(&json_path, text) {
-            return Err(anyhow::anyhow!(
-                "failed to write {}: {}",
-                json_path.display(),
-                e
-            ));
-        }
+        fs::write(&json_path, text).with_context(|| format!("writing {}", json_path.display()))?;
     }
 
     // Run check_serialization
@@ -92,27 +86,24 @@ fn run_check_serialization(
         check_abs.display()
     );
 
-    match std::process::Command::new(&check_abs)
+    let status = std::process::Command::new(&check_abs)
         .env("inputs", &inputs.path_buf)
         .env("machine", machine)
         .env("artifact", &artifact.name)
         .status()
-    {
-        Ok(status) => {
-            if status.success() {
-                debug!(
-                    "    check_serialization: OK (exit 0) -> skipping generation and serialization for this artifact"
-                );
-                Ok(true)
-            } else {
-                debug!(
-                    "    check_serialization: failed with status exit status: {} -> continuing with generation",
-                    status.code().unwrap_or(0)
-                );
-                Ok(false)
-            }
-        }
-        Err(error) => Err(anyhow::anyhow!("running check_serialization: {}", error)),
+        .with_context(|| format!("running check_serialization {}", check_abs.display()))?;
+
+    if status.success() {
+        debug!(
+            "    check_serialization: OK (exit 0) -> skipping generation and serialization for this artifact"
+        );
+        Ok(true)
+    } else {
+        debug!(
+            "    check_serialization: failed with status exit status: {} -> continuing with generation",
+            status.code().unwrap_or(0)
+        );
+        Ok(false)
     }
 }
 
@@ -163,15 +154,13 @@ fn run_serialize(
     let entry = backend.get_backend(backend_name)?;
     let ser_path = resolve_path(&backend.base_path, &entry.serialize);
     let ser_abs = fs::canonicalize(&ser_path).unwrap_or_else(|_| ser_path.clone());
-    let _ = std::process::Command::new("sh")
+    std::process::Command::new("sh")
         .arg(&ser_abs)
         .env("out", out)
         .env("machine", machine_name)
         .env("artifact", &artifact.name)
         .status()
-        .map_err(|e| {
-            error!("    running serialize: {}", e);
-        });
+        .with_context(|| format!("running serialize {}", ser_abs.display()))?;
     Ok(())
 }
 
@@ -197,30 +186,24 @@ pub fn run(backend_toml: &Path, make_json: &Path) -> Result<()> {
                 continue;
             }
 
-            let prompt_results = match prompt_manager.query_prompts(&artifact) {
-                Ok(results) => results,
-                Err(e) => {
-                    error!("Error could not query all prompts: {}", e);
-                    continue;
-                }
-            };
-
+            let prompt_results = prompt_manager
+                .query_prompts(&artifact)
+                .context("could not query all prompts")?;
             let prompt = create_temp_dir(Some(&format!("prompt-{}", artifact.name)))?;
-            if let Err(e) = prompt_results.write_prompts_to_files(&prompt.path_buf) {
-                error!("Error writing prompt files: {}", e);
-            }
+            prompt_results
+                .write_prompts_to_files(&prompt.path_buf)
+                .context("writing prompts to files")?;
 
             let out = create_temp_dir(Some(&format!("out-{}", artifact.name)))?;
 
-            if let Err(e) = generator_manager.run_generator_script(
-                &artifact,
-                &make.make_base.clone(),
-                &prompt.path_buf,
-                &out.path_buf,
-            ) {
-                // Stop the program with an error if the generator (nix-shell) fails
-                return Err(e).context("running generator script");
-            }
+            generator_manager
+                .run_generator_script(
+                    &artifact,
+                    &make.make_base.clone(),
+                    &prompt.path_buf,
+                    &out.path_buf,
+                )
+                .context("running generator script")?;
 
             verify_generated_files(artifact, &out.path_buf)?;
 

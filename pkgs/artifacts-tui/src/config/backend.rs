@@ -42,13 +42,13 @@ impl BackendConfiguration {
     }
 
     pub(crate) fn get_backend(&self, backend_name: &String) -> Result<BackendEntry> {
-        match self.config.get(backend_name) {
-            Some(entry) => Ok(entry.clone()),
-            None => Err(anyhow::anyhow!(
+        let backend = self.config.get(backend_name).with_context(|| {
+            format!(
                 "backend '{}' not found in {}",
                 backend_name,
                 self.backend_toml.display()
-            )),
-        }
+            )
+        })?;
+        Ok(backend.clone())
     }
 }
