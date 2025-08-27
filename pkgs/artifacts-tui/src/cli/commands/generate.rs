@@ -2,7 +2,7 @@ use crate::backend::generator::GeneratorManger;
 use crate::backend::prompt::PromptManager;
 use crate::backend::resolve_path;
 use crate::backend::temp_dir::create_temp_dir;
-use crate::config::backend::BackendConfig;
+use crate::config::backend::{BackendConfig, BackendConfiguration};
 use crate::config::make::ArtifactDef;
 use anyhow::{Context, Result};
 use serde_json::{from_str as json_from_str, json, to_string_pretty};
@@ -25,16 +25,19 @@ fn sanitize_name(name: &str) -> String {
         .collect()
 }
 
-fn read_backend_config(backend_toml: &Path) -> Result<(BackendConfig, PathBuf)> {
+fn read_backend_config(backend_toml: &Path) -> Result<BackendConfiguration> {
     let backend_text = fs::read_to_string(backend_toml)
         .with_context(|| format!("reading backend config {}", backend_toml.display()))?;
-    let backend_cfg: BackendConfig = toml::from_str(&backend_text)
+    let backend_config: BackendConfig = toml::from_str(&backend_text)
         .with_context(|| format!("parsing backend config {}", backend_toml.display()))?;
     let backend_base = backend_toml
         .parent()
         .map(|p| p.to_path_buf())
         .unwrap_or_else(|| PathBuf::from("."));
-    Ok((backend_cfg, backend_base))
+    Ok(BackendConfiguration {
+        config: backend_config,
+        base_path: backend_base,
+    })
 }
 
 fn read_make_config(make_json: &Path) -> Result<(HashMap<String, Vec<ArtifactDef>>, PathBuf)> {
@@ -75,13 +78,12 @@ fn print_files(artifact: &ArtifactDef, make_base: &Path) {
 fn maybe_run_check_serialization(
     artifact: &ArtifactDef,
     machine: &str,
-    backend_config: &BackendConfig,
-    backend_base: &Path,
+    backend: &BackendConfiguration,
     make_base: &Path,
     backend_toml: &Path,
 ) -> Result<bool> {
     let backend_name = &artifact.serialization;
-    let Some(entry) = backend_config.get(backend_name) else {
+    let Some(entry) = backend.config.get(backend_name) else {
         println!(
             "    WARN: backend '{}' not found in {}",
             backend_name,
@@ -118,7 +120,7 @@ fn maybe_run_check_serialization(
     }
 
     // Run check_serialization
-    let check_path = resolve_path(backend_base, &entry.check_serialization);
+    let check_path = resolve_path(&backend.base_path, &entry.check_serialization);
     let check_abs = fs::canonicalize(&check_path).unwrap_or_else(|_| check_path.clone());
     println!(
         "    running check_serialization: env inputs=\"{}\" machine=\"{}\" artifact=\"{}\" {}",
@@ -159,21 +161,20 @@ fn maybe_run_check_serialization(
 
 fn run_serialize(
     artifact: &ArtifactDef,
-    backend_cfg: &BackendConfig,
-    backend_base: &Path,
+    backend: &BackendConfiguration,
     out: &Path,
-    machine: &str,
+    machine_name: &str,
     backend_toml: &Path,
 ) {
     let backend_name = &artifact.serialization;
-    match backend_cfg.get(backend_name) {
+    match backend.config.get(backend_name) {
         Some(entry) => {
-            let ser_path = resolve_path(backend_base, &entry.serialize);
+            let ser_path = resolve_path(&backend.base_path, &entry.serialize);
             let ser_abs = fs::canonicalize(&ser_path).unwrap_or_else(|_| ser_path.clone());
             let _ = std::process::Command::new("sh")
                 .arg(&ser_abs)
                 .env("out", out)
-                .env("machine", machine)
+                .env("machine", machine_name)
                 .env("artifact", &artifact.name)
                 .status()
                 .map_err(|e| {
@@ -193,8 +194,7 @@ fn run_serialize(
 fn process_plan(
     mut make_map: HashMap<String, Vec<ArtifactDef>>,
     make_file_base_path: &Path,
-    backend_cfg: &BackendConfig,
-    backend_base: &Path,
+    backend: &BackendConfiguration,
     backend_toml: &Path,
 ) -> Result<()> {
     let prompt_manager = PromptManager::new();
@@ -211,8 +211,7 @@ fn process_plan(
             let skip_rest = maybe_run_check_serialization(
                 &artifact,
                 &machine,
-                backend_cfg,
-                backend_base,
+                backend,
                 make_file_base_path,
                 backend_toml,
             )?;
@@ -246,14 +245,7 @@ fn process_plan(
                 return Err(e).context("running generator script");
             }
 
-            run_serialize(
-                &artifact,
-                backend_cfg,
-                backend_base,
-                &out.path_buf,
-                &machine,
-                backend_toml,
-            );
+            run_serialize(&artifact, backend, &out.path_buf, &machine, backend_toml);
         }
     }
     Ok(())
@@ -262,19 +254,13 @@ fn process_plan(
 /// Generate plan: read make.json and backend config and print scripts to run.
 pub fn run(backend_toml: &Path, make_json: &Path) -> Result<()> {
     // Load backend config (TOML), paths relative to file location
-    let (backend_cfg, backend_base) = read_backend_config(backend_toml)?;
+    let backend = read_backend_config(backend_toml)?;
 
     // Load make.json. The format is: { "<machine-name>": [ArtifactDef, ...], ... }
     let (make_map, make_base) = read_make_config(make_json)?;
 
     // Iterate machines and artifacts; per-artifact temp dirs are prepared inside process_plan
-    process_plan(
-        make_map,
-        &make_base,
-        &backend_cfg,
-        &backend_base,
-        backend_toml,
-    )?;
+    process_plan(make_map, &make_base, &backend, backend_toml)?;
 
     Ok(())
 }
