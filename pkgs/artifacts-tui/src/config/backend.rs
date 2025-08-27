@@ -1,6 +1,7 @@
+use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct BackendSettings(pub HashMap<String, serde_json::Value>);
@@ -22,4 +23,18 @@ pub type BackendConfig = HashMap<String, BackendEntry>;
 pub struct BackendConfiguration {
     pub config: BackendConfig,
     pub base_path: PathBuf,
+    pub backend_toml: PathBuf,
+}
+
+impl BackendConfiguration {
+    pub(crate) fn get_backend(&self, backend_name: &String) -> Result<BackendEntry> {
+        match self.config.get(backend_name) {
+            Some(entry) => Ok(entry.clone()),
+            None => Err(anyhow::anyhow!(
+                "backend '{}' not found in {}",
+                backend_name,
+                self.backend_toml.display()
+            )),
+        }
+    }
 }

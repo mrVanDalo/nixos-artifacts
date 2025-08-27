@@ -2,7 +2,7 @@ use crate::backend::generator::GeneratorManger;
 use crate::backend::prompt::PromptManager;
 use crate::backend::resolve_path;
 use crate::backend::temp_dir::create_temp_dir;
-use crate::config::backend::{BackendConfig, BackendConfiguration};
+use crate::config::backend::{BackendConfig, BackendConfiguration, BackendEntry};
 use crate::config::make::ArtifactDef;
 use anyhow::{Context, Result};
 use serde_json::{from_str as json_from_str, json, to_string_pretty};
@@ -37,6 +37,7 @@ fn read_backend_config(backend_toml: &Path) -> Result<BackendConfiguration> {
     Ok(BackendConfiguration {
         config: backend_config,
         base_path: backend_base,
+        backend_toml: backend_toml.to_path_buf(),
     })
 }
 
@@ -80,48 +81,36 @@ fn maybe_run_check_serialization(
     machine: &str,
     backend: &BackendConfiguration,
     make_base: &Path,
-    backend_toml: &Path,
 ) -> Result<bool> {
     let backend_name = &artifact.serialization;
-    let Some(entry) = backend.config.get(backend_name) else {
-        println!(
-            "    WARN: backend '{}' not found in {}",
-            backend_name,
-            backend_toml.display()
-        );
-        return Ok(false);
-    };
-
+    let backend_entry = backend.get_backend(backend_name)?;
     let artifact_name = sanitize_name(&artifact.name);
     let inputs = create_temp_dir(Some(&format!("inputs-{}", artifact_name)))?;
-
-    let mut skip_rest = false;
 
     for file in &artifact.files {
         let file_name = sanitize_name(&file.name);
         let resolved_path = resolve_path(make_base, &file.path);
         let json_path = inputs.path_buf.join(file_name);
-        match to_string_pretty(&json!({
+
+        let text = to_string_pretty(&json!({
             "path": resolved_path,
             "owner": file.owner,
             "group": file.group,
-        })) {
-            Ok(text) => {
-                if let Err(e) = fs::write(&json_path, text) {
-                    println!("    WARN: failed to write {}: {}", json_path.display(), e);
-                }
-            }
-            Err(e) => println!(
-                "    WARN: failed to serialize JSON for {}: {}",
+        }))?;
+
+        if let Err(e) = fs::write(&json_path, text) {
+            return Err(anyhow::anyhow!(
+                "failed to write {}: {}",
                 json_path.display(),
                 e
-            ),
+            ));
         }
     }
 
     // Run check_serialization
-    let check_path = resolve_path(&backend.base_path, &entry.check_serialization);
+    let check_path = resolve_path(&backend.base_path, &backend_entry.check_serialization);
     let check_abs = fs::canonicalize(&check_path).unwrap_or_else(|_| check_path.clone());
+
     println!(
         "    running check_serialization: env inputs=\"{}\" machine=\"{}\" artifact=\"{}\" {}",
         inputs.path_buf.display(),
@@ -129,34 +118,32 @@ fn maybe_run_check_serialization(
         artifact.name,
         check_abs.display()
     );
-    let status = std::process::Command::new(&check_abs)
+
+    match std::process::Command::new(&check_abs)
         .env("inputs", &inputs.path_buf)
         .env("machine", machine)
         .env("artifact", &artifact.name)
-        .status();
-    match status {
-        Ok(s) => {
-            if s.success() {
+        .status()
+    {
+        Ok(status) => {
+            if status.success() {
                 println!(
-                    "    check_serialization: OK (exit 0) -> skipping generation/serialization for this artifact"
+                    "    check_serialization: OK (exit 0) -> skipping generation and serialization for this artifact"
                 );
-                skip_rest = true;
+                Ok(true)
             } else {
                 println!(
-                    "    check_serialization: failed with status {} -> continuing with generation",
-                    s
+                    "    check_serialization: failed with status exit status: {} -> continuing with generation",
+                    status.code().unwrap_or(0)
                 );
+                Ok(false)
             }
         }
-        Err(e) => {
-            println!(
-                "    ERROR running check_serialization: {} -> continuing with generation",
-                e
-            );
-        }
+        Err(error) => Err(anyhow::anyhow!(
+            "Error running check_serialization: {}",
+            error
+        )),
     }
-
-    Ok(skip_rest)
 }
 
 fn run_serialize(
@@ -164,31 +151,21 @@ fn run_serialize(
     backend: &BackendConfiguration,
     out: &Path,
     machine_name: &str,
-    backend_toml: &Path,
-) {
+) -> Result<()> {
     let backend_name = &artifact.serialization;
-    match backend.config.get(backend_name) {
-        Some(entry) => {
-            let ser_path = resolve_path(&backend.base_path, &entry.serialize);
-            let ser_abs = fs::canonicalize(&ser_path).unwrap_or_else(|_| ser_path.clone());
-            let _ = std::process::Command::new("sh")
-                .arg(&ser_abs)
-                .env("out", out)
-                .env("machine", machine_name)
-                .env("artifact", &artifact.name)
-                .status()
-                .map_err(|e| {
-                    eprintln!("    ERROR running serialize: {}", e);
-                });
-        }
-        None => {
-            println!(
-                "    WARN: backend '{}' not found in {}",
-                backend_name,
-                backend_toml.display()
-            );
-        }
-    }
+    let entry = backend.get_backend(backend_name)?;
+    let ser_path = resolve_path(&backend.base_path, &entry.serialize);
+    let ser_abs = fs::canonicalize(&ser_path).unwrap_or_else(|_| ser_path.clone());
+    let _ = std::process::Command::new("sh")
+        .arg(&ser_abs)
+        .env("out", out)
+        .env("machine", machine_name)
+        .env("artifact", &artifact.name)
+        .status()
+        .map_err(|e| {
+            eprintln!("    ERROR running serialize: {}", e);
+        });
+    Ok(())
 }
 
 fn process_plan(
@@ -208,13 +185,8 @@ fn process_plan(
             print_files(&artifact, make_file_base_path);
 
             // First, check if we can skip generation/serialization
-            let skip_rest = maybe_run_check_serialization(
-                &artifact,
-                &machine,
-                backend,
-                make_file_base_path,
-                backend_toml,
-            )?;
+            let skip_rest =
+                maybe_run_check_serialization(&artifact, &machine, backend, make_file_base_path)?;
             if skip_rest {
                 continue;
             }
@@ -245,7 +217,7 @@ fn process_plan(
                 return Err(e).context("running generator script");
             }
 
-            run_serialize(&artifact, backend, &out.path_buf, &machine, backend_toml);
+            run_serialize(&artifact, backend, &out.path_buf, &machine)?
         }
     }
     Ok(())
