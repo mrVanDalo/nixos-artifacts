@@ -1,7 +1,7 @@
-use crate::backend::cleanup::CleanupGuard;
 use crate::backend::generator::GeneratorManger;
 use crate::backend::prompt::PromptManager;
 use crate::backend::resolve_path;
+use crate::backend::temp_dir::TempManager;
 use crate::config::backend::BackendConfig;
 use crate::config::make::ArtifactDef;
 use anyhow::{Context, Result};
@@ -9,7 +9,6 @@ use serde_json::from_str as json_from_str;
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::time::SystemTime;
 
 fn read_backend_config(backend_toml: &Path) -> Result<(BackendConfig, PathBuf)> {
     let backend_text = fs::read_to_string(backend_toml)
@@ -33,45 +32,6 @@ fn read_make_config(make_json: &Path) -> Result<(HashMap<String, Vec<ArtifactDef
         .map(|p| p.to_path_buf())
         .unwrap_or_else(|| PathBuf::from("."));
     Ok((make_map, make_base))
-}
-
-fn sanitize_component(s: &str) -> String {
-    s.chars()
-        .map(|c| if c.is_ascii_alphanumeric() { c } else { '_' })
-        .collect::<String>()
-}
-
-fn prepare_temp_dirs_for_artifact(
-    machine: &str,
-    artifact_name: &str,
-) -> Result<(PathBuf, PathBuf, PathBuf)> {
-    // In tests we want deterministic paths to produce stable snapshots.
-    let safe_machine = sanitize_component(machine);
-    let safe_artifact = sanitize_component(artifact_name);
-    let base = if std::env::var("ARTIFACTS_TUI_TEST_FIXED_TMP").is_ok() {
-        let base = std::env::temp_dir().join(format!(
-            "artifacts-tui-test-{}-{}",
-            safe_machine, safe_artifact
-        ));
-        // Clean up any leftovers from previous runs of this specific artifact
-        let _ = fs::remove_dir_all(&base);
-        fs::create_dir_all(&base).context("creating per-artifact test base directory")?;
-        base
-    } else {
-        let now = SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap()
-            .as_millis();
-        std::env::temp_dir().join(format!(
-            "artifacts-tui-{}-{}-{}",
-            now, safe_machine, safe_artifact
-        ))
-    };
-    let prompts = base.join("prompts");
-    let out = base.join("out");
-    fs::create_dir_all(&prompts).context("creating prompts directory")?;
-    fs::create_dir_all(&out).context("creating out directory")?;
-    Ok((base, prompts, out))
 }
 
 fn print_files(artifact: &ArtifactDef, make_base: &Path) {
@@ -104,10 +64,10 @@ fn maybe_run_check_serialization(
     backend_base: &Path,
     make_base: &Path,
     backend_toml: &Path,
-) -> bool {
+) -> Result<bool> {
     let Some(backend_name) = artifact.serialization.as_ref() else {
         println!("    no serialization backend defined");
-        return false;
+        return Ok(false);
     };
 
     let Some(entry) = backend_cfg.get(backend_name) else {
@@ -116,35 +76,20 @@ fn maybe_run_check_serialization(
             backend_name,
             backend_toml.display()
         );
-        return false;
+        return Ok(false);
     };
 
     // Create per-artifact inputs dir and populate with JSON files
-    let now = SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap()
-        .as_millis();
     let safe_art = artifact
         .name
         .chars()
         .map(|c| if c.is_ascii_alphanumeric() { c } else { '_' })
         .collect::<String>();
-    let inputs = if std::env::var("ARTIFACTS_TUI_TEST_FIXED_TMP").is_ok() {
-        std::env::temp_dir().join(format!("artifacts-tui-test-{}-inputs", safe_art))
-    } else {
-        std::env::temp_dir().join(format!("artifacts-tui-{}-{}-inputs", now, safe_art))
-    };
+
+    let temp_manager = TempManager::new();
+    let inputs = temp_manager.create_temp_dir(Some(&format!("inputs-{}", safe_art)))?;
 
     let mut skip_rest = false;
-
-    if let Err(e) = fs::create_dir_all(&inputs) {
-        println!(
-            "    ERROR: failed to create inputs dir {}: {}",
-            inputs.display(),
-            e
-        );
-        return false;
-    }
 
     for f in &artifact.files {
         let resolved_path = resolve_path(make_base, &f.path);
@@ -153,7 +98,7 @@ fn maybe_run_check_serialization(
             .chars()
             .map(|c| if c.is_ascii_alphanumeric() { c } else { '_' })
             .collect::<String>();
-        let json_path = inputs.join(format!("{}.json", file_name));
+        let json_path = inputs.path_buf.join(format!("{}.json", file_name));
         let obj = serde_json::json!({
             "path": resolved_path,
             "owner": f.owner,
@@ -178,13 +123,13 @@ fn maybe_run_check_serialization(
     let check_abs = fs::canonicalize(&check_path).unwrap_or_else(|_| check_path.clone());
     println!(
         "    running check_serialization: env inputs=\"{}\" machine=\"{}\" artifact=\"{}\" {}",
-        inputs.display(),
+        inputs.path_buf.display(),
         machine,
         artifact.name,
         check_abs.display()
     );
     let status = std::process::Command::new(&check_abs)
-        .env("inputs", &inputs)
+        .env("inputs", &inputs.path_buf)
         .env("machine", machine)
         .env("artifact", &artifact.name)
         .status();
@@ -210,15 +155,7 @@ fn maybe_run_check_serialization(
         }
     }
 
-    if let Err(e) = fs::remove_dir_all(&inputs) {
-        println!(
-            "    WARN: failed to remove inputs dir {}: {}",
-            inputs.display(),
-            e
-        );
-    }
-
-    skip_rest
+    Ok(skip_rest)
 }
 
 fn run_serialize(
@@ -259,20 +196,21 @@ fn run_serialize(
 
 fn process_plan(
     mut make_map: HashMap<String, Vec<ArtifactDef>>,
-    make_base: &Path,
+    make_file_base_path: &Path,
     backend_cfg: &BackendConfig,
     backend_base: &Path,
     backend_toml: &Path,
 ) -> Result<()> {
     let prompt_manager = PromptManager::new();
     let generator_manager = GeneratorManger::new();
+    let temp_manager = TempManager::new();
 
     for (machine, artifacts) in make_map.drain() {
         println!("[generate] machine: {}", machine);
         for artifact in artifacts {
             println!("  - artifact: {}", artifact.name);
             // Do not print prompts to stdout; inputs are read from stdin and stored in $prompt
-            print_files(&artifact, make_base);
+            print_files(&artifact, make_file_base_path);
 
             // First, check if we can skip generation/serialization
             let skip_rest = maybe_run_check_serialization(
@@ -280,24 +218,12 @@ fn process_plan(
                 &machine,
                 backend_cfg,
                 backend_base,
-                make_base,
+                make_file_base_path,
                 backend_toml,
-            );
+            )?;
             if skip_rest {
                 continue;
             }
-
-            // Prepare per-artifact temp dirs and ensure cleanup after serialization
-            let (base, prompts, out) =
-                match prepare_temp_dirs_for_artifact(&machine, &artifact.name) {
-                    Ok(v) => v,
-                    Err(e) => {
-                        eprintln!("Error preparing temp dirs: {}", e);
-                        continue;
-                    }
-                };
-
-            let _cleanup = CleanupGuard::new(base.clone());
 
             let prompt_results = match prompt_manager.query_prompts(&artifact) {
                 Ok(results) => results,
@@ -307,13 +233,21 @@ fn process_plan(
                 }
             };
 
-            if let Err(e) = prompt_results.write_prompts_to_files(&prompts) {
+            let prompt =
+                temp_manager.create_temp_dir(Some(&format!("prompt-{}", artifact.name)))?;
+
+            if let Err(e) = prompt_results.write_prompts_to_files(&prompt.path_buf) {
                 eprintln!("Error writing prompt files: {}", e);
             }
 
-            if let Err(e) =
-                generator_manager.run_generator_script(&artifact, make_base, &prompts, &out)
-            {
+            let out = temp_manager.create_temp_dir(Some(&format!("out-{}", artifact.name)))?;
+
+            if let Err(e) = generator_manager.run_generator_script(
+                &artifact,
+                make_file_base_path,
+                &prompt.path_buf,
+                &out.path_buf,
+            ) {
                 // Stop the program with an error if the generator (nix-shell) fails
                 return Err(e).context("running generator script");
             }
@@ -322,11 +256,10 @@ fn process_plan(
                 &artifact,
                 backend_cfg,
                 backend_base,
-                &out,
+                &out.path_buf,
                 &machine,
                 backend_toml,
             );
-            // _cleanup guard drops here and removes the per-artifact temp dir
         }
     }
     Ok(())

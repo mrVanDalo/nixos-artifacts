@@ -1,8 +1,8 @@
 use std::path::{Path, PathBuf};
 
-pub mod cleanup;
 pub mod generator;
 pub mod prompt;
+pub mod temp_dir;
 
 pub(crate) fn resolve_path(base_dir: &Path, relative_path: &str) -> PathBuf {
     let path = Path::new(relative_path);

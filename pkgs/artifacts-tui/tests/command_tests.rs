@@ -38,7 +38,7 @@ impl TempTestEnv {
     fn apply_env<'a>(&self, cmd: &'a mut StdinCommand) -> &'a mut StdinCommand {
         // StdinCommand::env returns &mut Command; we don't need the return value here.
         let _ = cmd.env("TMPDIR", &self.path);
-        let _ = cmd.env("ARTIFACTS_TUI_TEST_FIXED_TMP", "1");
+        // let _ = cmd.env("ARTIFACTS_TUI_TEST_FIXED_TMP", "1");
         cmd
     }
 

@@ -14,6 +14,7 @@ which = "6"
 
 [dev-dependencies]
 insta-cmd = "0.6"
+insta = { version ="1.43.1" , features = ["filters"]}
 serial_test = "3"
 
 # Disable test harness for binaries so `cargo test` only runs real tests in tests/
