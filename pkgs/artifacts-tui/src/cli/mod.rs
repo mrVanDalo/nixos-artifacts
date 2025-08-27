@@ -37,7 +37,7 @@ impl log::Log for StdSplitLogger {
                 }
             }
             Level::Info => {
-                writeln!(io::stdout(), "{}", record.args());
+                let _ = writeln!(io::stdout(), "{}", record.args());
             }
             Level::Trace => {
                 let msg = record.args().to_string();

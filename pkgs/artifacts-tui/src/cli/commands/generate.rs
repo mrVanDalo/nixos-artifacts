@@ -2,10 +2,10 @@ use crate::backend::generator::GeneratorManger;
 use crate::backend::prompt::PromptManager;
 use crate::backend::resolve_path;
 use crate::backend::temp_dir::create_temp_dir;
-use crate::config::backend::{BackendConfig, BackendConfiguration, BackendEntry};
+use crate::config::backend::{BackendConfig, BackendConfiguration};
 use crate::config::make::ArtifactDef;
 use anyhow::{Context, Result};
-use log::{debug, error, info, trace, warn};
+use log::{debug, error, info};
 use serde_json::{from_str as json_from_str, json, to_string_pretty};
 use std::collections::HashMap;
 use std::fs;
@@ -173,7 +173,6 @@ fn process_plan(
     mut make_map: HashMap<String, Vec<ArtifactDef>>,
     make_file_base_path: &Path,
     backend: &BackendConfiguration,
-    backend_toml: &Path,
 ) -> Result<()> {
     let prompt_manager = PromptManager::new();
     let generator_manager = GeneratorManger::new();
@@ -234,7 +233,7 @@ pub fn run(backend_toml: &Path, make_json: &Path) -> Result<()> {
     let (make_map, make_base) = read_make_config(make_json)?;
 
     // Iterate machines and artifacts; per-artifact temp dirs are prepared inside process_plan
-    process_plan(make_map, &make_base, &backend, backend_toml)?;
+    process_plan(make_map, &make_base, &backend)?;
 
     Ok(())
 }
