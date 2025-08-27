@@ -48,7 +48,7 @@ fn print_files(artifact: &ArtifactDef, make_base: &Path) {
     }
 }
 
-fn maybe_run_check_serialization(
+fn run_check_serialization(
     artifact: &ArtifactDef,
     machine: &str,
     backend: &BackendConfiguration,
@@ -111,10 +111,7 @@ fn maybe_run_check_serialization(
                 Ok(false)
             }
         }
-        Err(error) => Err(anyhow::anyhow!(
-            "Error running check_serialization: {}",
-            error
-        )),
+        Err(error) => Err(anyhow::anyhow!("running check_serialization: {}", error)),
     }
 }
 
@@ -135,30 +132,29 @@ fn run_serialize(
         .env("artifact", &artifact.name)
         .status()
         .map_err(|e| {
-            error!("    ERROR running serialize: {}", e);
+            error!("    running serialize: {}", e);
         });
     Ok(())
 }
 
-fn process_plan(mut make: MakeConfiguration, backend: BackendConfiguration) -> Result<()> {
+/// Generate plan: read make.json and backend config and print scripts to run.
+pub fn run(backend_toml: &Path, make_json: &Path) -> Result<()> {
+    let backend = BackendConfiguration::read_backend_config(backend_toml)?;
+    let make = MakeConfiguration::read_make_config(make_json)?;
+
     let prompt_manager = PromptManager::new();
     let generator_manager = GeneratorManger::new();
 
-    for (machine, artifacts) in make.make_map.drain() {
+    for (machine, artifacts) in &make.make_map {
         info!("[generate]");
         info!("machine: {}", machine);
         for artifact in artifacts {
             info!("artifact: {}", artifact.name);
             // Do not print prompts to stdout; inputs are read from stdin and stored in $prompt
-            print_files(&artifact, &make.make_base.clone());
+            print_files(&artifact, &make.make_base);
 
-            // First, check if we can skip generation/serialization
-            let skip_rest = maybe_run_check_serialization(
-                &artifact,
-                &machine,
-                &backend,
-                &make.make_base.clone(),
-            )?;
+            let skip_rest =
+                run_check_serialization(&artifact, &machine, &backend, &make.make_base)?;
             if skip_rest {
                 continue;
             }
@@ -172,7 +168,6 @@ fn process_plan(mut make: MakeConfiguration, backend: BackendConfiguration) -> R
             };
 
             let prompt = create_temp_dir(Some(&format!("prompt-{}", artifact.name)))?;
-
             if let Err(e) = prompt_results.write_prompts_to_files(&prompt.path_buf) {
                 error!("Error writing prompt files: {}", e);
             }
@@ -189,18 +184,11 @@ fn process_plan(mut make: MakeConfiguration, backend: BackendConfiguration) -> R
                 return Err(e).context("running generator script");
             }
 
+            // verify if generator created the expected files
+
             run_serialize(&artifact, &backend, &out.path_buf, &machine)?
         }
     }
-    Ok(())
-}
-
-/// Generate plan: read make.json and backend config and print scripts to run.
-pub fn run(backend_toml: &Path, make_json: &Path) -> Result<()> {
-    let backend = BackendConfiguration::read_backend_config(backend_toml)?;
-    let make = MakeConfiguration::read_make_config(make_json)?;
-
-    process_plan(make, backend)?;
 
     Ok(())
 }
