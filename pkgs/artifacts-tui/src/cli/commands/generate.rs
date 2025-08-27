@@ -75,17 +75,13 @@ fn print_files(artifact: &ArtifactDef, make_base: &Path) {
 fn maybe_run_check_serialization(
     artifact: &ArtifactDef,
     machine: &str,
-    backend_cfg: &BackendConfig,
+    backend_config: &BackendConfig,
     backend_base: &Path,
     make_base: &Path,
     backend_toml: &Path,
 ) -> Result<bool> {
-    let Some(backend_name) = artifact.serialization.as_ref() else {
-        println!("    no serialization backend defined");
-        return Ok(false);
-    };
-
-    let Some(entry) = backend_cfg.get(backend_name) else {
+    let backend_name = &artifact.serialization;
+    let Some(entry) = backend_config.get(backend_name) else {
         println!(
             "    WARN: backend '{}' not found in {}",
             backend_name,
@@ -169,31 +165,28 @@ fn run_serialize(
     machine: &str,
     backend_toml: &Path,
 ) {
-    if let Some(backend_name) = artifact.serialization.as_ref() {
-        match backend_cfg.get(backend_name) {
-            Some(entry) => {
-                let ser_path = resolve_path(backend_base, &entry.serialize);
-                let ser_abs = fs::canonicalize(&ser_path).unwrap_or_else(|_| ser_path.clone());
-                let _ = std::process::Command::new("sh")
-                    .arg(&ser_abs)
-                    .env("out", out)
-                    .env("machine", machine)
-                    .env("artifact", &artifact.name)
-                    .status()
-                    .map_err(|e| {
-                        eprintln!("    ERROR running serialize: {}", e);
-                    });
-            }
-            None => {
-                println!(
-                    "    WARN: backend '{}' not found in {}",
-                    backend_name,
-                    backend_toml.display()
-                );
-            }
+    let backend_name = &artifact.serialization;
+    match backend_cfg.get(backend_name) {
+        Some(entry) => {
+            let ser_path = resolve_path(backend_base, &entry.serialize);
+            let ser_abs = fs::canonicalize(&ser_path).unwrap_or_else(|_| ser_path.clone());
+            let _ = std::process::Command::new("sh")
+                .arg(&ser_abs)
+                .env("out", out)
+                .env("machine", machine)
+                .env("artifact", &artifact.name)
+                .status()
+                .map_err(|e| {
+                    eprintln!("    ERROR running serialize: {}", e);
+                });
         }
-    } else {
-        println!("    no serialization backend defined");
+        None => {
+            println!(
+                "    WARN: backend '{}' not found in {}",
+                backend_name,
+                backend_toml.display()
+            );
+        }
     }
 }
 

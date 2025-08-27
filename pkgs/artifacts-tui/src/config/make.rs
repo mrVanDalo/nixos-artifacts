@@ -32,7 +32,7 @@ pub struct ArtifactDef {
     /// generator script to be run to generate secrets
     pub generator: String,
     /// serialization script to be run to serialize secrets
-    pub serialization: Option<String>, // backend reference name
+    pub serialization: String, // backend reference name
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
