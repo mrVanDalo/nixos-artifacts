@@ -2,14 +2,13 @@ use crate::backend::generator::GeneratorManger;
 use crate::backend::prompt::PromptManager;
 use crate::backend::resolve_path;
 use crate::backend::temp_dir::create_temp_dir;
-use crate::config::backend::{BackendConfig, BackendConfiguration};
-use crate::config::make::ArtifactDef;
+use crate::config::backend::BackendConfiguration;
+use crate::config::make::{ArtifactDef, MakeConfiguration};
 use anyhow::{Context, Result};
 use log::{debug, error, info};
-use serde_json::{from_str as json_from_str, json, to_string_pretty};
-use std::collections::HashMap;
+use serde_json::{json, to_string_pretty};
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 /// Converts a string into a safe filename by replacing non-alphanumeric characters with underscores.
 ///
@@ -24,34 +23,6 @@ fn sanitize_name(name: &str) -> String {
     name.chars()
         .map(|c| if c.is_ascii_alphanumeric() { c } else { '_' })
         .collect()
-}
-
-fn read_backend_config(backend_toml: &Path) -> Result<BackendConfiguration> {
-    let backend_text = fs::read_to_string(backend_toml)
-        .with_context(|| format!("reading backend config {}", backend_toml.display()))?;
-    let backend_config: BackendConfig = toml::from_str(&backend_text)
-        .with_context(|| format!("parsing backend config {}", backend_toml.display()))?;
-    let backend_base = backend_toml
-        .parent()
-        .map(|p| p.to_path_buf())
-        .unwrap_or_else(|| PathBuf::from("."));
-    Ok(BackendConfiguration {
-        config: backend_config,
-        base_path: backend_base,
-        backend_toml: backend_toml.to_path_buf(),
-    })
-}
-
-fn read_make_config(make_json: &Path) -> Result<(HashMap<String, Vec<ArtifactDef>>, PathBuf)> {
-    let make_text = fs::read_to_string(make_json)
-        .with_context(|| format!("reading make config {}", make_json.display()))?;
-    let make_map: HashMap<String, Vec<ArtifactDef>> = json_from_str(&make_text)
-        .with_context(|| format!("parsing make config {}", make_json.display()))?;
-    let make_base = make_json
-        .parent()
-        .map(|p| p.to_path_buf())
-        .unwrap_or_else(|| PathBuf::from("."));
-    Ok((make_map, make_base))
 }
 
 fn print_files(artifact: &ArtifactDef, make_base: &Path) {
@@ -169,25 +140,25 @@ fn run_serialize(
     Ok(())
 }
 
-fn process_plan(
-    mut make_map: HashMap<String, Vec<ArtifactDef>>,
-    make_file_base_path: &Path,
-    backend: &BackendConfiguration,
-) -> Result<()> {
+fn process_plan(mut make: MakeConfiguration, backend: BackendConfiguration) -> Result<()> {
     let prompt_manager = PromptManager::new();
     let generator_manager = GeneratorManger::new();
 
-    for (machine, artifacts) in make_map.drain() {
+    for (machine, artifacts) in make.make_map.drain() {
         info!("[generate]");
         info!("machine: {}", machine);
         for artifact in artifacts {
             info!("artifact: {}", artifact.name);
             // Do not print prompts to stdout; inputs are read from stdin and stored in $prompt
-            print_files(&artifact, make_file_base_path);
+            print_files(&artifact, &make.make_base.clone());
 
             // First, check if we can skip generation/serialization
-            let skip_rest =
-                maybe_run_check_serialization(&artifact, &machine, backend, make_file_base_path)?;
+            let skip_rest = maybe_run_check_serialization(
+                &artifact,
+                &machine,
+                &backend,
+                &make.make_base.clone(),
+            )?;
             if skip_rest {
                 continue;
             }
@@ -210,7 +181,7 @@ fn process_plan(
 
             if let Err(e) = generator_manager.run_generator_script(
                 &artifact,
-                make_file_base_path,
+                &make.make_base.clone(),
                 &prompt.path_buf,
                 &out.path_buf,
             ) {
@@ -218,7 +189,7 @@ fn process_plan(
                 return Err(e).context("running generator script");
             }
 
-            run_serialize(&artifact, backend, &out.path_buf, &machine)?
+            run_serialize(&artifact, &backend, &out.path_buf, &machine)?
         }
     }
     Ok(())
@@ -226,14 +197,10 @@ fn process_plan(
 
 /// Generate plan: read make.json and backend config and print scripts to run.
 pub fn run(backend_toml: &Path, make_json: &Path) -> Result<()> {
-    // Load backend config (TOML), paths relative to file location
-    let backend = read_backend_config(backend_toml)?;
+    let backend = BackendConfiguration::read_backend_config(backend_toml)?;
+    let make = MakeConfiguration::read_make_config(make_json)?;
 
-    // Load make.json. The format is: { "<machine-name>": [ArtifactDef, ...], ... }
-    let (make_map, make_base) = read_make_config(make_json)?;
-
-    // Iterate machines and artifacts; per-artifact temp dirs are prepared inside process_plan
-    process_plan(make_map, &make_base, &backend)?;
+    process_plan(make, backend)?;
 
     Ok(())
 }

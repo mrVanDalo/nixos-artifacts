@@ -1,4 +1,9 @@
+use anyhow::Context;
 use serde::{Deserialize, Serialize};
+use serde_json::from_str as json_from_str;
+use std::collections::HashMap;
+use std::fs;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FileDef {
@@ -35,8 +40,26 @@ pub struct ArtifactDef {
     pub serialization: String, // backend reference name
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct MakeConfig {
-    #[serde(default)]
-    pub machines: Vec<ArtifactDef>,
+pub struct MakeConfiguration {
+    pub make_map: HashMap<String, Vec<ArtifactDef>>,
+    pub make_base: PathBuf,
+    pub make_json: PathBuf,
+}
+
+impl MakeConfiguration {
+    pub(crate) fn read_make_config(make_json: &Path) -> anyhow::Result<MakeConfiguration> {
+        let make_text = fs::read_to_string(make_json)
+            .with_context(|| format!("reading make config {}", make_json.display()))?;
+        let make_map: HashMap<String, Vec<ArtifactDef>> = json_from_str(&make_text)
+            .with_context(|| format!("parsing make config {}", make_json.display()))?;
+        let make_base = make_json
+            .parent()
+            .map(|p| p.to_path_buf())
+            .unwrap_or_else(|| PathBuf::from("."));
+        Ok(MakeConfiguration {
+            make_map,
+            make_base,
+            make_json: make_json.to_path_buf(),
+        })
+    }
 }
