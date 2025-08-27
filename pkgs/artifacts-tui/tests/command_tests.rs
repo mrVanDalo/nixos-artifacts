@@ -122,10 +122,10 @@ fn two_artifacts_scenario() {
 
 #[test]
 #[serial]
-fn generator_incomplete_scenario() {
+fn generate_wrong_missing_files_scenario() {
     let root = project_root();
-    let backend = root.join("examples/generator_incomplete/backend.toml");
-    let make = root.join("examples/generator_incomplete/make.json");
+    let backend = root.join("examples/generate_wrong/backend.toml");
+    let make = root.join("examples/generate_wrong/make_missing_files.json");
 
     let env = TempTestEnv::new();
 
@@ -137,7 +137,44 @@ fn generator_incomplete_scenario() {
     env.finish().expect("temp folder not empty at end of test");
 
     assert_cmd_snapshot!(cmd);
-    assert!(false, "generator output is not checked yet")
+}
+
+#[test]
+#[serial]
+fn generate_wrong_wrong_file_type_scenario() {
+    let root = project_root();
+    let backend = root.join("examples/generate_wrong/backend.toml");
+    let make = root.join("examples/generate_wrong/make_wrong_file_type.json");
+
+    let env = TempTestEnv::new();
+
+    let mut cmd = sdtin_cli("one\ntwo\n");
+
+    cmd.arg("generate").arg(backend).arg(make);
+
+    // Verify and cleanup
+    env.finish().expect("temp folder not empty at end of test");
+
+    assert_cmd_snapshot!(cmd);
+}
+
+#[test]
+#[serial]
+fn generate_wrong_unwanted_files_scenario() {
+    let root = project_root();
+    let backend = root.join("examples/generate_wrong/backend.toml");
+    let make = root.join("examples/generate_wrong/make_unwanted_files.json");
+
+    let env = TempTestEnv::new();
+
+    let mut cmd = sdtin_cli("one\ntwo\n");
+
+    cmd.arg("generate").arg(backend).arg(make);
+
+    // Verify and cleanup
+    env.finish().expect("temp folder not empty at end of test");
+
+    assert_cmd_snapshot!(cmd);
 }
 
 #[test]

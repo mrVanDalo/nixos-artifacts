@@ -1,0 +1,21 @@
+{
+  "machine-name": [
+    {
+      "name": "test-artifact",
+      "files": [
+        {
+          "name": "very-simple-secrets",
+          "path": "/run/secrets/very-simple-secrets"
+        },
+        {
+          "name": "simple-secrets",
+          "path": "/run/secrets/simple-secrets",
+          "owner": "deployer",
+          "group": "deployer"
+        }
+      ],
+      "generator": "./test_generator_missing_files.sh",
+      "serialization": "test"
+    }
+  ]
+}

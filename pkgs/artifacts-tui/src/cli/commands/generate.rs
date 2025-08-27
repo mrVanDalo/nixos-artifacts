@@ -7,6 +7,7 @@ use crate::config::make::{ArtifactDef, MakeConfiguration};
 use anyhow::{Context, Result};
 use log::{debug, error, info};
 use serde_json::{json, to_string_pretty};
+use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
 
@@ -115,6 +116,43 @@ fn run_check_serialization(
     }
 }
 
+fn verify_generated_files(artifact: &ArtifactDef, out_path: &Path) -> Result<()> {
+    let expected_files: HashSet<String> = artifact.files.iter().map(|f| f.name.clone()).collect();
+
+    let actual_files: HashSet<String> = fs::read_dir(out_path)
+        .with_context(|| format!("reading generator output dir {}", out_path.display()))?
+        .filter_map(|entry| entry.ok())
+        .filter(|entry| entry.file_type().map(|t| t.is_file()).unwrap_or(false))
+        .map(|entry| entry.file_name().to_string_lossy().to_string())
+        .collect();
+
+    let mut missing_files: Vec<String> =
+        expected_files.difference(&actual_files).cloned().collect();
+
+    if !missing_files.is_empty() {
+        missing_files.sort();
+        return Err(anyhow::anyhow!(
+            "generator missing required files for artifact '{}': [{}]",
+            artifact.name,
+            missing_files.join(", ")
+        ));
+    }
+
+    let mut unwanted_files: Vec<String> =
+        actual_files.difference(&expected_files).cloned().collect();
+
+    if !unwanted_files.is_empty() {
+        unwanted_files.sort();
+        return Err(anyhow::anyhow!(
+            "generator produced extra files for artifact '{}': [{}]",
+            artifact.name,
+            unwanted_files.join(", ")
+        ));
+    }
+
+    Ok(())
+}
+
 fn run_serialize(
     artifact: &ArtifactDef,
     backend: &BackendConfiguration,
@@ -184,8 +222,9 @@ pub fn run(backend_toml: &Path, make_json: &Path) -> Result<()> {
                 return Err(e).context("running generator script");
             }
 
-            // verify if generator created the expected files
+            verify_generated_files(artifact, &out.path_buf)?;
 
+            // verify if generator created the expected files
             run_serialize(&artifact, &backend, &out.path_buf, &machine)?
         }
     }

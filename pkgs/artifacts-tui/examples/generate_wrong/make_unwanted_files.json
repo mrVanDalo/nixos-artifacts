@@ -14,19 +14,7 @@
           "group": "deployer"
         }
       ],
-      "prompts": [
-        {
-          "name": "secret1",
-          "description": "secret number 1",
-          "kind": "line"
-        },
-        {
-          "name": "secret2",
-          "description": "secret number 2",
-          "kind": "line"
-        }
-      ],
-      "generator": "./test_generator.sh",
+      "generator": "./test_generator_unwanted_files.sh",
       "serialization": "test"
     }
   ]
