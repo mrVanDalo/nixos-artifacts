@@ -64,7 +64,7 @@ structure:
 - **Prompts**: User input definitions
   - `name`: Prompt identifier
   - `description`: User-facing description
-  - `type`: Input type (`hidden`, `line`, `multiline`)
+  - `kind`: Input type (`hidden`, `line`, `multiline`)
 
 ## Development Standards
 

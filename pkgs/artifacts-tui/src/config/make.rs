@@ -12,7 +12,7 @@ pub struct FileDef {
 pub struct PromptDef {
     pub name: String,
     pub description: Option<String>,
-    #[serde(rename = "type")]
+    #[serde(alias = "type")]
     pub kind: Option<String>, // hidden | line | multiline
 }
 
