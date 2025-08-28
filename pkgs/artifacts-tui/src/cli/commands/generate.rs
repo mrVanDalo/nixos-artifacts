@@ -1,7 +1,7 @@
-use crate::backend::generator::GeneratorManger;
+use crate::backend::generator::{run_generator_script, verify_generated_files};
 use crate::backend::helpers::print_files;
 use crate::backend::helpers::resolve_path;
-use crate::backend::prompt::PromptManager;
+use crate::backend::prompt::read_artifact_prompts;
 use crate::backend::serialization::run_serialize;
 use crate::backend::temp_dir::create_temp_dir;
 use crate::config::backend::BackendConfiguration;
@@ -91,9 +91,6 @@ pub fn run(backend_toml: &Path, make_json: &Path) -> Result<()> {
     let backend = BackendConfiguration::read_backend_config(backend_toml)?;
     let make = MakeConfiguration::read_make_config(make_json)?;
 
-    let prompt_manager = PromptManager::new();
-    let generator_manager = GeneratorManger::new();
-
     for (machine, artifacts) in &make.make_map {
         info!("[generate]");
         info!("machine: {}", machine);
@@ -109,9 +106,8 @@ pub fn run(backend_toml: &Path, make_json: &Path) -> Result<()> {
                 continue;
             }
 
-            let prompt_results = prompt_manager
-                .query_prompts(&artifact)
-                .context("could not query all prompts")?;
+            let prompt_results =
+                read_artifact_prompts(&artifact).context("could not query all prompts")?;
             let prompt = create_temp_dir(Some(&format!("prompt-{}", artifact.name)))?;
             prompt_results
                 .write_prompts_to_files(&prompt.path_buf)
@@ -119,16 +115,15 @@ pub fn run(backend_toml: &Path, make_json: &Path) -> Result<()> {
 
             let out = create_temp_dir(Some(&format!("out-{}", artifact.name)))?;
 
-            generator_manager
-                .run_generator_script(
-                    &artifact,
-                    &make.make_base.clone(),
-                    &prompt.path_buf,
-                    &out.path_buf,
-                )
-                .context("running generator script")?;
+            run_generator_script(
+                &artifact,
+                &make.make_base.clone(),
+                &prompt.path_buf,
+                &out.path_buf,
+            )
+            .context("running generator script")?;
 
-            generator_manager.verify_generated_files(artifact, &out.path_buf)?;
+            verify_generated_files(artifact, &out.path_buf)?;
 
             // verify if generator created the expected files
             run_serialize(&artifact, &backend, &out.path_buf, &machine)?
