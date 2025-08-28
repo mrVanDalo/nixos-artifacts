@@ -1,13 +1,14 @@
 use crate::backend::generator::GeneratorManger;
+use crate::backend::helpers::print_files;
+use crate::backend::helpers::resolve_path;
 use crate::backend::prompt::PromptManager;
-use crate::backend::resolve_path;
+use crate::backend::serialization::run_serialize;
 use crate::backend::temp_dir::create_temp_dir;
 use crate::config::backend::BackendConfiguration;
 use crate::config::make::{ArtifactDef, MakeConfiguration};
 use anyhow::{Context, Result};
 use log::{debug, info};
 use serde_json::{json, to_string_pretty};
-use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
 
@@ -26,29 +27,6 @@ fn sanitize_name(name: &str) -> String {
         .collect()
 }
 
-fn print_files(artifact: &ArtifactDef, make_base: &Path) {
-    if artifact.files.is_empty() {
-        return;
-    }
-    debug!("    files to produce -> {} files", artifact.files.len());
-    for f in &artifact.files {
-        let resolved = resolve_path(make_base, &f.path);
-        debug!(
-            "      - {} => {}{}{}",
-            f.name,
-            resolved.display(),
-            f.owner
-                .as_ref()
-                .map(|o| format!(" owner={}", o))
-                .unwrap_or_default(),
-            f.group
-                .as_ref()
-                .map(|g| format!(" group={}", g))
-                .unwrap_or_default(),
-        );
-    }
-}
-
 fn run_check_serialization(
     artifact: &ArtifactDef,
     machine: &str,
@@ -58,6 +36,7 @@ fn run_check_serialization(
     let backend_name = &artifact.serialization;
     let backend_entry = backend.get_backend(backend_name)?;
     let artifact_name = sanitize_name(&artifact.name);
+
     let inputs = create_temp_dir(Some(&format!("inputs-{}", artifact_name)))?;
 
     for file in &artifact.files {
@@ -107,63 +86,6 @@ fn run_check_serialization(
     }
 }
 
-fn verify_generated_files(artifact: &ArtifactDef, out_path: &Path) -> Result<()> {
-    let expected_files: HashSet<String> = artifact.files.iter().map(|f| f.name.clone()).collect();
-
-    let actual_files: HashSet<String> = fs::read_dir(out_path)
-        .with_context(|| format!("reading generator output dir {}", out_path.display()))?
-        .filter_map(|entry| entry.ok())
-        .filter(|entry| entry.file_type().map(|t| t.is_file()).unwrap_or(false))
-        .map(|entry| entry.file_name().to_string_lossy().to_string())
-        .collect();
-
-    let mut missing_files: Vec<String> =
-        expected_files.difference(&actual_files).cloned().collect();
-
-    if !missing_files.is_empty() {
-        missing_files.sort();
-        return Err(anyhow::anyhow!(
-            "generator missing required files for artifact '{}': [{}]",
-            artifact.name,
-            missing_files.join(", ")
-        ));
-    }
-
-    let mut unwanted_files: Vec<String> =
-        actual_files.difference(&expected_files).cloned().collect();
-
-    if !unwanted_files.is_empty() {
-        unwanted_files.sort();
-        return Err(anyhow::anyhow!(
-            "generator produced extra files for artifact '{}': [{}]",
-            artifact.name,
-            unwanted_files.join(", ")
-        ));
-    }
-
-    Ok(())
-}
-
-fn run_serialize(
-    artifact: &ArtifactDef,
-    backend: &BackendConfiguration,
-    out: &Path,
-    machine_name: &str,
-) -> Result<()> {
-    let backend_name = &artifact.serialization;
-    let entry = backend.get_backend(backend_name)?;
-    let ser_path = resolve_path(&backend.base_path, &entry.serialize);
-    let ser_abs = fs::canonicalize(&ser_path).unwrap_or_else(|_| ser_path.clone());
-    std::process::Command::new("sh")
-        .arg(&ser_abs)
-        .env("out", out)
-        .env("machine", machine_name)
-        .env("artifact", &artifact.name)
-        .status()
-        .with_context(|| format!("running serialize {}", ser_abs.display()))?;
-    Ok(())
-}
-
 /// Generate plan: read make.json and backend config and print scripts to run.
 pub fn run(backend_toml: &Path, make_json: &Path) -> Result<()> {
     let backend = BackendConfiguration::read_backend_config(backend_toml)?;
@@ -177,6 +99,7 @@ pub fn run(backend_toml: &Path, make_json: &Path) -> Result<()> {
         info!("machine: {}", machine);
         for artifact in artifacts {
             info!("artifact: {}", artifact.name);
+
             // Do not print prompts to stdout; inputs are read from stdin and stored in $prompt
             print_files(&artifact, &make.make_base);
 
@@ -205,7 +128,7 @@ pub fn run(backend_toml: &Path, make_json: &Path) -> Result<()> {
                 )
                 .context("running generator script")?;
 
-            verify_generated_files(artifact, &out.path_buf)?;
+            generator_manager.verify_generated_files(artifact, &out.path_buf)?;
 
             // verify if generator created the expected files
             run_serialize(&artifact, &backend, &out.path_buf, &machine)?

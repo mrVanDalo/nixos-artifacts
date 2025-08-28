@@ -1,0 +1,50 @@
+{
+  "machine-one": [
+    {
+      "name": "artifact-one",
+      "files": [
+        {
+          "name": "first-secret",
+          "path": "/run/secrets/first-secret"
+        }
+      ],
+      "generator": "./test_generator_one.sh",
+      "serialization": "test"
+    },
+    {
+      "name": "artifact-two",
+      "files": [
+        {
+          "name": "second-secret",
+          "path": "/run/secrets/second-secret"
+        }
+      ],
+      "generator": "./test_generator_two.sh",
+      "serialization": "test"
+    }
+  ],
+  "machine-two": [
+    {
+      "name": "artifact-one",
+      "files": [
+        {
+          "name": "first-secret",
+          "path": "/run/secrets/first-secret"
+        }
+      ],
+      "generator": "./test_generator_one.sh",
+      "serialization": "test"
+    },
+    {
+      "name": "artifact-two",
+      "files": [
+        {
+          "name": "second-secret",
+          "path": "/run/secrets/second-secret"
+        }
+      ],
+      "generator": "./test_generator_two.sh",
+      "serialization": "test"
+    }
+  ]
+}

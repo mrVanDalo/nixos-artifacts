@@ -209,14 +209,100 @@ fn scenario_help() {
 #[serial]
 fn list_scenarios() {
     let root = project_root();
-    let backend = root.join("examples/2_artifacts/backend.toml");
-    let make = root.join("examples/2_artifacts/make.json");
+    let backend = root.join("examples/bigger_setup/backend.toml");
+    let make = root.join("examples/bigger_setup/make.json");
 
     let env = TempTestEnv::new();
 
     let mut cmd = sdtin_cli("");
 
     cmd.arg("list").arg(backend).arg(make);
+
+    // Verify and cleanup
+    env.finish().expect("temp folder not empty at end of test");
+
+    assert_cmd_snapshot!(cmd);
+}
+
+#[test]
+#[serial]
+fn regenerate_all_scenarios() {
+    let root = project_root();
+    let backend = root.join("examples/bigger_setup/backend.toml");
+    let make = root.join("examples/bigger_setup/make.json");
+
+    let env = TempTestEnv::new();
+
+    let mut cmd = sdtin_cli("");
+
+    cmd.arg("regenerate").arg(backend).arg(make).arg("--all");
+
+    // Verify and cleanup
+    env.finish().expect("temp folder not empty at end of test");
+
+    assert_cmd_snapshot!(cmd);
+}
+
+#[test]
+#[serial]
+fn regenerate_machine_scenarios() {
+    let root = project_root();
+    let backend = root.join("examples/bigger_setup/backend.toml");
+    let make = root.join("examples/bigger_setup/make.json");
+
+    let env = TempTestEnv::new();
+
+    let mut cmd = sdtin_cli("");
+
+    cmd.arg("regenerate")
+        .arg(backend)
+        .arg(make)
+        .arg("--machine=machine-one");
+
+    // Verify and cleanup
+    env.finish().expect("temp folder not empty at end of test");
+
+    assert_cmd_snapshot!(cmd);
+}
+
+#[test]
+#[serial]
+fn regenerate_machine_and_artifacts_scenarios() {
+    let root = project_root();
+    let backend = root.join("examples/bigger_setup/backend.toml");
+    let make = root.join("examples/bigger_setup/make.json");
+
+    let env = TempTestEnv::new();
+
+    let mut cmd = sdtin_cli("");
+
+    cmd.arg("regenerate")
+        .arg(backend)
+        .arg(make)
+        .arg("--machine=machine-one")
+        .arg("--artifact=artifact-one");
+
+    // Verify and cleanup
+    env.finish().expect("temp folder not empty at end of test");
+
+    assert_cmd_snapshot!(cmd);
+}
+
+#[test]
+#[serial]
+fn regenerate_wrong_machine_scenarios() {
+    let root = project_root();
+    let backend = root.join("examples/bigger_setup/backend.toml");
+    let make = root.join("examples/bigger_setup/make.json");
+
+    let env = TempTestEnv::new();
+
+    let mut cmd = sdtin_cli("");
+
+    cmd.arg("regenerate")
+        .arg(backend)
+        .arg(make)
+        .arg("--machine=machine-name");
 
     // Verify and cleanup
     env.finish().expect("temp folder not empty at end of test");

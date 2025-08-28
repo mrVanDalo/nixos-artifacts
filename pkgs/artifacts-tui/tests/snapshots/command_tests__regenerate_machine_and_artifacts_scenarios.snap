@@ -4,9 +4,11 @@ info:
   program: artifacts-cli
   args:
     - "--log-level=debug"
-    - list
+    - regenerate
     - /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup/backend.toml
     - /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup/make.json
+    - "--machine=machine-one"
+    - "--artifact=artifact-one"
   env:
     TMPDIR: /tmp/artifacts-tui-ci
   stdin: ""
@@ -14,13 +16,13 @@ info:
 success: true
 exit_code: 0
 ----- stdout -----
-[list]
+[regenerate]
 machine: machine-one
 artifact: artifact-one
-artifact: artifact-two
-[list]
-machine: machine-two
-artifact: artifact-one
-artifact: artifact-two
+DEBUG:     files to produce -> 1 files
+DEBUG:       - first-secret => /run/secrets/first-secret
+=== Content of /tmp/artifacts-tui-ci/out-artifact-one/first-secret ===
+one
+=========================
 
 ----- stderr -----

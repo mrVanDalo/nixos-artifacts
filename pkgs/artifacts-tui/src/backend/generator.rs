@@ -1,6 +1,7 @@
-use crate::backend::resolve_path;
+use crate::backend::helpers::resolve_path;
 use crate::config::make::ArtifactDef;
 use anyhow::{Context, Result, bail};
+use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
 
@@ -10,6 +11,45 @@ pub struct GeneratorManger {}
 impl GeneratorManger {
     pub fn new() -> Self {
         Self {}
+    }
+
+    /// Verify that the generator produced exactly the expected files for the given artifact
+    pub fn verify_generated_files(&self, artifact: &ArtifactDef, out_path: &Path) -> Result<()> {
+        let expected_files: HashSet<String> =
+            artifact.files.iter().map(|f| f.name.clone()).collect();
+
+        let actual_files: HashSet<String> = fs::read_dir(out_path)
+            .with_context(|| format!("reading generator output dir {}", out_path.display()))?
+            .filter_map(|entry| entry.ok())
+            .filter(|entry| entry.file_type().map(|t| t.is_file()).unwrap_or(false))
+            .map(|entry| entry.file_name().to_string_lossy().to_string())
+            .collect();
+
+        let mut missing_files: Vec<String> =
+            expected_files.difference(&actual_files).cloned().collect();
+
+        if !missing_files.is_empty() {
+            missing_files.sort();
+            return Err(anyhow::anyhow!(
+                "generator missing required files for artifact '{}': [{}]",
+                artifact.name,
+                missing_files.join(", ")
+            ));
+        }
+
+        let mut unwanted_files: Vec<String> =
+            actual_files.difference(&expected_files).cloned().collect();
+
+        if !unwanted_files.is_empty() {
+            unwanted_files.sort();
+            return Err(anyhow::anyhow!(
+                "generator produced extra files for artifact '{}': [{}]",
+                artifact.name,
+                unwanted_files.join(", ")
+            ));
+        }
+
+        Ok(())
     }
 
     // todo: get rid of nix-shell and use bwrap directly (brwap must be part of the nix-package)

@@ -1,7 +1,7 @@
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
 use serde_json::from_str as json_from_str;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -41,7 +41,7 @@ pub struct ArtifactDef {
 }
 
 pub struct MakeConfiguration {
-    pub make_map: HashMap<String, Vec<ArtifactDef>>,
+    pub make_map: BTreeMap<String, Vec<ArtifactDef>>,
     pub make_base: PathBuf,
     pub make_json: PathBuf,
 }
@@ -50,7 +50,7 @@ impl MakeConfiguration {
     pub(crate) fn read_make_config(make_json: &Path) -> anyhow::Result<MakeConfiguration> {
         let make_text = fs::read_to_string(make_json)
             .with_context(|| format!("reading make config {}", make_json.display()))?;
-        let make_map: HashMap<String, Vec<ArtifactDef>> = json_from_str(&make_text)
+        let make_map: BTreeMap<String, Vec<ArtifactDef>> = json_from_str(&make_text)
             .with_context(|| format!("parsing make config {}", make_json.display()))?;
         let make_base = make_json
             .parent()
