@@ -1,38 +1,121 @@
 use crate::backend::generator::{run_generator_script, verify_generated_files};
-use crate::backend::helpers::print_files;
-use crate::backend::helpers::resolve_path;
+use crate::backend::helpers::{print_files, resolve_path};
 use crate::backend::prompt::read_artifact_prompts;
 use crate::backend::serialization::run_serialize;
 use crate::backend::temp_dir::create_temp_dir;
 use crate::config::backend::BackendConfiguration;
 use crate::config::make::{ArtifactDef, MakeConfiguration};
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 use log::{debug, info};
 use serde_json::{json, to_string_pretty};
 use std::fs;
 use std::path::Path;
 
-/// Converts a string into a safe filename by replacing non-alphanumeric characters with underscores.
-///
-/// # Arguments
-///
-/// * `name` - The string to sanitize
-///
-/// # Returns
-///
-/// A new String containing only ASCII alphanumeric characters and underscores.
-fn sanitize_name(name: &str) -> String {
-    name.chars()
-        .map(|c| if c.is_ascii_alphanumeric() { c } else { '_' })
-        .collect()
+pub fn run_generate_command(
+    backend_toml: &Path,
+    make_json: &Path,
+    all: bool,
+    machines_to_regenerate: &Vec<String>,
+    artifacts_to_regenerate: &Vec<String>,
+) -> Result<()> {
+    // Validate argument rules
+    if all {
+        if !machines_to_regenerate.is_empty() || !artifacts_to_regenerate.is_empty() {
+            bail!("--all conflicts with --machine/--artifact");
+        }
+    }
+
+    let all = if !all {
+        machines_to_regenerate.is_empty() && artifacts_to_regenerate.is_empty()
+    } else {
+        all
+    };
+
+    run_generate_workflow(
+        backend_toml,
+        make_json,
+        all,
+        machines_to_regenerate,
+        artifacts_to_regenerate,
+        true,
+        "[generate]",
+    )
 }
 
-fn run_check_serialization(
+pub fn run_generate_workflow(
+    backend_toml: &Path,
+    make_json: &Path,
+    all: bool,
+    machines_to_regenerate: &Vec<String>,
+    artifacts_to_regenerate: &Vec<String>,
+    check_if_artifact_exists: bool,
+    header: &str,
+) -> anyhow::Result<()> {
+    let backend = BackendConfiguration::read_backend_config(backend_toml)?;
+    let make = MakeConfiguration::read_make_config(make_json)?;
+
+    let check_all = || -> bool { all };
+
+    let check_machine = |machine: &str| -> bool {
+        machines_to_regenerate.is_empty() || machines_to_regenerate.iter().any(|m| m == machine)
+    };
+
+    let check_artifact = |artifact: &ArtifactDef| -> bool {
+        artifacts_to_regenerate.is_empty()
+            || artifacts_to_regenerate.iter().any(|a| a == &artifact.name)
+    };
+
+    for (machine, artifacts) in &make.make_map {
+        for artifact in artifacts {
+            if !(check_all() || check_machine(machine) && check_artifact(&artifact)) {
+                continue;
+            }
+
+            info!("{}", header);
+            info!("machine: {}", machine);
+            info!("artifact: {}", artifact.name);
+            print_files(&artifact, &make.make_base);
+
+            if check_if_artifact_exists {
+                let skip_rest =
+                    run_check_serialization(&artifact, &machine, &backend, &make.make_base)?;
+                if skip_rest {
+                    continue;
+                }
+            }
+
+            let prompt_results =
+                read_artifact_prompts(&artifact).context("could not query all prompts")?;
+
+            let prompt = create_temp_dir(Some(&format!("prompt-{}", artifact.name)))?;
+            prompt_results
+                .write_prompts_to_files(&prompt.path_buf)
+                .context("writing prompts to files")?;
+
+            let out = create_temp_dir(Some(&format!("out-{}", artifact.name)))?;
+
+            run_generator_script(
+                &artifact,
+                &make.make_base.clone(),
+                &prompt.path_buf,
+                &out.path_buf,
+            )
+            .context("running generator script")?;
+
+            verify_generated_files(artifact, &out.path_buf)?;
+
+            run_serialize(&artifact, &backend, &out.path_buf, &machine)?
+        }
+    }
+    Ok(())
+}
+
+pub(crate) fn run_check_serialization(
     artifact: &ArtifactDef,
     machine: &str,
     backend: &BackendConfiguration,
     make_base: &Path,
-) -> Result<bool> {
+) -> anyhow::Result<bool> {
     let backend_name = &artifact.serialization;
     let backend_entry = backend.get_backend(backend_name)?;
     let artifact_name = sanitize_name(&artifact.name);
@@ -86,49 +169,44 @@ fn run_check_serialization(
     }
 }
 
-/// Generate plan: read make.json and backend config and print scripts to run.
-pub fn run(backend_toml: &Path, make_json: &Path) -> Result<()> {
-    let backend = BackendConfiguration::read_backend_config(backend_toml)?;
-    let make = MakeConfiguration::read_make_config(make_json)?;
+/// Converts a string into a safe filename by replacing non-alphanumeric characters with underscores.
+///
+/// # Arguments
+///
+/// * `name` - The string to sanitize
+///
+/// # Returns
+///
+/// A new String containing only ASCII alphanumeric characters and underscores.
+fn sanitize_name(name: &str) -> String {
+    name.chars()
+        .map(|c| if c.is_ascii_alphanumeric() { c } else { '_' })
+        .collect()
+}
 
-    for (machine, artifacts) in &make.make_map {
-        info!("[generate]");
-        info!("machine: {}", machine);
-        for artifact in artifacts {
-            info!("artifact: {}", artifact.name);
-
-            // Do not print prompts to stdout; inputs are read from stdin and stored in $prompt
-            print_files(&artifact, &make.make_base);
-
-            let skip_rest =
-                run_check_serialization(&artifact, &machine, &backend, &make.make_base)?;
-            if skip_rest {
-                continue;
-            }
-
-            let prompt_results =
-                read_artifact_prompts(&artifact).context("could not query all prompts")?;
-            let prompt = create_temp_dir(Some(&format!("prompt-{}", artifact.name)))?;
-            prompt_results
-                .write_prompts_to_files(&prompt.path_buf)
-                .context("writing prompts to files")?;
-
-            let out = create_temp_dir(Some(&format!("out-{}", artifact.name)))?;
-
-            run_generator_script(
-                &artifact,
-                &make.make_base.clone(),
-                &prompt.path_buf,
-                &out.path_buf,
-            )
-            .context("running generator script")?;
-
-            verify_generated_files(artifact, &out.path_buf)?;
-
-            // verify if generator created the expected files
-            run_serialize(&artifact, &backend, &out.path_buf, &machine)?
+pub fn run_regenerate_command(
+    backend_toml: &Path,
+    make_json: &Path,
+    all: bool,
+    machines_to_regenerate: &Vec<String>,
+    artifacts_to_regenerate: &Vec<String>,
+) -> Result<()> {
+    // Validate argument rules
+    if all {
+        if !machines_to_regenerate.is_empty() || !artifacts_to_regenerate.is_empty() {
+            bail!("--all conflicts with --machine/--artifact");
         }
+    } else if machines_to_regenerate.is_empty() && artifacts_to_regenerate.is_empty() {
+        bail!("provide --all or at least one of --machine/--artifact");
     }
 
-    Ok(())
+    run_generate_workflow(
+        backend_toml,
+        make_json,
+        all,
+        machines_to_regenerate,
+        artifacts_to_regenerate,
+        false,
+        "[regenerate]",
+    )
 }

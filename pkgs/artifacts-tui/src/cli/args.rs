@@ -29,6 +29,15 @@ pub enum Command {
         backend: PathBuf,
         /// Path to make configuration file (make.json)
         make: PathBuf,
+        /// Regenerate all artifacts from all machines (conflicts with --machine/--artifact)
+        #[arg(long = "all")]
+        all: bool,
+        /// Name of machine(s) to target (repeatable)
+        #[arg(long = "machine")]
+        machine: Vec<String>,
+        /// Name of artifact(s) to target (repeatable)
+        #[arg(long = "artifact")]
+        artifact: Vec<String>,
     },
     /// Regenerate selected artifacts (or all)
     Regenerate {

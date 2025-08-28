@@ -72,14 +72,20 @@ pub fn run() -> Result<()> {
     log::set_max_level(level_filter);
 
     match cli.command {
-        args::Command::Generate { backend, make } => commands::generate::run(&backend, &make)?,
+        args::Command::Generate {
+            backend,
+            make,
+            all,
+            machine,
+            artifact,
+        } => commands::generate::run_generate_command(&backend, &make, all, &machine, &artifact)?,
         args::Command::Regenerate {
             backend,
             make,
             all,
             machine,
             artifact,
-        } => commands::regenerate::run(&backend, &make, all, &machine, &artifact)?,
+        } => commands::generate::run_regenerate_command(&backend, &make, all, &machine, &artifact)?,
         args::Command::List { backend: _, make } => commands::list::run(&make)?,
     }
     Ok(())

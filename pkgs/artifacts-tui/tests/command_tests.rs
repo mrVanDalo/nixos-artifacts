@@ -197,10 +197,25 @@ fn missing_generator_scenario() {
 }
 
 #[test]
-#[serial]
 fn scenario_help() {
     let mut cmd = cli();
+    cmd.arg("--help");
+
+    assert_cmd_snapshot!(cmd);
+}
+
+#[test]
+fn scenario_generator_help() {
+    let mut cmd = cli();
     cmd.arg("generate").arg("--help");
+
+    assert_cmd_snapshot!(cmd);
+}
+
+#[test]
+fn scenario_regenerator_help() {
+    let mut cmd = cli();
+    cmd.arg("regenerate").arg("--help");
 
     assert_cmd_snapshot!(cmd);
 }
