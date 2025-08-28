@@ -73,6 +73,7 @@ pub fn run() -> Result<()> {
 
     match cli.command {
         args::Command::Generate { backend, make } => commands::generate::run(&backend, &make)?,
+        args::Command::List { backend: _, make } => commands::list::run(&make)?,
     }
     Ok(())
 }

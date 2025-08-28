@@ -1,0 +1,22 @@
+---
+source: tests/command_tests.rs
+info:
+  program: artifacts-cli
+  args:
+    - "--log-level=debug"
+    - list
+    - /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/2_artifacts/backend.toml
+    - /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/2_artifacts/make.json
+  env:
+    TMPDIR: /tmp/artifacts-tui-ci
+  stdin: ""
+---
+success: true
+exit_code: 0
+----- stdout -----
+[list]
+machine: machine-name
+artifact: artifact-one
+artifact: artifact-two
+
+----- stderr -----

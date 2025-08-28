@@ -204,3 +204,22 @@ fn scenario_help() {
 
     assert_cmd_snapshot!(cmd);
 }
+
+#[test]
+#[serial]
+fn list_scenarios() {
+    let root = project_root();
+    let backend = root.join("examples/2_artifacts/backend.toml");
+    let make = root.join("examples/2_artifacts/make.json");
+
+    let env = TempTestEnv::new();
+
+    let mut cmd = sdtin_cli("");
+
+    cmd.arg("list").arg(backend).arg(make);
+
+    // Verify and cleanup
+    env.finish().expect("temp folder not empty at end of test");
+
+    assert_cmd_snapshot!(cmd);
+}

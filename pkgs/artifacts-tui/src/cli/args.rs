@@ -30,4 +30,11 @@ pub enum Command {
         /// Path to make configuration file (make.json)
         make: PathBuf,
     },
+    /// List all machines and artifacts configured in make.json
+    List {
+        /// Path to backend configuration file (backend.toml)
+        backend: PathBuf,
+        /// Path to make configuration file (make.json)
+        make: PathBuf,
+    },
 }
