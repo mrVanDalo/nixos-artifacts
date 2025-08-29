@@ -17,13 +17,11 @@
       "prompts": [
         {
           "name": "secret1",
-          "description": "secret number 1",
-          "kind": "line"
+          "description": "secret number 1"
         },
         {
           "name": "secret2",
-          "description": "secret number 2",
-          "kind": "line"
+          "description": "secret number 2"
         }
       ],
       "generator": "./not_there_test_generator.sh",

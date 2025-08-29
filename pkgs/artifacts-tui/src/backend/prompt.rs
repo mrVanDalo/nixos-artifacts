@@ -51,23 +51,11 @@ fn read_prompt(prompt_element: &PromptDef) -> Result<(String, String)> {
     };
 
     let stdin = io::stdin();
-    let mut value = if stdin.is_terminal() {
+    let value = if stdin.is_terminal() {
         interactive_read_prompt(&prompt_element.name, description)?
     } else {
         non_interactive_read_prompt(prompt_element, description, stdin)?
     };
-
-    // Normalize multiline prompts when saving: remove trailing empty lines, ensure final newline
-    if matches!(prompt_element.kind.as_deref(), Some("multiline")) {
-        // Normalize CRLF to LF to make trimming predictable
-        value = value.replace("\r\n", "\n");
-        // Remove trailing newlines (effectively dropping empty lines at the end)
-        while value.ends_with('\n') {
-            value.pop();
-        }
-        // Ensure exactly one newline at the end
-        value.push('\n');
-    }
 
     Ok((prompt_element.name.clone(), value))
 }
@@ -163,6 +151,7 @@ fn interactive_read_prompt(name: &str, description: &str) -> Result<String> {
                                     render_prompt_line(&mut stdout, name, mode, &buffer, true)?;
                             }
                         }
+
                         // Enter: submit input or new multiline line
                         (KeyCode::Enter, _) => match mode {
                             InputMode::Line | InputMode::Hidden => {
@@ -177,6 +166,7 @@ fn interactive_read_prompt(name: &str, description: &str) -> Result<String> {
                                 stdout.flush()?;
                             }
                         },
+
                         // Ctrl-D: submit input or new multiline line
                         (KeyCode::Char('d'), KeyModifiers::CONTROL) => {
                             if mode == InputMode::Multiline {
