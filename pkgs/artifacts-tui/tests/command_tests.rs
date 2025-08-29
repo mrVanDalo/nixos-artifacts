@@ -116,7 +116,7 @@ fn two_artifacts_scenario() {
 
     let env = TempTestEnv::new();
 
-    let mut cmd = sdtin_cli("one\ntwo\n");
+    let mut cmd = sdtin_cli("");
 
     cmd.arg("generate").arg(backend).arg(make);
 

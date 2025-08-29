@@ -9,28 +9,26 @@ info:
     - /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/2_artifacts/make.json
   env:
     TMPDIR: /tmp/artifacts-tui-ci
-  stdin: "one\ntwo\n"
+  stdin: ""
 ---
 success: true
 exit_code: 0
 ----- stdout -----
 [generate]
-machine: machine-name
-artifact: artifact-one
 DEBUG:     files to produce -> 1 files
 DEBUG:       - first-secret => /run/secrets/first-secret
 DEBUG:     running check_serialization: env inputs="/tmp/artifacts-tui-ci/inputs-artifact_one" machine="machine-name" artifact="artifact-one" /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/2_artifacts/test_check.sh
 DEBUG:     check_serialization: failed with status exit status: 1 -> continuing with generation
+⚡ machine-name/artifact-one
 === Content of /tmp/artifacts-tui-ci/out-artifact-one/first-secret ===
 one
 =========================
 [generate]
-machine: machine-name
-artifact: artifact-two
 DEBUG:     files to produce -> 1 files
 DEBUG:       - second-secret => /run/secrets/second-secret
 DEBUG:     running check_serialization: env inputs="/tmp/artifacts-tui-ci/inputs-artifact_two" machine="machine-name" artifact="artifact-two" /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/2_artifacts/test_check.sh
 DEBUG:     check_serialization: failed with status exit status: 1 -> continuing with generation
+⚡ machine-name/artifact-two
 === Content of /tmp/artifacts-tui-ci/out-artifact-two/second-secret ===
 two
 =========================

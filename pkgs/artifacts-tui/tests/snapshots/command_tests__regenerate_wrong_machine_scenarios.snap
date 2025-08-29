@@ -15,5 +15,9 @@ info:
 success: true
 exit_code: 0
 ----- stdout -----
+✅ machine-one/artifact-one
+✅ machine-one/artifact-two
+✅ machine-two/artifact-one
+✅ machine-two/artifact-two
 
 ----- stderr -----

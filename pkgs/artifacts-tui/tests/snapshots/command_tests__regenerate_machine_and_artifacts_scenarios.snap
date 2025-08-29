@@ -17,12 +17,14 @@ success: true
 exit_code: 0
 ----- stdout -----
 [regenerate]
-machine: machine-one
-artifact: artifact-one
 DEBUG:     files to produce -> 1 files
 DEBUG:       - first-secret => /run/secrets/first-secret
+⚡ machine-one/artifact-one
 === Content of /tmp/artifacts-tui-ci/out-artifact-one/first-secret ===
 one
 =========================
+✅ machine-one/artifact-two
+✅ machine-two/artifact-one
+✅ machine-two/artifact-two
 
 ----- stderr -----

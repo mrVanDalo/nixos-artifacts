@@ -6,7 +6,6 @@ use crossterm::{
     style::Print,
     terminal,
 };
-use log::info;
 use std::collections::HashMap;
 use std::io::{BufRead, IsTerminal, Stdin, Write};
 use std::path::Path;
@@ -65,8 +64,10 @@ fn non_interactive_read_prompt(
     description: &str,
     stdin: Stdin,
 ) -> Result<String> {
-    info!("description: {}", description);
-    info!("enter prompt {}: ", prompt_element.name);
+    println!(">>> DESC: {}", description);
+    println!(">>> PROMPT: {}", prompt_element.name);
+    println!("> ");
+    io::stdout().flush()?;
     let mut reader = stdin.lock();
     let mut input = String::new();
     reader
@@ -85,7 +86,6 @@ enum InputMode {
 // Helper: re-render only the current prompt line (no full-screen clear)
 fn render_prompt_line(
     stdout: &mut io::Stdout,
-    name: &str,
     mode: InputMode,
     buffer: &str,
     show_hint: bool,
@@ -98,12 +98,9 @@ fn render_prompt_line(
     stdout.queue(cursor::MoveToColumn(0))?; // go to column 0
     stdout.queue(terminal::Clear(terminal::ClearType::CurrentLine))?; // clear the current line
     let prompt_prefix = if show_hint {
-        format!(
-            "enter prompt {} [{}] (Tab to change mode): ",
-            name, mode_str
-        )
+        format!("[{}] > (Tab to change mode): ", mode_str)
     } else {
-        format!("enter prompt {} [{}]: ", name, mode_str)
+        format!("[{}] > : ", mode_str)
     };
     let prompt_len = prompt_prefix.chars().count();
     stdout.queue(Print(prompt_prefix))?;
@@ -116,8 +113,11 @@ fn render_prompt_line(
     Ok(prompt_len)
 }
 
-fn interactive_read_prompt(name: &str, description: &str) -> Result<String> {
+fn interactive_read_prompt(prompt_name: &str, description: &str) -> Result<String> {
     let mut stdout = io::stdout();
+
+    println!(">>> DESC: {}", description);
+    println!(">>> PROMPT: {}", prompt_name);
 
     // Enable raw mode for key handling
     terminal::enable_raw_mode()?;
@@ -125,12 +125,9 @@ fn interactive_read_prompt(name: &str, description: &str) -> Result<String> {
     let mut mode = InputMode::Line;
     let mut buffer = String::new();
 
-    // Print description once, like a normal prompt would do, without clearing the screen
-    stdout.queue(Print(format!("{}\n", description)))?;
-
     // Initial prompt render (show hint before typing starts)
     let mut typing_started = false;
-    let mut prompt_prefix_len = render_prompt_line(&mut stdout, name, mode, &buffer, true)?;
+    let mut prompt_prefix_len = render_prompt_line(&mut stdout, mode, &buffer, true)?;
 
     loop {
         if event::poll(std::time::Duration::from_millis(500))? {
@@ -148,7 +145,7 @@ fn interactive_read_prompt(name: &str, description: &str) -> Result<String> {
                                     InputMode::Hidden => InputMode::Line,
                                 };
                                 prompt_prefix_len =
-                                    render_prompt_line(&mut stdout, name, mode, &buffer, true)?;
+                                    render_prompt_line(&mut stdout, mode, &buffer, true)?;
                             }
                         }
 
@@ -199,7 +196,7 @@ fn interactive_read_prompt(name: &str, description: &str) -> Result<String> {
                                 buffer.push(c);
                                 // We re-rendered the whole line including the char, so skip incremental echoing
                                 prompt_prefix_len =
-                                    render_prompt_line(&mut stdout, name, mode, &buffer, false)?;
+                                    render_prompt_line(&mut stdout, mode, &buffer, false)?;
                             } else {
                                 buffer.push(c);
                                 match mode {

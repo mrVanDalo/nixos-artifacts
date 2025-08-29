@@ -15,17 +15,18 @@ success: true
 exit_code: 0
 ----- stdout -----
 [generate]
-machine: machine-name
-artifact: test-artifact
 DEBUG:     files to produce -> 2 files
 DEBUG:       - very-simple-secrets => /run/secrets/very-simple-secrets
 DEBUG:       - simple-secrets => /run/secrets/simple-secrets owner=deployer group=deployer
 DEBUG:     running check_serialization: env inputs="/tmp/artifacts-tui-ci/inputs-test_artifact" machine="machine-name" artifact="test-artifact" /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/scenario_simple/test_check.sh
 DEBUG:     check_serialization: failed with status exit status: 1 -> continuing with generation
-description: secret number 1
-enter prompt secret1: 
-description: secret number 2
-enter prompt secret2: 
+⚡ machine-name/test-artifact
+>>> DESC: secret number 1
+>>> PROMPT: secret1
+> 
+>>> DESC: secret number 2
+>>> PROMPT: secret2
+> 
 === Content of /tmp/artifacts-tui-ci/out-test-artifact/simple-secrets ===
 two
 =========================

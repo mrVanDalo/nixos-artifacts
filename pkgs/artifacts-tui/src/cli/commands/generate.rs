@@ -50,7 +50,7 @@ pub fn run_generate_workflow(
     artifacts_to_regenerate: &Vec<String>,
     check_if_artifact_exists: bool,
     header: &str,
-) -> anyhow::Result<()> {
+) -> Result<()> {
     let backend = BackendConfiguration::read_backend_config(backend_toml)?;
     let make = MakeConfiguration::read_make_config(make_json)?;
 
@@ -68,22 +68,24 @@ pub fn run_generate_workflow(
     for (machine, artifacts) in &make.make_map {
         for artifact in artifacts {
             if !(check_all() || check_machine(machine) && check_artifact(&artifact)) {
+                println!("✅ {}/{}", machine, artifact.name);
                 continue;
             }
 
             info!("{}", header);
-            info!("machine: {}", machine);
-            info!("artifact: {}", artifact.name);
+
             print_files(&artifact, &make.make_base);
 
             if check_if_artifact_exists {
                 let skip_rest =
                     run_check_serialization(&artifact, &machine, &backend, &make.make_base)?;
                 if skip_rest {
+                    println!("✅ {}/{}", machine, artifact.name);
                     continue;
                 }
             }
 
+            println!("⚡ {}/{}", machine, artifact.name);
             let prompt_results =
                 read_artifact_prompts(&artifact).context("could not query all prompts")?;
 
