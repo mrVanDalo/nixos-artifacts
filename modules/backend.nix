@@ -28,36 +28,12 @@ with types;
   options = {
 
     artifacts.default.backend = {
-      serialize = mkOption {
-        type = package;
+      serialization = mkOption {
+        type = str;
         description = "script for serialization";
       };
-      deserialize = mkOption {
-        type = package;
-        description = "script for deserialization";
-      };
     };
 
-    artifacts.backend = mkOption {
-      type = attrsOf (submodule {
-        options = {
-          serialize = mkOption {
-            type = package;
-            description = "script for serialization";
-          };
-
-          deserialize = mkOption {
-            type = package;
-            description = "script for deserialization";
-          };
-        };
-      });
-      default = { };
-      description = "Backend configurations for artifact serialization and deserialization";
-      example = literalExpression ''
-        artifacts.backend.default = config.artifacts.backend.passage;
-      '';
-    };
   };
 
 }

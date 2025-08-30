@@ -9,9 +9,9 @@ pkgs.rustPlatform.buildRustPackage rec {
   src = ./.;
 
   # Use the lock file shipped with the repository
-  cargoLock = {
-    lockFile = ./Cargo.lock;
-  };
+  cargoLock.lockFile = ./Cargo.lock;
+
+  doCheck = false;
 
   # Set to lib.fakeSha256 initially. Build once to get the real cargoHash from the error message,
   # then replace this value for reproducible builds.

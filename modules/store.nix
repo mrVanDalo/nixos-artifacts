@@ -108,17 +108,18 @@ with types;
               description = "Prompts end up in $prompt/<name> in the generator script";
             };
 
-            serialize = mkOption {
-              type = package;
-              default = config.artifacts.default.backend.serialize;
+            serialization = mkOption {
+              #type = package;
+              type = str;
+              default = config.artifacts.default.backend.serialization;
               description = "Serialization definition";
             };
 
-            deserialize = mkOption {
-              type = package;
-              default = config.artifacts.default.backend.deserialize;
-              description = "Deserialization definition";
-            };
+            #            deserialize = mkOption {
+            #              type = package;
+            #              default = config.artifacts.default.backend.deserialize;
+            #              description = "Deserialization definition";
+            #            };
 
             generator = mkOption {
               type = nullOr package;
