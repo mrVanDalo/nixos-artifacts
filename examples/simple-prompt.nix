@@ -5,7 +5,7 @@
     files.secret = { };
     prompts.test.description = "test input";
     generator = pkgs.writers.writeBash "test" ''
-      cat $prompt/test > $out/secret
+      cat $prompts/test > $out/secret
     '';
   };
 

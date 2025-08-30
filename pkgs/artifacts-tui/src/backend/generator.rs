@@ -101,16 +101,16 @@ pub fn run_generator_script(
     arguments.push(generator_script_absolut_path.display().to_string());
     let bwrap_command = arguments.join(" ");
 
-    // Ensure that our 'out' and 'prompt' override any nix-shell provided 'out'
+    // Ensure that our 'out' and 'prompts' override any nix-shell provided 'out'
     fn sh_escape_single_quoted(s: &str) -> String {
         // Replace ' with '\'' for safe single-quoting
         s.replace('\'', "'\\''")
     }
     let out_quoted = sh_escape_single_quoted(&out.display().to_string());
-    let prompt_quoted = sh_escape_single_quoted(&prompts.display().to_string());
+    let prompts_quoted = sh_escape_single_quoted(&prompts.display().to_string());
     let nix_shell_run_command = format!(
-        "export out='{}'; export prompt='{}'; {}",
-        out_quoted, prompt_quoted, bwrap_command
+        "export out='{}'; export prompts='{}'; {}",
+        out_quoted, prompts_quoted, bwrap_command
     );
 
     let mut generator_command = std::process::Command::new(nix_shell);
