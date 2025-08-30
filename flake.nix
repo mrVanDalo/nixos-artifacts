@@ -33,20 +33,29 @@
                   backendFile = (pkgs.formats.toml { }).generate "backend.toml" backend;
                 in
                 pkgs.writers.writeBashBin "artifacts" ''
-                  nix eval --json .#nixosConfigurations --apply "
-                  configurations:
-                  map (name: { machine = "'"''${name}"'" ; artifacts = configurations."'"''${name}"'".config.artifacts.store ;}) (builtins.attrNames configurations)
-                  " | ${pkgs.gojq}/bin/gojq
+                  set -e
+                  set -o pipefail
 
-                  #${self'.packages.artifacts-cli-bin}/bin/artifacts-cli ${backendFile} "$@"
+                  MAKE=$(nix build --impure -I flake=$PWD --no-link --print-out-paths --expr 'import ${./make_file_generator.nix} { system = "${pkgs.system}"; }')
                   cat ${backendFile}
+                  ${self'.packages.artifacts-cli-bin}/bin/artifacts-cli "$@" ${backendFile} ''${MAKE}
                 ''
               )
               {
                 backend = {
-                  test.check_serialization = "./test_check.sh";
-                  test.serialize = "./test_serialize.sh";
-                  test.deserialize = "./test_deseraialize.sh";
+                  test.check_serialization = pkgs.writers.writeBash "test_check" "exit 1"; # always fail
+                  test.deserialize = pkgs.writers.writeBash "test_deserialize" ''
+                    echo "what is deserialization there for again?";
+                  '';
+                  test.serialize = pkgs.writers.writeBash "test_serialize" ''
+                    for file in "$out"/*; do
+                        if [ -f "$file" ]; then
+                            echo "=== Content of $file ==="
+                            cat "$file"
+                            echo "========================="
+                        fi
+                    done
+                  '';
                 };
               };
 
@@ -83,7 +92,7 @@
             machine-two = machineConfiguration "machine-two";
           };
 
-        flakeModules.default = ./flake-module.nix;
+        #flakeModules.default = ./flake-module.nix;
 
         nixosModules.default = {
           imports = [ ./modules ];
