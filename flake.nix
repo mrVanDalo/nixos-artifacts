@@ -15,7 +15,7 @@
       imports = [
         ./nix/formatter.nix
         ./nix/devshells.nix
-        ./flake-module.nix
+        #./flake-module.nix
       ];
       perSystem =
         { pkgs, self', ... }:
@@ -35,7 +35,7 @@
                 pkgs.writers.writeBashBin "artifacts" ''
                   nix eval --json .#nixosConfigurations --apply "
                   configurations:
-                  map (name: { "'"''${name}"'" = configurations."'"''${name}"'".config.artifacts.store ;}) (builtins.attrNames configurations)
+                  map (name: { machine = "'"''${name}"'" ; artifacts = configurations."'"''${name}"'".config.artifacts.store ;}) (builtins.attrNames configurations)
                   " | ${pkgs.gojq}/bin/gojq
 
                   #${self'.packages.artifacts-cli-bin}/bin/artifacts-cli ${backendFile} "$@"
@@ -58,36 +58,30 @@
 
       flake = {
 
-        nixosConfigurations.example = inputs.nixpkgs.lib.nixosSystem {
-          system = "x86_64-linux";
-          specialArgs = { inherit inputs; };
-          modules = [
-            self.nixosModules.default
-            (
-              { pkgs, config, ... }:
-              {
-                networking.hostName = "example";
-                #artifacts.default.backend = config.artifacts.backend.agenix;
-                #artifacts.config.agenix.storeDirAgain = ./secrets;
-                #artifacts.config.agenix.publicHostKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEUXkewyZ94A7CeCyVvN0KCqPn+8x1BZaGWMAojlfCXO";
-                #artifacts.config.agenix.publicUserKeys = [
-                #  "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILE1jxUxvujFaj8kSjwJuNVRUinNuHsGeXUGVG6/lA1O"
-                #];
-
-                artifacts.default.backend.serialization = "test";
-
-                artifacts.store = {
-                  test = {
-                    files.asdf = { };
-                    generator = pkgs.writers.writeBash "generate-test" ''
-                      echo "hallo" > $out/asdf
-                    '';
-                  };
-                };
-              }
-            )
-          ];
-        };
+        nixosConfigurations =
+          let
+            machineConfiguration =
+              name:
+              inputs.nixpkgs.lib.nixosSystem {
+                system = "x86_64-linux";
+                specialArgs = { inherit inputs; };
+                modules = [
+                  self.nixosModules.default
+                  self.nixosModules.examples
+                  (
+                    { pkgs, config, ... }:
+                    {
+                      networking.hostName = name;
+                      artifacts.default.backend.serialization = "test";
+                    }
+                  )
+                ];
+              };
+          in
+          {
+            machine-one = machineConfiguration "machine-one";
+            machine-two = machineConfiguration "machine-two";
+          };
 
         flakeModules.default = ./flake-module.nix;
 

@@ -1,50 +1,56 @@
-{
-  "machine-one": {
-    "artifact-one": {
-      "name": "artifact-one",
-      "files": {
-        "first-secret": {
-          "name": "first-secret",
-          "path": "/run/secrets/first-secret"
-        }
+[
+  {
+    "machine": "machine-one",
+    "artifacts": {
+      "artifact-one": {
+        "name": "artifact-one",
+        "files": {
+          "first-secret": {
+            "name": "first-secret",
+            "path": "/run/secrets/first-secret"
+          }
+        },
+        "generator": "./test_generator_one.sh",
+        "serialization": "test"
       },
-      "generator": "./test_generator_one.sh",
-      "serialization": "test"
-    },
-    "artifact-two": {
-      "name": "artifact-two",
-      "files": {
-        "second-secret": {
-          "name": "second-secret",
-          "path": "/run/secrets/second-secret"
-        }
-      },
-      "generator": "./test_generator_two.sh",
-      "serialization": "test"
+      "artifact-two": {
+        "name": "artifact-two",
+        "files": {
+          "second-secret": {
+            "name": "second-secret",
+            "path": "/run/secrets/second-secret"
+          }
+        },
+        "generator": "./test_generator_two.sh",
+        "serialization": "test"
+      }
     }
   },
-  "machine-two": {
-    "artifact-one": {
-      "name": "artifact-one",
-      "files": {
-        "first-secret": {
-          "name": "first-secret",
-          "path": "/run/secrets/first-secret"
-        }
+  {
+    "machine": "machine-two",
+    "artifacts": {
+      "artifact-one": {
+        "name": "artifact-one",
+        "files": {
+          "first-secret": {
+            "name": "first-secret",
+            "path": "/run/secrets/first-secret"
+          }
+        },
+        "generator": "./test_generator_one.sh",
+        "serialization": "test"
       },
-      "generator": "./test_generator_one.sh",
-      "serialization": "test"
-    },
-    "artifact-two": {
-      "name": "artifact-two",
-      "files": {
-        "second-secret": {
-          "name": "second-secret",
-          "path": "/run/secrets/second-secret"
-        }
-      },
-      "generator": "./test_generator_two.sh",
-      "serialization": "test"
+      "artifact-two": {
+        "name": "artifact-two",
+        "files": {
+          "second-secret": {
+            "name": "second-secret",
+            "path": "/run/secrets/second-secret"
+          }
+        },
+        "generator": "./test_generator_two.sh",
+        "serialization": "test"
+      }
     }
   }
-}
+]

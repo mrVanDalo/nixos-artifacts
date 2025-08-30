@@ -45,13 +45,30 @@ pub struct MakeConfiguration {
     pub make_json: PathBuf,
 }
 
+// New JSON structure: an array of objects with fields { machine: String, artifacts: { name -> ArtifactDef } }
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct MachineArtifacts {
+    machine: String,
+    #[serde(default)]
+    artifacts: BTreeMap<String, ArtifactDef>,
+}
+
 impl MakeConfiguration {
     pub(crate) fn read_make_config(make_json: &Path) -> anyhow::Result<MakeConfiguration> {
         let make_text = fs::read_to_string(make_json)
             .with_context(|| format!("reading make config {}", make_json.display()))?;
-        let make_map: BTreeMap<String, BTreeMap<String, ArtifactDef>> =
-            json_from_str(&make_text)
-                .with_context(|| format!("parsing make config {}", make_json.display()))?;
+
+        let entries: Vec<MachineArtifacts> = json_from_str(&make_text)
+            .with_context(|| format!("parsing make config {}", make_json.display()))?;
+
+        let mut make_map: BTreeMap<String, BTreeMap<String, ArtifactDef>> = BTreeMap::new();
+        for entry in entries {
+            let machine_map = make_map.entry(entry.machine).or_default();
+            for (art_name, art) in entry.artifacts {
+                machine_map.insert(art_name, art);
+            }
+        }
+
         let make_base = make_json
             .parent()
             .map(|p| p.to_path_buf())

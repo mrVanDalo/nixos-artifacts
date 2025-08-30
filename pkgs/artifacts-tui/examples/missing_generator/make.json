@@ -1,14 +1,17 @@
-{
-  "machine-name": {
-    "artifact": {
-      "name": "artifact",
-      "files": {
-        "first-secret": {
-          "name": "first-secret",
-          "path": "/run/secrets/first-secret"
-        }
-      },
-      "serialization": "test"
+[
+  {
+    "machine": "machine-name",
+    "artifacts": {
+      "artifact": {
+        "name": "artifact",
+        "files": {
+          "first-secret": {
+            "name": "first-secret",
+            "path": "/run/secrets/first-secret"
+          }
+        },
+        "serialization": "test"
+      }
     }
   }
-}
+]

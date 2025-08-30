@@ -1,6 +1,6 @@
 {
   imports = [
-    ./shared-generator.nix
+    #./shared-generator.nix
     ./simple-generator.nix
     ./simple-prompt.nix
   ];
