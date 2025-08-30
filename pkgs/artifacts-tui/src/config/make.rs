@@ -26,12 +26,12 @@ pub struct ArtifactDef {
     /// is artifact shared across machines
     /// (not implemented yet)
     pub shared: Option<bool>,
-    /// files to be created
+    /// files to be created, keyed by file name
     #[serde(default)]
-    pub files: Vec<FileDef>,
-    /// prompts to be asked
+    pub files: BTreeMap<String, FileDef>,
+    /// prompts to be asked, keyed by prompt name
     #[serde(default)]
-    pub prompts: Vec<PromptDef>,
+    pub prompts: BTreeMap<String, PromptDef>,
     /// generator script to be run to generate secrets
     pub generator: String,
     /// serialization script to be run to serialize secrets
@@ -39,7 +39,8 @@ pub struct ArtifactDef {
 }
 
 pub struct MakeConfiguration {
-    pub make_map: BTreeMap<String, Vec<ArtifactDef>>,
+    // machine-name -> (artifact-name -> artifact)
+    pub make_map: BTreeMap<String, BTreeMap<String, ArtifactDef>>,
     pub make_base: PathBuf,
     pub make_json: PathBuf,
 }
@@ -48,8 +49,9 @@ impl MakeConfiguration {
     pub(crate) fn read_make_config(make_json: &Path) -> anyhow::Result<MakeConfiguration> {
         let make_text = fs::read_to_string(make_json)
             .with_context(|| format!("reading make config {}", make_json.display()))?;
-        let make_map: BTreeMap<String, Vec<ArtifactDef>> = json_from_str(&make_text)
-            .with_context(|| format!("parsing make config {}", make_json.display()))?;
+        let make_map: BTreeMap<String, BTreeMap<String, ArtifactDef>> =
+            json_from_str(&make_text)
+                .with_context(|| format!("parsing make config {}", make_json.display()))?;
         let make_base = make_json
             .parent()
             .map(|p| p.to_path_buf())

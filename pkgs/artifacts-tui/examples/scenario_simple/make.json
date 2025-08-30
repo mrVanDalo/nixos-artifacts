@@ -1,31 +1,31 @@
 {
-  "machine-name": [
-    {
+  "machine-name": {
+    "test-artifact": {
       "name": "test-artifact",
-      "files": [
-        {
+      "files": {
+        "very-simple-secrets": {
           "name": "very-simple-secrets",
           "path": "/run/secrets/very-simple-secrets"
         },
-        {
+        "simple-secrets": {
           "name": "simple-secrets",
           "path": "/run/secrets/simple-secrets",
           "owner": "deployer",
           "group": "deployer"
         }
-      ],
-      "prompts": [
-        {
+      },
+      "prompts": {
+        "secret1": {
           "name": "secret1",
           "description": "secret number 1"
         },
-        {
+        "secret2": {
           "name": "secret2",
           "description": "secret number 2"
         }
-      ],
+      },
       "generator": "./test_generator.sh",
       "serialization": "test"
     }
-  ]
+  }
 }

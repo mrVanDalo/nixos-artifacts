@@ -1,14 +1,14 @@
 {
-  "machine-name": [
-    {
+  "machine-name": {
+    "artifact": {
       "name": "artifact",
-      "files": [
-        {
+      "files": {
+        "first-secret": {
           "name": "first-secret",
           "path": "/run/secrets/first-secret"
         }
-      ],
+      },
       "serialization": "test"
     }
-  ]
+  }
 }

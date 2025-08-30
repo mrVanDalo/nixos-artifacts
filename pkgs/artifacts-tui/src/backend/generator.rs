@@ -7,7 +7,7 @@ use std::path::Path;
 
 /// Verify that the generator produced exactly the expected files for the given artifact
 pub fn verify_generated_files(artifact: &ArtifactDef, out_path: &Path) -> Result<()> {
-    let expected_files: HashSet<String> = artifact.files.iter().map(|f| f.name.clone()).collect();
+    let expected_files: HashSet<String> = artifact.files.keys().cloned().collect();
 
     let actual_files: HashSet<String> = fs::read_dir(out_path)
         .with_context(|| format!("reading generator output dir {}", out_path.display()))?

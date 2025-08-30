@@ -34,7 +34,7 @@ pub fn read_artifact_prompts(artifact: &ArtifactDef) -> Result<PromptResult> {
         return Ok(PromptResult { results });
     }
 
-    for prompt_element in &artifact.prompts {
+    for prompt_element in artifact.prompts.values() {
         let (name, value) = read_prompt(prompt_element)?;
         results.insert(name, value.clone());
     }

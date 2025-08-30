@@ -66,7 +66,7 @@ pub fn run_generate_workflow(
     };
 
     for (machine, artifacts) in &make.make_map {
-        for artifact in artifacts {
+        for artifact in artifacts.values() {
             if !(check_all() || check_machine(machine) && check_artifact(&artifact)) {
                 println!("✅ {}/{}", machine, artifact.name);
                 continue;
@@ -124,7 +124,7 @@ pub(crate) fn run_check_serialization(
 
     let inputs = create_temp_dir(Some(&format!("inputs-{}", artifact_name)))?;
 
-    for file in &artifact.files {
+    for file in artifact.files.values() {
         let file_name = sanitize_name(&file.name);
         let resolved_path = resolve_path(make_base, &file.path);
         let json_path = inputs.path_buf.join(file_name);

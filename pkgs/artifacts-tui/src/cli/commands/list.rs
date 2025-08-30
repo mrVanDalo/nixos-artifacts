@@ -10,7 +10,7 @@ pub fn run(make_json: &Path) -> Result<()> {
     for (machine, artifacts) in &make.make_map {
         info!("[list]");
         info!("machine: {}", machine);
-        for artifact in artifacts {
+        for artifact in artifacts.values() {
             info!("artifact: {}", artifact.name);
         }
     }

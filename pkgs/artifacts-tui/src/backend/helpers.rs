@@ -7,7 +7,7 @@ pub fn print_files(artifact: &ArtifactDef, make_base: &Path) {
         return;
     }
     debug!("    files to produce -> {} files", artifact.files.len());
-    for f in &artifact.files {
+    for f in artifact.files.values() {
         let resolved = resolve_path(make_base, &f.path);
         debug!(
             "      - {} => {}{}{}",
