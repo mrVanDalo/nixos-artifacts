@@ -246,6 +246,25 @@ fn list_scenarios() {
 
 #[test]
 #[serial]
+fn bigger_scenarios() {
+    let root = project_root();
+    let backend = root.join("examples/bigger_setup/backend.toml");
+    let make = root.join("examples/bigger_setup/make.json");
+
+    let env = TempTestEnv::new();
+
+    let mut cmd = sdtin_cli("");
+
+    cmd.arg("generate").arg(backend).arg(make);
+
+    // Verify and cleanup
+    env.finish().expect("temp folder not empty at end of test");
+
+    assert_cmd_snapshot!(cmd);
+}
+
+#[test]
+#[serial]
 fn regenerate_all_scenarios() {
     let root = project_root();
     let backend = root.join("examples/bigger_setup/backend.toml");

@@ -19,6 +19,7 @@ exit_code: 0
 DEBUG:     files to produce -> 1 files
 DEBUG:       - first-secret => /run/secrets/first-secret
 ⚡ machine-one/artifact-one
+💾 serialize secrets
 === Content of /tmp/artifacts-tui-ci/out-artifact-one/first-secret ===
 one
 =========================
@@ -26,6 +27,7 @@ one
 DEBUG:     files to produce -> 1 files
 DEBUG:       - second-secret => /run/secrets/second-secret
 ⚡ machine-one/artifact-two
+💾 serialize secrets
 === Content of /tmp/artifacts-tui-ci/out-artifact-two/second-secret ===
 two
 =========================
@@ -33,6 +35,7 @@ two
 DEBUG:     files to produce -> 1 files
 DEBUG:       - first-secret => /run/secrets/first-secret
 ⚡ machine-two/artifact-one
+💾 serialize secrets
 === Content of /tmp/artifacts-tui-ci/out-artifact-one/first-secret ===
 one
 =========================
@@ -40,6 +43,7 @@ one
 DEBUG:     files to produce -> 1 files
 DEBUG:       - second-secret => /run/secrets/second-secret
 ⚡ machine-two/artifact-two
+💾 serialize secrets
 === Content of /tmp/artifacts-tui-ci/out-artifact-two/second-secret ===
 two
 =========================

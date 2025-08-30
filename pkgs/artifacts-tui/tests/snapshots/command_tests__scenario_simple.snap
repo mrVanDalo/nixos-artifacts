@@ -27,6 +27,7 @@ DEBUG:     check_serialization: failed with status exit status: 1 -> continuing 
 >>> DESC: secret number 2
 >>> PROMPT: secret2
 > 
+💾 serialize secrets
 === Content of /tmp/artifacts-tui-ci/out-test-artifact/simple-secrets ===
 two
 =========================

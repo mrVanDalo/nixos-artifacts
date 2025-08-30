@@ -22,6 +22,7 @@ pub fn run_serialize(
     let entry = backend.get_backend(backend_name)?;
     let ser_path = resolve_path(&backend.base_path, &entry.serialize);
     let ser_abs = fs::canonicalize(&ser_path).unwrap_or_else(|_| ser_path.clone());
+    println!("💾 serialize secrets");
     std::process::Command::new("sh")
         .arg(&ser_abs)
         .env("out", out)
