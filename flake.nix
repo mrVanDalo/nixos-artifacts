@@ -15,7 +15,6 @@
       imports = [
         ./nix/formatter.nix
         ./nix/devshells.nix
-        #./flake-module.nix
       ];
       perSystem =
         { pkgs, self', ... }:
@@ -91,8 +90,6 @@
             machine-one = machineConfiguration "machine-one";
             machine-two = machineConfiguration "machine-two";
           };
-
-        #flakeModules.default = ./flake-module.nix;
 
         nixosModules.default = {
           imports = [ ./modules ];
