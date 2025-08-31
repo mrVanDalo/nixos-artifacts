@@ -2,8 +2,6 @@
   description = "Description for the project";
 
   inputs = {
-    agenix.inputs.nixpkgs.follows = "nixpkgs";
-    agenix.url = "github:ryantm/agenix";
     devshell.url = "github:numtide/devshell";
     flake-parts.url = "github:hercules-ci/flake-parts";
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -28,22 +26,22 @@
             pkgs.callPackage
               (
                 {
-                  backend ? { },
+                  backends ? { },
                 }:
                 let
-                  backendFile = (pkgs.formats.toml { }).generate "backend.toml" backend;
+                  backendsFile = (pkgs.formats.toml { }).generate "backends.toml" backends;
                 in
                 pkgs.writers.writeBashBin "artifacts" ''
                   set -e
                   set -o pipefail
 
                   MAKE=$(nix build --impure -I flake=$PWD --no-link --print-out-paths --expr 'import ${./make_file_generator.nix} { system = "${pkgs.system}"; }')
-                  cat ${backendFile}
-                  ${self'.packages.artifacts-cli-bin}/bin/artifacts-cli "$@" ${backendFile} ''${MAKE}
+                  cat ${backendsFile}
+                  ${self'.packages.artifacts-cli-bin}/bin/artifacts-cli "$@" ${backendsFile} ''${MAKE}
                 ''
               )
               {
-                backend = {
+                backends = {
                   test.check_serialization = pkgs.writers.writeBash "test_check" "exit 1"; # always fail
                   test.deserialize = pkgs.writers.writeBash "test_deserialize" ''
                     echo "what is deserialization there for again?";
@@ -82,7 +80,7 @@
                     { pkgs, config, ... }:
                     {
                       networking.hostName = name;
-                      artifacts.default.backend.serialization = "agenix";
+                      artifacts.default.backend.serialization = "test";
                     }
                   )
                 ];
