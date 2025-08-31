@@ -1,6 +1,5 @@
 use anyhow::Context;
 use anyhow::Result;
-use insta_cmd::SpawnExt;
 #[allow(deprecated)]
 use insta_cmd::{StdinCommand, assert_cmd_snapshot, get_cargo_bin};
 use serial_test::serial;
@@ -68,6 +67,24 @@ impl TempTestEnv {
 
 #[test]
 #[serial]
+fn no_config_scenario() {
+    let root = project_root();
+    let backend = root.join("examples/no_config/backend.toml");
+    let make = root.join("examples/no_config/make.json");
+
+    let env = TempTestEnv::new();
+
+    let mut cmd = sdtin_cli("one\ntwo\n");
+
+    cmd.arg("generate").arg(backend).arg(make);
+
+    // Verify and cleanup
+    env.finish().expect("temp folder not empty at end of test");
+
+    assert_cmd_snapshot!(cmd);
+}
+#[test]
+#[serial]
 fn scenario_simple() {
     let root = project_root();
     let backend = root.join("examples/scenario_simple/backend.toml");
@@ -77,11 +94,7 @@ fn scenario_simple() {
 
     let mut cmd = sdtin_cli("one\ntwo\n");
 
-    cmd.arg("generate")
-        .arg(backend)
-        .arg(make)
-        .pass_stdin("a")
-        .pass_stdin("b");
+    cmd.arg("generate").arg(backend).arg(make);
 
     // Verify and cleanup
     env.finish().expect("temp folder not empty at end of test");

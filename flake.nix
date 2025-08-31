@@ -2,6 +2,8 @@
   description = "Description for the project";
 
   inputs = {
+    agenix.inputs.nixpkgs.follows = "nixpkgs";
+    agenix.url = "github:ryantm/agenix";
     devshell.url = "github:numtide/devshell";
     flake-parts.url = "github:hercules-ci/flake-parts";
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -80,7 +82,7 @@
                     { pkgs, config, ... }:
                     {
                       networking.hostName = name;
-                      artifacts.default.backend.serialization = "test";
+                      artifacts.default.backend.serialization = "agenix";
                     }
                   )
                 ];

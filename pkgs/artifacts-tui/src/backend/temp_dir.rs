@@ -17,6 +17,7 @@ impl Drop for TempDirGuard {
 /// Create a temporary directory under the system temp dir.
 /// If `subfolder` is provided, it will be appended to the temp path.
 /// Returns a guard that will remove the directory on drop.
+// todo : it seems /tmp/<subfolder> is always the scenario, but we want something like tempdir creates
 pub fn create_temp_dir(subfolder: Option<&str>) -> Result<TempDirGuard> {
     let mut directory = std::env::temp_dir();
     if let Some(sub) = subfolder {

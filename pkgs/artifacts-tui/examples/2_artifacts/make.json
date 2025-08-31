@@ -1,6 +1,9 @@
 [
   {
     "machine": "machine-name",
+    "config": {
+      "test": { "key": "example-key" }
+    },
     "artifacts": {
       "artifact-one": {
         "name": "artifact-one",

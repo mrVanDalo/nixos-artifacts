@@ -8,6 +8,7 @@ let
   make = map (name: {
     machine = name;
     artifacts = flake.nixosConfigurations.${name}.config.artifacts.store;
+    config = flake.nixosConfigurations.${name}.config.artifacts.config;
   }) configurations;
 in
 pkgs.writeText "test.json" (builtins.toJSON make)

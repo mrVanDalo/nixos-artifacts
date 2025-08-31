@@ -77,8 +77,7 @@ pub fn run_generate_workflow(
             print_files(&artifact, &make.make_base);
 
             if check_if_artifact_exists {
-                let skip_rest =
-                    run_check_serialization(&artifact, &machine, &backend, &make.make_base)?;
+                let skip_rest = run_check_serialization(&artifact, &machine, &backend, &make)?;
                 if skip_rest {
                     println!("✅ {}/{}", machine, artifact.name);
                     continue;
@@ -106,7 +105,7 @@ pub fn run_generate_workflow(
 
             verify_generated_files(artifact, &out.path_buf)?;
 
-            run_serialize(&artifact, &backend, &out.path_buf, &machine)?
+            run_serialize(&artifact, &backend, &out.path_buf, &machine, &make)?
         }
     }
     Ok(())
@@ -116,7 +115,7 @@ pub(crate) fn run_check_serialization(
     artifact: &ArtifactDef,
     machine: &str,
     backend: &BackendConfiguration,
-    make_base: &Path,
+    make: &MakeConfiguration,
 ) -> anyhow::Result<bool> {
     let backend_name = &artifact.serialization;
     let backend_entry = backend.get_backend(backend_name)?;
@@ -124,9 +123,22 @@ pub(crate) fn run_check_serialization(
 
     let inputs = create_temp_dir(Some(&format!("inputs-{}", artifact_name)))?;
 
+    // Prepare backend config file for this machine/backend
+    let config_dir = create_temp_dir(Some(&format!("config-{}", artifact_name)))?;
+    let config_file = config_dir.path_buf.join("config.json");
+    let config_value = make
+        .machine_config
+        .get(machine)
+        .and_then(|per_machine| per_machine.get(backend_name))
+        .map(|m| serde_json::to_value(m).unwrap_or(serde_json::json!({})))
+        .unwrap_or(serde_json::json!({}));
+    let config_text = to_string_pretty(&config_value)?;
+    fs::write(&config_file, &config_text)
+        .with_context(|| format!("writing {}", config_file.display()))?;
+
     for file in artifact.files.values() {
         let file_name = sanitize_name(&file.name);
-        let resolved_path = resolve_path(make_base, &file.path);
+        let resolved_path = resolve_path(&make.make_base, &file.path);
         let json_path = inputs.path_buf.join(file_name);
 
         let text = to_string_pretty(&json!({
@@ -152,6 +164,7 @@ pub(crate) fn run_check_serialization(
 
     let status = std::process::Command::new(&check_abs)
         .env("inputs", &inputs.path_buf)
+        .env("config", &config_file)
         .env("machine", machine)
         .env("artifact", &artifact.name)
         .status()
