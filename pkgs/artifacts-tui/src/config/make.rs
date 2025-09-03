@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FileDef {
     pub name: String,
-    pub path: String,
+    pub path: Option<String>,
     pub owner: Option<String>,
     pub group: Option<String>,
 }

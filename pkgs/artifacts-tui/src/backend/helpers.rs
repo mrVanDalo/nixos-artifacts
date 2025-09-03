@@ -8,11 +8,16 @@ pub fn print_files(artifact: &ArtifactDef, make_base: &Path) {
     }
     debug!("    files to produce -> {} files", artifact.files.len());
     for f in artifact.files.values() {
-        let resolved = resolve_path(make_base, &f.path);
+        let path = match f.path.clone() {
+            None => None,
+            Some(path) => Some(resolve_path(make_base, &path)),
+        };
         debug!(
             "      - {} => {}{}{}",
             f.name,
-            resolved.display(),
+            path.as_ref()
+                .map(|p| format!("{}", p.display()))
+                .unwrap_or_default(),
             f.owner
                 .as_ref()
                 .map(|o| format!(" owner={}", o))

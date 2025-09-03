@@ -44,7 +44,7 @@ with types;
 
                       path = mkOption {
                         type = str;
-                        default = "/run/secrets/${artifactName}/${fileName}";
+                        default = "/run/artifacts/${artifactName}/${fileName}";
                         example = "/etc/ssh/ssh_host_ed25519_key";
                         description = "Path to the file on the target system.";
                       };

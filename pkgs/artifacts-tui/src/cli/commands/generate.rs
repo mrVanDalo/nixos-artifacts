@@ -138,7 +138,10 @@ pub(crate) fn run_check_serialization(
 
     for file in artifact.files.values() {
         let file_name = sanitize_name(&file.name);
-        let resolved_path = resolve_path(&make.make_base, &file.path);
+        let resolved_path = match &file.path.clone() {
+            None => None,
+            Some(path) => Some(resolve_path(&make.make_base, path)),
+        };
         let json_path = inputs.path_buf.join(file_name);
 
         let text = to_string_pretty(&json!({
