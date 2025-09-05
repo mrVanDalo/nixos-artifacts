@@ -13,7 +13,11 @@ let
   make = map (name: {
     machine = name;
     artifacts = flake.nixosConfigurations.${name}.config.artifacts.store;
-    config = flake.nixosConfigurations.${name}.config.artifacts.config;
+    config =
+      if (builtins.hasAttr "config" flake.nixosConfigurations.${name}.config.artifacts) then
+        flake.nixosConfigurations.${name}.config.artifacts.config
+      else
+        { };
   }) configurations;
 in
 pkgs.writeText "test.json" (builtins.toJSON make)
