@@ -60,6 +60,15 @@ with types;
                         default = "root";
                         description = "group of the file on the target system.";
                       };
+
+                      mode = mkOption {
+                        type = types.str;
+                        default = "0400";
+                        description = ''
+                          Permissions mode of the decrypted secret in a format understood by chmod.
+                        '';
+                      };
+
                     };
                   }
                 )
