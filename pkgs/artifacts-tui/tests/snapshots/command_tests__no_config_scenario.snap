@@ -18,7 +18,7 @@ exit_code: 0
 DEBUG:     files to produce -> 2 files
 DEBUG:       - simple-secrets => /run/secrets/simple-secrets owner=deployer group=deployer
 DEBUG:       - very-simple-secrets => /run/secrets/very-simple-secrets
-DEBUG:     running check_serialization: env inputs="/tmp/artifacts-tui-ci/inputs-test_artifact" machine="machine-name" artifact="test-artifact" /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/no_config/test_check.sh
+DEBUG:     running check_serialization: env inputs="/tmp/artifacts-tui-ci/inputs-test-artifact" machine="machine-name" artifact="test-artifact" /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/no_config/test_check.sh
 $config: 
 {}
 DEBUG:     check_serialization: failed with status exit status: 1 -> continuing with generation

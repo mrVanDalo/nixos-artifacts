@@ -361,3 +361,25 @@ fn regenerate_wrong_machine_scenarios() {
 
     assert_cmd_snapshot!(cmd);
 }
+
+#[test]
+#[serial]
+fn artifact_name_scenario() {
+    let root = project_root();
+    let backend = root.join("examples/artifact_names/backend.toml");
+    let make = root.join("examples/artifact_names/make.json");
+
+    let env = TempTestEnv::new();
+
+    let mut cmd = sdtin_cli("");
+
+    cmd.arg("generate")
+        .arg(backend)
+        .arg(make)
+        .arg("--machine=machine-name");
+
+    // Verify and cleanup
+    env.finish().expect("temp folder not empty at end of test");
+
+    assert_cmd_snapshot!(cmd);
+}

@@ -120,12 +120,11 @@ pub(crate) fn run_check_serialization(
 ) -> anyhow::Result<bool> {
     let backend_name = &artifact.serialization;
     let backend_entry = backend.get_backend(backend_name)?;
-    let artifact_name = sanitize_name(&artifact.name);
 
-    let inputs = create_temp_dir(Some(&format!("inputs-{}", artifact_name)))?;
+    let inputs = create_temp_dir(Some(&format!("inputs-{}", artifact.name)))?;
 
     // Prepare backend config file for this machine/backend
-    let config_dir = create_temp_dir(Some(&format!("config-{}", artifact_name)))?;
+    let config_dir = create_temp_dir(Some(&format!("config-{}", artifact.name)))?;
     let config_file = config_dir.path_buf.join("config.json");
     let config_value = make
         .machine_config
@@ -138,12 +137,11 @@ pub(crate) fn run_check_serialization(
         .with_context(|| format!("writing {}", config_file.display()))?;
 
     for file in artifact.files.values() {
-        let file_name = sanitize_name(&file.name);
         let resolved_path = match &file.path.clone() {
             None => None,
             Some(path) => Some(resolve_path(&make.make_base, path)),
         };
-        let json_path = inputs.path_buf.join(file_name);
+        let json_path = inputs.path_buf.join(&file.name);
 
         let text = to_string_pretty(&json!({
             "path": resolved_path,
@@ -197,6 +195,8 @@ pub(crate) fn run_check_serialization(
 /// # Returns
 ///
 /// A new String containing only ASCII alphanumeric characters and underscores.
+// todo : we might need this file again
+#[allow(dead_code)]
 fn sanitize_name(name: &str) -> String {
     name.chars()
         .map(|c| if c.is_ascii_alphanumeric() { c } else { '_' })
