@@ -46,6 +46,7 @@ pub fn verify_generated_files(artifact: &ArtifactDef, out_path: &Path) -> Result
 // todo: get rid of nix-shell and use bwrap directly (brwap must be part of the nix-package)
 pub fn run_generator_script(
     artifact: &ArtifactDef,
+    machine: &str,
     make_base: &Path,
     prompts: &Path,
     out: &Path,
@@ -108,9 +109,11 @@ pub fn run_generator_script(
     }
     let out_quoted = sh_escape_single_quoted(&out.display().to_string());
     let prompts_quoted = sh_escape_single_quoted(&prompts.display().to_string());
+    let machine_quoted = sh_escape_single_quoted(machine);
+    let artifact_quoted = sh_escape_single_quoted(&artifact.name);
     let nix_shell_run_command = format!(
-        "export out='{}'; export prompts='{}'; {}",
-        out_quoted, prompts_quoted, bwrap_command
+        "export out='{}'; export prompts='{}'; export machine='{}'; export artifact='{}'; {}",
+        out_quoted, prompts_quoted, machine_quoted, artifact_quoted, bwrap_command
     );
 
     let mut generator_command = std::process::Command::new(nix_shell);

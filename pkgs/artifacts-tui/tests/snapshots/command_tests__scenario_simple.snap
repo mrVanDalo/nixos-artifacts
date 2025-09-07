@@ -31,6 +31,8 @@ DEBUG:     check_serialization: failed with status exit status: 1 -> continuing 
 >>> DESC: secret number 2
 >>> PROMPT: secret2
 > 
+machine=machine-name
+artifact=test-artifact
 💾 serialize secrets
 $config: 
 {

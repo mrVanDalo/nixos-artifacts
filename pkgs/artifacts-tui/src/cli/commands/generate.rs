@@ -97,6 +97,7 @@ pub fn run_generate_workflow(
 
             run_generator_script(
                 &artifact,
+                &machine,
                 &make.make_base.clone(),
                 &prompt.path_buf,
                 &out.path_buf,
