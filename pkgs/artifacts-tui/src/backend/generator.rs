@@ -1,10 +1,10 @@
 use crate::backend::helpers::resolve_path;
 use crate::config::make::ArtifactDef;
 use anyhow::{Context, Result, bail};
+use log::debug;
 use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
-use log::debug;
 
 /// Verify that the generator produced exactly the expected files for the given artifact
 pub fn verify_generated_files(artifact: &ArtifactDef, out_path: &Path) -> Result<()> {
@@ -96,9 +96,9 @@ pub fn run_generator_script(
     // Build the bwrap command as a single string for nix-shell --run
     // Start with the always-present arguments using vec![] to appease clippy
     let mut arguments: Vec<String> = string_vec!["bwrap"];
-    arguments.extend(string_vec![ "--unshare-all", "--unshare-user" ]);
-    arguments.extend(string_vec![ "--uid", "1000" ]);
-    arguments.extend(string_vec![ "--gid", "1000" ]);
+    arguments.extend(string_vec!["--unshare-all", "--unshare-user"]);
+    arguments.extend(string_vec!["--uid", "1000"]);
+    arguments.extend(string_vec!["--gid", "1000"]);
     arguments.extend(string_vec!["--tmpfs", "/"]);
     arguments.extend(string_vec!["--chdir", "/"]);
     arguments.extend(string_vec!["--ro-bind", "/nix/store", "/nix/store"]);
@@ -115,14 +115,18 @@ pub fn run_generator_script(
         ]);
     }
     if Path::new("/bin").exists() {
-       arguments.extend(string_vec!["--ro-bind", "/bin", "/bin"]);
+        arguments.extend(string_vec!["--ro-bind", "/bin", "/bin"]);
     }
     if Path::new("/usr/bin").exists() {
         arguments.extend(string_vec!["--ro-bind", "/usr/bin", "/usr/bin"]);
     }
     // Bind our custom passwd into the namespace as read-only
-    arguments.extend(string_vec!["--ro-bind", temp_passwd_path.display(), "/etc/passwd"]);
-    arguments.extend(string_vec![ "--", "/bin/sh" ]);
+    arguments.extend(string_vec![
+        "--ro-bind",
+        temp_passwd_path.display(),
+        "/etc/passwd"
+    ]);
+    arguments.extend(string_vec!["--", "/bin/sh"]);
     arguments.push(generator_script_absolut_path.display().to_string());
     let bwrap_command = arguments.join(" ");
     debug!("bwrap command: {}", bwrap_command);
