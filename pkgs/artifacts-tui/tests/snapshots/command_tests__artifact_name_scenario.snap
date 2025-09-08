@@ -30,6 +30,7 @@ forthSecret
 third-secret
 DEBUG:     check_serialization: failed with status exit status: 1 -> continuing with generation
 ⚡ machine-name/artifact.one
+DEBUG: bwrap command: bwrap --unshare-all --unshare-user --uid 1000 --gid 1000 --tmpfs / --chdir / --ro-bind /nix/store /nix/store --tmpfs /usr/lib/systemd --proc /proc --dev /dev --bind /tmp/artifacts-tui-ci/prompt-artifact.one /tmp/artifacts-tui-ci/prompt-artifact.one --bind /tmp/artifacts-tui-ci/out-artifact.one /tmp/artifacts-tui-ci/out-artifact.one --ro-bind /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/artifact_names /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/artifact_names --ro-bind /bin /bin --ro-bind /usr/bin /usr/bin --ro-bind /tmp/artifacts-tui-ci/artifacts-tui-passwd-65ccc173a2653c6b.txt /etc/passwd -- /bin/sh /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/artifact_names/test_generator.sh
 💾 serialize secrets
 === Content of /tmp/artifacts-tui-ci/out-artifact.one/fifth secret ===
 test

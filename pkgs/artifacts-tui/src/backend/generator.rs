@@ -4,6 +4,7 @@ use anyhow::{Context, Result, bail};
 use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
+use log::debug;
 
 /// Verify that the generator produced exactly the expected files for the given artifact
 pub fn verify_generated_files(artifact: &ArtifactDef, out_path: &Path) -> Result<()> {
@@ -42,6 +43,11 @@ pub fn verify_generated_files(artifact: &ArtifactDef, out_path: &Path) -> Result
 
     Ok(())
 }
+macro_rules! string_vec {
+    ($($x:expr),* $(,)?) => {
+        vec![$($x.to_string()),*]
+    };
+}
 
 // todo: get rid of nix-shell and use bwrap directly (brwap must be part of the nix-package)
 pub fn run_generator_script(
@@ -60,47 +66,66 @@ pub fn run_generator_script(
     let nix_shell = which::which("nix-shell")
         .context("nix-shell is required to run the generator but was not found in PATH")?;
 
+    // Prepare a temporary /etc/passwd to be bind-mounted read-only inside bwrap
+    // Requirement: entries "user:1000:1000:/tmp:/bin/sh"
+    let passwd_content = "user:x:1000:1000::/tmp:/bin/sh\n";
+
+    // Compute a deterministic filename based on the 'out' path to keep test snapshots stable
+    fn fnv1a64(s: &str) -> u64 {
+        let mut hash: u64 = 0xcbf29ce484222325; // FNV offset basis
+        const PRIME: u64 = 0x00000100000001B3; // FNV prime
+        for b in s.as_bytes() {
+            hash ^= *b as u64;
+            hash = hash.wrapping_mul(PRIME);
+        }
+        hash
+    }
+    let out_path_str = out.display().to_string();
+    let hash = fnv1a64(&out_path_str);
+    let mut temp_passwd_path = std::env::temp_dir();
+    let file_name = format!("artifacts-tui-passwd-{:016x}.txt", hash);
+    temp_passwd_path.push(file_name);
+
+    fs::write(&temp_passwd_path, passwd_content).with_context(|| {
+        format!(
+            "failed to create temporary passwd file at {}",
+            temp_passwd_path.display()
+        )
+    })?;
+
     // Build the bwrap command as a single string for nix-shell --run
     // Start with the always-present arguments using vec![] to appease clippy
-    let mut arguments: Vec<String> = vec![
-        "bwrap".to_string(),
-        "--ro-bind".to_string(),
-        "/nix/store".to_string(),
-        "/nix/store".to_string(),
-        "--tmpfs".to_string(),
-        "/usr/lib/systemd".to_string(),
-        "--dev".to_string(),
-        "/dev".to_string(),
-        "--bind".to_string(),
-        prompts.display().to_string(),
-        prompts.display().to_string(),
-        "--bind".to_string(),
-        out.display().to_string(),
-        out.display().to_string(),
-    ];
+    let mut arguments: Vec<String> = string_vec!["bwrap"];
+    arguments.extend(string_vec![ "--unshare-all", "--unshare-user" ]);
+    arguments.extend(string_vec![ "--uid", "1000" ]);
+    arguments.extend(string_vec![ "--gid", "1000" ]);
+    arguments.extend(string_vec!["--tmpfs", "/"]);
+    arguments.extend(string_vec!["--chdir", "/"]);
+    arguments.extend(string_vec!["--ro-bind", "/nix/store", "/nix/store"]);
+    arguments.extend(string_vec!["--tmpfs", "/usr/lib/systemd"]);
+    arguments.extend(string_vec!["--proc", "/proc"]);
+    arguments.extend(string_vec!["--dev", "/dev"]);
+    arguments.extend(string_vec!["--bind", prompts.display(), prompts.display()]);
+    arguments.extend(string_vec!["--bind", out.display(), out.display()]);
     if let Some(gen_dir) = generator_script_absolut_path.parent() {
-        arguments.push("--ro-bind".to_string());
-        arguments.push(gen_dir.display().to_string());
-        arguments.push(gen_dir.display().to_string());
+        arguments.extend(string_vec![
+            "--ro-bind",
+            gen_dir.display(),
+            gen_dir.display()
+        ]);
     }
     if Path::new("/bin").exists() {
-        arguments.push("--ro-bind".to_string());
-        arguments.push("/bin".to_string());
-        arguments.push("/bin".to_string());
+       arguments.extend(string_vec!["--ro-bind", "/bin", "/bin"]);
     }
     if Path::new("/usr/bin").exists() {
-        arguments.push("--ro-bind".to_string());
-        arguments.push("/usr/bin".to_string());
-        arguments.push("/usr/bin".to_string());
+        arguments.extend(string_vec!["--ro-bind", "/usr/bin", "/usr/bin"]);
     }
-    arguments.push("--unshare-all".to_string());
-    arguments.push("--unshare-user".to_string());
-    arguments.push("--uid".to_string());
-    arguments.push("1000".to_string());
-    arguments.push("--".to_string());
-    arguments.push("/bin/sh".to_string());
+    // Bind our custom passwd into the namespace as read-only
+    arguments.extend(string_vec!["--ro-bind", temp_passwd_path.display(), "/etc/passwd"]);
+    arguments.extend(string_vec![ "--", "/bin/sh" ]);
     arguments.push(generator_script_absolut_path.display().to_string());
     let bwrap_command = arguments.join(" ");
+    debug!("bwrap command: {}", bwrap_command);
 
     // Ensure that our 'out' and 'prompts' override any nix-shell provided 'out'
     fn sh_escape_single_quoted(s: &str) -> String {
@@ -128,6 +153,9 @@ pub fn run_generator_script(
     let status = generator_command
         .status()
         .context("failed to start generator in nix-shell")?;
+
+    // Best-effort cleanup of the temporary passwd file
+    let _ = fs::remove_file(&temp_passwd_path);
 
     if !status.success() {
         bail!(

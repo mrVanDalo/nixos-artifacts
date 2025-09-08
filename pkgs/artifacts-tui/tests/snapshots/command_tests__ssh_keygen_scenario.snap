@@ -1,0 +1,60 @@
+---
+source: tests/command_tests.rs
+info:
+  program: artifacts-cli
+  args:
+    - "--log-level=debug"
+    - generate
+    - /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/ssh-keygen/backend.toml
+    - /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/ssh-keygen/make.json
+    - "--machine=machine-name"
+  env:
+    TMPDIR: /tmp/artifacts-tui-ci
+  stdin: ""
+---
+success: true
+exit_code: 0
+----- stdout -----
+[generate]
+DEBUG:     files to produce -> 2 files
+DEBUG:       - id_ed25519 => /run/secrets/id_ed25519
+DEBUG:       - id_ed25519.pub => /run/secrets/id_ed25519.pub
+DEBUG:     running check_serialization: env inputs="/tmp/artifacts-tui-ci/inputs-artifact.one" machine="machine-name" artifact="artifact.one" /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/ssh-keygen/test_check.sh
+id_ed25519
+id_ed25519.pub
+DEBUG:     check_serialization: failed with status exit status: 1 -> continuing with generation
+⚡ machine-name/artifact.one
+DEBUG: bwrap command: bwrap --unshare-all --unshare-user --uid 1000 --gid 1000 --tmpfs / --chdir / --ro-bind /nix/store /nix/store --tmpfs /usr/lib/systemd --proc /proc --dev /dev --bind /tmp/artifacts-tui-ci/prompt-artifact.one /tmp/artifacts-tui-ci/prompt-artifact.one --bind /tmp/artifacts-tui-ci/out-artifact.one /tmp/artifacts-tui-ci/out-artifact.one --ro-bind /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/ssh-keygen /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/ssh-keygen --ro-bind /bin /bin --ro-bind /usr/bin /usr/bin --ro-bind /tmp/artifacts-tui-ci/artifacts-tui-passwd-65ccc173a2653c6b.txt /etc/passwd -- /bin/sh /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/ssh-keygen/test_generator.sh
+Generating public/private ed25519 key pair.
+Your identification has been saved in /tmp/artifacts-tui-ci/out-artifact.one/id_ed25519
+Your public key has been saved in /tmp/artifacts-tui-ci/out-artifact.one/id_ed25519.pub
+The key fingerprint is:
+SHA256:bY3n5Cfu6B9IbIjYomxgukal483UL0g9zC9chmLqI2Q user@cherry
+The key's randomart image is:
++--[ED25519 256]--+
+|                 |
+|                 |
+|                 |
+|   . o . + o     |
+|..o B + S B +    |
+|oE * O o + *     |
+|* % + *   . = .  |
+|.B + + o   o +   |
+|=..   o  .oo+    |
++----[SHA256]-----+
+machine-name ssh key for  = ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBqHX/hemz44j6V3ORW/sP6HSffriG6pP+2os0f08PYj user@cherry
+💾 serialize secrets
+=== Content of /tmp/artifacts-tui-ci/out-artifact.one/id_ed25519 ===
+-----BEGIN OPENSSH PRIVATE KEY-----
+b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
+QyNTUxOQAAACAah1/4Xps+OI+ldzkVv7D+h0n364huqT/tqLNH9PD2IwAAAJATvEtJE7xL
+SQAAAAtzc2gtZWQyNTUxOQAAACAah1/4Xps+OI+ldzkVv7D+h0n364huqT/tqLNH9PD2Iw
+AAAEAtlv279N8SwPbbmvffkXhm9nHiQxPEU5Y4hmEk+MUxwxqHX/hemz44j6V3ORW/sP6H
+SffriG6pP+2os0f08PYjAAAAC3VzZXJAY2hlcnJ5AQI=
+-----END OPENSSH PRIVATE KEY-----
+=========================
+=== Content of /tmp/artifacts-tui-ci/out-artifact.one/id_ed25519.pub ===
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBqHX/hemz44j6V3ORW/sP6HSffriG6pP+2os0f08PYj user@cherry
+=========================
+
+----- stderr -----

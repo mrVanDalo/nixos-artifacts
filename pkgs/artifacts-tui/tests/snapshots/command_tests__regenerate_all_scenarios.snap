@@ -19,6 +19,7 @@ exit_code: 0
 DEBUG:     files to produce -> 1 files
 DEBUG:       - first-secret => /run/secrets/first-secret
 ⚡ machine-one/artifact-one
+DEBUG: bwrap command: bwrap --unshare-all --unshare-user --uid 1000 --gid 1000 --tmpfs / --chdir / --ro-bind /nix/store /nix/store --tmpfs /usr/lib/systemd --proc /proc --dev /dev --bind /tmp/artifacts-tui-ci/prompt-artifact-one /tmp/artifacts-tui-ci/prompt-artifact-one --bind /tmp/artifacts-tui-ci/out-artifact-one /tmp/artifacts-tui-ci/out-artifact-one --ro-bind /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup --ro-bind /bin /bin --ro-bind /usr/bin /usr/bin --ro-bind /tmp/artifacts-tui-ci/artifacts-tui-passwd-371ed15b95352dfc.txt /etc/passwd -- /bin/sh /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup/test_generator_one.sh
 💾 serialize secrets
 === Content of /tmp/artifacts-tui-ci/out-artifact-one/first-secret ===
 one
@@ -27,6 +28,7 @@ one
 DEBUG:     files to produce -> 1 files
 DEBUG:       - second-secret => /run/secrets/second-secret
 ⚡ machine-one/artifact-two
+DEBUG: bwrap command: bwrap --unshare-all --unshare-user --uid 1000 --gid 1000 --tmpfs / --chdir / --ro-bind /nix/store /nix/store --tmpfs /usr/lib/systemd --proc /proc --dev /dev --bind /tmp/artifacts-tui-ci/prompt-artifact-two /tmp/artifacts-tui-ci/prompt-artifact-two --bind /tmp/artifacts-tui-ci/out-artifact-two /tmp/artifacts-tui-ci/out-artifact-two --ro-bind /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup --ro-bind /bin /bin --ro-bind /usr/bin /usr/bin --ro-bind /tmp/artifacts-tui-ci/artifacts-tui-passwd-ebde385bfb41d4e2.txt /etc/passwd -- /bin/sh /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup/test_generator_two.sh
 💾 serialize secrets
 === Content of /tmp/artifacts-tui-ci/out-artifact-two/second-secret ===
 two
@@ -35,6 +37,7 @@ two
 DEBUG:     files to produce -> 1 files
 DEBUG:       - first-secret => /run/secrets/first-secret
 ⚡ machine-two/artifact-one
+DEBUG: bwrap command: bwrap --unshare-all --unshare-user --uid 1000 --gid 1000 --tmpfs / --chdir / --ro-bind /nix/store /nix/store --tmpfs /usr/lib/systemd --proc /proc --dev /dev --bind /tmp/artifacts-tui-ci/prompt-artifact-one /tmp/artifacts-tui-ci/prompt-artifact-one --bind /tmp/artifacts-tui-ci/out-artifact-one /tmp/artifacts-tui-ci/out-artifact-one --ro-bind /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup --ro-bind /bin /bin --ro-bind /usr/bin /usr/bin --ro-bind /tmp/artifacts-tui-ci/artifacts-tui-passwd-371ed15b95352dfc.txt /etc/passwd -- /bin/sh /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup/test_generator_one.sh
 💾 serialize secrets
 === Content of /tmp/artifacts-tui-ci/out-artifact-one/first-secret ===
 one
@@ -43,6 +46,7 @@ one
 DEBUG:     files to produce -> 1 files
 DEBUG:       - second-secret => /run/secrets/second-secret
 ⚡ machine-two/artifact-two
+DEBUG: bwrap command: bwrap --unshare-all --unshare-user --uid 1000 --gid 1000 --tmpfs / --chdir / --ro-bind /nix/store /nix/store --tmpfs /usr/lib/systemd --proc /proc --dev /dev --bind /tmp/artifacts-tui-ci/prompt-artifact-two /tmp/artifacts-tui-ci/prompt-artifact-two --bind /tmp/artifacts-tui-ci/out-artifact-two /tmp/artifacts-tui-ci/out-artifact-two --ro-bind /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup --ro-bind /bin /bin --ro-bind /usr/bin /usr/bin --ro-bind /tmp/artifacts-tui-ci/artifacts-tui-passwd-ebde385bfb41d4e2.txt /etc/passwd -- /bin/sh /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup/test_generator_two.sh
 💾 serialize secrets
 === Content of /tmp/artifacts-tui-ci/out-artifact-two/second-secret ===
 two
