@@ -22,6 +22,8 @@ inputs.nixos-artifacts.packages.${system}.default.override {
 
 Now you can install this package system-wide or in a dev shell.
 
+NOTE: Have a look at xref:defining-backends.adoc[how to define backends] on details of the scripts that need to be defined.
+
 == Run the CLI
 
 === Generate artifacts

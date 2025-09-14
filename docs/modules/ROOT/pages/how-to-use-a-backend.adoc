@@ -1,0 +1,43 @@
+= How to use a backend
+
+This page shows how to choose which backend is used when storing artifacts.
+
+You can set a default backend for all artifacts and optionally override it for a specific artifact.
+
+== Prerequisites
+
+- You have a backend available to the CLI, configured under a chosen name (e.g., my-backend). See xref:generate-artifacts-cli.adoc#_configure_the_cli[Configure the CLI].
+- You have at least one artifact defined. See xref:artifact-definition-example.adoc[Artifact definition example].
+
+== Set a default backend
+
+Set the default backend once so all artifacts use it unless they override it.
+
+[source,nix]
+----
+# In your NixOS configuration
+{
+  # Choose the backend name that is configured for the CLI
+  artifacts.default.backend.serialization = "my-backend";
+}
+----
+
+== Override the backend for a specific artifact
+
+You can select a different backend for an individual artifact by setting the serialization field on that artifact.
+
+[source,nix]
+----
+# In your NixOS configuration
+{
+  artifacts.store.my-artifact = {
+    # ... files, prompts, generator, etc.
+    serialization = "my-backend"; # use a specific backend just for this artifact
+  };
+}
+----
+
+== Related topics
+
+- xref:defining-backends.adoc[How to define backends].
+- xref:generate-artifacts-cli.adoc#_configure_the_cli[Generate artifacts (artifacts CLI) — Configure the CLI].

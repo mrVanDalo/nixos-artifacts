@@ -20,6 +20,7 @@ NixOS Artifacts is a framework to unify artifacts and secrets in NixOS flakes. I
 == Backends
 
 - xref:defining-backends.adoc[How to define backends]
+- xref:how-to-use-a-backend.adoc[How to use a backend]
 
 == Build the docs locally
 

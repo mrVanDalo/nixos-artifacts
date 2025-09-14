@@ -3,11 +3,13 @@
 This page explains how to author a backend that integrates with nixos-artifacts.
 A backend implements serialization and deserialization of artifact files. Backends can be packaged as separate flakes and plugged into a project.
 
+NOTE: Have a look at xref:generate-artifacts-cli.adoc[artifacts cli] on how to use the defined backends.
+
 WARNING: The backend interface is experimental and may change.
 
 == Environment variables and directories
 
-Backend scripts and generator scripts operate on temporary directories.
+Backend scripts and generator scripts operate in temporary directories.
 Everything the script should use is handed over via files, directories and environment variables.
 
 == Backend phases / scripts
