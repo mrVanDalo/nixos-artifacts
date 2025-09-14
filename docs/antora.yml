@@ -1,0 +1,5 @@
+name: nixos-artifacts
+title: NixOS Artifacts
+version: latest
+nav:
+  - modules/ROOT/nav.adoc

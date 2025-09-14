@@ -1,2 +1,4 @@
-
-.terraform*
+public/
+.cache/
+/build/
+/node_modules/

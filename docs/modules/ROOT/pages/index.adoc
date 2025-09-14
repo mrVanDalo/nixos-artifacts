@@ -1,0 +1,11 @@
+= NixOS Artifacts
+:page-role: index
+
+Welcome to the minimal documentation site for the NixOS Artifacts project.
+
+This site is built with Antora and is intentionally small; the primary goal is to demonstrate the Nix dev shell setup and file structure for building Antora documentation suitable for GitHub Pages.
+
+== Getting Started
+
+- Build the site with the flake app: `nix run .#build-docs`.
+- The generated site will be in docs/public.

@@ -1,5 +1,7 @@
 # NixOS Artifacts Store
 
+See [Documentation](https://mrvandalo.github.io/nixos-artifacts/)
+
 ## Overview
 
 Nixos-artifacts is a framework to unify artifacts and secrets in NixOS flakes.

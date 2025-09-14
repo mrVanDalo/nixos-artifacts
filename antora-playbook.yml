@@ -1,0 +1,18 @@
+site:
+  title: NixOS Artifacts Docs
+  url: https://mrVanDalo.github.io/nixos-artifacts
+  start_page: nixos-artifacts::index
+content:
+  sources:
+    - url: .
+      start_path: docs
+      branches: HEAD
+      worktree: true
+ui:
+  bundle:
+    url: ./docs/ui-bundle.zip
+    snapshot: true
+runtime:
+  fetch: true
+output:
+  dir: /tmp/antora-public
