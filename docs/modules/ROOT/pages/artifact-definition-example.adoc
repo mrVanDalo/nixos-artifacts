@@ -1,0 +1,38 @@
+= Artifact definition example
+
+This defines an artifact that creates an SSH key, demonstrating `prompts`, `generator`, and `files` options.
+
+[source,nix]
+----
+{ config, pkgs, ... }:
+{
+  artifacts.store.ssh-host-key = {
+    files."id_ed25519".mode = "0400"; <1>
+    files."id_ed25519".path = "/root/.ssh/new_key"; <2>
+    files."id_ed25519.pub".mode = "0444"; <3>
+    files."id_ed25519.pub".path = "/roo/.ssh/new_key.pub"; <4>
+    prompts.passphrase.description = "Enter Passphrase"; <5>
+    generator = pkgs.writeShellScriptBin "gen-ssh" '' <6>
+      ${pkgs.openssh}/bin/ssh-keygen -t ed25519 -N $(cat $prompts/passphrase) -f "$out/id_ed25519"
+    '';
+  };
+}
+----
+<1> the file mode of `id_ed25519`
+<2> the path where `id_ed25519` should be stored on the target system.
+<3> the file mode of `id_ed25519.pub`
+<4> the path where `id_ed25519.pub` should be stored on the target system.
+<5> creates a prompt before the `generator` script is executed. The input of that prompt will be present in the file `$prompts/passphrase`.
+<6> the generator script definition. It must be a nix package, which generated all the defined files in `$out`.
+
+
+== Generator contract
+
+The generator must:
+
+- Read optional user inputs from files in $prompt/<name> for each prompts entry.
+- Write one file per files.<name> handle into $out/<name>.
+
+The backend will then handle serialization of $out.
+
+See also xref:defining-backends.adoc[Defining backends] for how serialization/deserialization is provided.

@@ -1,0 +1,57 @@
+= nixos-artifacts main workflow loop
+
+IMPORTANT: Nothing to see here yet, I have to install the mermaid plugin first
+
+This page explains the main loop that powers generation, rotation, and synchronization of artifacts.
+
+At a high level, the loop tries to ensure every desired artifact (defined in your NixOS configuration) exists in the output, preferring to deserialize from the backend; if missing, it prompts, runs the generator, and then serializes back to the backend.
+
+== Diagram
+
+[mermaid]
+....
+flowchart TD
+  start["Start"] --> mkdir["mkdir <b>$final_out</b>"]
+  mkdir --> init["Initialize: for <b>$artifact</b> in <b>$machine</b>.artifacts"]
+  init --> deserialize["<b>$out</b> := deserialize-secrets(<b>$machine</b>, <b>$artifact</b>)"]
+  deserialize --> check1{"All secrets in <b>$out</b> are present?"}
+  check1 -->|Yes| move1["move <b>$out</b>/* to <b>$final_out</b>/<b>$machine</b>/<b>$artifact</b>/"]
+  move1 --> continue1["continue to next artifact"]
+  check1 -->|No| prompt["<b>$prompts</b> := provide_prompts(<b>$machine</b>,<b>$artifact</b>)"]
+  prompt --> generate["<b>$out</b> := generator_script(<b>$machine</b>,<b>$artifact</b>,<b>$prompts</b>)"]
+  generate --> check2{"All secrets in <b>$out</b> are present?"}
+  check2 -->|Yes| serialize["serialize(<b>$machine</b>,<b>$artifact</b>,<b>$out</b>)"]
+  serialize --> move2["move <b>$out</b>/* to <b>$final_out</b>/<b>$machine</b>/<b>$artifact</b>/"]
+  move2 --> continue2["continue to next artifact"]
+  check2 -->|No| error["Error"]
+  continue1 --> more{"More artifacts?"}
+  continue2 --> more
+  more -->|Yes| deserialize
+  more -->|No| finish["End - All artifacts processed"]
+
+  style finish fill:#E8F5E8
+  style error fill:#F5E8E8
+  style continue1 fill:#E8F0F5
+  style continue2 fill:#E8F0F5
+  style prompt stroke:#333,stroke-width:3px
+  style deserialize fill:#F0E8F0,stroke:#333,stroke-width:3px
+  style generate fill:#F5F0E8,stroke:#333,stroke-width:3px
+  style serialize fill:#F0E8F0,stroke:#333,stroke-width:3px
+....
+
+== Legend
+
+- Green: Success completion state
+- Red: Error state
+- Blue: Flow control operations
+- Purple: Core artifact operations (deserialize, serialize) provided by the backend
+- Yellow: User-defined generator
+
+== Interacting with each step
+
+- Deserialization: Implemented by the selected backend. Attempts to restore the artifact files into $out from persisted state.
+- Prompts: Based on artifacts.store.<name>.prompts, the CLI collects input values and writes them to a temporary $prompt directory for the generator.
+- Generator: A user-provided script or program that must write all expected output files to $out. See xref:artifact-definition-example.adoc[artifact definition] for environment details.
+- Serialization: Implemented by the backend; it persists $out to the backend’s storage.
+
+See also xref:generate-artifacts-cli.adoc[Generate Artifacts with the CLI] for how to execute this loop.

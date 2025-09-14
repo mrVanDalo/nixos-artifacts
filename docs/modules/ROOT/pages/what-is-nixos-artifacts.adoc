@@ -1,0 +1,63 @@
+= What is nixos-artifacts
+:page-aliases: overview.adoc
+
+NixOS Artifacts is a framework to unify artifacts and secrets in NixOS flakes.
+
+It provides a standardized interface to define, generate, rotate, store, and deploy artifacts (such as secrets, keys, certificates, and other configuration files) across machines, while allowing fine-grained backend choice per artifact.
+
+WARNING: This project is experimental. Both the interface and the option structure are not settled and may change at any time in the near future.
+
+== Core idea
+
+nixos-artifacts decouples what you define from how and where it is stored:
+
+- You define artifacts once using a common options schema.
+- Each artifact can choose its own backend (e.g., agenix, sops-nix, custom). Different artifacts can use different backends.
+- A generator and rotation tool orchestrates prompts, generation, serialization, and deserialization.
+
+Inspired by:
+
+- https://docs.clan.lol/guides/vars/vars-overview/[Clan vars]
+- https://github.com/NixOS/nixpkgs/pull/370444[NixOS PR #370444]
+- https://github.com/oddlama/agenix-rekey[agenix rekey]
+
+== What it is
+
+- A secret/artefact engine overlay with a standardized interface.
+- A generator and rotation tool that runs an opinionated main loop to reconcile desired artifacts with their serialized state.
+
+== What it is not
+
+- A secret serialization backend. Backends are provided separately, you can mix and match them per artifact.
+- A guarantee of cross-backend feature parity. Some backend-specific features might not map to the standardized interface.
+
+== Planned features
+
+- Dependencies between artifacts.
+- Shared secrets (same secret content across multiple machines).
+- Publicly readable “secrets” (i.e., public artifacts in the same framework for convenience).
+
+== NixOS options structure
+
+Artifacts are organized into two top-level option trees.
+
+- artifacts.store — What are the artifacts and where should they end up on the target system?
+- artifacts.config — How do we customize or parameterize backend behavior and define defaults?
+
+See xref:artifact-definition-example.adoc[Artifact definition example] for a concrete artifact and the fields available in artifacts.store.
+
+== Supported backends
+
+Out of the box the project aims to support multiple backends; today the repository includes test stubs and a minimal harness.
+
+- agenix (available)
+- sops-nix (planned)
+- colmena (planned)
+
+See:
+
+- xref:defining-backends.adoc[How to define backends]
+
+== CLI and workflow
+
+Use the CLI to drive the main loop for generation and rotation. Start with xref:nixos-artifacts-main-workflow-loop.adoc[Main workflow loop] for the high-level flow, then xref:generate-artifacts-cli.adoc[Generate artifacts] for concrete commands.

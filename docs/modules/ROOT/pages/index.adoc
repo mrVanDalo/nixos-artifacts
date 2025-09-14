@@ -1,11 +1,27 @@
 = NixOS Artifacts
 :page-role: index
 
-Welcome to the minimal documentation site for the NixOS Artifacts project.
+Welcome to the documentation for the NixOS Artifacts project.
 
-This site is built with Antora and is intentionally small; the primary goal is to demonstrate the Nix dev shell setup and file structure for building Antora documentation suitable for GitHub Pages.
+WARNING: This project is experimental. Interfaces and option structures may change without notice.
 
-== Getting Started
+== What is this?
+
+nixos-artifacts is a framework to unify artifacts and secrets in NixOS flakes, providing a standardized interface for generation, rotation, and multi-backend storage.
+
+- xref:what-is-nixos-artifacts.adoc[What is nixos-artifacts]
+- xref:nixos-artifacts-main-workflow-loop.adoc[nixos-artifacts main workflow loop]
+
+== Get started
+
+- xref:artifact-definition-example.adoc[Artifact definition example]
+- xref:generate-artifacts-cli.adoc[Generate artifacts (artifacts CLI)]
+
+== Backends
+
+- xref:defining-backends.adoc[How to define backends]
+
+== Build the docs locally
 
 - Build the site with the flake app: `nix run .#build-docs`.
 - The generated site will be in docs/public.
