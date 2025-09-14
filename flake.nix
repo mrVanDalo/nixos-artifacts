@@ -61,17 +61,24 @@
           apps = {
             build-docs = {
               type = "app";
-              program = "${pkgs.writeShellApplication {
-                name = "build-docs";
-                runtimeInputs = [ pkgs.antora pkgs.nodejs pkgs.git ];
-                text = ''
-                  set -euo pipefail
-                  export ANTORA_CACHE_DIR="$PWD/.cache"
-                  antora --stacktrace antora-playbook.yml --to-dir /tmp/antora-public
-                  echo
-                  echo "Site generated in: docs/public"
-                '';
-              }}/bin/build-docs";
+              program = "${
+                pkgs.writeShellApplication {
+                  name = "build-docs";
+                  runtimeInputs = [
+                    pkgs.antora
+                    pkgs.antora-lunr-extension
+                    pkgs.git
+                    pkgs.nodejs
+                  ];
+                  text = ''
+                    set -euo pipefail
+                    export ANTORA_CACHE_DIR="$PWD/.cache"
+                    antora --stacktrace antora-playbook.yml --to-dir /tmp/antora-public --extension ${pkgs.antora-lunr-extension}/node_modules/@antora/lunr-extension
+                    echo
+                    echo "Site generated in: docs/public"
+                  '';
+                }
+              }/bin/build-docs";
             };
           };
         };

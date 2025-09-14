@@ -21,8 +21,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read    # to read the repository itself
-      pages: write      # to configure Pages
+      contents: read # to read the repository itself
+      pages: write # to configure Pages
     steps:
       - name: Check out repository
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -40,12 +40,21 @@ jobs:
         run: |
           npm --version
           node --version
+          npm install @sntke/antora-mermaid-extension
+          npm install @antora/lunr-extension
           # npx will fetch antora automatically; no local package.json required
           npx antora --version || true
 
       - name: Generate Site
         # Override playbook's absolute output dir (/tmp/antora-public) to a relative path
-        run: npx antora --stacktrace --to-dir build/site antora-playbook.yml
+        run: |
+          npx antora \
+            --stacktrace \
+            --to-dir build/site \
+            --extension ./node_modules/@sntke/antora-mermaid-extension \
+            --extension ./node_modules/@antora/lunr-extension \
+            antora-playbook.yml 
+
 
       - name: Ensure root index redirects to latest docs
         run: |
@@ -76,8 +85,8 @@ jobs:
     runs-on: ubuntu-latest
     # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
     permissions:
-      pages: write      # to deploy to Pages
-      id-token: write   # to verify the deployment originates from an appropriate source
+      pages: write # to deploy to Pages
+      id-token: write # to verify the deployment originates from an appropriate source
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

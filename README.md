@@ -13,7 +13,6 @@ Inspired by:
 
 > **Note:** This project is currently in the design phase.
 
-
 ## Core Concept
 
 NixOS-artifacts provides an abstraction layer over various secret management

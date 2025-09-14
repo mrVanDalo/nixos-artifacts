@@ -1,6 +1,7 @@
 # NixOS Artifacts Docs (Antora)
 
-This is a minimal Antora setup primarily to demonstrate the dev shell and file layout for building docs that can be published via GitHub Pages.
+This is a minimal Antora setup primarily to demonstrate the dev shell and file
+layout for building docs that can be published via GitHub Pages.
 
 ## Structure
 
@@ -22,4 +23,5 @@ Open the generated site at `docs/public/index.html` in your browser.
 
 ## GitHub Pages
 
-You can publish the `docs/public` folder with GitHub Pages (e.g., using a workflow that runs `nix run .#build-docs` and uploads `docs/public`).
+You can publish the `docs/public` folder with GitHub Pages (e.g., using a
+workflow that runs `nix run .#build-docs` and uploads `docs/public`).
