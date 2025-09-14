@@ -7,6 +7,8 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
     treefmt-nix.url = "github:numtide/treefmt-nix";
+    antora-flake.url = "github:mrvandalo/antora-flake";
+    antora-flake.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   outputs =
@@ -17,7 +19,7 @@
         ./nix/devshells.nix
       ];
       perSystem =
-        { pkgs, self', ... }:
+        { pkgs, self', system, ... }:
         {
           packages.default = self'.packages.artifacts-cli;
           packages.artifacts-cli-bin = pkgs.callPackage ./pkgs/artifacts-tui { };
@@ -66,14 +68,18 @@
                   name = "build-docs";
                   runtimeInputs = [
                     pkgs.antora
-                    pkgs.antora-lunr-extension
                     pkgs.git
                     pkgs.nodejs
                   ];
                   text = ''
                     set -euo pipefail
                     export ANTORA_CACHE_DIR="$PWD/.cache"
-                    antora --stacktrace antora-playbook.yml --to-dir /tmp/antora-public --extension ${pkgs.antora-lunr-extension}/node_modules/@antora/lunr-extension
+                    antora \
+                      --stacktrace \
+                      --to-dir /tmp/antora-public \
+                      --extension ${pkgs.antora-lunr-extension}/node_modules/@antora/lunr-extension \
+                      --extension ${inputs.antora-flake.packages.${system}.antora-mermaid-extension}/lib/node_modules/@sntke/antora-mermaid-extension \
+                      antora-playbook.yml
                     echo
                     echo "Site generated in: docs/public"
                   '';

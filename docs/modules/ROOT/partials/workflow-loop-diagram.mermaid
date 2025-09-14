@@ -1,0 +1,12 @@
+flowchart TD
+  start["Start"] --> check_serialization{"check_serialization = 0?"}
+  check_serialization -->|Yes| continue1["continue to next artifact"]
+  check_serialization -->|No| prompt["<b>$prompts</b> := provide_prompts(<b>$machine</b>,<b>$artifact</b>)"]
+  prompt --> generate["<b>$out</b> := generator_script(<b>$machine</b>,<b>$artifact</b>,<b>$prompts</b>)"]
+  generate --> serialize["serialize(<b>$machine</b>,<b>$artifact</b>,<b>$out</b>)"]
+  serialize --> continue2["continue to next artifact"]
+  continue1 --> more{"More artifacts?"}
+  continue2 --> more
+  more -->|Yes| check_serialization
+  more -->|No| finish["End"]
+

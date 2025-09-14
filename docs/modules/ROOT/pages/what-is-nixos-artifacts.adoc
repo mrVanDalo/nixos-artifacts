@@ -1,4 +1,4 @@
-= What is nixos-artifacts
+= What is NixOS Artifacts
 :page-aliases: overview.adoc
 
 NixOS Artifacts is a framework to unify artifacts and secrets in NixOS flakes.
@@ -23,7 +23,7 @@ Inspired by:
 
 == What it is
 
-- A secret/artefact engine overlay with a standardized interface.
+- A secret/artifact engine overlay with a standardized interface.
 - A generator and rotation tool that runs an opinionated main loop to reconcile desired artifacts with their serialized state.
 
 == What it is not
@@ -60,4 +60,4 @@ See:
 
 == CLI and workflow
 
-Use the CLI to drive the main loop for generation and rotation. Start with xref:nixos-artifacts-main-workflow-loop.adoc[Main workflow loop] for the high-level flow, then xref:generate-artifacts-cli.adoc[Generate artifacts] for concrete commands.
+Use the CLI to drive the main loop for generation and rotation. Start with xref:artifacts-workflow-diagrams.adoc[artifact workflow diagrams] for the high-level flow, then xref:generate-artifacts-cli.adoc[Generate artifacts] for concrete commands.

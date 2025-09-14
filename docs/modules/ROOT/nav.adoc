@@ -1,6 +1,6 @@
 * xref:index.adoc[Home]
 * xref:what-is-nixos-artifacts.adoc[What is nixos-artifacts]
-// * xref:nixos-artifacts-main-workflow-loop.adoc[nixos-artifacts main workflow loop]
 * xref:artifact-definition-example.adoc[Artifact definition example]
 * xref:generate-artifacts-cli.adoc[Generate artifacts (CLI)]
 * xref:defining-backends.adoc[How to define backends]
+* xref:artifacts-workflow-diagrams.adoc[Workflow diagrams]

@@ -10,7 +10,7 @@ This defines an artifact that creates an SSH key, demonstrating `prompts`, `gene
     files."id_ed25519".mode = "0400"; <1>
     files."id_ed25519".path = "/root/.ssh/new_key"; <2>
     files."id_ed25519.pub".mode = "0444"; <3>
-    files."id_ed25519.pub".path = "/roo/.ssh/new_key.pub"; <4>
+    files."id_ed25519.pub".path = "/root/.ssh/new_key.pub"; <4>
     prompts.passphrase.description = "Enter Passphrase"; <5>
     generator = pkgs.writeShellScriptBin "gen-ssh" '' <6>
       ${pkgs.openssh}/bin/ssh-keygen -t ed25519 -N $(cat $prompts/passphrase) -f "$out/id_ed25519"
@@ -23,14 +23,14 @@ This defines an artifact that creates an SSH key, demonstrating `prompts`, `gene
 <3> the file mode of `id_ed25519.pub`
 <4> the path where `id_ed25519.pub` should be stored on the target system.
 <5> creates a prompt before the `generator` script is executed. The input of that prompt will be present in the file `$prompts/passphrase`.
-<6> the generator script definition. It must be a nix package, which generated all the defined files in `$out`.
+<6> The generator script definition. It must be a Nix package that generates all defined files into `$out`.
 
 
 == Generator contract
 
 The generator must:
 
-- Read optional user inputs from files in $prompt/<name> for each prompts entry.
+- Read optional user inputs from files in $prompts/<name> for each prompts entry.
 - Write one file per files.<name> handle into $out/<name>.
 
 The backend will then handle serialization of $out.

@@ -22,6 +22,7 @@
             pkgs.rustup
             pkgs.cargo-insta
             pkgs.bubblewrap
+            pkgs.mermaid-cli
           ];
         };
 

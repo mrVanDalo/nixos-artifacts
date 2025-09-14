@@ -53,8 +53,7 @@ jobs:
             --to-dir build/site \
             --extension ./node_modules/@sntke/antora-mermaid-extension \
             --extension ./node_modules/@antora/lunr-extension \
-            antora-playbook.yml 
-
+            antora-playbook.yml
 
       - name: Ensure root index redirects to latest docs
         run: |

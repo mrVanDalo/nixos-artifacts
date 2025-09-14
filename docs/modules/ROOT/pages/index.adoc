@@ -7,10 +7,10 @@ WARNING: This project is experimental. Interfaces and option structures may chan
 
 == What is this?
 
-nixos-artifacts is a framework to unify artifacts and secrets in NixOS flakes, providing a standardized interface for generation, rotation, and multi-backend storage.
+NixOS Artifacts is a framework to unify artifacts and secrets in NixOS flakes. It provides a standardized interface for generation, rotation, and multi-backend storage.
 
-- xref:what-is-nixos-artifacts.adoc[What is nixos-artifacts]
-- xref:nixos-artifacts-main-workflow-loop.adoc[nixos-artifacts main workflow loop]
+- xref:what-is-nixos-artifacts.adoc[What is NixOS Artifacts]
+- xref:artifacts-workflow-diagrams.adoc[Artifact Workflow Diagrams]
 
 == Get started
 
@@ -24,4 +24,4 @@ nixos-artifacts is a framework to unify artifacts and secrets in NixOS flakes, p
 == Build the docs locally
 
 - Build the site with the flake app: `nix run .#build-docs`.
-- The generated site will be in docs/public.
+- The generated site will be in `docs/public`.

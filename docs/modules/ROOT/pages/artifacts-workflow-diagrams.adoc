@@ -1,0 +1,10 @@
+= Generator workflow loop
+
+This diagram illustrates the steps the `generate` workflow performs.
+
+[mermaid]
+----
+include::partial$workflow-loop-diagram.mermaid[]
+----
+
+See also xref:generate-artifacts-cli.adoc[Generate artifacts with the CLI] for how to use the `generate` command.

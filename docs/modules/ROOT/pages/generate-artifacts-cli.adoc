@@ -1,3 +1,57 @@
 = Generate artifacts (artifacts CLI)
 
-NOTE: write me!
+See xref:artifacts-workflow-diagrams.adoc[Artifacts workflow diagram] for how the `generate` command works.
+
+== Configure the CLI
+
+The CLI must be configured with the backends it can use and how those backends are defined.
+This is done by overriding the `backends` attribute of the `default` package delivered by this flake.
+
+Example:
+
+[source,nix]
+----
+inputs.nixos-artifacts.packages.${system}.default.override {
+  backends.my-backend = {
+    check_serialization = pkgs.writers.writeBashBin "check_serialization" ''...'';
+    serialize = pkgs.writers.writeBashBin "serialize" ''...'';
+    deserialize = pkgs.writers.writeBashBin "deserialize" ''...'';
+  };
+}
+----
+
+Now you can install this package system-wide or in a dev shell.
+
+== Run the CLI
+
+=== Generate artifacts
+
+Checks the flake in the current folder and scans all nixosConfigurations to verify whether artifacts are generated.
+
+[source,shell]
+----
+artifacts generate <1>
+artifacts generate --machine my-machine <2>
+artifacts generate --artifact my-artifact <3>
+artifacts generate --machine my-machine --artifact my-artifact <4>
+----
+<1> scan all artifacts on all machines
+<2> scan all artifacts on one machine (the `--machine` option can be given multiple times)
+<3> scan one artifact on all machines (the `--artifact` option can be given multiple times)
+<4> scan one artifact on one machine
+
+=== Regenerate artifacts
+
+Checks the flake in the current folder, scans all nixosConfigurations, and regenerates all artifacts matching the given filters.
+
+[source,shell]
+----
+artifacts generate --all <1>
+artifacts generate --machine my-machine <2>
+artifacts generate --artifact my-artifact <3>
+artifacts generate --machine my-machine --artifact my-artifact <4>
+----
+<1> regenerate all artifacts on all machines
+<2> regenerate all artifacts on one machine (the `--machine` option can be given multiple times)
+<3> regenerate one artifact on all machines (the `--artifact` option can be given multiple times)
+<4> regenerate one artifact on one machine
