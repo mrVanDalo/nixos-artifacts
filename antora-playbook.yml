@@ -1,5 +1,5 @@
 site:
-  title: NixOS Artifacts Docs
+  title: NixOS Artifacts
   url: https://mrVanDalo.github.io/nixos-artifacts
   start_page: nixos-artifacts::index
 content:
@@ -8,6 +8,9 @@ content:
       start_path: docs
       branches: HEAD
       worktree: true
+    - url: https://github.com/mrVanDalo/nixos-artifacts-agenix.git
+      start_path: docs
+      branches: HEAD
 ui:
   bundle:
     url: ./docs/ui-bundle.zip
