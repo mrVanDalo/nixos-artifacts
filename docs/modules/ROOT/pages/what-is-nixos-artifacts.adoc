@@ -50,9 +50,7 @@ See xref:artifact-definition-example.adoc[Artifact definition example] for a con
 
 Out of the box the project aims to support multiple backends; today the repository includes test stubs and a minimal harness.
 
-- agenix (available)
-- sops-nix (planned)
-- colmena (planned)
+- xref:latest@nixos-artifacts-agenix:ROOT:index.adoc[Agenix]
 
 See:
 
