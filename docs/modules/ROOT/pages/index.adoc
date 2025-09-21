@@ -1,13 +1,10 @@
 = NixOS Artifacts
 :page-role: index
 
-Welcome to the documentation for the NixOS Artifacts project.
-
 WARNING: This project is experimental. Interfaces and option structures may change without notice.
 
-== What is this?
-
-NixOS Artifacts is a framework to unify artifacts and secrets in NixOS flakes. It provides a standardized interface for generation, rotation, and multi-backend storage.
+NixOS Artifacts is a framework to unify artifacts and secrets in NixOS flakes.
+It provides a standardized interface for generation, rotation, and multi-backend storage.
 
 - xref:what-is-nixos-artifacts.adoc[What is NixOS Artifacts]
 - xref:artifacts-workflow-diagrams.adoc[Artifact Workflow Diagrams]
@@ -21,8 +18,4 @@ NixOS Artifacts is a framework to unify artifacts and secrets in NixOS flakes. I
 
 - xref:defining-backends.adoc[How to define backends]
 - xref:how-to-use-a-backend.adoc[How to use a backend]
-
-== Build the docs locally
-
-- Build the site with the flake app: `nix run .#build-docs`.
-- The generated site will be in `docs/public`.
+- xref:latest@nixos-artifacts-agenix:ROOT:index.adoc[agenix backend implementation]

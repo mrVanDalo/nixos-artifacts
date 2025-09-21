@@ -13,6 +13,7 @@ nixos-artifacts decouples what you define from how and where it is stored:
 
 - You define artifacts once using a common options schema.
 - Each artifact can choose its own backend (e.g., agenix, sops-nix, custom). Different artifacts can use different backends.
+  Of course, a default backend can be defined.
 - A generator and rotation tool orchestrates prompts, generation, serialization, and deserialization.
 
 Inspired by:
