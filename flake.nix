@@ -17,10 +17,18 @@
       imports = [
         ./nix/formatter.nix
         ./nix/devshells.nix
+        ./nix/options.nix
       ];
       perSystem =
-        { pkgs, self', system, ... }:
         {
+          pkgs,
+          self',
+          system,
+          lib,
+          ...
+        }:
+        {
+
           packages.default = self'.packages.artifacts-cli;
           packages.artifacts-cli-bin = pkgs.callPackage ./pkgs/artifacts-tui { };
 
@@ -78,7 +86,9 @@
                       --stacktrace \
                       --to-dir /tmp/antora-public \
                       --extension ${pkgs.antora-lunr-extension}/node_modules/@antora/lunr-extension \
-                      --extension ${inputs.antora-flake.packages.${system}.antora-mermaid-extension}/lib/node_modules/@sntke/antora-mermaid-extension \
+                      --extension ${
+                        inputs.antora-flake.packages.${system}.antora-mermaid-extension
+                      }/lib/node_modules/@sntke/antora-mermaid-extension \
                       antora-playbook.yml
                     echo
                     echo "Site generated in: docs/public"

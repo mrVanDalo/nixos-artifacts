@@ -121,6 +121,7 @@ with types;
             serialization = mkOption {
               type = str;
               default = config.artifacts.default.backend.serialization;
+              defaultText = literalExpression "config.artifacts.default.backend.serialization";
               description = "Serialization definition";
             };
 
@@ -134,7 +135,7 @@ with types;
               '';
               example = literalExpression ''
                 pkgs.write.writeBash "random" ${"''"}
-                  ${pkgs.xkcdpass}/bin/xkcdpass --numwords 10 > $out/random_password
+                  ''${pkgs.xkcdpass}/bin/xkcdpass --numwords 10 > $out/random_password
                 ${"''"};
               '';
             };
