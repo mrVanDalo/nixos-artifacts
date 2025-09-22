@@ -16,6 +16,7 @@ with types;
               type = str;
               default = artifactName;
               readOnly = true;
+              internal = true;
               description = "The name of the artifact";
             };
 
@@ -39,11 +40,13 @@ with types;
                         type = str;
                         default = fileName;
                         readOnly = true;
+                        internal = true;
                         description = "The name of the filehandle";
                       };
 
                       path = mkOption {
                         type = str;
+                        defaultText = literalExpression "/run/artifacts/<artifact-name>/<file-name>";
                         default = "/run/artifacts/${artifactName}/${fileName}";
                         example = "/etc/ssh/ssh_host_ed25519_key";
                         description = "Path to the file on the target system.";
@@ -91,6 +94,7 @@ with types;
                         type = str;
                         default = promptName;
                         readOnly = true;
+                        internal = true;
                         description = "The name of the prompt";
                       };
 
@@ -129,9 +133,12 @@ with types;
               type = nullOr package;
               default = null;
               description = ''
-                Generator Script. Two environment variables are handed over to this script.
-                - $prompt which is a folder containing files containing the prompt inputs (defined by the prompt option)
-                - $out which is a folder the generator script must create a file for each file definition of the artifact.
+                Generator Script. These environment variables are handed over to this script.
+                - `$machine` machine name.
+                - `$artifact` artifact name.
+                - `$config` a file which contains `artifact.config.<backend>` values as json.
+                - `$prompt` a folder containing files containing the prompt inputs (defined by the prompt option).
+                - `$out` a folder the generator script must create a file for each file definition of the artifact.
               '';
               example = literalExpression ''
                 pkgs.write.writeBash "random" ${"''"}

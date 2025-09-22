@@ -1,4 +1,3 @@
-* xref:index.adoc[Home]
 * xref:what-is-nixos-artifacts.adoc[What is nixos-artifacts]
 * xref:artifact-definition-example.adoc[Artifact definition example]
 * xref:generate-artifacts-cli.adoc[Generate artifacts (CLI)]

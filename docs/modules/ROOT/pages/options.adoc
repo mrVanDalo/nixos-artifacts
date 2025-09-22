@@ -72,22 +72,6 @@ __Default:__ ``{quot}0400{quot}``
 
 
 
-== artifacts{zwsp}.store{zwsp}.{zwsp}+<+{zwsp}name{gt}{zwsp}.files{zwsp}.{zwsp}+<+{zwsp}name{gt}{zwsp}.name
-
-
-
-The name of the filehandle
-
-
-
-__Type:__ string __(read only)__
-
-
-
-__Default:__ ``{quot}‹name›{quot}``
-
-
-
 == artifacts{zwsp}.store{zwsp}.{zwsp}+<+{zwsp}name{gt}{zwsp}.files{zwsp}.{zwsp}+<+{zwsp}name{gt}{zwsp}.owner
 
 
@@ -116,7 +100,7 @@ __Type:__ string
 
 
 
-__Default:__ ``{quot}/run/artifacts/‹name›/‹name›{quot}``
+__Default:__ ``/run/artifacts/{zwsp}+<+{zwsp}artifact-name{gt}/{zwsp}+<+{zwsp}file-name{gt}``
 
 
 
@@ -128,12 +112,18 @@ __Example:__ ``{quot}/etc/ssh/ssh_host_ed25519_key{quot}``
 
 
 
-Generator Script{zwsp}. Two environment variables are handed over to this script{zwsp}.
+Generator Script{zwsp}. These environment variables are handed over to this script{zwsp}.
 
 [options="compact"]
-* {empty}$prompt which is a folder containing files containing the prompt inputs (defined by the prompt option)
+* {empty}``$machine`` machine name{zwsp}.
 
-* {empty}$out which is a folder the generator script must create a file for each file definition of the artifact{zwsp}.
+* {empty}``$artifact`` artifact name{zwsp}.
+
+* {empty}``$config`` a file which contains ``artifact{zwsp}.config{zwsp}.{zwsp}+<+{zwsp}backend{gt}`` values as json{zwsp}.
+
+* {empty}``$prompt`` a folder containing files containing the prompt inputs (defined by the prompt option){zwsp}.
+
+* {empty}``$out`` a folder the generator script must create a file for each file definition of the artifact{zwsp}.
 
 
 
@@ -154,22 +144,6 @@ pkgs.write.writeBash "random" ''
 '';
 
 ----
-
-
-
-== artifacts{zwsp}.store{zwsp}.{zwsp}+<+{zwsp}name{gt}{zwsp}.name
-
-
-
-The name of the artifact
-
-
-
-__Type:__ string __(read only)__
-
-
-
-__Default:__ ``{quot}‹name›{quot}``
 
 
 
@@ -202,22 +176,6 @@ __Type:__ string
 
 
 __Default:__ ``{quot}input for ‹name›{quot}``
-
-
-
-== artifacts{zwsp}.store{zwsp}.{zwsp}+<+{zwsp}name{gt}{zwsp}.prompts{zwsp}.{zwsp}+<+{zwsp}name{gt}{zwsp}.name
-
-
-
-The name of the prompt
-
-
-
-__Type:__ string __(read only)__
-
-
-
-__Default:__ ``{quot}‹name›{quot}``
 
 
 

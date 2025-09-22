@@ -1,0 +1,30 @@
+[source,nix]
+----
+{
+  ...
+  inputs.nixos-artifacts.url = "github:mrVanDalo/nixos-artifacts"; <1>
+  inputs.nixos-artifacts-agenix.url = "github:mrVanDalo/nixos-artifacts-agenix"; <2>
+  outputs = inputs@{ self, ... }: {
+    nixosConfigurations.my-host = nixpkgs.lib.nixosSystem {
+      system = "x86_64-linux";
+      modules = [
+        inputs.nixos-artifacts.nixosModules.default <3>
+        inputs.nixos-artifacts-agenix.nixosModules.default <4>
+        ({ config, pkgs, ... }: {
+          artifacts.default.backend.serialization = "agenix"; <5>
+          artifacts.config.agenix = { ... }; <6>
+        })
+        ...
+      ];
+    };
+  };
+}
+----
+<1> nixos-artifacts framework input
+<2> nixos-artifacts-agenix backend input (other backends can be used here as well)
+<3> import nixos-artifacts nixos module
+<4> import nixos-artifacts-agenix nixos module (contains `agenix.nixosModules.default`).
+<5> use agenix as default backend, if xref:options.adoc#_artifactszwsp_storezwsp_zwspzwspnamegtzwsp_serialization[backend] is not explicitly set, this backend will be used.
+<6> xref:latest@nixos-artifacts-agenix:ROOT:options.adoc[nixos-artifacts-agenix configuration options]
+
+

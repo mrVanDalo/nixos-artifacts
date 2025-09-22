@@ -1,0 +1,10 @@
+[source,nix]
+----
+inputs.nixos-artifacts.packages.${system}.default.override {
+  backends.my-backend = {
+    check_serialization = pkgs.writers.writeBashBin "check_serialization" ''...'';
+    serialize = pkgs.writers.writeBashBin "serialize" ''...'';
+    deserialize = pkgs.writers.writeBashBin "deserialize" ''...'';
+  };
+}
+----

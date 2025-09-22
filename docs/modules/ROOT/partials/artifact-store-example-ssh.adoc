@@ -1,0 +1,21 @@
+[source,nix]
+----
+{ config, pkgs, ... }:
+{
+  artifacts.store.ssh-host-key = {
+    files."id_ed25519".mode = "0400"; <1>
+    files."id_ed25519.pub".mode = "0444"; <2>
+    prompts.passphrase.description = "Enter Passphrase"; <3>
+    generator = pkgs.writeShellScriptBin "gen-ssh" '' <4>
+      ${pkgs.openssh}/bin/ssh-keygen \
+        -t ed25519 \
+        -N $(cat $prompts/passphrase) \
+        -f "$out/id_ed25519"
+    '';
+  };
+}
+----
+<1> the file mode of `id_ed25519`
+<2> the file mode of `id_ed25519.pub`
+<3> creates a prompt before the `generator` script is executed. The input of that prompt will be present in the file `$prompts/passphrase`.
+<4> The generator script definition. It must be a Nix package that generates all defined files into `$out`.

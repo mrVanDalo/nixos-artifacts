@@ -6,16 +6,38 @@ WARNING: This project is experimental. Interfaces and option structures may chan
 NixOS Artifacts is a framework to unify artifacts and secrets in NixOS flakes.
 It provides a standardized interface for generation, rotation, and multi-backend storage.
 
-- xref:what-is-nixos-artifacts.adoc[What is NixOS Artifacts]
-- xref:artifacts-workflow-diagrams.adoc[Artifact Workflow Diagrams]
+- xref:what-is-nixos-artifacts.adoc[What is NixOS Artifacts].
+- xref:artifacts-workflow-diagrams.adoc[Artifact Workflow Diagrams].
 
 == Get started
 
-- xref:artifact-definition-example.adoc[Artifact definition example]
-- xref:generate-artifacts-cli.adoc[Generate artifacts (artifacts CLI)]
+These are the steps more or less you need to do to use `nixos-artifacts`.
 
-== Backends
+=== Flake setup
 
-- xref:defining-backends.adoc[How to define backends]
-- xref:how-to-use-a-backend.adoc[How to use a backend]
-- xref:latest@nixos-artifacts-agenix:ROOT:index.adoc[agenix backend implementation]
+First you have to include `nixos-artifacts` and a `nixos-artifact` backend (in this example `agenix`).
+
+include::partial$artifacts-input-example.adoc[]
+
+=== Configure artifacts-cli
+
+Second you have to configure the xref:generate-artifacts-cli.adoc[artifacts-cli], backends might
+ship with a already configured backend (like xref:latest@nixos-artifacts-agenix:ROOT:how-to-configure-artifacts-cli.adoc[nixos-artifacts-agenix]).
+
+include::partial$artifact-cli-configuration.adoc[]
+
+.Have a look at
+- xref:generate-artifacts-cli.adoc[Generate artifacts (artifacts CLI)].
+- xref:defining-backends.adoc[How to define backends].
+- xref:how-to-use-a-backend.adoc[How to use a backend].
+- xref:latest@nixos-artifacts-agenix:ROOT:index.adoc[agenix backend implementation].
+
+
+=== Define your artifacts
+
+Thrid define your artifacts.
+
+include::partial$artifact-store-example-ssh.adoc[]
+
+.Have a look at
+- xref:artifact-definition-example.adoc[Artifact definition example].

@@ -23,6 +23,7 @@
             pkgs.cargo-insta
             pkgs.bubblewrap
             pkgs.mermaid-cli
+            pkgs.yed
           ];
         };
 
