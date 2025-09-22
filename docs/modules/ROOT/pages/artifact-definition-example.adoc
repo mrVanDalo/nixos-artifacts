@@ -13,9 +13,20 @@ This defines an artifact that creates an SSH key, demonstrating `prompts`, `gene
     files."id_ed25519.pub".path = "/root/.ssh/new_key.pub"; <4>
     prompts.passphrase.description = "Enter Passphrase"; <5>
     generator = pkgs.writeShellScriptBin "gen-ssh" '' <6>
-      ${pkgs.openssh}/bin/ssh-keygen -t ed25519 -N $(cat $prompts/passphrase) -f "$out/id_ed25519"
+      ${pkgs.openssh}/bin/ssh-keygen \
+        -t ed25519 \
+        -N $(cat $prompts/passphrase) \
+        -f "$out/id_ed25519"
     '';
   };
+
+  environment.systemPackages = [
+    (pkgs.writers.writeBashBin "ssh-to-my-machine" ''
+        ${pkgs.openssh}/bin/ssh \
+          -i ${config.artifacts.store.ssh-host-key.files."id_ed25519".path} \ <7>
+          root@my-machine
+    '')
+  ];
 }
 ----
 <1> the file mode of `id_ed25519`
@@ -24,6 +35,7 @@ This defines an artifact that creates an SSH key, demonstrating `prompts`, `gene
 <4> the path where `id_ed25519.pub` should be stored on the target system.
 <5> creates a prompt before the `generator` script is executed. The input of that prompt will be present in the file `$prompts/passphrase`.
 <6> The generator script definition. It must be a Nix package that generates all defined files into `$out`.
+<7> Use reference to the artifact path
 
 
 == Generator contract
