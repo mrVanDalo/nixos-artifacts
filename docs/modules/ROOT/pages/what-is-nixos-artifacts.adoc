@@ -16,11 +16,15 @@ nixos-artifacts decouple what you define from how and where it is stored:
   Of course, a default backend can be defined.
 - A generator and rotation tool orchestrates prompts, generation, serialization, and deserialization.
 
+.Architecture overview on the Example of agenix as backend
+image::architecture.svg[Architectures]
+
 Inspired by:
 
 - https://docs.clan.lol/guides/vars/vars-overview/[Clan vars]
 - https://github.com/NixOS/nixpkgs/pull/370444[NixOS PR #370444]
 - https://github.com/oddlama/agenix-rekey[agenix rekey]
+
 
 == What it is
 
@@ -45,7 +49,6 @@ See xref:artifact-definition-example.adoc[Artifact definition example] for a con
 == Supported backends
 
 - xref:latest@nixos-artifacts-agenix:ROOT:index.adoc[Agenix]
-
 
 NOTE: Have a look at xref:defining-backends.adoc[How to define backends], if you want to write your own backend.
 
