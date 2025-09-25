@@ -27,8 +27,8 @@ pub enum Command {
     ///
     /// Note: backend configuration is read from env var NIXOS_ARTIFACTS_BACKEND_CONFIG (path to backend.toml)
     Generate {
-        /// Path to make configuration file (make.json)
-        make: PathBuf,
+        /// Path to flake to read machines/artifacts from (passed as -I flake=<path> to nix). If omitted, uses the current directory.
+        make: Option<PathBuf>,
         /// Regenerate all artifacts from all machines (conflicts with --machine/--artifact)
         #[arg(long = "all")]
         all: bool,
