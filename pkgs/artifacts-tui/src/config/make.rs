@@ -1,4 +1,6 @@
 use anyhow::Context;
+use log::debug;
+use serde::de::{self, Deserializer};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, from_str as json_from_str};
 use std::collections::BTreeMap;
@@ -19,23 +21,63 @@ pub struct PromptDef {
     pub description: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct ArtifactDef {
     /// artifact name
     pub name: String,
     /// is artifact shared across machines
     /// (not implemented yet)
-    pub shared: Option<bool>,
+    pub shared: bool,
     /// files to be created, keyed by file name
-    #[serde(default)]
     pub files: BTreeMap<String, FileDef>,
     /// prompts to be asked, keyed by prompt name
-    #[serde(default)]
     pub prompts: BTreeMap<String, PromptDef>,
     /// generator script to be run to generate secrets
     pub generator: String,
     /// serialization script to be run to serialize secrets
     pub serialization: String, // backend reference name
+}
+
+impl<'de> Deserialize<'de> for ArtifactDef {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct ArtifactDefHelper {
+            name: Option<String>,
+            shared: Option<bool>,
+            #[serde(default)]
+            files: BTreeMap<String, FileDef>,
+            #[serde(default)]
+            prompts: BTreeMap<String, PromptDef>,
+            generator: Option<String>,
+            serialization: Option<String>,
+        }
+
+        let helper = ArtifactDefHelper::deserialize(deserializer)?;
+        let name = match helper.name {
+            Some(n) if !n.is_empty() => n,
+            _ => return Err(de::Error::custom("name must be set")),
+        };
+        let shared = helper.shared.unwrap_or(false);
+        let generator = match helper.generator {
+            Some(g) if !g.is_empty() => g,
+            _ => return Err(de::Error::custom("generator must be set")),
+        };
+        let serialization = match helper.serialization {
+            Some(s) if !s.is_empty() => s,
+            _ => return Err(de::Error::custom("serialization must be set")),
+        };
+        Ok(ArtifactDef {
+            name,
+            shared,
+            files: helper.files,
+            prompts: helper.prompts,
+            generator,
+            serialization,
+        })
+    }
 }
 
 pub struct MakeConfiguration {
@@ -63,6 +105,8 @@ impl MakeConfiguration {
     pub(crate) fn read_make_config(make_json: &Path) -> anyhow::Result<MakeConfiguration> {
         let make_text = fs::read_to_string(make_json)
             .with_context(|| format!("reading make config {}", make_json.display()))?;
+
+        debug!("make config: {}", make_text);
 
         let entries: Vec<MachineArtifacts> = json_from_str(&make_text)
             .with_context(|| format!("parsing make config {}", make_json.display()))?;

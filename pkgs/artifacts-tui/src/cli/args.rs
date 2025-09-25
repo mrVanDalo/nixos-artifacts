@@ -25,7 +25,8 @@ pub struct Cli {
 pub enum Command {
     /// Generate artifacts
     ///
-    /// Note: backend configuration is read from env var NIXOS_ARTIFACTS_BACKEND_CONFIG (path to backend.toml)
+    /// Backend configuration is read from the environment variable NIXOS_ARTIFACTS_BACKEND_CONFIG
+    /// if set; otherwise, it falls back to <flake-dir>/backend.toml.
     Generate {
         /// Path to flake to read machines/artifacts from (passed as -I flake=<path> to nix). If omitted, uses the current directory.
         make: Option<PathBuf>,
@@ -40,11 +41,12 @@ pub enum Command {
         artifact: Vec<String>,
     },
     /// Regenerate selected artifacts (or all)
+    ///
+    /// Backend configuration is read from the environment variable NIXOS_ARTIFACTS_BACKEND_CONFIG
+    /// if set; otherwise, it falls back to <flake-dir>/backend.toml.
     Regenerate {
-        /// Path to backend configuration file (backend.toml)
-        backend: PathBuf,
-        /// Path to make configuration file (make.json)
-        make: PathBuf,
+        /// Path to flake to read machines/artifacts from (passed as -I flake=<path> to nix). If omitted, uses the current directory.
+        make: Option<PathBuf>,
         /// Regenerate all artifacts from all machines (conflicts with --machine/--artifact)
         #[arg(long = "all")]
         all: bool,
@@ -55,11 +57,12 @@ pub enum Command {
         #[arg(long = "artifact")]
         artifact: Vec<String>,
     },
-    /// List all machines and artifacts configured in make.json
+    /// List all machines and artifacts defined by the flake
+    ///
+    /// Backend configuration is read from the environment variable NIXOS_ARTIFACTS_BACKEND_CONFIG
+    /// if set; otherwise, it falls back to <flake-dir>/backend.toml.
     List {
-        /// Path to backend configuration file (backend.toml)
-        backend: PathBuf,
-        /// Path to make configuration file (make.json)
-        make: PathBuf,
+        /// Path to flake to read machines/artifacts from (passed as -I flake=<path> to nix). If omitted, uses the current directory.
+        make: Option<PathBuf>,
     },
 }

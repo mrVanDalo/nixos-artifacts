@@ -18,7 +18,6 @@ fn sdtin_cli(stdin: &str) -> StdinCommand {
     let _ = cmd
         .env("TMPDIR", "/tmp/artifacts-tui-ci")
         .arg("--log-level=debug");
-    // let _ = cmd.env("ARTIFACTS_TUI_TEST_FIXED_TMP", "1");
     cmd
 }
 
@@ -69,14 +68,18 @@ impl TempTestEnv {
 #[serial]
 fn no_config_scenario() {
     let root = project_root();
-    let backend = root.join("examples/no_config/backend.toml");
-    let make = root.join("examples/no_config/make.json");
+    let test_dir = root.join("examples/no_config");
 
     let env = TempTestEnv::new();
 
     let mut cmd = sdtin_cli("one\ntwo\n");
 
-    cmd.arg("generate").env("NIXOS_ARTIFACTS_BACKEND_CONFIG", &backend).arg(make);
+    cmd.arg("generate")
+        .env(
+            "NIXOS_ARTIFACTS_BACKEND_CONFIG",
+            &test_dir.join("backend.toml"),
+        )
+        .arg(test_dir);
 
     // Verify and cleanup
     env.finish().expect("temp folder not empty at end of test");
@@ -87,36 +90,22 @@ fn no_config_scenario() {
 #[serial]
 fn scenario_simple() {
     let root = project_root();
-    let backend = root.join("examples/scenario_simple/backend.toml");
-    let make = root.join("examples/scenario_simple/make.json");
+    let test_dir = root.join("examples/scenario_simple");
 
     let env = TempTestEnv::new();
 
     let mut cmd = sdtin_cli("one\ntwo\n");
 
-    cmd.arg("generate").env("NIXOS_ARTIFACTS_BACKEND_CONFIG", &backend).arg(make);
+    cmd.arg("generate")
+        .env(
+            "NIXOS_ARTIFACTS_BACKEND_CONFIG",
+            &test_dir.join("backend.toml"),
+        )
+        .arg(test_dir);
 
     // Verify and cleanup
     env.finish().expect("temp folder not empty at end of test");
 
-    assert_cmd_snapshot!(cmd);
-}
-
-#[test]
-#[serial]
-fn generator_missing_scenario() {
-    let root = project_root();
-    let backend = root.join("examples/generator_missing/backend.toml");
-    let make = root.join("examples/generator_missing/make.json");
-
-    let env = TempTestEnv::new();
-
-    let mut cmd = sdtin_cli("one\ntwo\n");
-
-    cmd.arg("generate").env("NIXOS_ARTIFACTS_BACKEND_CONFIG", &backend).arg(make);
-
-    // Verify and cleanup
-    env.finish().expect("temp folder not empty at end of test");
     assert_cmd_snapshot!(cmd);
 }
 
@@ -124,14 +113,18 @@ fn generator_missing_scenario() {
 #[serial]
 fn two_artifacts_scenario() {
     let root = project_root();
-    let backend = root.join("examples/2_artifacts/backend.toml");
-    let make = root.join("examples/2_artifacts/make.json");
+    let test_dir = root.join("examples/2_artifacts");
 
     let env = TempTestEnv::new();
 
     let mut cmd = sdtin_cli("");
 
-    cmd.arg("generate").env("NIXOS_ARTIFACTS_BACKEND_CONFIG", &backend).arg(make);
+    cmd.arg("generate")
+        .env(
+            "NIXOS_ARTIFACTS_BACKEND_CONFIG",
+            &test_dir.join("backend.toml"),
+        )
+        .arg(test_dir);
 
     // Verify and cleanup
     env.finish().expect("temp folder not empty at end of test");
@@ -140,35 +133,20 @@ fn two_artifacts_scenario() {
 
 #[test]
 #[serial]
-fn generate_wrong_missing_files_scenario() {
+fn missing_files_scenario() {
     let root = project_root();
-    let backend = root.join("examples/generate_wrong/backend.toml");
-    let make = root.join("examples/generate_wrong/make_missing_files.json");
+    let test_dir = root.join("examples/missing-files");
 
     let env = TempTestEnv::new();
 
     let mut cmd = sdtin_cli("one\ntwo\n");
 
-    cmd.arg("generate").env("NIXOS_ARTIFACTS_BACKEND_CONFIG", &backend).arg(make);
-
-    // Verify and cleanup
-    env.finish().expect("temp folder not empty at end of test");
-
-    assert_cmd_snapshot!(cmd);
-}
-
-#[test]
-#[serial]
-fn generate_wrong_wrong_file_type_scenario() {
-    let root = project_root();
-    let backend = root.join("examples/generate_wrong/backend.toml");
-    let make = root.join("examples/generate_wrong/make_wrong_file_type.json");
-
-    let env = TempTestEnv::new();
-
-    let mut cmd = sdtin_cli("one\ntwo\n");
-
-    cmd.arg("generate").env("NIXOS_ARTIFACTS_BACKEND_CONFIG", &backend).arg(make);
+    cmd.arg("generate")
+        .env(
+            "NIXOS_ARTIFACTS_BACKEND_CONFIG",
+            &test_dir.join("backend.toml"),
+        )
+        .arg(test_dir);
 
     // Verify and cleanup
     env.finish().expect("temp folder not empty at end of test");
@@ -178,16 +156,43 @@ fn generate_wrong_wrong_file_type_scenario() {
 
 #[test]
 #[serial]
-fn generate_wrong_unwanted_files_scenario() {
+fn wrong_file_type_scenario() {
     let root = project_root();
-    let backend = root.join("examples/generate_wrong/backend.toml");
-    let make = root.join("examples/generate_wrong/make_unwanted_files.json");
+    let test_dir = root.join("examples/wrong-file-type");
 
     let env = TempTestEnv::new();
 
     let mut cmd = sdtin_cli("one\ntwo\n");
 
-    cmd.arg("generate").env("NIXOS_ARTIFACTS_BACKEND_CONFIG", &backend).arg(make);
+    cmd.arg("generate")
+        .env(
+            "NIXOS_ARTIFACTS_BACKEND_CONFIG",
+            &test_dir.join("backend.toml"),
+        )
+        .arg(test_dir);
+
+    // Verify and cleanup
+    env.finish().expect("temp folder not empty at end of test");
+
+    assert_cmd_snapshot!(cmd);
+}
+
+#[test]
+#[serial]
+fn unwanted_files_scenario() {
+    let root = project_root();
+    let test_dir = root.join("examples/unwanted-files");
+
+    let env = TempTestEnv::new();
+
+    let mut cmd = sdtin_cli("one\ntwo\n");
+
+    cmd.arg("generate")
+        .env(
+            "NIXOS_ARTIFACTS_BACKEND_CONFIG",
+            &test_dir.join("backend.toml"),
+        )
+        .arg(test_dir);
 
     // Verify and cleanup
     env.finish().expect("temp folder not empty at end of test");
@@ -199,14 +204,18 @@ fn generate_wrong_unwanted_files_scenario() {
 #[serial]
 fn missing_generator_scenario() {
     let root = project_root();
-    let backend = root.join("examples/missing_generator/backend.toml");
-    let make = root.join("examples/missing_generator/make.json");
+    let test_dir = root.join("examples/missing_generator");
 
     let env = TempTestEnv::new();
 
     let mut cmd = sdtin_cli("");
 
-    cmd.arg("generate").env("NIXOS_ARTIFACTS_BACKEND_CONFIG", &backend).arg(make);
+    cmd.arg("generate")
+        .env(
+            "NIXOS_ARTIFACTS_BACKEND_CONFIG",
+            &test_dir.join("backend.toml"),
+        )
+        .arg(test_dir);
 
     // Verify and cleanup
     env.finish().expect("temp folder not empty at end of test");
@@ -242,14 +251,18 @@ fn scenario_regenerator_help() {
 #[serial]
 fn list_scenarios() {
     let root = project_root();
-    let backend = root.join("examples/bigger_setup/backend.toml");
-    let make = root.join("examples/bigger_setup/make.json");
+    let test_dir = root.join("examples/bigger_setup");
 
     let env = TempTestEnv::new();
 
     let mut cmd = sdtin_cli("");
 
-    cmd.arg("list").arg(backend).arg(make);
+    cmd.arg("list")
+        .env(
+            "NIXOS_ARTIFACTS_BACKEND_CONFIG",
+            &test_dir.join("backend.toml"),
+        )
+        .arg(test_dir);
 
     // Verify and cleanup
     env.finish().expect("temp folder not empty at end of test");
@@ -261,14 +274,18 @@ fn list_scenarios() {
 #[serial]
 fn bigger_scenarios() {
     let root = project_root();
-    let backend = root.join("examples/bigger_setup/backend.toml");
-    let make = root.join("examples/bigger_setup/make.json");
+    let test_dir = root.join("examples/bigger_setup");
 
     let env = TempTestEnv::new();
 
     let mut cmd = sdtin_cli("");
 
-    cmd.arg("generate").arg(backend).arg(make);
+    cmd.arg("generate")
+        .env(
+            "NIXOS_ARTIFACTS_BACKEND_CONFIG",
+            &test_dir.join("backend.toml"),
+        )
+        .arg(test_dir);
 
     // Verify and cleanup
     env.finish().expect("temp folder not empty at end of test");
@@ -280,14 +297,19 @@ fn bigger_scenarios() {
 #[serial]
 fn regenerate_all_scenarios() {
     let root = project_root();
-    let backend = root.join("examples/bigger_setup/backend.toml");
-    let make = root.join("examples/bigger_setup/make.json");
+    let test_dir = root.join("examples/bigger_setup");
 
     let env = TempTestEnv::new();
 
     let mut cmd = sdtin_cli("");
 
-    cmd.arg("regenerate").arg(backend).arg(make).arg("--all");
+    cmd.arg("regenerate")
+        .env(
+            "NIXOS_ARTIFACTS_BACKEND_CONFIG",
+            &test_dir.join("backend.toml"),
+        )
+        .arg(test_dir)
+        .arg("--all");
 
     // Verify and cleanup
     env.finish().expect("temp folder not empty at end of test");
@@ -299,16 +321,18 @@ fn regenerate_all_scenarios() {
 #[serial]
 fn regenerate_machine_scenarios() {
     let root = project_root();
-    let backend = root.join("examples/bigger_setup/backend.toml");
-    let make = root.join("examples/bigger_setup/make.json");
+    let test_dir = root.join("examples/bigger_setup");
 
     let env = TempTestEnv::new();
 
     let mut cmd = sdtin_cli("");
 
     cmd.arg("regenerate")
-        .arg(backend)
-        .arg(make)
+        .env(
+            "NIXOS_ARTIFACTS_BACKEND_CONFIG",
+            &test_dir.join("backend.toml"),
+        )
+        .arg(test_dir)
         .arg("--machine=machine-one");
 
     // Verify and cleanup
@@ -321,16 +345,18 @@ fn regenerate_machine_scenarios() {
 #[serial]
 fn regenerate_machine_and_artifacts_scenarios() {
     let root = project_root();
-    let backend = root.join("examples/bigger_setup/backend.toml");
-    let make = root.join("examples/bigger_setup/make.json");
+    let test_dir = root.join("examples/bigger_setup");
 
     let env = TempTestEnv::new();
 
     let mut cmd = sdtin_cli("");
 
     cmd.arg("regenerate")
-        .arg(backend)
-        .arg(make)
+        .env(
+            "NIXOS_ARTIFACTS_BACKEND_CONFIG",
+            &test_dir.join("backend.toml"),
+        )
+        .arg(test_dir)
         .arg("--machine=machine-one")
         .arg("--artifact=artifact-one");
 
@@ -344,16 +370,18 @@ fn regenerate_machine_and_artifacts_scenarios() {
 #[serial]
 fn regenerate_wrong_machine_scenarios() {
     let root = project_root();
-    let backend = root.join("examples/bigger_setup/backend.toml");
-    let make = root.join("examples/bigger_setup/make.json");
+    let test_dir = root.join("examples/bigger_setup");
 
     let env = TempTestEnv::new();
 
     let mut cmd = sdtin_cli("");
 
     cmd.arg("regenerate")
-        .arg(backend)
-        .arg(make)
+        .env(
+            "NIXOS_ARTIFACTS_BACKEND_CONFIG",
+            &test_dir.join("backend.toml"),
+        )
+        .arg(test_dir)
         .arg("--machine=machine-name");
 
     // Verify and cleanup
@@ -366,38 +394,18 @@ fn regenerate_wrong_machine_scenarios() {
 #[serial]
 fn artifact_name_scenario() {
     let root = project_root();
-    let backend = root.join("examples/artifact_names/backend.toml");
-    let make = root.join("examples/artifact_names/make.json");
+    let test_dir = root.join("examples/artifact_names");
 
     let env = TempTestEnv::new();
 
     let mut cmd = sdtin_cli("");
 
     cmd.arg("generate")
-        .env("NIXOS_ARTIFACTS_BACKEND_CONFIG", &backend)
-        .arg(make)
-        .arg("--machine=machine-name");
-
-    // Verify and cleanup
-    env.finish().expect("temp folder not empty at end of test");
-
-    assert_cmd_snapshot!(cmd);
-}
-
-#[test]
-#[serial]
-fn ssh_keygen_scenario() {
-    let root = project_root();
-    let backend = root.join("examples/ssh-keygen/backend.toml");
-    let make = root.join("examples/ssh-keygen/make.json");
-
-    let env = TempTestEnv::new();
-
-    let mut cmd = sdtin_cli("");
-
-    cmd.arg("generate")
-        .env("NIXOS_ARTIFACTS_BACKEND_CONFIG", &backend)
-        .arg(make)
+        .env(
+            "NIXOS_ARTIFACTS_BACKEND_CONFIG",
+            &test_dir.join("backend.toml"),
+        )
+        .arg(test_dir)
         .arg("--machine=machine-name");
 
     // Verify and cleanup

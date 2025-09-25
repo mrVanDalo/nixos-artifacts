@@ -1,0 +1,29 @@
+---
+source: tests/command_tests.rs
+info:
+  program: artifacts
+  args:
+    - "--log-level=debug"
+    - generate
+    - /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-tui/examples/missing-files
+  env:
+    NIXOS_ARTIFACTS_BACKEND_CONFIG: /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-tui/examples/missing-files/backend.toml
+    TMPDIR: /tmp/artifacts-tui-ci
+  stdin: "one\ntwo\n"
+---
+success: false
+exit_code: 1
+----- stdout -----
+DEBUG: Running nix build: "/run/current-system/sw/bin/nix" "build" "--impure" "-I" "flake=/home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-tui/examples/missing-files" "--no-link" "--print-out-paths" "--expr" "\nlet\n  system = \"x86_64-linux\";\n  filterAttrs =\n    pred: set:\n    builtins.removeAttrs set (builtins.filter (name: !pred name set.${name}) (builtins.attrNames set));\n  flake = builtins.getFlake (toString <flake>);\n  pkgs = flake.inputs.nixpkgs.legacyPackages.${system};\n  configurations = builtins.attrNames (\n    filterAttrs (\n      machine: configuration: builtins.hasAttr \"artifacts\" configuration.options\n    ) flake.nixosConfigurations\n  );\n  make = map (name: {\n    machine = name;\n    artifacts = flake.nixosConfigurations.${name}.config.artifacts.store;\n    config =\n      if (builtins.hasAttr \"config\" flake.nixosConfigurations.${name}.config.artifacts) then\n        flake.nixosConfigurations.${name}.config.artifacts.config\n      else\n        { };\n  }) configurations;\nin\npkgs.writeText \"test.json\" (builtins.toJSON make)\n"
+DEBUG: make config: [{"artifacts":{"test-artifact":{"files":{"simple-secrets":{"group":"deployer","mode":"0400","name":"simple-secrets","owner":"deployer","path":"/run/secrets/simple-secrets"},"very-simple-secrets":{"group":"root","mode":"0400","name":"very-simple-secrets","owner":"root","path":"/run/secrets/very-simple-secrets"}},"generator":"/nix/store/plx0434b5fakwhf3izjhqjflv7s09cr9-test_generator_missing_files.sh","name":"test-artifact","prompts":{},"serialization":"test","shared":false}},"config":{},"machine":"missing-files"}]
+[generate]
+DEBUG:     files to produce -> 2 files
+DEBUG:       - simple-secrets => /run/secrets/simple-secrets owner=deployer group=deployer
+DEBUG:       - very-simple-secrets => /run/secrets/very-simple-secrets owner=root group=root
+DEBUG:     running check_serialization: env inputs="/tmp/artifacts-tui-ci/inputs-test-artifact" machine="missing-files" artifact="test-artifact" /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-tui/examples/missing-files/test_check.sh
+DEBUG:     check_serialization: failed with status exit status: 1 -> continuing with generation
+⚡ missing-files/test-artifact
+DEBUG: bwrap command: bwrap --unshare-all --unshare-user --uid 1000 --gid 1000 --tmpfs / --chdir / --ro-bind /nix/store /nix/store --tmpfs /usr/lib/systemd --proc /proc --dev /dev --bind /tmp/artifacts-tui-ci/prompt-test-artifact /tmp/artifacts-tui-ci/prompt-test-artifact --bind /tmp/artifacts-tui-ci/out-test-artifact /tmp/artifacts-tui-ci/out-test-artifact --ro-bind /nix/store/3i3xal107rwdfvd5dlj8fbra2wry8w5b-test_generator_missing_files.sh/bin /nix/store/3i3xal107rwdfvd5dlj8fbra2wry8w5b-test_generator_missing_files.sh/bin --ro-bind /bin /bin --ro-bind /usr/bin /usr/bin --ro-bind /tmp/artifacts-tui-ci/artifacts-tui-passwd-cc66c63dc4c7a304.txt /etc/passwd -- /bin/sh /nix/store/3i3xal107rwdfvd5dlj8fbra2wry8w5b-test_generator_missing_files.sh/bin/test_generator_missing_files.sh
+
+----- stderr -----
+ERROR: generator missing required files for artifact 'test-artifact': [very-simple-secrets]
