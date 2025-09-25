@@ -1,12 +1,12 @@
 ---
 source: tests/command_tests.rs
 info:
-  program: artifacts-cli
+  program: artifacts
   args:
     - "--log-level=debug"
     - generate
-    - /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/generate_wrong/backend.toml
-    - /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/generate_wrong/make_missing_files.json
+    - /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-tui/examples/generate_wrong/backend.toml
+    - /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-tui/examples/generate_wrong/make_missing_files.json
   env:
     TMPDIR: /tmp/artifacts-tui-ci
   stdin: "one\ntwo\n"
@@ -18,10 +18,13 @@ exit_code: 1
 DEBUG:     files to produce -> 2 files
 DEBUG:       - simple-secrets => /run/secrets/simple-secrets owner=deployer group=deployer
 DEBUG:       - very-simple-secrets => /run/secrets/very-simple-secrets
-DEBUG:     running check_serialization: env inputs="/tmp/artifacts-tui-ci/inputs-test-artifact" machine="machine-name" artifact="test-artifact" /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/generate_wrong/test_check.sh
+DEBUG:     running check_serialization: env inputs="/tmp/artifacts-tui-ci/inputs-test-artifact" machine="machine-name" artifact="test-artifact" /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-tui/examples/generate_wrong/test_check.sh
 DEBUG:     check_serialization: failed with status exit status: 1 -> continuing with generation
 ⚡ machine-name/test-artifact
-DEBUG: bwrap command: bwrap --unshare-all --unshare-user --uid 1000 --gid 1000 --tmpfs / --chdir / --ro-bind /nix/store /nix/store --tmpfs /usr/lib/systemd --proc /proc --dev /dev --bind /tmp/artifacts-tui-ci/prompt-test-artifact /tmp/artifacts-tui-ci/prompt-test-artifact --bind /tmp/artifacts-tui-ci/out-test-artifact /tmp/artifacts-tui-ci/out-test-artifact --ro-bind /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/generate_wrong /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/generate_wrong --ro-bind /bin /bin --ro-bind /usr/bin /usr/bin --ro-bind /tmp/artifacts-tui-ci/artifacts-tui-passwd-cc66c63dc4c7a304.txt /etc/passwd -- /bin/sh /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/generate_wrong/test_generator_missing_files.sh
+DEBUG: bwrap command: bwrap --unshare-all --unshare-user --uid 1000 --gid 1000 --tmpfs / --chdir / --ro-bind /nix/store /nix/store --tmpfs /usr/lib/systemd --proc /proc --dev /dev --bind /tmp/artifacts-tui-ci/prompt-test-artifact /tmp/artifacts-tui-ci/prompt-test-artifact --bind /tmp/artifacts-tui-ci/out-test-artifact /tmp/artifacts-tui-ci/out-test-artifact --ro-bind /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-tui/examples/generate_wrong /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-tui/examples/generate_wrong --ro-bind /bin /bin --ro-bind /usr/bin /usr/bin --ro-bind /tmp/artifacts-tui-ci/artifacts-tui-passwd-cc66c63dc4c7a304.txt /etc/passwd -- /bin/sh /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-tui/examples/generate_wrong/test_generator_missing_files.sh
 
 ----- stderr -----
+this path will be fetched (0.06 MiB download, 0.32 MiB unpacked):
+  /nix/store/k7j93hvaqwg9l4n8hkq5xkjs1gx71ki9-bash-interactive-5.3p3-dev
+copying path '/nix/store/k7j93hvaqwg9l4n8hkq5xkjs1gx71ki9-bash-interactive-5.3p3-dev' from 'https://cache.nixos.org'...
 ERROR: generator missing required files for artifact 'test-artifact': [very-simple-secrets]

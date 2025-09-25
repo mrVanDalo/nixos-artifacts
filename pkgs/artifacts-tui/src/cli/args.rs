@@ -11,7 +11,7 @@ pub enum LogLevel {
 }
 
 #[derive(Debug, Parser)]
-#[command(name = "artifacts-tui", version, about = "TUI for managing NixOS artifacts", long_about = None)]
+#[command(name = "artifacts", version, about = "command line interafce to managing NixOS Artifacts", long_about = None)]
 pub struct Cli {
     /// Set the logging level (error, warning, info, debug, trace)
     #[arg(long = "log-level", value_enum, default_value_t = LogLevel::Info)]

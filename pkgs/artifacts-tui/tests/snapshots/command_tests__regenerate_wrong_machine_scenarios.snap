@@ -1,7 +1,7 @@
 ---
 source: tests/command_tests.rs
 info:
-  program: artifacts-cli
+  program: artifacts
   args:
     - "--log-level=debug"
     - regenerate

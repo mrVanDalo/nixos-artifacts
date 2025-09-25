@@ -1,16 +1,16 @@
 ---
 source: tests/command_tests.rs
 info:
-  program: artifacts-cli
+  program: artifacts
   args:
     - "--help"
 ---
 success: true
 exit_code: 0
 ----- stdout -----
-TUI for managing NixOS artifacts
+command line interafce to managing NixOS Artifacts
 
-Usage: artifacts-cli [OPTIONS] <COMMAND>
+Usage: artifacts [OPTIONS] <COMMAND>
 
 Commands:
   generate    Generate artifacts

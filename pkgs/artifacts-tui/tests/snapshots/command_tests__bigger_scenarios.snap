@@ -1,12 +1,12 @@
 ---
 source: tests/command_tests.rs
 info:
-  program: artifacts-cli
+  program: artifacts
   args:
     - "--log-level=debug"
     - generate
-    - /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup/backend.toml
-    - /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup/make.json
+    - /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup/backend.toml
+    - /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup/make.json
   env:
     TMPDIR: /tmp/artifacts-tui-ci
   stdin: ""
@@ -17,10 +17,10 @@ exit_code: 0
 [generate]
 DEBUG:     files to produce -> 1 files
 DEBUG:       - first-secret => /run/secrets/first-secret
-DEBUG:     running check_serialization: env inputs="/tmp/artifacts-tui-ci/inputs-artifact-one" machine="machine-one" artifact="artifact-one" /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup/test_check.sh
+DEBUG:     running check_serialization: env inputs="/tmp/artifacts-tui-ci/inputs-artifact-one" machine="machine-one" artifact="artifact-one" /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup/test_check.sh
 DEBUG:     check_serialization: failed with status exit status: 1 -> continuing with generation
 ⚡ machine-one/artifact-one
-DEBUG: bwrap command: bwrap --unshare-all --unshare-user --uid 1000 --gid 1000 --tmpfs / --chdir / --ro-bind /nix/store /nix/store --tmpfs /usr/lib/systemd --proc /proc --dev /dev --bind /tmp/artifacts-tui-ci/prompt-artifact-one /tmp/artifacts-tui-ci/prompt-artifact-one --bind /tmp/artifacts-tui-ci/out-artifact-one /tmp/artifacts-tui-ci/out-artifact-one --ro-bind /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup --ro-bind /bin /bin --ro-bind /usr/bin /usr/bin --ro-bind /tmp/artifacts-tui-ci/artifacts-tui-passwd-371ed15b95352dfc.txt /etc/passwd -- /bin/sh /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup/test_generator_one.sh
+DEBUG: bwrap command: bwrap --unshare-all --unshare-user --uid 1000 --gid 1000 --tmpfs / --chdir / --ro-bind /nix/store /nix/store --tmpfs /usr/lib/systemd --proc /proc --dev /dev --bind /tmp/artifacts-tui-ci/prompt-artifact-one /tmp/artifacts-tui-ci/prompt-artifact-one --bind /tmp/artifacts-tui-ci/out-artifact-one /tmp/artifacts-tui-ci/out-artifact-one --ro-bind /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup --ro-bind /bin /bin --ro-bind /usr/bin /usr/bin --ro-bind /tmp/artifacts-tui-ci/artifacts-tui-passwd-371ed15b95352dfc.txt /etc/passwd -- /bin/sh /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup/test_generator_one.sh
 💾 serialize secrets
 === Content of /tmp/artifacts-tui-ci/out-artifact-one/first-secret ===
 one
@@ -28,16 +28,16 @@ one
 [generate]
 DEBUG:     files to produce -> 1 files
 DEBUG:       - second-secret => /run/secrets/second-secret
-DEBUG:     running check_serialization: env inputs="/tmp/artifacts-tui-ci/inputs-artifact-two" machine="machine-one" artifact="artifact-two" /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup/test_check.sh
+DEBUG:     running check_serialization: env inputs="/tmp/artifacts-tui-ci/inputs-artifact-two" machine="machine-one" artifact="artifact-two" /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup/test_check.sh
 DEBUG:     check_serialization: OK (exit 0) -> skipping generation and serialization for this artifact
 ✅ machine-one/artifact-two
 [generate]
 DEBUG:     files to produce -> 1 files
 DEBUG:       - first-secret => /run/secrets/first-secret
-DEBUG:     running check_serialization: env inputs="/tmp/artifacts-tui-ci/inputs-artifact-one" machine="machine-two" artifact="artifact-one" /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup/test_check.sh
+DEBUG:     running check_serialization: env inputs="/tmp/artifacts-tui-ci/inputs-artifact-one" machine="machine-two" artifact="artifact-one" /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup/test_check.sh
 DEBUG:     check_serialization: failed with status exit status: 1 -> continuing with generation
 ⚡ machine-two/artifact-one
-DEBUG: bwrap command: bwrap --unshare-all --unshare-user --uid 1000 --gid 1000 --tmpfs / --chdir / --ro-bind /nix/store /nix/store --tmpfs /usr/lib/systemd --proc /proc --dev /dev --bind /tmp/artifacts-tui-ci/prompt-artifact-one /tmp/artifacts-tui-ci/prompt-artifact-one --bind /tmp/artifacts-tui-ci/out-artifact-one /tmp/artifacts-tui-ci/out-artifact-one --ro-bind /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup --ro-bind /bin /bin --ro-bind /usr/bin /usr/bin --ro-bind /tmp/artifacts-tui-ci/artifacts-tui-passwd-371ed15b95352dfc.txt /etc/passwd -- /bin/sh /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup/test_generator_one.sh
+DEBUG: bwrap command: bwrap --unshare-all --unshare-user --uid 1000 --gid 1000 --tmpfs / --chdir / --ro-bind /nix/store /nix/store --tmpfs /usr/lib/systemd --proc /proc --dev /dev --bind /tmp/artifacts-tui-ci/prompt-artifact-one /tmp/artifacts-tui-ci/prompt-artifact-one --bind /tmp/artifacts-tui-ci/out-artifact-one /tmp/artifacts-tui-ci/out-artifact-one --ro-bind /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup --ro-bind /bin /bin --ro-bind /usr/bin /usr/bin --ro-bind /tmp/artifacts-tui-ci/artifacts-tui-passwd-371ed15b95352dfc.txt /etc/passwd -- /bin/sh /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup/test_generator_one.sh
 💾 serialize secrets
 === Content of /tmp/artifacts-tui-ci/out-artifact-one/first-secret ===
 one
@@ -45,10 +45,10 @@ one
 [generate]
 DEBUG:     files to produce -> 1 files
 DEBUG:       - second-secret => /run/secrets/second-secret
-DEBUG:     running check_serialization: env inputs="/tmp/artifacts-tui-ci/inputs-artifact-two" machine="machine-two" artifact="artifact-two" /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup/test_check.sh
+DEBUG:     running check_serialization: env inputs="/tmp/artifacts-tui-ci/inputs-artifact-two" machine="machine-two" artifact="artifact-two" /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup/test_check.sh
 DEBUG:     check_serialization: failed with status exit status: 1 -> continuing with generation
 ⚡ machine-two/artifact-two
-DEBUG: bwrap command: bwrap --unshare-all --unshare-user --uid 1000 --gid 1000 --tmpfs / --chdir / --ro-bind /nix/store /nix/store --tmpfs /usr/lib/systemd --proc /proc --dev /dev --bind /tmp/artifacts-tui-ci/prompt-artifact-two /tmp/artifacts-tui-ci/prompt-artifact-two --bind /tmp/artifacts-tui-ci/out-artifact-two /tmp/artifacts-tui-ci/out-artifact-two --ro-bind /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup --ro-bind /bin /bin --ro-bind /usr/bin /usr/bin --ro-bind /tmp/artifacts-tui-ci/artifacts-tui-passwd-ebde385bfb41d4e2.txt /etc/passwd -- /bin/sh /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup/test_generator_two.sh
+DEBUG: bwrap command: bwrap --unshare-all --unshare-user --uid 1000 --gid 1000 --tmpfs / --chdir / --ro-bind /nix/store /nix/store --tmpfs /usr/lib/systemd --proc /proc --dev /dev --bind /tmp/artifacts-tui-ci/prompt-artifact-two /tmp/artifacts-tui-ci/prompt-artifact-two --bind /tmp/artifacts-tui-ci/out-artifact-two /tmp/artifacts-tui-ci/out-artifact-two --ro-bind /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup --ro-bind /bin /bin --ro-bind /usr/bin /usr/bin --ro-bind /tmp/artifacts-tui-ci/artifacts-tui-passwd-ebde385bfb41d4e2.txt /etc/passwd -- /bin/sh /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup/test_generator_two.sh
 💾 serialize secrets
 === Content of /tmp/artifacts-tui-ci/out-artifact-two/second-secret ===
 two

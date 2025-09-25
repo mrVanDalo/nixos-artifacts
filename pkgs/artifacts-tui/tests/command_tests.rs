@@ -8,12 +8,12 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 fn cli() -> Command {
-    Command::new(get_cargo_bin("artifacts-cli"))
+    Command::new(get_cargo_bin("artifacts"))
 }
 
 #[allow(deprecated)]
 fn sdtin_cli(stdin: &str) -> StdinCommand {
-    let mut cmd = StdinCommand::new(get_cargo_bin("artifacts-cli"), stdin);
+    let mut cmd = StdinCommand::new(get_cargo_bin("artifacts"), stdin);
     // StdinCommand::env returns &mut Command; we don't need the return value here.
     let _ = cmd
         .env("TMPDIR", "/tmp/artifacts-tui-ci")

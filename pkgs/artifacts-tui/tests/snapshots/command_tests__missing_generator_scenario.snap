@@ -1,11 +1,12 @@
 ---
 source: tests/command_tests.rs
 info:
-  program: artifacts-cli
+  program: artifacts
   args:
+    - "--log-level=debug"
     - generate
-    - /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/missing_generator/backend.toml
-    - /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/missing_generator/make.json
+    - /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-tui/examples/missing_generator/backend.toml
+    - /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-tui/examples/missing_generator/make.json
   env:
     TMPDIR: /tmp/artifacts-tui-ci
   stdin: ""
@@ -15,4 +16,4 @@ exit_code: 1
 ----- stdout -----
 
 ----- stderr -----
-ERROR: parsing make config /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/missing_generator/make.json: missing field `generator` at line 14 column 7
+ERROR: parsing make config /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-tui/examples/missing_generator/make.json: missing field `generator` at line 14 column 7

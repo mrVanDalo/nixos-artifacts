@@ -1,7 +1,7 @@
 ---
 source: tests/command_tests.rs
 info:
-  program: artifacts-cli
+  program: artifacts
   args:
     - generate
     - "--help"
@@ -11,7 +11,7 @@ exit_code: 0
 ----- stdout -----
 Generate artifacts
 
-Usage: artifacts-cli generate [OPTIONS] <BACKEND> <MAKE>
+Usage: artifacts generate [OPTIONS] <BACKEND> <MAKE>
 
 Arguments:
   <BACKEND>  Path to backend configuration file (backend.toml)

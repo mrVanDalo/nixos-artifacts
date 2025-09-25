@@ -1,1 +1,0 @@
-//! Event handling (stub)

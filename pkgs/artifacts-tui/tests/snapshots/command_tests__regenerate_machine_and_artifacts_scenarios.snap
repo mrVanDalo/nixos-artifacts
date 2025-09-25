@@ -1,12 +1,12 @@
 ---
 source: tests/command_tests.rs
 info:
-  program: artifacts-cli
+  program: artifacts
   args:
     - "--log-level=debug"
     - regenerate
-    - /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup/backend.toml
-    - /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup/make.json
+    - /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup/backend.toml
+    - /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup/make.json
     - "--machine=machine-one"
     - "--artifact=artifact-one"
   env:
@@ -20,7 +20,7 @@ exit_code: 0
 DEBUG:     files to produce -> 1 files
 DEBUG:       - first-secret => /run/secrets/first-secret
 ⚡ machine-one/artifact-one
-DEBUG: bwrap command: bwrap --unshare-all --unshare-user --uid 1000 --gid 1000 --tmpfs / --chdir / --ro-bind /nix/store /nix/store --tmpfs /usr/lib/systemd --proc /proc --dev /dev --bind /tmp/artifacts-tui-ci/prompt-artifact-one /tmp/artifacts-tui-ci/prompt-artifact-one --bind /tmp/artifacts-tui-ci/out-artifact-one /tmp/artifacts-tui-ci/out-artifact-one --ro-bind /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup --ro-bind /bin /bin --ro-bind /usr/bin /usr/bin --ro-bind /tmp/artifacts-tui-ci/artifacts-tui-passwd-371ed15b95352dfc.txt /etc/passwd -- /bin/sh /home/palo/dev/nixos/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup/test_generator_one.sh
+DEBUG: bwrap command: bwrap --unshare-all --unshare-user --uid 1000 --gid 1000 --tmpfs / --chdir / --ro-bind /nix/store /nix/store --tmpfs /usr/lib/systemd --proc /proc --dev /dev --bind /tmp/artifacts-tui-ci/prompt-artifact-one /tmp/artifacts-tui-ci/prompt-artifact-one --bind /tmp/artifacts-tui-ci/out-artifact-one /tmp/artifacts-tui-ci/out-artifact-one --ro-bind /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup --ro-bind /bin /bin --ro-bind /usr/bin /usr/bin --ro-bind /tmp/artifacts-tui-ci/artifacts-tui-passwd-371ed15b95352dfc.txt /etc/passwd -- /bin/sh /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-tui/examples/bigger_setup/test_generator_one.sh
 💾 serialize secrets
 === Content of /tmp/artifacts-tui-ci/out-artifact-one/first-secret ===
 one

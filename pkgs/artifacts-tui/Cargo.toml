@@ -1,7 +1,8 @@
 [package]
-name = "artifacts-tui"
+name = "artifacts-cli"
 version = "0.1.0"
 edition = "2024"
+autobins = false
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }
@@ -19,14 +20,9 @@ insta-cmd = "0.6"
 insta = { version ="1.43.1" , features = ["filters"]}
 serial_test = "3"
 
-# Disable test harness for binaries so `cargo test` only runs real tests in tests/
+# Single binary target
 [[bin]]
-name = "artifacts-cli"
-path = "src/bin/artifacts_cli.rs"
-test = false
-
-[[bin]]
-name = "artifacts-tui"
-path = "src/bin/artifacts_tui.rs"
+name = "artifacts"
+path = "src/bin/artifacts.rs"
 test = false
 
