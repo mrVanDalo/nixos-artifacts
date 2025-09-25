@@ -104,16 +104,6 @@ with types;
                         description = "description shown during prompt entry";
                       };
 
-                      type = mkOption {
-                        type = enum [
-                          "hidden"
-                          "line"
-                          "multiline"
-                        ];
-                        default = "line";
-                        description = "Type of prompt input";
-                      };
-
                     };
                   }
                 )
