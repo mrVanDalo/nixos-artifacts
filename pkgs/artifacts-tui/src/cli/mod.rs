@@ -73,12 +73,23 @@ pub fn run() -> Result<()> {
 
     match cli.command {
         args::Command::Generate {
-            backend,
             make,
             all,
             machine,
             artifact,
-        } => commands::generate::run_generate_command(&backend, &make, all, &machine, &artifact)?,
+        } => {
+            use std::path::PathBuf;
+            let backend_path = std::env::var("NIXOS_ARTIFACTS_BACKEND_CONFIG")
+                .map(PathBuf::from)
+                .map_err(|_| anyhow::anyhow!("environment variable NIXOS_ARTIFACTS_BACKEND_CONFIG must be set and point to backend.toml"))?;
+            if !backend_path.is_file() {
+                return Err(anyhow::anyhow!(
+                    "NIXOS_ARTIFACTS_BACKEND_CONFIG points to a non-existent file: {}",
+                    backend_path.display()
+                ));
+            }
+            commands::generate::run_generate_command(&backend_path, &make, all, &machine, &artifact)?
+        }
         args::Command::Regenerate {
             backend,
             make,

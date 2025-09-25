@@ -46,8 +46,8 @@
                   set -o pipefail
 
                   MAKE=$(nix build --impure -I flake=$PWD --no-link --print-out-paths --expr 'import ${./make_file_generator.nix} { system = "${pkgs.system}"; }')
-                  cat ${backendsFile}
-                  ${self'.packages.artifacts-cli-bin}/bin/artifacts-cli "$@" ${backendsFile} ''${MAKE}
+                  export NIXOS_ARTIFACTS_BACKEND_CONFIG=${backendsFile}
+                  ${self'.packages.artifacts-cli-bin}/bin/artifacts "$@" ''${MAKE}
                 ''
               )
               {

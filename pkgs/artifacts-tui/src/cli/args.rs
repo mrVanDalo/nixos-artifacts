@@ -24,9 +24,9 @@ pub struct Cli {
 #[derive(Debug, Subcommand)]
 pub enum Command {
     /// Generate artifacts
+    ///
+    /// Note: backend configuration is read from env var NIXOS_ARTIFACTS_BACKEND_CONFIG (path to backend.toml)
     Generate {
-        /// Path to backend configuration file (backend.toml)
-        backend: PathBuf,
         /// Path to make configuration file (make.json)
         make: PathBuf,
         /// Regenerate all artifacts from all machines (conflicts with --machine/--artifact)

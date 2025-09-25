@@ -76,7 +76,7 @@ fn no_config_scenario() {
 
     let mut cmd = sdtin_cli("one\ntwo\n");
 
-    cmd.arg("generate").arg(backend).arg(make);
+    cmd.arg("generate").env("NIXOS_ARTIFACTS_BACKEND_CONFIG", &backend).arg(make);
 
     // Verify and cleanup
     env.finish().expect("temp folder not empty at end of test");
@@ -94,7 +94,7 @@ fn scenario_simple() {
 
     let mut cmd = sdtin_cli("one\ntwo\n");
 
-    cmd.arg("generate").arg(backend).arg(make);
+    cmd.arg("generate").env("NIXOS_ARTIFACTS_BACKEND_CONFIG", &backend).arg(make);
 
     // Verify and cleanup
     env.finish().expect("temp folder not empty at end of test");
@@ -113,7 +113,7 @@ fn generator_missing_scenario() {
 
     let mut cmd = sdtin_cli("one\ntwo\n");
 
-    cmd.arg("generate").arg(backend).arg(make);
+    cmd.arg("generate").env("NIXOS_ARTIFACTS_BACKEND_CONFIG", &backend).arg(make);
 
     // Verify and cleanup
     env.finish().expect("temp folder not empty at end of test");
@@ -131,7 +131,7 @@ fn two_artifacts_scenario() {
 
     let mut cmd = sdtin_cli("");
 
-    cmd.arg("generate").arg(backend).arg(make);
+    cmd.arg("generate").env("NIXOS_ARTIFACTS_BACKEND_CONFIG", &backend).arg(make);
 
     // Verify and cleanup
     env.finish().expect("temp folder not empty at end of test");
@@ -149,7 +149,7 @@ fn generate_wrong_missing_files_scenario() {
 
     let mut cmd = sdtin_cli("one\ntwo\n");
 
-    cmd.arg("generate").arg(backend).arg(make);
+    cmd.arg("generate").env("NIXOS_ARTIFACTS_BACKEND_CONFIG", &backend).arg(make);
 
     // Verify and cleanup
     env.finish().expect("temp folder not empty at end of test");
@@ -168,7 +168,7 @@ fn generate_wrong_wrong_file_type_scenario() {
 
     let mut cmd = sdtin_cli("one\ntwo\n");
 
-    cmd.arg("generate").arg(backend).arg(make);
+    cmd.arg("generate").env("NIXOS_ARTIFACTS_BACKEND_CONFIG", &backend).arg(make);
 
     // Verify and cleanup
     env.finish().expect("temp folder not empty at end of test");
@@ -187,7 +187,7 @@ fn generate_wrong_unwanted_files_scenario() {
 
     let mut cmd = sdtin_cli("one\ntwo\n");
 
-    cmd.arg("generate").arg(backend).arg(make);
+    cmd.arg("generate").env("NIXOS_ARTIFACTS_BACKEND_CONFIG", &backend).arg(make);
 
     // Verify and cleanup
     env.finish().expect("temp folder not empty at end of test");
@@ -206,7 +206,7 @@ fn missing_generator_scenario() {
 
     let mut cmd = sdtin_cli("");
 
-    cmd.arg("generate").arg(backend).arg(make);
+    cmd.arg("generate").env("NIXOS_ARTIFACTS_BACKEND_CONFIG", &backend).arg(make);
 
     // Verify and cleanup
     env.finish().expect("temp folder not empty at end of test");
@@ -374,7 +374,7 @@ fn artifact_name_scenario() {
     let mut cmd = sdtin_cli("");
 
     cmd.arg("generate")
-        .arg(backend)
+        .env("NIXOS_ARTIFACTS_BACKEND_CONFIG", &backend)
         .arg(make)
         .arg("--machine=machine-name");
 
@@ -396,7 +396,7 @@ fn ssh_keygen_scenario() {
     let mut cmd = sdtin_cli("");
 
     cmd.arg("generate")
-        .arg(backend)
+        .env("NIXOS_ARTIFACTS_BACKEND_CONFIG", &backend)
         .arg(make)
         .arg("--machine=machine-name");
 

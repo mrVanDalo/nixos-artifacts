@@ -5,10 +5,10 @@ info:
   args:
     - "--log-level=debug"
     - generate
-    - /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-tui/examples/scenario_simple/backend.toml
     - /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-tui/examples/scenario_simple/make.json
   env:
     TMPDIR: /tmp/artifacts-tui-ci
+    NIXOS_ARTIFACTS_BACKEND_CONFIG: /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-tui/examples/scenario_simple/backend.toml
   stdin: "one\ntwo\n"
 ---
 success: true
