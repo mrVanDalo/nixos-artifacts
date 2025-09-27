@@ -3,8 +3,8 @@
 }:
 
 pkgs.rustPlatform.buildRustPackage rec {
-  pname = "artifacts-tui";
-  version = "0.1.0";
+  pname = "artifacts-cli";
+  version = "0.2.0";
 
   src = ./.;
 

@@ -29,12 +29,12 @@ Top-Level Layout
   - backend.nix — Declares artifacts.default.backend.serialization.
   - store.nix — Declares artifacts.store tree: files, prompts, generator,
     serialization.
-- pkgs/artifacts-tui — Rust crate that builds (has it's own guidelines.md)
+- pkgs/artifacts-cli — Rust crate that builds (has it's own guidelines.md)
 - examples/ — Reference scenarios for tests (backend.toml, make.json, scripts).
 
 Nix Flake Outputs (flake.nix)
 
-- packages.artifacts-cli-bin — Builds Rust CLI from pkgs/artifacts-tui.
+- packages.artifacts-cli-bin — Builds Rust CLI from pkgs/artifacts-cli.
 - packages.artifacts-cli — Wrapper Bash script that:
   - Generates a backends.toml from a Nix attrset (currently wired with a test
     backend).

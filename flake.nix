@@ -30,7 +30,7 @@
         {
 
           packages.default = self'.packages.artifacts-cli;
-          packages.artifacts-cli-bin = pkgs.callPackage ./pkgs/artifacts-tui { };
+          packages.artifacts-cli-bin = pkgs.callPackage ./pkgs/artifacts-cli { };
 
           packages.artifacts-cli =
             pkgs.callPackage

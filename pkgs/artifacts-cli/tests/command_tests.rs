@@ -16,7 +16,7 @@ fn sdtin_cli(stdin: &str) -> StdinCommand {
     let mut cmd = StdinCommand::new(get_cargo_bin("artifacts"), stdin);
     // StdinCommand::env returns &mut Command; we don't need the return value here.
     let _ = cmd
-        .env("TMPDIR", "/tmp/artifacts-tui-ci")
+        .env("TMPDIR", "/tmp/artifacts-cli")
         .arg("--log-level=debug");
     cmd
 }
@@ -44,7 +44,7 @@ impl Drop for TempTestEnv {
 #[allow(deprecated)]
 impl TempTestEnv {
     fn new() -> Self {
-        let path = PathBuf::from("/tmp/artifacts-tui-ci");
+        let path = PathBuf::from("/tmp/artifacts-cli");
         let _ = remove_dir_all(&path);
         std::fs::create_dir_all(&path).expect("failed to create fixed tmp dir");
         TempTestEnv { path }

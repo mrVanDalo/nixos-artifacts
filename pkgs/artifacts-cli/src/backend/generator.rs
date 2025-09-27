@@ -83,7 +83,7 @@ pub fn run_generator_script(
     let out_path_str = out.display().to_string();
     let hash = fnv1a64(&out_path_str);
     let mut temp_passwd_path = std::env::temp_dir();
-    let file_name = format!("artifacts-tui-passwd-{:016x}.txt", hash);
+    let file_name = format!("artifacts-cli-passwd-{:016x}.txt", hash);
     temp_passwd_path.push(file_name);
 
     fs::write(&temp_passwd_path, passwd_content).with_context(|| {
