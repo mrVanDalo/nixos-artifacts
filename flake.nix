@@ -44,10 +44,8 @@
                 pkgs.writers.writeBashBin "artifacts" ''
                   set -e
                   set -o pipefail
-
-                  MAKE=$(nix build --impure -I flake=$PWD --no-link --print-out-paths --expr 'import ${./make_file_generator.nix} { system = "${pkgs.system}"; }')
                   export NIXOS_ARTIFACTS_BACKEND_CONFIG=${backendsFile}
-                  ${self'.packages.artifacts-cli-bin}/bin/artifacts "$@" ''${MAKE}
+                  ${self'.packages.artifacts-cli-bin}/bin/artifacts "$@"
                 ''
               )
               {
