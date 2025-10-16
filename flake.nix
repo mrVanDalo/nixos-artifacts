@@ -9,6 +9,8 @@
     treefmt-nix.url = "github:numtide/treefmt-nix";
     antora-flake.url = "github:mrvandalo/antora-flake";
     antora-flake.inputs.nixpkgs.follows = "nixpkgs";
+    home-manager.inputs.nixpkgs.follows = "nixpkgs";
+    home-manager.url = "github:nix-community/home-manager";
   };
 
   outputs =
@@ -128,10 +130,30 @@
             machine-two = machineConfiguration "machine-two";
           };
 
+        homeConfiguration.test = inputs.home-manager.lib.homeManagerConfiguration {
+          pkgs = inputs.nixpkgs.legacyPackages."x86_64-linux".pkgs;
+          modules = [
+            self.homeModules.default
+            self.homeModules.examples
+            { artifacts.default.backend.serialization = "test"; }
+            {
+              home.stateVersion = "25.05";
+              home.username = "test";
+              home.homeDirectory = "/home/test";
+            }
+          ];
+        };
+
+        homeModules.default = {
+          imports = [ ./modules/hm ];
+        };
+        homeModules.examples = {
+          imports = [ ./examples/hm ];
+        };
+
         nixosModules.default = {
           imports = [ ./modules ];
         };
-
         nixosModules.examples = {
           imports = [ ./examples ];
         };
