@@ -18,4 +18,4 @@ DEBUG: Running nix build: "/run/current-system/sw/bin/nix" "build" "--impure" "-
 DEBUG: make config: [{"artifacts":{"artifact":{"files":{"first-secret":{"group":"root","mode":"0400","name":"first-secret","owner":"root","path":"/run/secrets/first-secret"}},"generator":null,"name":"artifact","prompts":{},"serialization":"test","shared":false}},"config":{},"machine":"machine-name"}]
 
 ----- stderr -----
-ERROR: parsing make config /nix/store/caywslwwwwmk7y8n2cli8y4wsql2wkkj-test.json: generator must be set at line 1 column 242
+ERROR: parsing make config /nix/store/m8pmq99hr9vypbbj7bf6i8318xglq8w7-test.json: generator must be set at line 1 column 242
