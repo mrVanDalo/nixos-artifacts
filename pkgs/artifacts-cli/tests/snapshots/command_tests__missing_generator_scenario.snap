@@ -14,8 +14,35 @@ info:
 success: false
 exit_code: 1
 ----- stdout -----
-DEBUG: Running nix build: "/run/current-system/sw/bin/nix" "build" "--impure" "-I" "flake=/home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/missing_generator" "--no-link" "--print-out-paths" "--expr" "\nlet\n  system = \"x86_64-linux\";\n  filterAttrs =\n    pred: set:\n    builtins.removeAttrs set (builtins.filter (name: !pred name set.${name}) (builtins.attrNames set));\n  flake = builtins.getFlake (toString <flake>);\n  pkgs = flake.inputs.nixpkgs.legacyPackages.${system};\n  configurations = builtins.attrNames (\n    filterAttrs (\n      machine: configuration: builtins.hasAttr \"artifacts\" configuration.options\n    ) flake.nixosConfigurations\n  );\n  make = map (name: {\n    machine = name;\n    artifacts = flake.nixosConfigurations.${name}.config.artifacts.store;\n    config =\n      if (builtins.hasAttr \"config\" flake.nixosConfigurations.${name}.config.artifacts) then\n        flake.nixosConfigurations.${name}.config.artifacts.config\n      else\n        { };\n  }) configurations;\nin\npkgs.writeText \"test.json\" (builtins.toJSON make)\n"
-DEBUG: make config: [{"artifacts":{"artifact":{"files":{"first-secret":{"group":"root","mode":"0400","name":"first-secret","owner":"root","path":"/run/secrets/first-secret"}},"generator":null,"name":"artifact","prompts":{},"serialization":"test","shared":false}},"config":{},"machine":"machine-name"}]
+DEBUG: Running nix build: "/run/current-system/sw/bin/nix" "build" "--impure" "-I" "flake=/home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/missing_generator" "--no-link" "--print-out-paths" "--expr" "\nlet\n  system = \"x86_64-linux\";\n  filterAttrs =\n    pred: set:\n    builtins.removeAttrs set (builtins.filter (name: !pred name set.${name}) (builtins.attrNames set));\n  flake = builtins.getFlake (toString <flake>);\n  pkgs = flake.inputs.nixpkgs.legacyPackages.${system};\n  nixosConfigurations = builtins.attrNames (\n    filterAttrs (\n      machine: configuration: builtins.hasAttr \"artifacts\" configuration.options\n    ) flake.nixosConfigurations\n  );\n  homeConfigurations =\n    let hc = if builtins.hasAttr \"homeConfigurations\" flake then flake.homeConfigurations else {};\n    in builtins.attrNames (\n      filterAttrs (\n        user: configuration: builtins.hasAttr \"artifacts\" configuration.options\n      ) hc\n    );\n  nixos = map (name: {\n    machine = name;\n    artifacts = flake.nixosConfigurations.${name}.config.artifacts.store;\n    config =\n      if (builtins.hasAttr \"config\" flake.nixosConfigurations.${name}.config.artifacts) then\n        flake.nixosConfigurations.${name}.config.artifacts.config\n      else\n        { };\n  }) nixosConfigurations;\n  home = map (name: {\n    user = name;\n    artifacts = flake.homeConfigurations.${name}.config.artifacts.store;\n    config =\n      if (builtins.hasAttr \"config\" flake.homeConfigurations.${name}.config.artifacts) then\n        flake.homeConfigurations.${name}.config.artifacts.config\n      else\n        { };\n  }) homeConfigurations;\n  make = { inherit nixos home; };\nin\npkgs.writeText \"test.json\" (builtins.toJSON make)\n"
+DEBUG: make config (pretty):
+DEBUG: {
+DEBUG:   "home": [],
+DEBUG:   "nixos": [
+DEBUG:     {
+DEBUG:       "artifacts": {
+DEBUG:         "artifact": {
+DEBUG:           "files": {
+DEBUG:             "first-secret": {
+DEBUG:               "group": "root",
+DEBUG:               "mode": "0400",
+DEBUG:               "name": "first-secret",
+DEBUG:               "owner": "root",
+DEBUG:               "path": "/run/secrets/first-secret"
+DEBUG:             }
+DEBUG:           },
+DEBUG:           "generator": null,
+DEBUG:           "name": "artifact",
+DEBUG:           "prompts": {},
+DEBUG:           "serialization": "test",
+DEBUG:           "shared": false
+DEBUG:         }
+DEBUG:       },
+DEBUG:       "config": {},
+DEBUG:       "machine": "machine-name"
+DEBUG:     }
+DEBUG:   ]
+DEBUG: }
 
 ----- stderr -----
-ERROR: parsing make config /nix/store/m8pmq99hr9vypbbj7bf6i8318xglq8w7-test.json: generator must be set at line 1 column 242
+ERROR: parsing make config /nix/store/810szkddawwjycs2lj6lrphsim4pm1si-test.json: generator must be set at line 1 column 261

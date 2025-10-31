@@ -15,8 +15,89 @@ info:
 success: true
 exit_code: 0
 ----- stdout -----
-DEBUG: Running nix build: "/run/current-system/sw/bin/nix" "build" "--impure" "-I" "flake=/home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/bigger_setup" "--no-link" "--print-out-paths" "--expr" "\nlet\n  system = \"x86_64-linux\";\n  filterAttrs =\n    pred: set:\n    builtins.removeAttrs set (builtins.filter (name: !pred name set.${name}) (builtins.attrNames set));\n  flake = builtins.getFlake (toString <flake>);\n  pkgs = flake.inputs.nixpkgs.legacyPackages.${system};\n  configurations = builtins.attrNames (\n    filterAttrs (\n      machine: configuration: builtins.hasAttr \"artifacts\" configuration.options\n    ) flake.nixosConfigurations\n  );\n  make = map (name: {\n    machine = name;\n    artifacts = flake.nixosConfigurations.${name}.config.artifacts.store;\n    config =\n      if (builtins.hasAttr \"config\" flake.nixosConfigurations.${name}.config.artifacts) then\n        flake.nixosConfigurations.${name}.config.artifacts.config\n      else\n        { };\n  }) configurations;\nin\npkgs.writeText \"test.json\" (builtins.toJSON make)\n"
-DEBUG: make config: [{"artifacts":{"artifact-one":{"files":{"first-secret":{"group":"root","mode":"0400","name":"first-secret","owner":"root","path":"/run/secrets/first-secret"}},"generator":"/nix/store/pwyaca1xgqx07pggwd6k3mywyc0mgjnd-test_generator_one.sh","name":"artifact-one","prompts":{},"serialization":"test","shared":false},"artifact-two":{"files":{"second-secret":{"group":"root","mode":"0400","name":"second-secret","owner":"root","path":"/run/secrets/second-secret"}},"generator":"/nix/store/wciybsclyhlydjhk704mxyij7rrx02cw-test_generator_two.sh","name":"artifact-two","prompts":{},"serialization":"test","shared":false}},"config":{},"machine":"machine-one"},{"artifacts":{"artifact-one":{"files":{"first-secret":{"group":"root","mode":"0400","name":"first-secret","owner":"root","path":"/run/secrets/first-secret"}},"generator":"/nix/store/pwyaca1xgqx07pggwd6k3mywyc0mgjnd-test_generator_one.sh","name":"artifact-one","prompts":{},"serialization":"test","shared":false},"artifact-two":{"files":{"second-secret":{"group":"root","mode":"0400","name":"second-secret","owner":"root","path":"/run/secrets/second-secret"}},"generator":"/nix/store/wciybsclyhlydjhk704mxyij7rrx02cw-test_generator_two.sh","name":"artifact-two","prompts":{},"serialization":"test","shared":false}},"config":{},"machine":"machine-two"}]
+DEBUG: Running nix build: "/run/current-system/sw/bin/nix" "build" "--impure" "-I" "flake=/home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/bigger_setup" "--no-link" "--print-out-paths" "--expr" "\nlet\n  system = \"x86_64-linux\";\n  filterAttrs =\n    pred: set:\n    builtins.removeAttrs set (builtins.filter (name: !pred name set.${name}) (builtins.attrNames set));\n  flake = builtins.getFlake (toString <flake>);\n  pkgs = flake.inputs.nixpkgs.legacyPackages.${system};\n  nixosConfigurations = builtins.attrNames (\n    filterAttrs (\n      machine: configuration: builtins.hasAttr \"artifacts\" configuration.options\n    ) flake.nixosConfigurations\n  );\n  homeConfigurations =\n    let hc = if builtins.hasAttr \"homeConfigurations\" flake then flake.homeConfigurations else {};\n    in builtins.attrNames (\n      filterAttrs (\n        user: configuration: builtins.hasAttr \"artifacts\" configuration.options\n      ) hc\n    );\n  nixos = map (name: {\n    machine = name;\n    artifacts = flake.nixosConfigurations.${name}.config.artifacts.store;\n    config =\n      if (builtins.hasAttr \"config\" flake.nixosConfigurations.${name}.config.artifacts) then\n        flake.nixosConfigurations.${name}.config.artifacts.config\n      else\n        { };\n  }) nixosConfigurations;\n  home = map (name: {\n    user = name;\n    artifacts = flake.homeConfigurations.${name}.config.artifacts.store;\n    config =\n      if (builtins.hasAttr \"config\" flake.homeConfigurations.${name}.config.artifacts) then\n        flake.homeConfigurations.${name}.config.artifacts.config\n      else\n        { };\n  }) homeConfigurations;\n  make = { inherit nixos home; };\nin\npkgs.writeText \"test.json\" (builtins.toJSON make)\n"
+DEBUG: make config (pretty):
+DEBUG: {
+DEBUG:   "home": [],
+DEBUG:   "nixos": [
+DEBUG:     {
+DEBUG:       "artifacts": {
+DEBUG:         "artifact-one": {
+DEBUG:           "files": {
+DEBUG:             "first-secret": {
+DEBUG:               "group": "root",
+DEBUG:               "mode": "0400",
+DEBUG:               "name": "first-secret",
+DEBUG:               "owner": "root",
+DEBUG:               "path": "/run/secrets/first-secret"
+DEBUG:             }
+DEBUG:           },
+DEBUG:           "generator": "/nix/store/pwyaca1xgqx07pggwd6k3mywyc0mgjnd-test_generator_one.sh",
+DEBUG:           "name": "artifact-one",
+DEBUG:           "prompts": {},
+DEBUG:           "serialization": "test",
+DEBUG:           "shared": false
+DEBUG:         },
+DEBUG:         "artifact-two": {
+DEBUG:           "files": {
+DEBUG:             "second-secret": {
+DEBUG:               "group": "root",
+DEBUG:               "mode": "0400",
+DEBUG:               "name": "second-secret",
+DEBUG:               "owner": "root",
+DEBUG:               "path": "/run/secrets/second-secret"
+DEBUG:             }
+DEBUG:           },
+DEBUG:           "generator": "/nix/store/wciybsclyhlydjhk704mxyij7rrx02cw-test_generator_two.sh",
+DEBUG:           "name": "artifact-two",
+DEBUG:           "prompts": {},
+DEBUG:           "serialization": "test",
+DEBUG:           "shared": false
+DEBUG:         }
+DEBUG:       },
+DEBUG:       "config": {},
+DEBUG:       "machine": "machine-one"
+DEBUG:     },
+DEBUG:     {
+DEBUG:       "artifacts": {
+DEBUG:         "artifact-one": {
+DEBUG:           "files": {
+DEBUG:             "first-secret": {
+DEBUG:               "group": "root",
+DEBUG:               "mode": "0400",
+DEBUG:               "name": "first-secret",
+DEBUG:               "owner": "root",
+DEBUG:               "path": "/run/secrets/first-secret"
+DEBUG:             }
+DEBUG:           },
+DEBUG:           "generator": "/nix/store/pwyaca1xgqx07pggwd6k3mywyc0mgjnd-test_generator_one.sh",
+DEBUG:           "name": "artifact-one",
+DEBUG:           "prompts": {},
+DEBUG:           "serialization": "test",
+DEBUG:           "shared": false
+DEBUG:         },
+DEBUG:         "artifact-two": {
+DEBUG:           "files": {
+DEBUG:             "second-secret": {
+DEBUG:               "group": "root",
+DEBUG:               "mode": "0400",
+DEBUG:               "name": "second-secret",
+DEBUG:               "owner": "root",
+DEBUG:               "path": "/run/secrets/second-secret"
+DEBUG:             }
+DEBUG:           },
+DEBUG:           "generator": "/nix/store/wciybsclyhlydjhk704mxyij7rrx02cw-test_generator_two.sh",
+DEBUG:           "name": "artifact-two",
+DEBUG:           "prompts": {},
+DEBUG:           "serialization": "test",
+DEBUG:           "shared": false
+DEBUG:         }
+DEBUG:       },
+DEBUG:       "config": {},
+DEBUG:       "machine": "machine-two"
+DEBUG:     }
+DEBUG:   ]
+DEBUG: }
 [regenerate]
 DEBUG:     files to produce -> 1 files
 DEBUG:       - first-secret => /run/secrets/first-secret owner=root group=root

@@ -30,12 +30,15 @@ pub enum Command {
     Generate {
         /// Path to flake to read machines/artifacts from (passed as -I flake=<path> to nix). If omitted, uses the current directory.
         make: Option<PathBuf>,
-        /// Regenerate all artifacts from all machines (conflicts with --machine/--artifact)
+        /// Regenerate all artifacts from all machines/users (conflicts with --machine/--home/--artifact)
         #[arg(long = "all")]
         all: bool,
         /// Name of machine(s) to target (repeatable)
         #[arg(long = "machine")]
         machine: Vec<String>,
+        /// Name of home user(s) to target (repeatable)
+        #[arg(long = "home")]
+        home: Vec<String>,
         /// Name of artifact(s) to target (repeatable)
         #[arg(long = "artifact")]
         artifact: Vec<String>,
@@ -47,12 +50,15 @@ pub enum Command {
     Regenerate {
         /// Path to flake to read machines/artifacts from (passed as -I flake=<path> to nix). If omitted, uses the current directory.
         make: Option<PathBuf>,
-        /// Regenerate all artifacts from all machines (conflicts with --machine/--artifact)
+        /// Regenerate all artifacts from all machines/users (conflicts with --machine/--home/--artifact)
         #[arg(long = "all")]
         all: bool,
         /// Name of machine(s) to target (repeatable)
         #[arg(long = "machine")]
         machine: Vec<String>,
+        /// Name of home user(s) to target (repeatable)
+        #[arg(long = "home")]
+        home: Vec<String>,
         /// Name of artifact(s) to target (repeatable)
         #[arg(long = "artifact")]
         artifact: Vec<String>,

@@ -7,9 +7,17 @@ use std::path::Path;
 pub fn run(make_json: &Path) -> Result<()> {
     let make = MakeConfiguration::read_make_config(make_json)?;
 
-    for (machine, artifacts) in &make.make_map {
+    for (machine, artifacts) in &make.nixos_map {
         info!("[list]");
-        info!("machine: {}", machine);
+        info!("nixos machine: {}", machine);
+        for artifact in artifacts.values() {
+            info!("artifact: {}", artifact.name);
+        }
+    }
+
+    for (user, artifacts) in &make.home_map {
+        info!("[list]");
+        info!("home user: {}", user);
         for artifact in artifacts.values() {
             info!("artifact: {}", artifact.name);
         }

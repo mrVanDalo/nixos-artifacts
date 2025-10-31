@@ -14,8 +14,42 @@ info:
 success: false
 exit_code: 1
 ----- stdout -----
-DEBUG: Running nix build: "/run/current-system/sw/bin/nix" "build" "--impure" "-I" "flake=/home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/unwanted-files" "--no-link" "--print-out-paths" "--expr" "\nlet\n  system = \"x86_64-linux\";\n  filterAttrs =\n    pred: set:\n    builtins.removeAttrs set (builtins.filter (name: !pred name set.${name}) (builtins.attrNames set));\n  flake = builtins.getFlake (toString <flake>);\n  pkgs = flake.inputs.nixpkgs.legacyPackages.${system};\n  configurations = builtins.attrNames (\n    filterAttrs (\n      machine: configuration: builtins.hasAttr \"artifacts\" configuration.options\n    ) flake.nixosConfigurations\n  );\n  make = map (name: {\n    machine = name;\n    artifacts = flake.nixosConfigurations.${name}.config.artifacts.store;\n    config =\n      if (builtins.hasAttr \"config\" flake.nixosConfigurations.${name}.config.artifacts) then\n        flake.nixosConfigurations.${name}.config.artifacts.config\n      else\n        { };\n  }) configurations;\nin\npkgs.writeText \"test.json\" (builtins.toJSON make)\n"
-DEBUG: make config: [{"artifacts":{"test-artifact":{"files":{"simple-secrets":{"group":"deployer","mode":"0400","name":"simple-secrets","owner":"deployer","path":"/run/secrets/simple-secrets"},"very-simple-secrets":{"group":"root","mode":"0400","name":"very-simple-secrets","owner":"root","path":"/run/secrets/very-simple-secrets"}},"generator":"/nix/store/ps8hafgvb472hz2gp3d5xirrxq8jg3vw-test_generator_unwanted_files.sh","name":"test-artifact","prompts":{},"serialization":"test","shared":false}},"config":{},"machine":"unwanted-files"}]
+DEBUG: Running nix build: "/run/current-system/sw/bin/nix" "build" "--impure" "-I" "flake=/home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/unwanted-files" "--no-link" "--print-out-paths" "--expr" "\nlet\n  system = \"x86_64-linux\";\n  filterAttrs =\n    pred: set:\n    builtins.removeAttrs set (builtins.filter (name: !pred name set.${name}) (builtins.attrNames set));\n  flake = builtins.getFlake (toString <flake>);\n  pkgs = flake.inputs.nixpkgs.legacyPackages.${system};\n  nixosConfigurations = builtins.attrNames (\n    filterAttrs (\n      machine: configuration: builtins.hasAttr \"artifacts\" configuration.options\n    ) flake.nixosConfigurations\n  );\n  homeConfigurations =\n    let hc = if builtins.hasAttr \"homeConfigurations\" flake then flake.homeConfigurations else {};\n    in builtins.attrNames (\n      filterAttrs (\n        user: configuration: builtins.hasAttr \"artifacts\" configuration.options\n      ) hc\n    );\n  nixos = map (name: {\n    machine = name;\n    artifacts = flake.nixosConfigurations.${name}.config.artifacts.store;\n    config =\n      if (builtins.hasAttr \"config\" flake.nixosConfigurations.${name}.config.artifacts) then\n        flake.nixosConfigurations.${name}.config.artifacts.config\n      else\n        { };\n  }) nixosConfigurations;\n  home = map (name: {\n    user = name;\n    artifacts = flake.homeConfigurations.${name}.config.artifacts.store;\n    config =\n      if (builtins.hasAttr \"config\" flake.homeConfigurations.${name}.config.artifacts) then\n        flake.homeConfigurations.${name}.config.artifacts.config\n      else\n        { };\n  }) homeConfigurations;\n  make = { inherit nixos home; };\nin\npkgs.writeText \"test.json\" (builtins.toJSON make)\n"
+DEBUG: make config (pretty):
+DEBUG: {
+DEBUG:   "home": [],
+DEBUG:   "nixos": [
+DEBUG:     {
+DEBUG:       "artifacts": {
+DEBUG:         "test-artifact": {
+DEBUG:           "files": {
+DEBUG:             "simple-secrets": {
+DEBUG:               "group": "deployer",
+DEBUG:               "mode": "0400",
+DEBUG:               "name": "simple-secrets",
+DEBUG:               "owner": "deployer",
+DEBUG:               "path": "/run/secrets/simple-secrets"
+DEBUG:             },
+DEBUG:             "very-simple-secrets": {
+DEBUG:               "group": "root",
+DEBUG:               "mode": "0400",
+DEBUG:               "name": "very-simple-secrets",
+DEBUG:               "owner": "root",
+DEBUG:               "path": "/run/secrets/very-simple-secrets"
+DEBUG:             }
+DEBUG:           },
+DEBUG:           "generator": "/nix/store/ps8hafgvb472hz2gp3d5xirrxq8jg3vw-test_generator_unwanted_files.sh",
+DEBUG:           "name": "test-artifact",
+DEBUG:           "prompts": {},
+DEBUG:           "serialization": "test",
+DEBUG:           "shared": false
+DEBUG:         }
+DEBUG:       },
+DEBUG:       "config": {},
+DEBUG:       "machine": "unwanted-files"
+DEBUG:     }
+DEBUG:   ]
+DEBUG: }
 [generate]
 DEBUG:     files to produce -> 2 files
 DEBUG:       - simple-secrets => /run/secrets/simple-secrets owner=deployer group=deployer

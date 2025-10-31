@@ -21,10 +21,13 @@ Arguments:
 
 Options:
       --all
-          Regenerate all artifacts from all machines (conflicts with --machine/--artifact)
+          Regenerate all artifacts from all machines/users (conflicts with --machine/--home/--artifact)
 
       --machine <MACHINE>
           Name of machine(s) to target (repeatable)
+
+      --home <HOME>
+          Name of home user(s) to target (repeatable)
 
       --artifact <ARTIFACT>
           Name of artifact(s) to target (repeatable)

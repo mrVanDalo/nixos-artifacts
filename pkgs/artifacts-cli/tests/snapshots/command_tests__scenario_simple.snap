@@ -14,8 +14,55 @@ info:
 success: true
 exit_code: 0
 ----- stdout -----
-DEBUG: Running nix build: "/run/current-system/sw/bin/nix" "build" "--impure" "-I" "flake=/home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/scenario_simple" "--no-link" "--print-out-paths" "--expr" "\nlet\n  system = \"x86_64-linux\";\n  filterAttrs =\n    pred: set:\n    builtins.removeAttrs set (builtins.filter (name: !pred name set.${name}) (builtins.attrNames set));\n  flake = builtins.getFlake (toString <flake>);\n  pkgs = flake.inputs.nixpkgs.legacyPackages.${system};\n  configurations = builtins.attrNames (\n    filterAttrs (\n      machine: configuration: builtins.hasAttr \"artifacts\" configuration.options\n    ) flake.nixosConfigurations\n  );\n  make = map (name: {\n    machine = name;\n    artifacts = flake.nixosConfigurations.${name}.config.artifacts.store;\n    config =\n      if (builtins.hasAttr \"config\" flake.nixosConfigurations.${name}.config.artifacts) then\n        flake.nixosConfigurations.${name}.config.artifacts.config\n      else\n        { };\n  }) configurations;\nin\npkgs.writeText \"test.json\" (builtins.toJSON make)\n"
-DEBUG: make config: [{"artifacts":{"test-artifact":{"files":{"simple-secrets":{"group":"deployer","mode":"0400","name":"simple-secrets","owner":"deployer","path":"/run/secrets/simple-secrets"},"very-simple-secrets":{"group":"root","mode":"0400","name":"very-simple-secrets","owner":"root","path":"/run/secrets/very-simple-secrets"}},"generator":"/nix/store/myx4c4cr0pdj772ikg7cypjqcsc1ilx4-test_generator.sh","name":"test-artifact","prompts":{"secret1":{"description":"secret number 1","name":"secret1"},"secret2":{"description":"secret number 2","name":"secret2"}},"serialization":"test","shared":false}},"config":{"test":{"key":"example-key"}},"machine":"machine-name"}]
+DEBUG: Running nix build: "/run/current-system/sw/bin/nix" "build" "--impure" "-I" "flake=/home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/scenario_simple" "--no-link" "--print-out-paths" "--expr" "\nlet\n  system = \"x86_64-linux\";\n  filterAttrs =\n    pred: set:\n    builtins.removeAttrs set (builtins.filter (name: !pred name set.${name}) (builtins.attrNames set));\n  flake = builtins.getFlake (toString <flake>);\n  pkgs = flake.inputs.nixpkgs.legacyPackages.${system};\n  nixosConfigurations = builtins.attrNames (\n    filterAttrs (\n      machine: configuration: builtins.hasAttr \"artifacts\" configuration.options\n    ) flake.nixosConfigurations\n  );\n  homeConfigurations =\n    let hc = if builtins.hasAttr \"homeConfigurations\" flake then flake.homeConfigurations else {};\n    in builtins.attrNames (\n      filterAttrs (\n        user: configuration: builtins.hasAttr \"artifacts\" configuration.options\n      ) hc\n    );\n  nixos = map (name: {\n    machine = name;\n    artifacts = flake.nixosConfigurations.${name}.config.artifacts.store;\n    config =\n      if (builtins.hasAttr \"config\" flake.nixosConfigurations.${name}.config.artifacts) then\n        flake.nixosConfigurations.${name}.config.artifacts.config\n      else\n        { };\n  }) nixosConfigurations;\n  home = map (name: {\n    user = name;\n    artifacts = flake.homeConfigurations.${name}.config.artifacts.store;\n    config =\n      if (builtins.hasAttr \"config\" flake.homeConfigurations.${name}.config.artifacts) then\n        flake.homeConfigurations.${name}.config.artifacts.config\n      else\n        { };\n  }) homeConfigurations;\n  make = { inherit nixos home; };\nin\npkgs.writeText \"test.json\" (builtins.toJSON make)\n"
+DEBUG: make config (pretty):
+DEBUG: {
+DEBUG:   "home": [],
+DEBUG:   "nixos": [
+DEBUG:     {
+DEBUG:       "artifacts": {
+DEBUG:         "test-artifact": {
+DEBUG:           "files": {
+DEBUG:             "simple-secrets": {
+DEBUG:               "group": "deployer",
+DEBUG:               "mode": "0400",
+DEBUG:               "name": "simple-secrets",
+DEBUG:               "owner": "deployer",
+DEBUG:               "path": "/run/secrets/simple-secrets"
+DEBUG:             },
+DEBUG:             "very-simple-secrets": {
+DEBUG:               "group": "root",
+DEBUG:               "mode": "0400",
+DEBUG:               "name": "very-simple-secrets",
+DEBUG:               "owner": "root",
+DEBUG:               "path": "/run/secrets/very-simple-secrets"
+DEBUG:             }
+DEBUG:           },
+DEBUG:           "generator": "/nix/store/myx4c4cr0pdj772ikg7cypjqcsc1ilx4-test_generator.sh",
+DEBUG:           "name": "test-artifact",
+DEBUG:           "prompts": {
+DEBUG:             "secret1": {
+DEBUG:               "description": "secret number 1",
+DEBUG:               "name": "secret1"
+DEBUG:             },
+DEBUG:             "secret2": {
+DEBUG:               "description": "secret number 2",
+DEBUG:               "name": "secret2"
+DEBUG:             }
+DEBUG:           },
+DEBUG:           "serialization": "test",
+DEBUG:           "shared": false
+DEBUG:         }
+DEBUG:       },
+DEBUG:       "config": {
+DEBUG:         "test": {
+DEBUG:           "key": "example-key"
+DEBUG:         }
+DEBUG:       },
+DEBUG:       "machine": "machine-name"
+DEBUG:     }
+DEBUG:   ]
+DEBUG: }
 [generate]
 DEBUG:     files to produce -> 2 files
 DEBUG:       - simple-secrets => /run/secrets/simple-secrets owner=deployer group=deployer

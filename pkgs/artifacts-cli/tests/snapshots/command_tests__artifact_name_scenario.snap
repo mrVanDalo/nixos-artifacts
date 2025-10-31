@@ -15,8 +15,63 @@ info:
 success: true
 exit_code: 0
 ----- stdout -----
-DEBUG: Running nix build: "/run/current-system/sw/bin/nix" "build" "--impure" "-I" "flake=/home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/artifact_names" "--no-link" "--print-out-paths" "--expr" "\nlet\n  system = \"x86_64-linux\";\n  filterAttrs =\n    pred: set:\n    builtins.removeAttrs set (builtins.filter (name: !pred name set.${name}) (builtins.attrNames set));\n  flake = builtins.getFlake (toString <flake>);\n  pkgs = flake.inputs.nixpkgs.legacyPackages.${system};\n  configurations = builtins.attrNames (\n    filterAttrs (\n      machine: configuration: builtins.hasAttr \"artifacts\" configuration.options\n    ) flake.nixosConfigurations\n  );\n  make = map (name: {\n    machine = name;\n    artifacts = flake.nixosConfigurations.${name}.config.artifacts.store;\n    config =\n      if (builtins.hasAttr \"config\" flake.nixosConfigurations.${name}.config.artifacts) then\n        flake.nixosConfigurations.${name}.config.artifacts.config\n      else\n        { };\n  }) configurations;\nin\npkgs.writeText \"test.json\" (builtins.toJSON make)\n"
-DEBUG: make config: [{"artifacts":{"artifact.one":{"files":{"fifth secret":{"group":"root","mode":"0400","name":"fifth secret","owner":"root","path":"/run/secrets/fifth secret"},"first.secret":{"group":"root","mode":"0400","name":"first.secret","owner":"root","path":"/run/secrets/first.secret"},"forthSecret":{"group":"root","mode":"0400","name":"forthSecret","owner":"root","path":"/run/secrets/forthSecret"},"second_secret":{"group":"root","mode":"0400","name":"second_secret","owner":"root","path":"/run/secrets/second_secret"},"third-secret":{"group":"root","mode":"0400","name":"third-secret","owner":"root","path":"/run/secrets/third-secret"}},"generator":"/nix/store/q33g8js7wza4gbyn84ww58swyqh0md2z-test_generator.sh","name":"artifact.one","prompts":{},"serialization":"test","shared":false}},"config":{},"machine":"machine-name"}]
+DEBUG: Running nix build: "/run/current-system/sw/bin/nix" "build" "--impure" "-I" "flake=/home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/artifact_names" "--no-link" "--print-out-paths" "--expr" "\nlet\n  system = \"x86_64-linux\";\n  filterAttrs =\n    pred: set:\n    builtins.removeAttrs set (builtins.filter (name: !pred name set.${name}) (builtins.attrNames set));\n  flake = builtins.getFlake (toString <flake>);\n  pkgs = flake.inputs.nixpkgs.legacyPackages.${system};\n  nixosConfigurations = builtins.attrNames (\n    filterAttrs (\n      machine: configuration: builtins.hasAttr \"artifacts\" configuration.options\n    ) flake.nixosConfigurations\n  );\n  homeConfigurations =\n    let hc = if builtins.hasAttr \"homeConfigurations\" flake then flake.homeConfigurations else {};\n    in builtins.attrNames (\n      filterAttrs (\n        user: configuration: builtins.hasAttr \"artifacts\" configuration.options\n      ) hc\n    );\n  nixos = map (name: {\n    machine = name;\n    artifacts = flake.nixosConfigurations.${name}.config.artifacts.store;\n    config =\n      if (builtins.hasAttr \"config\" flake.nixosConfigurations.${name}.config.artifacts) then\n        flake.nixosConfigurations.${name}.config.artifacts.config\n      else\n        { };\n  }) nixosConfigurations;\n  home = map (name: {\n    user = name;\n    artifacts = flake.homeConfigurations.${name}.config.artifacts.store;\n    config =\n      if (builtins.hasAttr \"config\" flake.homeConfigurations.${name}.config.artifacts) then\n        flake.homeConfigurations.${name}.config.artifacts.config\n      else\n        { };\n  }) homeConfigurations;\n  make = { inherit nixos home; };\nin\npkgs.writeText \"test.json\" (builtins.toJSON make)\n"
+DEBUG: make config (pretty):
+DEBUG: {
+DEBUG:   "home": [],
+DEBUG:   "nixos": [
+DEBUG:     {
+DEBUG:       "artifacts": {
+DEBUG:         "artifact.one": {
+DEBUG:           "files": {
+DEBUG:             "fifth secret": {
+DEBUG:               "group": "root",
+DEBUG:               "mode": "0400",
+DEBUG:               "name": "fifth secret",
+DEBUG:               "owner": "root",
+DEBUG:               "path": "/run/secrets/fifth secret"
+DEBUG:             },
+DEBUG:             "first.secret": {
+DEBUG:               "group": "root",
+DEBUG:               "mode": "0400",
+DEBUG:               "name": "first.secret",
+DEBUG:               "owner": "root",
+DEBUG:               "path": "/run/secrets/first.secret"
+DEBUG:             },
+DEBUG:             "forthSecret": {
+DEBUG:               "group": "root",
+DEBUG:               "mode": "0400",
+DEBUG:               "name": "forthSecret",
+DEBUG:               "owner": "root",
+DEBUG:               "path": "/run/secrets/forthSecret"
+DEBUG:             },
+DEBUG:             "second_secret": {
+DEBUG:               "group": "root",
+DEBUG:               "mode": "0400",
+DEBUG:               "name": "second_secret",
+DEBUG:               "owner": "root",
+DEBUG:               "path": "/run/secrets/second_secret"
+DEBUG:             },
+DEBUG:             "third-secret": {
+DEBUG:               "group": "root",
+DEBUG:               "mode": "0400",
+DEBUG:               "name": "third-secret",
+DEBUG:               "owner": "root",
+DEBUG:               "path": "/run/secrets/third-secret"
+DEBUG:             }
+DEBUG:           },
+DEBUG:           "generator": "/nix/store/q33g8js7wza4gbyn84ww58swyqh0md2z-test_generator.sh",
+DEBUG:           "name": "artifact.one",
+DEBUG:           "prompts": {},
+DEBUG:           "serialization": "test",
+DEBUG:           "shared": false
+DEBUG:         }
+DEBUG:       },
+DEBUG:       "config": {},
+DEBUG:       "machine": "machine-name"
+DEBUG:     }
+DEBUG:   ]
+DEBUG: }
 [generate]
 DEBUG:     files to produce -> 5 files
 DEBUG:       - fifth secret => /run/secrets/fifth secret owner=root group=root
