@@ -1,0 +1,26 @@
+---
+source: tests/backend/helpers.rs
+expression: outputs
+---
+[
+    (
+        "",
+        "",
+    ),
+    (
+        "noquotes",
+        "noquotes",
+    ),
+    (
+        "it's fine",
+        "it'\\''s fine",
+    ),
+    (
+        "''''",
+        "'\\'''\\'''\\'''\\''",
+    ),
+    (
+        "a'b",
+        "a'\\''b",
+    ),
+]

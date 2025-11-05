@@ -1,3 +1,5 @@
+mod backend;
+
 use anyhow::Context;
 use anyhow::Result;
 #[allow(deprecated)]
@@ -10,6 +12,9 @@ use std::process::Command;
 fn cli() -> Command {
     Command::new(get_cargo_bin("artifacts"))
 }
+
+// todo get rid of /nix/store/<hash> in snapshots
+// todo get rid of /tmp/<hash> in snapshots => get rid of serial
 
 #[allow(deprecated)]
 fn sdtin_cli(stdin: &str) -> StdinCommand {

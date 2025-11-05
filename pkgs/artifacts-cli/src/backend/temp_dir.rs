@@ -3,7 +3,7 @@ use std::fs;
 use std::path::PathBuf;
 
 /// A guard to ensure a temporary directory is removed on drop
-pub(crate) struct TempDirGuard {
+pub struct TempDirGuard {
     pub path_buf: PathBuf,
 }
 
