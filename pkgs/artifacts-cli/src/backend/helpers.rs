@@ -8,10 +8,7 @@ pub fn print_files(artifact: &ArtifactDef, make_base: &Path) {
     }
     debug!("    files to produce -> {} files", artifact.files.len());
     for f in artifact.files.values() {
-        let path = match f.path.clone() {
-            None => None,
-            Some(path) => Some(resolve_path(make_base, &path)),
-        };
+        let path = f.path.clone().map(|path| resolve_path(make_base, &path));
         debug!(
             "      - {} => {}{}{}",
             f.name,

@@ -15,18 +15,17 @@ pub fn run_generate_command(
     backend_toml: &Path,
     make_json: &Path,
     all: bool,
-    machines_to_regenerate: &Vec<String>,
-    home_users_to_regenerate: &Vec<String>,
-    artifacts_to_regenerate: &Vec<String>,
+    machines_to_regenerate: &[String],
+    home_users_to_regenerate: &[String],
+    artifacts_to_regenerate: &[String],
 ) -> Result<()> {
     // Validate argument rules
-    if all {
-        if !machines_to_regenerate.is_empty()
+    if all
+        && (!machines_to_regenerate.is_empty()
             || !home_users_to_regenerate.is_empty()
-            || !artifacts_to_regenerate.is_empty()
-        {
-            bail!("--all conflicts with --machine/--home/--artifact");
-        }
+            || !artifacts_to_regenerate.is_empty())
+    {
+        bail!("--all conflicts with --machine/--home/--artifact");
     }
 
     let all = if !all {
@@ -49,13 +48,14 @@ pub fn run_generate_command(
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn run_generate_workflow(
     backend_toml: &Path,
     make_json: &Path,
     all: bool,
-    machines_to_regenerate: &Vec<String>,
-    home_users_to_regenerate: &Vec<String>,
-    artifacts_to_regenerate: &Vec<String>,
+    machines_to_regenerate: &[String],
+    home_users_to_regenerate: &[String],
+    artifacts_to_regenerate: &[String],
     check_if_artifact_exists: bool,
     header: &str,
 ) -> Result<()> {
@@ -80,17 +80,17 @@ pub fn run_generate_workflow(
     // NixOS machines
     for (machine, artifacts) in &make.nixos_map {
         for artifact in artifacts.values() {
-            if !(check_all() || (check_machine(machine) && check_artifact(&artifact))) {
+            if !(check_all() || (check_machine(machine) && check_artifact(artifact))) {
                 println!("✅ {}/{}", machine, artifact.name);
                 continue;
             }
 
             info!("{}", header);
 
-            print_files(&artifact, &make.make_base);
+            print_files(artifact, &make.make_base);
 
             if check_if_artifact_exists {
-                let skip_rest = run_check_serialization(&artifact, &machine, &backend, &make)?;
+                let skip_rest = run_check_serialization(artifact, machine, &backend, &make)?;
                 if skip_rest {
                     println!("✅ {}/{}", machine, artifact.name);
                     continue;
@@ -99,7 +99,7 @@ pub fn run_generate_workflow(
 
             println!("⚡ {}/{}", machine, artifact.name);
             let prompt_results =
-                read_artifact_prompts(&artifact).context("could not query all prompts")?;
+                read_artifact_prompts(artifact).context("could not query all prompts")?;
 
             let prompt = create_temp_dir(Some(&format!("prompt-{}", artifact.name)))?;
             prompt_results
@@ -109,34 +109,34 @@ pub fn run_generate_workflow(
             let out = create_temp_dir(Some(&format!("out-{}", artifact.name)))?;
 
             run_generator_script(
-                &artifact,
-                &machine,
+                artifact,
+                machine,
                 &make.make_base.clone(),
                 &prompt.path_buf,
                 &out.path_buf,
             )
             .context("running generator script")?;
 
-            verify_generated_files(&artifact, &out.path_buf)?;
+            verify_generated_files(artifact, &out.path_buf)?;
 
-            run_serialize(&artifact, &backend, &out.path_buf, &machine, &make)?
+            run_serialize(artifact, &backend, &out.path_buf, machine, &make)?
         }
     }
 
     // Home users
     for (user, artifacts) in &make.home_map {
         for artifact in artifacts.values() {
-            if !(check_all() || (check_user(user) && check_artifact(&artifact))) {
+            if !(check_all() || (check_user(user) && check_artifact(artifact))) {
                 println!("✅ {}/{}", user, artifact.name);
                 continue;
             }
 
             info!("{}", header);
 
-            print_files(&artifact, &make.make_base);
+            print_files(artifact, &make.make_base);
 
             if check_if_artifact_exists {
-                let skip_rest = run_check_serialization(&artifact, &user, &backend, &make)?;
+                let skip_rest = run_check_serialization(artifact, user, &backend, &make)?;
                 if skip_rest {
                     println!("✅ {}/{}", user, artifact.name);
                     continue;
@@ -145,7 +145,7 @@ pub fn run_generate_workflow(
 
             println!("⚡ {}/{}", user, artifact.name);
             let prompt_results =
-                read_artifact_prompts(&artifact).context("could not query all prompts")?;
+                read_artifact_prompts(artifact).context("could not query all prompts")?;
 
             let prompt = create_temp_dir(Some(&format!("prompt-{}", artifact.name)))?;
             prompt_results
@@ -155,17 +155,17 @@ pub fn run_generate_workflow(
             let out = create_temp_dir(Some(&format!("out-{}", artifact.name)))?;
 
             run_generator_script(
-                &artifact,
-                &user,
+                artifact,
+                user,
                 &make.make_base.clone(),
                 &prompt.path_buf,
                 &out.path_buf,
             )
             .context("running generator script")?;
 
-            verify_generated_files(&artifact, &out.path_buf)?;
+            verify_generated_files(artifact, &out.path_buf)?;
 
-            run_serialize(&artifact, &backend, &out.path_buf, &user, &make)?
+            run_serialize(artifact, &backend, &out.path_buf, user, &make)?
         }
     }
     Ok(())
@@ -194,10 +194,10 @@ pub(crate) fn run_check_serialization(
         .with_context(|| format!("writing {}", config_file.display()))?;
 
     for file in artifact.files.values() {
-        let resolved_path = match &file.path.clone() {
-            None => None,
-            Some(path) => Some(resolve_path(&make.make_base, path)),
-        };
+        let resolved_path = file
+            .path
+            .as_ref()
+            .map(|path| resolve_path(&make.make_base, path));
         let json_path = inputs.path_buf.join(&file.name);
 
         let text = to_string_pretty(&json!({
@@ -264,9 +264,9 @@ pub fn run_regenerate_command(
     backend_toml: &Path,
     make_json: &Path,
     all: bool,
-    machines_to_regenerate: &Vec<String>,
-    home_users_to_regenerate: &Vec<String>,
-    artifacts_to_regenerate: &Vec<String>,
+    machines_to_regenerate: &[String],
+    home_users_to_regenerate: &[String],
+    artifacts_to_regenerate: &[String],
 ) -> Result<()> {
     // Validate argument rules
     if all {
