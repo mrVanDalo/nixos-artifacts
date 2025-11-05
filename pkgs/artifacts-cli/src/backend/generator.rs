@@ -1,4 +1,4 @@
-use crate::backend::helpers::{escape_single_quoted, resolve_path};
+use crate::backend::helpers::{escape_single_quoted, fnv1a64, resolve_path};
 use crate::config::make::ArtifactDef;
 use crate::string_vec;
 use anyhow::{Context, Result, bail};
@@ -66,16 +66,6 @@ pub fn run_generator_script(
     // Requirement: entries "user:1000:1000:/tmp:/bin/sh"
     let passwd_content = "user:x:1000:1000::/tmp:/bin/sh\n";
 
-    // Compute a deterministic filename based on the 'out' path to keep test snapshots stable
-    fn fnv1a64(s: &str) -> u64 {
-        let mut hash: u64 = 0xcbf29ce484222325; // FNV offset basis
-        const PRIME: u64 = 0x00000100000001B3; // FNV prime
-        for b in s.as_bytes() {
-            hash ^= *b as u64;
-            hash = hash.wrapping_mul(PRIME);
-        }
-        hash
-    }
     let out_path_str = out.display().to_string();
     let hash = fnv1a64(&out_path_str);
     let mut temp_passwd_path = std::env::temp_dir();

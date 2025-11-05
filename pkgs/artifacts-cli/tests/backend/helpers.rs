@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock};
 
 use artifacts_cli::backend::helpers::{
-    escape_single_quoted, pretty_print_shell_escape, print_files,
+    escape_single_quoted, fnv1a64, pretty_print_shell_escape, print_files,
 };
 use artifacts_cli::config::make::{ArtifactDef, FileDef};
 use insta::{assert_debug_snapshot, assert_snapshot};
@@ -127,4 +127,27 @@ fn test_print_files_logs() {
 
     let lines = logger.take().join("\n");
     assert_snapshot!("print_files_logs", lines);
+}
+
+#[test]
+fn test_fnv1a64() {
+    let cases = vec![
+        "",
+        "a",
+        "hello",
+        "Hello, world!",
+        "/abs/path",
+        "rel/path",
+        "with spaces",
+        "emoji 😀",
+        "mix/With-CHARS_123",
+    ];
+
+    // Use hex to make the snapshot compact and stable across platforms
+    let outputs: Vec<(String, String)> = cases
+        .into_iter()
+        .map(|inp| (inp.to_string(), format!("{:016x}", fnv1a64(inp))))
+        .collect();
+
+    insta::assert_debug_snapshot!("fnv1a64", outputs);
 }

@@ -27,6 +27,17 @@ pub fn print_files(artifact: &ArtifactDef, make_base: &Path) {
     }
 }
 
+// Compute a deterministic filename based on the 'out' path to keep test snapshots stable
+pub fn fnv1a64(s: &str) -> u64 {
+    let mut hash: u64 = 0xcbf29ce484222325; // FNV offset basis
+    const PRIME: u64 = 0x00000100000001B3; // FNV prime
+    for b in s.as_bytes() {
+        hash ^= *b as u64;
+        hash = hash.wrapping_mul(PRIME);
+    }
+    hash
+}
+
 pub(crate) fn resolve_path(base_dir: &Path, relative_path: &str) -> PathBuf {
     let path = Path::new(relative_path);
     if path.is_absolute() {
