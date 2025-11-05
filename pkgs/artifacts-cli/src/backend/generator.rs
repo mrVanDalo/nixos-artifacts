@@ -1,5 +1,6 @@
-use crate::backend::helpers::resolve_path;
+use crate::backend::helpers::{escape_single_quoted, resolve_path};
 use crate::config::make::ArtifactDef;
+use crate::string_vec;
 use anyhow::{Context, Result, bail};
 use log::debug;
 use std::collections::HashSet;
@@ -42,11 +43,6 @@ pub fn verify_generated_files(artifact: &ArtifactDef, out_path: &Path) -> Result
     }
 
     Ok(())
-}
-macro_rules! string_vec {
-    ($($x:expr),* $(,)?) => {
-        vec![$($x.to_string()),*]
-    };
 }
 
 // todo: get rid of nix-shell and use bwrap directly (brwap must be part of the nix-package)
@@ -151,14 +147,10 @@ pub fn run_generator_script(
     debug!("bwrap command: \n{}", bwrap_pretty);
 
     // Ensure that our 'out' and 'prompts' override any nix-shell provided 'out'
-    fn sh_escape_single_quoted(s: &str) -> String {
-        // Replace ' with '\'' for safe single-quoting
-        s.replace('\'', "'\\''")
-    }
-    let out_quoted = sh_escape_single_quoted(&out.display().to_string());
-    let prompts_quoted = sh_escape_single_quoted(&prompts.display().to_string());
-    let machine_quoted = sh_escape_single_quoted(machine);
-    let artifact_quoted = sh_escape_single_quoted(&artifact.name);
+    let out_quoted = escape_single_quoted(&out.display().to_string());
+    let prompts_quoted = escape_single_quoted(&prompts.display().to_string());
+    let machine_quoted = escape_single_quoted(machine);
+    let artifact_quoted = escape_single_quoted(&artifact.name);
     let nix_shell_run_command = format!(
         "export out='{}'; export prompts='{}'; export machine='{}'; export artifact='{}'; {}",
         out_quoted, prompts_quoted, machine_quoted, artifact_quoted, bwrap_command

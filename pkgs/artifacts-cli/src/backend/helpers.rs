@@ -38,3 +38,18 @@ pub(crate) fn resolve_path(base_dir: &Path, relative_path: &str) -> PathBuf {
         base_dir.join(path)
     }
 }
+
+#[rustfmt::skip]
+pub fn pretty_print_shell_escape(input: &str) -> String {
+    let needs_quotes = input.is_empty() || input.chars().any(|character| { character.is_whitespace() || matches!( character, '\'' | '"' | '\\' | '$' | '&' | '|' | ';' | '<' | '>' | '(' | ')' | '[' | ']' | '{' | '}' ) });
+    if needs_quotes {
+        format!("'{}'", escape_single_quoted(input))
+    } else {
+        input.to_string()
+    }
+}
+
+// Replace ' with '\'' for safe single-quoting
+pub fn escape_single_quoted(input: &str) -> String {
+    input.replace('\'', "'\\''")
+}
