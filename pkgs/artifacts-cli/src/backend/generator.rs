@@ -129,7 +129,26 @@ pub fn run_generator_script(
     arguments.extend(string_vec!["--", "/bin/sh"]);
     arguments.push(generator_script_absolut_path.display().to_string());
     let bwrap_command = arguments.join(" ");
-    debug!("bwrap command: {}", bwrap_command);
+    // Pretty-print the bwrap command for readability in logs
+    let bwrap_pretty = {
+        let mut result = String::new();
+        for (index, argument) in arguments.iter().enumerate() {
+            if index == 0 {
+                result.push_str(argument);
+            } else if argument.starts_with("--") {
+                // start a new line for option keys (including the standalone "--")
+                result.push_str(" \\\n");
+                result.push_str(argument);
+            } else {
+                // keep values on the same line as their preceding key
+                result.push(' ');
+                result.push_str(argument);
+            }
+        }
+        result
+    };
+    // Keep the original prefix but print as multiline for readability
+    debug!("bwrap command: \n{}", bwrap_pretty);
 
     // Ensure that our 'out' and 'prompts' override any nix-shell provided 'out'
     fn sh_escape_single_quoted(s: &str) -> String {

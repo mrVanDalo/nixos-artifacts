@@ -103,7 +103,25 @@ DEBUG: }
 DEBUG:     files to produce -> 1 files
 DEBUG:       - first-secret => /run/secrets/first-secret owner=root group=root
 ⚡ machine-one/artifact-one
-DEBUG: bwrap command: bwrap --unshare-all --unshare-user --uid 1000 --gid 1000 --tmpfs / --chdir / --ro-bind /nix/store /nix/store --tmpfs /usr/lib/systemd --proc /proc --dev /dev --bind /tmp/artifacts-cli/prompt-artifact-one /tmp/artifacts-cli/prompt-artifact-one --bind /tmp/artifacts-cli/out-artifact-one /tmp/artifacts-cli/out-artifact-one --ro-bind /nix/store/lmj4gn57myfvylfasml508hwf1cr1m0y-test_generator_one.sh/bin /nix/store/lmj4gn57myfvylfasml508hwf1cr1m0y-test_generator_one.sh/bin --ro-bind /bin /bin --ro-bind /usr/bin /usr/bin --ro-bind /tmp/artifacts-cli/artifacts-cli-passwd-3029b01ac1f84b21.txt /etc/passwd -- /bin/sh /nix/store/lmj4gn57myfvylfasml508hwf1cr1m0y-test_generator_one.sh/bin/test_generator_one.sh
+DEBUG: bwrap command: 
+DEBUG: bwrap \
+DEBUG: --unshare-all \
+DEBUG: --unshare-user \
+DEBUG: --uid 1000 \
+DEBUG: --gid 1000 \
+DEBUG: --tmpfs / \
+DEBUG: --chdir / \
+DEBUG: --ro-bind /nix/store /nix/store \
+DEBUG: --tmpfs /usr/lib/systemd \
+DEBUG: --proc /proc \
+DEBUG: --dev /dev \
+DEBUG: --bind /tmp/artifacts-cli/prompt-artifact-one /tmp/artifacts-cli/prompt-artifact-one \
+DEBUG: --bind /tmp/artifacts-cli/out-artifact-one /tmp/artifacts-cli/out-artifact-one \
+DEBUG: --ro-bind /nix/store/lmj4gn57myfvylfasml508hwf1cr1m0y-test_generator_one.sh/bin /nix/store/lmj4gn57myfvylfasml508hwf1cr1m0y-test_generator_one.sh/bin \
+DEBUG: --ro-bind /bin /bin \
+DEBUG: --ro-bind /usr/bin /usr/bin \
+DEBUG: --ro-bind /tmp/artifacts-cli/artifacts-cli-passwd-3029b01ac1f84b21.txt /etc/passwd \
+DEBUG: -- /bin/sh /nix/store/lmj4gn57myfvylfasml508hwf1cr1m0y-test_generator_one.sh/bin/test_generator_one.sh
 💾 serialize secrets
 === Content of /tmp/artifacts-cli/out-artifact-one/first-secret ===
 one

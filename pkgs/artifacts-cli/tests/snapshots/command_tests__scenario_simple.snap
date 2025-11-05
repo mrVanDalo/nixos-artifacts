@@ -80,7 +80,25 @@ DEBUG:     check_serialization: failed with status exit status: 1 -> continuing 
 >>> DESC: secret number 2
 >>> PROMPT: secret2
 > 
-DEBUG: bwrap command: bwrap --unshare-all --unshare-user --uid 1000 --gid 1000 --tmpfs / --chdir / --ro-bind /nix/store /nix/store --tmpfs /usr/lib/systemd --proc /proc --dev /dev --bind /tmp/artifacts-cli/prompt-test-artifact /tmp/artifacts-cli/prompt-test-artifact --bind /tmp/artifacts-cli/out-test-artifact /tmp/artifacts-cli/out-test-artifact --ro-bind /nix/store/jvma1mvvppy632k36jz64ywl3iiz4vk5-test_generator.sh/bin /nix/store/jvma1mvvppy632k36jz64ywl3iiz4vk5-test_generator.sh/bin --ro-bind /bin /bin --ro-bind /usr/bin /usr/bin --ro-bind /tmp/artifacts-cli/artifacts-cli-passwd-820e090949e37de7.txt /etc/passwd -- /bin/sh /nix/store/jvma1mvvppy632k36jz64ywl3iiz4vk5-test_generator.sh/bin/test_generator.sh
+DEBUG: bwrap command: 
+DEBUG: bwrap \
+DEBUG: --unshare-all \
+DEBUG: --unshare-user \
+DEBUG: --uid 1000 \
+DEBUG: --gid 1000 \
+DEBUG: --tmpfs / \
+DEBUG: --chdir / \
+DEBUG: --ro-bind /nix/store /nix/store \
+DEBUG: --tmpfs /usr/lib/systemd \
+DEBUG: --proc /proc \
+DEBUG: --dev /dev \
+DEBUG: --bind /tmp/artifacts-cli/prompt-test-artifact /tmp/artifacts-cli/prompt-test-artifact \
+DEBUG: --bind /tmp/artifacts-cli/out-test-artifact /tmp/artifacts-cli/out-test-artifact \
+DEBUG: --ro-bind /nix/store/jvma1mvvppy632k36jz64ywl3iiz4vk5-test_generator.sh/bin /nix/store/jvma1mvvppy632k36jz64ywl3iiz4vk5-test_generator.sh/bin \
+DEBUG: --ro-bind /bin /bin \
+DEBUG: --ro-bind /usr/bin /usr/bin \
+DEBUG: --ro-bind /tmp/artifacts-cli/artifacts-cli-passwd-820e090949e37de7.txt /etc/passwd \
+DEBUG: -- /bin/sh /nix/store/jvma1mvvppy632k36jz64ywl3iiz4vk5-test_generator.sh/bin/test_generator.sh
 💾 serialize secrets
 $config: 
 {

@@ -87,7 +87,25 @@ second_secret
 third-secret
 DEBUG:     check_serialization: failed with status exit status: 1 -> continuing with generation
 ⚡ machine-name/artifact.one
-DEBUG: bwrap command: bwrap --unshare-all --unshare-user --uid 1000 --gid 1000 --tmpfs / --chdir / --ro-bind /nix/store /nix/store --tmpfs /usr/lib/systemd --proc /proc --dev /dev --bind /tmp/artifacts-cli/prompt-artifact.one /tmp/artifacts-cli/prompt-artifact.one --bind /tmp/artifacts-cli/out-artifact.one /tmp/artifacts-cli/out-artifact.one --ro-bind /nix/store/inl14w6ihknsaw9rnvrhr7h2y3hfd1jg-test_generator.sh/bin /nix/store/inl14w6ihknsaw9rnvrhr7h2y3hfd1jg-test_generator.sh/bin --ro-bind /bin /bin --ro-bind /usr/bin /usr/bin --ro-bind /tmp/artifacts-cli/artifacts-cli-passwd-70cab021bfe35e1e.txt /etc/passwd -- /bin/sh /nix/store/inl14w6ihknsaw9rnvrhr7h2y3hfd1jg-test_generator.sh/bin/test_generator.sh
+DEBUG: bwrap command: 
+DEBUG: bwrap \
+DEBUG: --unshare-all \
+DEBUG: --unshare-user \
+DEBUG: --uid 1000 \
+DEBUG: --gid 1000 \
+DEBUG: --tmpfs / \
+DEBUG: --chdir / \
+DEBUG: --ro-bind /nix/store /nix/store \
+DEBUG: --tmpfs /usr/lib/systemd \
+DEBUG: --proc /proc \
+DEBUG: --dev /dev \
+DEBUG: --bind /tmp/artifacts-cli/prompt-artifact.one /tmp/artifacts-cli/prompt-artifact.one \
+DEBUG: --bind /tmp/artifacts-cli/out-artifact.one /tmp/artifacts-cli/out-artifact.one \
+DEBUG: --ro-bind /nix/store/inl14w6ihknsaw9rnvrhr7h2y3hfd1jg-test_generator.sh/bin /nix/store/inl14w6ihknsaw9rnvrhr7h2y3hfd1jg-test_generator.sh/bin \
+DEBUG: --ro-bind /bin /bin \
+DEBUG: --ro-bind /usr/bin /usr/bin \
+DEBUG: --ro-bind /tmp/artifacts-cli/artifacts-cli-passwd-70cab021bfe35e1e.txt /etc/passwd \
+DEBUG: -- /bin/sh /nix/store/inl14w6ihknsaw9rnvrhr7h2y3hfd1jg-test_generator.sh/bin/test_generator.sh
 💾 serialize secrets
 === Content of /tmp/artifacts-cli/out-artifact.one/fifth secret ===
 test

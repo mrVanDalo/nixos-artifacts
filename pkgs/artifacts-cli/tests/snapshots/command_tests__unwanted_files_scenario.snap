@@ -57,7 +57,25 @@ DEBUG:       - very-simple-secrets => /run/secrets/very-simple-secrets owner=roo
 DEBUG:     running check_serialization: env inputs="/tmp/artifacts-cli/inputs-test-artifact" machine="unwanted-files" artifact="test-artifact" /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/unwanted-files/test_check.sh
 DEBUG:     check_serialization: failed with status exit status: 1 -> continuing with generation
 ⚡ unwanted-files/test-artifact
-DEBUG: bwrap command: bwrap --unshare-all --unshare-user --uid 1000 --gid 1000 --tmpfs / --chdir / --ro-bind /nix/store /nix/store --tmpfs /usr/lib/systemd --proc /proc --dev /dev --bind /tmp/artifacts-cli/prompt-test-artifact /tmp/artifacts-cli/prompt-test-artifact --bind /tmp/artifacts-cli/out-test-artifact /tmp/artifacts-cli/out-test-artifact --ro-bind /nix/store/r5r02f5v6808647s7iq64n1nk9m04wdw-test_generator_unwanted_files.sh/bin /nix/store/r5r02f5v6808647s7iq64n1nk9m04wdw-test_generator_unwanted_files.sh/bin --ro-bind /bin /bin --ro-bind /usr/bin /usr/bin --ro-bind /tmp/artifacts-cli/artifacts-cli-passwd-820e090949e37de7.txt /etc/passwd -- /bin/sh /nix/store/r5r02f5v6808647s7iq64n1nk9m04wdw-test_generator_unwanted_files.sh/bin/test_generator_unwanted_files.sh
+DEBUG: bwrap command: 
+DEBUG: bwrap \
+DEBUG: --unshare-all \
+DEBUG: --unshare-user \
+DEBUG: --uid 1000 \
+DEBUG: --gid 1000 \
+DEBUG: --tmpfs / \
+DEBUG: --chdir / \
+DEBUG: --ro-bind /nix/store /nix/store \
+DEBUG: --tmpfs /usr/lib/systemd \
+DEBUG: --proc /proc \
+DEBUG: --dev /dev \
+DEBUG: --bind /tmp/artifacts-cli/prompt-test-artifact /tmp/artifacts-cli/prompt-test-artifact \
+DEBUG: --bind /tmp/artifacts-cli/out-test-artifact /tmp/artifacts-cli/out-test-artifact \
+DEBUG: --ro-bind /nix/store/r5r02f5v6808647s7iq64n1nk9m04wdw-test_generator_unwanted_files.sh/bin /nix/store/r5r02f5v6808647s7iq64n1nk9m04wdw-test_generator_unwanted_files.sh/bin \
+DEBUG: --ro-bind /bin /bin \
+DEBUG: --ro-bind /usr/bin /usr/bin \
+DEBUG: --ro-bind /tmp/artifacts-cli/artifacts-cli-passwd-820e090949e37de7.txt /etc/passwd \
+DEBUG: -- /bin/sh /nix/store/r5r02f5v6808647s7iq64n1nk9m04wdw-test_generator_unwanted_files.sh/bin/test_generator_unwanted_files.sh
 
 ----- stderr -----
 ERROR: generator produced extra files for artifact 'test-artifact': [should_not_be_there]
