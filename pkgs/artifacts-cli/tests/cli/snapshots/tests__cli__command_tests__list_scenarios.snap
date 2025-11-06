@@ -73,7 +73,7 @@ DEBUG:               "owner": "root",
 DEBUG:               "path": "/run/secrets/first-secret"
 DEBUG:             }
 DEBUG:           },
-DEBUG:           "generator": "/nix/store/pwyaca1xgqx07pggwd6k3mywyc0mgjnd-test_generator_one.sh",
+DEBUG:           "generator": "/nix/store/[hash]-test_generator_one.sh",
 DEBUG:           "name": "artifact-one",
 DEBUG:           "prompts": {},
 DEBUG:           "serialization": "test",
@@ -89,7 +89,7 @@ DEBUG:               "owner": "root",
 DEBUG:               "path": "/run/secrets/second-secret"
 DEBUG:             }
 DEBUG:           },
-DEBUG:           "generator": "/nix/store/wciybsclyhlydjhk704mxyij7rrx02cw-test_generator_two.sh",
+DEBUG:           "generator": "/nix/store/[hash]-test_generator_two.sh",
 DEBUG:           "name": "artifact-two",
 DEBUG:           "prompts": {},
 DEBUG:           "serialization": "test",
@@ -111,7 +111,7 @@ DEBUG:               "owner": "root",
 DEBUG:               "path": "/run/secrets/first-secret"
 DEBUG:             }
 DEBUG:           },
-DEBUG:           "generator": "/nix/store/pwyaca1xgqx07pggwd6k3mywyc0mgjnd-test_generator_one.sh",
+DEBUG:           "generator": "/nix/store/[hash]-test_generator_one.sh",
 DEBUG:           "name": "artifact-one",
 DEBUG:           "prompts": {},
 DEBUG:           "serialization": "test",
@@ -127,7 +127,7 @@ DEBUG:               "owner": "root",
 DEBUG:               "path": "/run/secrets/second-secret"
 DEBUG:             }
 DEBUG:           },
-DEBUG:           "generator": "/nix/store/wciybsclyhlydjhk704mxyij7rrx02cw-test_generator_two.sh",
+DEBUG:           "generator": "/nix/store/[hash]-test_generator_two.sh",
 DEBUG:           "name": "artifact-two",
 DEBUG:           "prompts": {},
 DEBUG:           "serialization": "test",

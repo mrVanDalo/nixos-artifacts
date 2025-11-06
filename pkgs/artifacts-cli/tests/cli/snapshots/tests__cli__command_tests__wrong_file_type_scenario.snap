@@ -80,7 +80,7 @@ DEBUG:               "owner": "root",
 DEBUG:               "path": "/run/secrets/very-simple-secrets"
 DEBUG:             }
 DEBUG:           },
-DEBUG:           "generator": "/nix/store/s31b8lrxvdfk360qqr2plwdwm8wz758i-test_generator_wrong_file_type.sh",
+DEBUG:           "generator": "/nix/store/[hash]-test_generator_wrong_file_type.sh",
 DEBUG:           "name": "test-artifact",
 DEBUG:           "prompts": {},
 DEBUG:           "serialization": "test",
@@ -99,7 +99,7 @@ DEBUG:       - very-simple-secrets => /run/secrets/very-simple-secrets owner=roo
 DEBUG:     running check_serialization: env inputs="/tmp/artifacts-cli/inputs-test-artifact" machine="wrong-file-type" artifact="test-artifact" /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/wrong-file-type/test_check.sh
 DEBUG:     check_serialization: failed with status exit status: 1 -> continuing with generation
 ⚡ wrong-file-type/test-artifact
-DEBUG: run bwrap with command /nix/store/6mmk27w5a9gxi6355zb2wbrb3ypgnh5r-test_generator_wrong_file_type.sh/bin/test_generator_wrong_file_type.sh
+DEBUG: run bwrap with command /nix/store/[hash]-test_generator_wrong_file_type.sh/bin/test_generator_wrong_file_type.sh
 TRACE: bwrap \
 TRACE: --unshare-all \
 TRACE: --unshare-user \
@@ -113,11 +113,11 @@ TRACE: --proc /proc \
 TRACE: --dev /dev \
 TRACE: --bind /tmp/artifacts-cli/prompt-test-artifact /tmp/artifacts-cli/prompt-test-artifact \
 TRACE: --bind /tmp/artifacts-cli/out-test-artifact /tmp/artifacts-cli/out-test-artifact \
-TRACE: --ro-bind /nix/store/6mmk27w5a9gxi6355zb2wbrb3ypgnh5r-test_generator_wrong_file_type.sh/bin /nix/store/6mmk27w5a9gxi6355zb2wbrb3ypgnh5r-test_generator_wrong_file_type.sh/bin \
+TRACE: --ro-bind /nix/store/[hash]-test_generator_wrong_file_type.sh/bin /nix/store/[hash]-test_generator_wrong_file_type.sh/bin \
 TRACE: --ro-bind /bin /bin \
 TRACE: --ro-bind /usr/bin /usr/bin \
 TRACE: --ro-bind /tmp/artifacts-cli/artifacts-cli-passwd-820e090949e37de7.txt /etc/passwd \
-TRACE: -- /bin/sh /nix/store/6mmk27w5a9gxi6355zb2wbrb3ypgnh5r-test_generator_wrong_file_type.sh/bin/test_generator_wrong_file_type.sh
+TRACE: -- /bin/sh /nix/store/[hash]-test_generator_wrong_file_type.sh/bin/test_generator_wrong_file_type.sh
 
 ----- stderr -----
 ERROR: generator missing required files for artifact 'test-artifact': [simple-secrets, very-simple-secrets]

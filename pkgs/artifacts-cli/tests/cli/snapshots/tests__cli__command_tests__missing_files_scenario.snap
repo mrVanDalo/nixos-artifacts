@@ -80,7 +80,7 @@ DEBUG:               "owner": "root",
 DEBUG:               "path": "/run/secrets/very-simple-secrets"
 DEBUG:             }
 DEBUG:           },
-DEBUG:           "generator": "/nix/store/9w8qy1ab3c26i21a27xs9769y17nlc0a-test_generator_missing_files.sh",
+DEBUG:           "generator": "/nix/store/[hash]-test_generator_missing_files.sh",
 DEBUG:           "name": "test-artifact",
 DEBUG:           "prompts": {},
 DEBUG:           "serialization": "test",
@@ -99,7 +99,7 @@ DEBUG:       - very-simple-secrets => /run/secrets/very-simple-secrets owner=roo
 DEBUG:     running check_serialization: env inputs="/tmp/artifacts-cli/inputs-test-artifact" machine="missing-files" artifact="test-artifact" /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/missing-files/test_check.sh
 DEBUG:     check_serialization: failed with status exit status: 1 -> continuing with generation
 ⚡ missing-files/test-artifact
-DEBUG: run bwrap with command /nix/store/jfl6c3fg7y552yrfbmih0n9lg6sm5cjs-test_generator_missing_files.sh/bin/test_generator_missing_files.sh
+DEBUG: run bwrap with command /nix/store/[hash]-test_generator_missing_files.sh/bin/test_generator_missing_files.sh
 TRACE: bwrap \
 TRACE: --unshare-all \
 TRACE: --unshare-user \
@@ -113,11 +113,11 @@ TRACE: --proc /proc \
 TRACE: --dev /dev \
 TRACE: --bind /tmp/artifacts-cli/prompt-test-artifact /tmp/artifacts-cli/prompt-test-artifact \
 TRACE: --bind /tmp/artifacts-cli/out-test-artifact /tmp/artifacts-cli/out-test-artifact \
-TRACE: --ro-bind /nix/store/jfl6c3fg7y552yrfbmih0n9lg6sm5cjs-test_generator_missing_files.sh/bin /nix/store/jfl6c3fg7y552yrfbmih0n9lg6sm5cjs-test_generator_missing_files.sh/bin \
+TRACE: --ro-bind /nix/store/[hash]-test_generator_missing_files.sh/bin /nix/store/[hash]-test_generator_missing_files.sh/bin \
 TRACE: --ro-bind /bin /bin \
 TRACE: --ro-bind /usr/bin /usr/bin \
 TRACE: --ro-bind /tmp/artifacts-cli/artifacts-cli-passwd-820e090949e37de7.txt /etc/passwd \
-TRACE: -- /bin/sh /nix/store/jfl6c3fg7y552yrfbmih0n9lg6sm5cjs-test_generator_missing_files.sh/bin/test_generator_missing_files.sh
+TRACE: -- /bin/sh /nix/store/[hash]-test_generator_missing_files.sh/bin/test_generator_missing_files.sh
 
 ----- stderr -----
 ERROR: generator missing required files for artifact 'test-artifact': [very-simple-secrets]

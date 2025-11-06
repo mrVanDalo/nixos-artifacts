@@ -80,7 +80,7 @@ DEBUG:               "owner": "root",
 DEBUG:               "path": "/run/secrets/very-simple-secrets"
 DEBUG:             }
 DEBUG:           },
-DEBUG:           "generator": "/nix/store/myx4c4cr0pdj772ikg7cypjqcsc1ilx4-test_generator.sh",
+DEBUG:           "generator": "/nix/store/[hash]-test_generator.sh",
 DEBUG:           "name": "test-artifact",
 DEBUG:           "prompts": {
 DEBUG:             "secret1": {
@@ -122,7 +122,7 @@ DEBUG:     check_serialization: failed with status exit status: 1 -> continuing 
 >>> DESC: secret number 2
 >>> PROMPT: secret2
 > 
-DEBUG: run bwrap with command /nix/store/jvma1mvvppy632k36jz64ywl3iiz4vk5-test_generator.sh/bin/test_generator.sh
+DEBUG: run bwrap with command /nix/store/[hash]-test_generator.sh/bin/test_generator.sh
 TRACE: bwrap \
 TRACE: --unshare-all \
 TRACE: --unshare-user \
@@ -136,11 +136,11 @@ TRACE: --proc /proc \
 TRACE: --dev /dev \
 TRACE: --bind /tmp/artifacts-cli/prompt-test-artifact /tmp/artifacts-cli/prompt-test-artifact \
 TRACE: --bind /tmp/artifacts-cli/out-test-artifact /tmp/artifacts-cli/out-test-artifact \
-TRACE: --ro-bind /nix/store/jvma1mvvppy632k36jz64ywl3iiz4vk5-test_generator.sh/bin /nix/store/jvma1mvvppy632k36jz64ywl3iiz4vk5-test_generator.sh/bin \
+TRACE: --ro-bind /nix/store/[hash]-test_generator.sh/bin /nix/store/[hash]-test_generator.sh/bin \
 TRACE: --ro-bind /bin /bin \
 TRACE: --ro-bind /usr/bin /usr/bin \
 TRACE: --ro-bind /tmp/artifacts-cli/artifacts-cli-passwd-820e090949e37de7.txt /etc/passwd \
-TRACE: -- /bin/sh /nix/store/jvma1mvvppy632k36jz64ywl3iiz4vk5-test_generator.sh/bin/test_generator.sh
+TRACE: -- /bin/sh /nix/store/[hash]-test_generator.sh/bin/test_generator.sh
 💾 serialize secrets
 $config: 
 {

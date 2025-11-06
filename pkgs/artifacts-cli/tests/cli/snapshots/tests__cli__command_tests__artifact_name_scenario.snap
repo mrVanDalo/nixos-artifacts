@@ -102,7 +102,7 @@ DEBUG:               "owner": "root",
 DEBUG:               "path": "/run/secrets/third-secret"
 DEBUG:             }
 DEBUG:           },
-DEBUG:           "generator": "/nix/store/q33g8js7wza4gbyn84ww58swyqh0md2z-test_generator.sh",
+DEBUG:           "generator": "/nix/store/[hash]-test_generator.sh",
 DEBUG:           "name": "artifact.one",
 DEBUG:           "prompts": {},
 DEBUG:           "serialization": "test",
@@ -129,7 +129,7 @@ second_secret
 third-secret
 DEBUG:     check_serialization: failed with status exit status: 1 -> continuing with generation
 ⚡ machine-name/artifact.one
-DEBUG: run bwrap with command /nix/store/inl14w6ihknsaw9rnvrhr7h2y3hfd1jg-test_generator.sh/bin/test_generator.sh
+DEBUG: run bwrap with command /nix/store/[hash]-test_generator.sh/bin/test_generator.sh
 TRACE: bwrap \
 TRACE: --unshare-all \
 TRACE: --unshare-user \
@@ -143,11 +143,11 @@ TRACE: --proc /proc \
 TRACE: --dev /dev \
 TRACE: --bind /tmp/artifacts-cli/prompt-artifact.one /tmp/artifacts-cli/prompt-artifact.one \
 TRACE: --bind /tmp/artifacts-cli/out-artifact.one /tmp/artifacts-cli/out-artifact.one \
-TRACE: --ro-bind /nix/store/inl14w6ihknsaw9rnvrhr7h2y3hfd1jg-test_generator.sh/bin /nix/store/inl14w6ihknsaw9rnvrhr7h2y3hfd1jg-test_generator.sh/bin \
+TRACE: --ro-bind /nix/store/[hash]-test_generator.sh/bin /nix/store/[hash]-test_generator.sh/bin \
 TRACE: --ro-bind /bin /bin \
 TRACE: --ro-bind /usr/bin /usr/bin \
 TRACE: --ro-bind /tmp/artifacts-cli/artifacts-cli-passwd-70cab021bfe35e1e.txt /etc/passwd \
-TRACE: -- /bin/sh /nix/store/inl14w6ihknsaw9rnvrhr7h2y3hfd1jg-test_generator.sh/bin/test_generator.sh
+TRACE: -- /bin/sh /nix/store/[hash]-test_generator.sh/bin/test_generator.sh
 💾 serialize secrets
 === Content of /tmp/artifacts-cli/out-artifact.one/fifth secret ===
 test

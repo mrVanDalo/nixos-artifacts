@@ -74,7 +74,7 @@ DEBUG:               "owner": "root",
 DEBUG:               "path": "/run/secrets/first-secret"
 DEBUG:             }
 DEBUG:           },
-DEBUG:           "generator": "/nix/store/pwyaca1xgqx07pggwd6k3mywyc0mgjnd-test_generator_one.sh",
+DEBUG:           "generator": "/nix/store/[hash]-test_generator_one.sh",
 DEBUG:           "name": "artifact-one",
 DEBUG:           "prompts": {},
 DEBUG:           "serialization": "test",
@@ -90,7 +90,7 @@ DEBUG:               "owner": "root",
 DEBUG:               "path": "/run/secrets/second-secret"
 DEBUG:             }
 DEBUG:           },
-DEBUG:           "generator": "/nix/store/wciybsclyhlydjhk704mxyij7rrx02cw-test_generator_two.sh",
+DEBUG:           "generator": "/nix/store/[hash]-test_generator_two.sh",
 DEBUG:           "name": "artifact-two",
 DEBUG:           "prompts": {},
 DEBUG:           "serialization": "test",
@@ -112,7 +112,7 @@ DEBUG:               "owner": "root",
 DEBUG:               "path": "/run/secrets/first-secret"
 DEBUG:             }
 DEBUG:           },
-DEBUG:           "generator": "/nix/store/pwyaca1xgqx07pggwd6k3mywyc0mgjnd-test_generator_one.sh",
+DEBUG:           "generator": "/nix/store/[hash]-test_generator_one.sh",
 DEBUG:           "name": "artifact-one",
 DEBUG:           "prompts": {},
 DEBUG:           "serialization": "test",
@@ -128,7 +128,7 @@ DEBUG:               "owner": "root",
 DEBUG:               "path": "/run/secrets/second-secret"
 DEBUG:             }
 DEBUG:           },
-DEBUG:           "generator": "/nix/store/wciybsclyhlydjhk704mxyij7rrx02cw-test_generator_two.sh",
+DEBUG:           "generator": "/nix/store/[hash]-test_generator_two.sh",
 DEBUG:           "name": "artifact-two",
 DEBUG:           "prompts": {},
 DEBUG:           "serialization": "test",
@@ -144,7 +144,7 @@ DEBUG: }
 DEBUG:     files to produce -> 1 files
 DEBUG:       - first-secret => /run/secrets/first-secret owner=root group=root
 ⚡ machine-one/artifact-one
-DEBUG: run bwrap with command /nix/store/lmj4gn57myfvylfasml508hwf1cr1m0y-test_generator_one.sh/bin/test_generator_one.sh
+DEBUG: run bwrap with command /nix/store/[hash]-test_generator_one.sh/bin/test_generator_one.sh
 TRACE: bwrap \
 TRACE: --unshare-all \
 TRACE: --unshare-user \
@@ -158,11 +158,11 @@ TRACE: --proc /proc \
 TRACE: --dev /dev \
 TRACE: --bind /tmp/artifacts-cli/prompt-artifact-one /tmp/artifacts-cli/prompt-artifact-one \
 TRACE: --bind /tmp/artifacts-cli/out-artifact-one /tmp/artifacts-cli/out-artifact-one \
-TRACE: --ro-bind /nix/store/lmj4gn57myfvylfasml508hwf1cr1m0y-test_generator_one.sh/bin /nix/store/lmj4gn57myfvylfasml508hwf1cr1m0y-test_generator_one.sh/bin \
+TRACE: --ro-bind /nix/store/[hash]-test_generator_one.sh/bin /nix/store/[hash]-test_generator_one.sh/bin \
 TRACE: --ro-bind /bin /bin \
 TRACE: --ro-bind /usr/bin /usr/bin \
 TRACE: --ro-bind /tmp/artifacts-cli/artifacts-cli-passwd-3029b01ac1f84b21.txt /etc/passwd \
-TRACE: -- /bin/sh /nix/store/lmj4gn57myfvylfasml508hwf1cr1m0y-test_generator_one.sh/bin/test_generator_one.sh
+TRACE: -- /bin/sh /nix/store/[hash]-test_generator_one.sh/bin/test_generator_one.sh
 💾 serialize secrets
 === Content of /tmp/artifacts-cli/out-artifact-one/first-secret ===
 one
@@ -171,7 +171,7 @@ one
 DEBUG:     files to produce -> 1 files
 DEBUG:       - second-secret => /run/secrets/second-secret owner=root group=root
 ⚡ machine-one/artifact-two
-DEBUG: run bwrap with command /nix/store/gvl5rgmpdf10ibc73gkpi5x3zbi9gfsk-test_generator_two.sh/bin/test_generator_two.sh
+DEBUG: run bwrap with command /nix/store/[hash]-test_generator_two.sh/bin/test_generator_two.sh
 TRACE: bwrap \
 TRACE: --unshare-all \
 TRACE: --unshare-user \
@@ -185,11 +185,11 @@ TRACE: --proc /proc \
 TRACE: --dev /dev \
 TRACE: --bind /tmp/artifacts-cli/prompt-artifact-two /tmp/artifacts-cli/prompt-artifact-two \
 TRACE: --bind /tmp/artifacts-cli/out-artifact-two /tmp/artifacts-cli/out-artifact-two \
-TRACE: --ro-bind /nix/store/gvl5rgmpdf10ibc73gkpi5x3zbi9gfsk-test_generator_two.sh/bin /nix/store/gvl5rgmpdf10ibc73gkpi5x3zbi9gfsk-test_generator_two.sh/bin \
+TRACE: --ro-bind /nix/store/[hash]-test_generator_two.sh/bin /nix/store/[hash]-test_generator_two.sh/bin \
 TRACE: --ro-bind /bin /bin \
 TRACE: --ro-bind /usr/bin /usr/bin \
 TRACE: --ro-bind /tmp/artifacts-cli/artifacts-cli-passwd-8e43491af6eee0ab.txt /etc/passwd \
-TRACE: -- /bin/sh /nix/store/gvl5rgmpdf10ibc73gkpi5x3zbi9gfsk-test_generator_two.sh/bin/test_generator_two.sh
+TRACE: -- /bin/sh /nix/store/[hash]-test_generator_two.sh/bin/test_generator_two.sh
 💾 serialize secrets
 === Content of /tmp/artifacts-cli/out-artifact-two/second-secret ===
 two

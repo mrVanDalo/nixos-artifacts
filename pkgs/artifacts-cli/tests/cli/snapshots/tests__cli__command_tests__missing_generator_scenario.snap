@@ -87,4 +87,4 @@ DEBUG:   ]
 DEBUG: }
 
 ----- stderr -----
-ERROR: parsing make config /nix/store/810szkddawwjycs2lj6lrphsim4pm1si-test.json: generator must be set at line 1 column 261
+ERROR: parsing make config /nix/store/[hash]-test.json: generator must be set at line 1 column 261

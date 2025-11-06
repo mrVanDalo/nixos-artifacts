@@ -1,11 +1,29 @@
 use anyhow::Context;
 use anyhow::Result;
 #[allow(deprecated)]
-use insta_cmd::{StdinCommand, assert_cmd_snapshot, get_cargo_bin};
+use insta_cmd::{StdinCommand, get_cargo_bin};
 use serial_test::serial;
 use std::fs::remove_dir_all;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+
+// Normalize unstable paths in snapshots (e.g., Nix store derivation hashes)
+// Example: /nix/store/lmj4gn57myfvylfasml508hwf1cr1m0y-test_generator_one.sh
+// becomes: /nix/store/[hash]-test_generator_one.sh
+// The Nix store hash has a consistent length; we conservatively match 32 lowercase
+// hex/base32 chars which is sufficient for our outputs.
+macro_rules! assert_cmd_snapshot {
+    ($cmd:expr) => {{
+        insta::with_settings!({
+            filters => vec![
+                // Collapse Nix store hash segments while preserving the remainder of the file name
+                (r"/nix/store/[a-z0-9]{32}-", "/nix/store/[hash]-"),
+            ]
+        }, {
+            insta_cmd::assert_cmd_snapshot!($cmd);
+        });
+    }};
+}
 
 fn cli() -> Command {
     Command::new(get_cargo_bin("artifacts"))
