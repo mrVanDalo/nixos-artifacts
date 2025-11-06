@@ -29,9 +29,6 @@ fn cli() -> Command {
     Command::new(get_cargo_bin("artifacts"))
 }
 
-// todo get rid of /nix/store/<hash> in snapshots
-// todo get rid of /tmp/<hash> in snapshots => get rid of serial
-
 #[allow(deprecated)]
 fn sdtin_cli(stdin: &str) -> StdinCommand {
     let mut cmd = StdinCommand::new(get_cargo_bin("artifacts"), stdin);
@@ -98,7 +95,7 @@ fn no_config_scenario() {
     cmd.arg("generate")
         .env(
             "NIXOS_ARTIFACTS_BACKEND_CONFIG",
-            &test_dir.join("backend.toml"),
+            test_dir.join("backend.toml"),
         )
         .arg(test_dir);
 
@@ -120,7 +117,7 @@ fn scenario_simple() {
     cmd.arg("generate")
         .env(
             "NIXOS_ARTIFACTS_BACKEND_CONFIG",
-            &test_dir.join("backend.toml"),
+            test_dir.join("backend.toml"),
         )
         .arg(test_dir);
 
@@ -143,7 +140,7 @@ fn two_artifacts_scenario() {
     cmd.arg("generate")
         .env(
             "NIXOS_ARTIFACTS_BACKEND_CONFIG",
-            &test_dir.join("backend.toml"),
+            test_dir.join("backend.toml"),
         )
         .arg(test_dir);
 
@@ -165,7 +162,7 @@ fn missing_files_scenario() {
     cmd.arg("generate")
         .env(
             "NIXOS_ARTIFACTS_BACKEND_CONFIG",
-            &test_dir.join("backend.toml"),
+            test_dir.join("backend.toml"),
         )
         .arg(test_dir);
 
@@ -188,7 +185,7 @@ fn wrong_file_type_scenario() {
     cmd.arg("generate")
         .env(
             "NIXOS_ARTIFACTS_BACKEND_CONFIG",
-            &test_dir.join("backend.toml"),
+            test_dir.join("backend.toml"),
         )
         .arg(test_dir);
 
@@ -211,7 +208,7 @@ fn unwanted_files_scenario() {
     cmd.arg("generate")
         .env(
             "NIXOS_ARTIFACTS_BACKEND_CONFIG",
-            &test_dir.join("backend.toml"),
+            test_dir.join("backend.toml"),
         )
         .arg(test_dir);
 
@@ -234,7 +231,7 @@ fn missing_generator_scenario() {
     cmd.arg("generate")
         .env(
             "NIXOS_ARTIFACTS_BACKEND_CONFIG",
-            &test_dir.join("backend.toml"),
+            test_dir.join("backend.toml"),
         )
         .arg(test_dir);
 
@@ -281,7 +278,7 @@ fn list_scenarios() {
     cmd.arg("list")
         .env(
             "NIXOS_ARTIFACTS_BACKEND_CONFIG",
-            &test_dir.join("backend.toml"),
+            test_dir.join("backend.toml"),
         )
         .arg(test_dir);
 
@@ -304,7 +301,7 @@ fn bigger_scenarios() {
     cmd.arg("generate")
         .env(
             "NIXOS_ARTIFACTS_BACKEND_CONFIG",
-            &test_dir.join("backend.toml"),
+            test_dir.join("backend.toml"),
         )
         .arg(test_dir);
 
@@ -327,7 +324,7 @@ fn regenerate_all_scenarios() {
     cmd.arg("regenerate")
         .env(
             "NIXOS_ARTIFACTS_BACKEND_CONFIG",
-            &test_dir.join("backend.toml"),
+            test_dir.join("backend.toml"),
         )
         .arg(test_dir)
         .arg("--all");
@@ -351,7 +348,7 @@ fn regenerate_machine_scenarios() {
     cmd.arg("regenerate")
         .env(
             "NIXOS_ARTIFACTS_BACKEND_CONFIG",
-            &test_dir.join("backend.toml"),
+            test_dir.join("backend.toml"),
         )
         .arg(test_dir)
         .arg("--machine=machine-one");
@@ -375,7 +372,7 @@ fn regenerate_machine_and_artifacts_scenarios() {
     cmd.arg("regenerate")
         .env(
             "NIXOS_ARTIFACTS_BACKEND_CONFIG",
-            &test_dir.join("backend.toml"),
+            test_dir.join("backend.toml"),
         )
         .arg(test_dir)
         .arg("--machine=machine-one")
@@ -400,7 +397,7 @@ fn regenerate_wrong_machine_scenarios() {
     cmd.arg("regenerate")
         .env(
             "NIXOS_ARTIFACTS_BACKEND_CONFIG",
-            &test_dir.join("backend.toml"),
+            test_dir.join("backend.toml"),
         )
         .arg(test_dir)
         .arg("--machine=machine-name");
@@ -424,7 +421,7 @@ fn artifact_name_scenario() {
     cmd.arg("generate")
         .env(
             "NIXOS_ARTIFACTS_BACKEND_CONFIG",
-            &test_dir.join("backend.toml"),
+            test_dir.join("backend.toml"),
         )
         .arg(test_dir)
         .arg("--machine=machine-name");
@@ -437,6 +434,7 @@ fn artifact_name_scenario() {
 
 //#[test]
 //#[serial]
+#[allow(dead_code)]
 fn simple_home_manager_scenario() {
     let root = project_root();
     let test_dir = root.join("examples/simple-home-manager");
@@ -448,7 +446,7 @@ fn simple_home_manager_scenario() {
     cmd.arg("generate")
         .env(
             "NIXOS_ARTIFACTS_BACKEND_CONFIG",
-            &test_dir.join("backend.toml"),
+            test_dir.join("backend.toml"),
         )
         .arg(test_dir);
 
