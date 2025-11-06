@@ -1,5 +1,5 @@
 ---
-source: tests/command_tests.rs
+source: tests/cli/command_tests.rs
 info:
   program: artifacts
   args:

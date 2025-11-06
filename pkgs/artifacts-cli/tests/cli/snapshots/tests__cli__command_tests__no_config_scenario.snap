@@ -1,0 +1,148 @@
+---
+source: tests/cli/command_tests.rs
+info:
+  program: artifacts
+  args:
+    - "--log-level=trace"
+    - generate
+    - /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/no_config
+  env:
+    NIXOS_ARTIFACTS_BACKEND_CONFIG: /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/no_config/backend.toml
+    TMPDIR: /tmp/artifacts-cli
+  stdin: "one\ntwo\n"
+---
+success: true
+exit_code: 0
+----- stdout -----
+DEBUG: Running nix build on /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/no_config
+TRACE: /run/current-system/sw/bin/nix build --impure -I flake=/home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/no_config --no-link --print-out-paths --expr '
+TRACE: let
+TRACE:   system = "x86_64-linux";
+TRACE:   filterAttrs =
+TRACE:     pred: set:
+TRACE:     builtins.removeAttrs set (builtins.filter (name: !pred name set.${name}) (builtins.attrNames set));
+TRACE:   flake = builtins.getFlake (toString <flake>);
+TRACE:   pkgs = flake.inputs.nixpkgs.legacyPackages.${system};
+TRACE:   nixosConfigurations = builtins.attrNames (
+TRACE:     filterAttrs (
+TRACE:       machine: configuration: builtins.hasAttr "artifacts" configuration.options
+TRACE:     ) flake.nixosConfigurations
+TRACE:   );
+TRACE:   homeConfigurations =
+TRACE:     let hc = if builtins.hasAttr "homeConfigurations" flake then flake.homeConfigurations else {};
+TRACE:     in builtins.attrNames (
+TRACE:       filterAttrs (
+TRACE:         user: configuration: builtins.hasAttr "artifacts" configuration.options
+TRACE:       ) hc
+TRACE:     );
+TRACE:   nixos = map (name: {
+TRACE:     machine = name;
+TRACE:     artifacts = flake.nixosConfigurations.${name}.config.artifacts.store;
+TRACE:     config =
+TRACE:       if (builtins.hasAttr "config" flake.nixosConfigurations.${name}.config.artifacts) then
+TRACE:         flake.nixosConfigurations.${name}.config.artifacts.config
+TRACE:       else
+TRACE:         { };
+TRACE:   }) nixosConfigurations;
+TRACE:   home = map (name: {
+TRACE:     user = name;
+TRACE:     artifacts = flake.homeConfigurations.${name}.config.artifacts.store;
+TRACE:     config =
+TRACE:       if (builtins.hasAttr "config" flake.homeConfigurations.${name}.config.artifacts) then
+TRACE:         flake.homeConfigurations.${name}.config.artifacts.config
+TRACE:       else
+TRACE:         { };
+TRACE:   }) homeConfigurations;
+TRACE:   make = { inherit nixos home; };
+TRACE: in
+TRACE: pkgs.writeText "test.json" (builtins.toJSON make)
+TRACE: '
+DEBUG: make config (pretty):
+DEBUG: {
+DEBUG:   "home": [],
+DEBUG:   "nixos": [
+DEBUG:     {
+DEBUG:       "artifacts": {
+DEBUG:         "test-artifact": {
+DEBUG:           "files": {
+DEBUG:             "simple-secrets": {
+DEBUG:               "group": "deployer",
+DEBUG:               "mode": "0400",
+DEBUG:               "name": "simple-secrets",
+DEBUG:               "owner": "deployer",
+DEBUG:               "path": "/run/secrets/simple-secrets"
+DEBUG:             },
+DEBUG:             "very-simple-secrets": {
+DEBUG:               "group": "root",
+DEBUG:               "mode": "0400",
+DEBUG:               "name": "very-simple-secrets",
+DEBUG:               "owner": "root",
+DEBUG:               "path": "/run/secrets/very-simple-secrets"
+DEBUG:             }
+DEBUG:           },
+DEBUG:           "generator": "/nix/store/27x8bw475f4ir2fb5ig3mzqx07zdmjfv-test_generator.sh",
+DEBUG:           "name": "test-artifact",
+DEBUG:           "prompts": {
+DEBUG:             "secret1": {
+DEBUG:               "description": "secret number 1",
+DEBUG:               "name": "secret1"
+DEBUG:             },
+DEBUG:             "secret2": {
+DEBUG:               "description": "secret number 2",
+DEBUG:               "name": "secret2"
+DEBUG:             }
+DEBUG:           },
+DEBUG:           "serialization": "test",
+DEBUG:           "shared": false
+DEBUG:         }
+DEBUG:       },
+DEBUG:       "config": {},
+DEBUG:       "machine": "machine-name"
+DEBUG:     }
+DEBUG:   ]
+DEBUG: }
+[generate]
+DEBUG:     files to produce -> 2 files
+DEBUG:       - simple-secrets => /run/secrets/simple-secrets owner=deployer group=deployer
+DEBUG:       - very-simple-secrets => /run/secrets/very-simple-secrets owner=root group=root
+DEBUG:     running check_serialization: env inputs="/tmp/artifacts-cli/inputs-test-artifact" machine="machine-name" artifact="test-artifact" /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/no_config/test_check.sh
+$config: 
+{}
+DEBUG:     check_serialization: failed with status exit status: 1 -> continuing with generation
+⚡ machine-name/test-artifact
+>>> DESC: secret number 1
+>>> PROMPT: secret1
+> 
+>>> DESC: secret number 2
+>>> PROMPT: secret2
+> 
+DEBUG: run bwrap with command /nix/store/8b4xzgbirkdi8190fw74vmwcrxdlrk9s-test_generator.sh/bin/test_generator.sh
+TRACE: bwrap \
+TRACE: --unshare-all \
+TRACE: --unshare-user \
+TRACE: --uid 1000 \
+TRACE: --gid 1000 \
+TRACE: --tmpfs / \
+TRACE: --chdir / \
+TRACE: --ro-bind /nix/store /nix/store \
+TRACE: --tmpfs /usr/lib/systemd \
+TRACE: --proc /proc \
+TRACE: --dev /dev \
+TRACE: --bind /tmp/artifacts-cli/prompt-test-artifact /tmp/artifacts-cli/prompt-test-artifact \
+TRACE: --bind /tmp/artifacts-cli/out-test-artifact /tmp/artifacts-cli/out-test-artifact \
+TRACE: --ro-bind /nix/store/8b4xzgbirkdi8190fw74vmwcrxdlrk9s-test_generator.sh/bin /nix/store/8b4xzgbirkdi8190fw74vmwcrxdlrk9s-test_generator.sh/bin \
+TRACE: --ro-bind /bin /bin \
+TRACE: --ro-bind /usr/bin /usr/bin \
+TRACE: --ro-bind /tmp/artifacts-cli/artifacts-cli-passwd-820e090949e37de7.txt /etc/passwd \
+TRACE: -- /bin/sh /nix/store/8b4xzgbirkdi8190fw74vmwcrxdlrk9s-test_generator.sh/bin/test_generator.sh
+💾 serialize secrets
+$config: 
+{}
+=== Content of /tmp/artifacts-cli/out-test-artifact/simple-secrets ===
+two
+=========================
+=== Content of /tmp/artifacts-cli/out-test-artifact/very-simple-secrets ===
+one
+=========================
+
+----- stderr -----

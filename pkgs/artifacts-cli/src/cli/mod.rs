@@ -4,7 +4,7 @@ pub mod commands;
 use crate::backend::helpers::pretty_print_shell_escape;
 use anyhow::Result;
 use clap::Parser;
-use log::{Level, LevelFilter, Metadata, Record, debug};
+use log::{Level, LevelFilter, Metadata, Record, debug, trace};
 use std::io::{self, Write};
 
 struct StdSplitLogger;
@@ -145,7 +145,8 @@ pkgs.writeText "test.json" (builtins.toJSON make)
             )
             .collect::<Vec<_>>()
             .join(" ");
-        debug!("Running nix build: {}", pretty);
+        debug!("Running nix build on {}", flake_path.display());
+        trace!("{}", pretty);
 
         command.args(&arguments);
         let output = command

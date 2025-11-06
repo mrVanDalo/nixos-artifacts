@@ -1,0 +1,7 @@
+---
+source: tests/backend/helpers.rs
+expression: lines
+---
+    files to produce -> 2 files
+      - config.toml => /make/base/etc/app/config.toml owner=root group=root
+      - secret.key => /var/lib/app/secret.key group=app

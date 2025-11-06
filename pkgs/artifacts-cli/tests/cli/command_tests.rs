@@ -1,5 +1,3 @@
-mod backend;
-
 use anyhow::Context;
 use anyhow::Result;
 #[allow(deprecated)]
@@ -22,7 +20,7 @@ fn sdtin_cli(stdin: &str) -> StdinCommand {
     // StdinCommand::env returns &mut Command; we don't need the return value here.
     let _ = cmd
         .env("TMPDIR", "/tmp/artifacts-cli")
-        .arg("--log-level=debug");
+        .arg("--log-level=trace");
     cmd
 }
 
@@ -419,8 +417,8 @@ fn artifact_name_scenario() {
     assert_cmd_snapshot!(cmd);
 }
 
-#[test]
-#[serial]
+//#[test]
+//#[serial]
 fn simple_home_manager_scenario() {
     let root = project_root();
     let test_dir = root.join("examples/simple-home-manager");

@@ -1,9 +1,9 @@
 ---
-source: tests/command_tests.rs
+source: tests/cli/command_tests.rs
 info:
   program: artifacts
   args:
-    - "--log-level=debug"
+    - "--log-level=trace"
     - generate
     - /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/bigger_setup
   env:
@@ -14,48 +14,49 @@ info:
 success: true
 exit_code: 0
 ----- stdout -----
-DEBUG: Running nix build: /run/current-system/sw/bin/nix build --impure -I flake=/home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/bigger_setup --no-link --print-out-paths --expr '
-DEBUG: let
-DEBUG:   system = "x86_64-linux";
-DEBUG:   filterAttrs =
-DEBUG:     pred: set:
-DEBUG:     builtins.removeAttrs set (builtins.filter (name: !pred name set.${name}) (builtins.attrNames set));
-DEBUG:   flake = builtins.getFlake (toString <flake>);
-DEBUG:   pkgs = flake.inputs.nixpkgs.legacyPackages.${system};
-DEBUG:   nixosConfigurations = builtins.attrNames (
-DEBUG:     filterAttrs (
-DEBUG:       machine: configuration: builtins.hasAttr "artifacts" configuration.options
-DEBUG:     ) flake.nixosConfigurations
-DEBUG:   );
-DEBUG:   homeConfigurations =
-DEBUG:     let hc = if builtins.hasAttr "homeConfigurations" flake then flake.homeConfigurations else {};
-DEBUG:     in builtins.attrNames (
-DEBUG:       filterAttrs (
-DEBUG:         user: configuration: builtins.hasAttr "artifacts" configuration.options
-DEBUG:       ) hc
-DEBUG:     );
-DEBUG:   nixos = map (name: {
-DEBUG:     machine = name;
-DEBUG:     artifacts = flake.nixosConfigurations.${name}.config.artifacts.store;
-DEBUG:     config =
-DEBUG:       if (builtins.hasAttr "config" flake.nixosConfigurations.${name}.config.artifacts) then
-DEBUG:         flake.nixosConfigurations.${name}.config.artifacts.config
-DEBUG:       else
-DEBUG:         { };
-DEBUG:   }) nixosConfigurations;
-DEBUG:   home = map (name: {
-DEBUG:     user = name;
-DEBUG:     artifacts = flake.homeConfigurations.${name}.config.artifacts.store;
-DEBUG:     config =
-DEBUG:       if (builtins.hasAttr "config" flake.homeConfigurations.${name}.config.artifacts) then
-DEBUG:         flake.homeConfigurations.${name}.config.artifacts.config
-DEBUG:       else
-DEBUG:         { };
-DEBUG:   }) homeConfigurations;
-DEBUG:   make = { inherit nixos home; };
-DEBUG: in
-DEBUG: pkgs.writeText "test.json" (builtins.toJSON make)
-DEBUG: '
+DEBUG: Running nix build on /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/bigger_setup
+TRACE: /run/current-system/sw/bin/nix build --impure -I flake=/home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/bigger_setup --no-link --print-out-paths --expr '
+TRACE: let
+TRACE:   system = "x86_64-linux";
+TRACE:   filterAttrs =
+TRACE:     pred: set:
+TRACE:     builtins.removeAttrs set (builtins.filter (name: !pred name set.${name}) (builtins.attrNames set));
+TRACE:   flake = builtins.getFlake (toString <flake>);
+TRACE:   pkgs = flake.inputs.nixpkgs.legacyPackages.${system};
+TRACE:   nixosConfigurations = builtins.attrNames (
+TRACE:     filterAttrs (
+TRACE:       machine: configuration: builtins.hasAttr "artifacts" configuration.options
+TRACE:     ) flake.nixosConfigurations
+TRACE:   );
+TRACE:   homeConfigurations =
+TRACE:     let hc = if builtins.hasAttr "homeConfigurations" flake then flake.homeConfigurations else {};
+TRACE:     in builtins.attrNames (
+TRACE:       filterAttrs (
+TRACE:         user: configuration: builtins.hasAttr "artifacts" configuration.options
+TRACE:       ) hc
+TRACE:     );
+TRACE:   nixos = map (name: {
+TRACE:     machine = name;
+TRACE:     artifacts = flake.nixosConfigurations.${name}.config.artifacts.store;
+TRACE:     config =
+TRACE:       if (builtins.hasAttr "config" flake.nixosConfigurations.${name}.config.artifacts) then
+TRACE:         flake.nixosConfigurations.${name}.config.artifacts.config
+TRACE:       else
+TRACE:         { };
+TRACE:   }) nixosConfigurations;
+TRACE:   home = map (name: {
+TRACE:     user = name;
+TRACE:     artifacts = flake.homeConfigurations.${name}.config.artifacts.store;
+TRACE:     config =
+TRACE:       if (builtins.hasAttr "config" flake.homeConfigurations.${name}.config.artifacts) then
+TRACE:         flake.homeConfigurations.${name}.config.artifacts.config
+TRACE:       else
+TRACE:         { };
+TRACE:   }) homeConfigurations;
+TRACE:   make = { inherit nixos home; };
+TRACE: in
+TRACE: pkgs.writeText "test.json" (builtins.toJSON make)
+TRACE: '
 DEBUG: make config (pretty):
 DEBUG: {
 DEBUG:   "home": [],
@@ -144,25 +145,25 @@ DEBUG:       - first-secret => /run/secrets/first-secret owner=root group=root
 DEBUG:     running check_serialization: env inputs="/tmp/artifacts-cli/inputs-artifact-one" machine="machine-one" artifact="artifact-one" /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/bigger_setup/test_check.sh
 DEBUG:     check_serialization: failed with status exit status: 1 -> continuing with generation
 ⚡ machine-one/artifact-one
-DEBUG: bwrap command: 
-DEBUG: bwrap \
-DEBUG: --unshare-all \
-DEBUG: --unshare-user \
-DEBUG: --uid 1000 \
-DEBUG: --gid 1000 \
-DEBUG: --tmpfs / \
-DEBUG: --chdir / \
-DEBUG: --ro-bind /nix/store /nix/store \
-DEBUG: --tmpfs /usr/lib/systemd \
-DEBUG: --proc /proc \
-DEBUG: --dev /dev \
-DEBUG: --bind /tmp/artifacts-cli/prompt-artifact-one /tmp/artifacts-cli/prompt-artifact-one \
-DEBUG: --bind /tmp/artifacts-cli/out-artifact-one /tmp/artifacts-cli/out-artifact-one \
-DEBUG: --ro-bind /nix/store/lmj4gn57myfvylfasml508hwf1cr1m0y-test_generator_one.sh/bin /nix/store/lmj4gn57myfvylfasml508hwf1cr1m0y-test_generator_one.sh/bin \
-DEBUG: --ro-bind /bin /bin \
-DEBUG: --ro-bind /usr/bin /usr/bin \
-DEBUG: --ro-bind /tmp/artifacts-cli/artifacts-cli-passwd-3029b01ac1f84b21.txt /etc/passwd \
-DEBUG: -- /bin/sh /nix/store/lmj4gn57myfvylfasml508hwf1cr1m0y-test_generator_one.sh/bin/test_generator_one.sh
+DEBUG: run bwrap with command /nix/store/lmj4gn57myfvylfasml508hwf1cr1m0y-test_generator_one.sh/bin/test_generator_one.sh
+TRACE: bwrap \
+TRACE: --unshare-all \
+TRACE: --unshare-user \
+TRACE: --uid 1000 \
+TRACE: --gid 1000 \
+TRACE: --tmpfs / \
+TRACE: --chdir / \
+TRACE: --ro-bind /nix/store /nix/store \
+TRACE: --tmpfs /usr/lib/systemd \
+TRACE: --proc /proc \
+TRACE: --dev /dev \
+TRACE: --bind /tmp/artifacts-cli/prompt-artifact-one /tmp/artifacts-cli/prompt-artifact-one \
+TRACE: --bind /tmp/artifacts-cli/out-artifact-one /tmp/artifacts-cli/out-artifact-one \
+TRACE: --ro-bind /nix/store/lmj4gn57myfvylfasml508hwf1cr1m0y-test_generator_one.sh/bin /nix/store/lmj4gn57myfvylfasml508hwf1cr1m0y-test_generator_one.sh/bin \
+TRACE: --ro-bind /bin /bin \
+TRACE: --ro-bind /usr/bin /usr/bin \
+TRACE: --ro-bind /tmp/artifacts-cli/artifacts-cli-passwd-3029b01ac1f84b21.txt /etc/passwd \
+TRACE: -- /bin/sh /nix/store/lmj4gn57myfvylfasml508hwf1cr1m0y-test_generator_one.sh/bin/test_generator_one.sh
 💾 serialize secrets
 === Content of /tmp/artifacts-cli/out-artifact-one/first-secret ===
 one
@@ -179,25 +180,25 @@ DEBUG:       - first-secret => /run/secrets/first-secret owner=root group=root
 DEBUG:     running check_serialization: env inputs="/tmp/artifacts-cli/inputs-artifact-one" machine="machine-two" artifact="artifact-one" /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/bigger_setup/test_check.sh
 DEBUG:     check_serialization: failed with status exit status: 1 -> continuing with generation
 ⚡ machine-two/artifact-one
-DEBUG: bwrap command: 
-DEBUG: bwrap \
-DEBUG: --unshare-all \
-DEBUG: --unshare-user \
-DEBUG: --uid 1000 \
-DEBUG: --gid 1000 \
-DEBUG: --tmpfs / \
-DEBUG: --chdir / \
-DEBUG: --ro-bind /nix/store /nix/store \
-DEBUG: --tmpfs /usr/lib/systemd \
-DEBUG: --proc /proc \
-DEBUG: --dev /dev \
-DEBUG: --bind /tmp/artifacts-cli/prompt-artifact-one /tmp/artifacts-cli/prompt-artifact-one \
-DEBUG: --bind /tmp/artifacts-cli/out-artifact-one /tmp/artifacts-cli/out-artifact-one \
-DEBUG: --ro-bind /nix/store/lmj4gn57myfvylfasml508hwf1cr1m0y-test_generator_one.sh/bin /nix/store/lmj4gn57myfvylfasml508hwf1cr1m0y-test_generator_one.sh/bin \
-DEBUG: --ro-bind /bin /bin \
-DEBUG: --ro-bind /usr/bin /usr/bin \
-DEBUG: --ro-bind /tmp/artifacts-cli/artifacts-cli-passwd-3029b01ac1f84b21.txt /etc/passwd \
-DEBUG: -- /bin/sh /nix/store/lmj4gn57myfvylfasml508hwf1cr1m0y-test_generator_one.sh/bin/test_generator_one.sh
+DEBUG: run bwrap with command /nix/store/lmj4gn57myfvylfasml508hwf1cr1m0y-test_generator_one.sh/bin/test_generator_one.sh
+TRACE: bwrap \
+TRACE: --unshare-all \
+TRACE: --unshare-user \
+TRACE: --uid 1000 \
+TRACE: --gid 1000 \
+TRACE: --tmpfs / \
+TRACE: --chdir / \
+TRACE: --ro-bind /nix/store /nix/store \
+TRACE: --tmpfs /usr/lib/systemd \
+TRACE: --proc /proc \
+TRACE: --dev /dev \
+TRACE: --bind /tmp/artifacts-cli/prompt-artifact-one /tmp/artifacts-cli/prompt-artifact-one \
+TRACE: --bind /tmp/artifacts-cli/out-artifact-one /tmp/artifacts-cli/out-artifact-one \
+TRACE: --ro-bind /nix/store/lmj4gn57myfvylfasml508hwf1cr1m0y-test_generator_one.sh/bin /nix/store/lmj4gn57myfvylfasml508hwf1cr1m0y-test_generator_one.sh/bin \
+TRACE: --ro-bind /bin /bin \
+TRACE: --ro-bind /usr/bin /usr/bin \
+TRACE: --ro-bind /tmp/artifacts-cli/artifacts-cli-passwd-3029b01ac1f84b21.txt /etc/passwd \
+TRACE: -- /bin/sh /nix/store/lmj4gn57myfvylfasml508hwf1cr1m0y-test_generator_one.sh/bin/test_generator_one.sh
 💾 serialize secrets
 === Content of /tmp/artifacts-cli/out-artifact-one/first-secret ===
 one
@@ -208,25 +209,25 @@ DEBUG:       - second-secret => /run/secrets/second-secret owner=root group=root
 DEBUG:     running check_serialization: env inputs="/tmp/artifacts-cli/inputs-artifact-two" machine="machine-two" artifact="artifact-two" /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/bigger_setup/test_check.sh
 DEBUG:     check_serialization: failed with status exit status: 1 -> continuing with generation
 ⚡ machine-two/artifact-two
-DEBUG: bwrap command: 
-DEBUG: bwrap \
-DEBUG: --unshare-all \
-DEBUG: --unshare-user \
-DEBUG: --uid 1000 \
-DEBUG: --gid 1000 \
-DEBUG: --tmpfs / \
-DEBUG: --chdir / \
-DEBUG: --ro-bind /nix/store /nix/store \
-DEBUG: --tmpfs /usr/lib/systemd \
-DEBUG: --proc /proc \
-DEBUG: --dev /dev \
-DEBUG: --bind /tmp/artifacts-cli/prompt-artifact-two /tmp/artifacts-cli/prompt-artifact-two \
-DEBUG: --bind /tmp/artifacts-cli/out-artifact-two /tmp/artifacts-cli/out-artifact-two \
-DEBUG: --ro-bind /nix/store/gvl5rgmpdf10ibc73gkpi5x3zbi9gfsk-test_generator_two.sh/bin /nix/store/gvl5rgmpdf10ibc73gkpi5x3zbi9gfsk-test_generator_two.sh/bin \
-DEBUG: --ro-bind /bin /bin \
-DEBUG: --ro-bind /usr/bin /usr/bin \
-DEBUG: --ro-bind /tmp/artifacts-cli/artifacts-cli-passwd-8e43491af6eee0ab.txt /etc/passwd \
-DEBUG: -- /bin/sh /nix/store/gvl5rgmpdf10ibc73gkpi5x3zbi9gfsk-test_generator_two.sh/bin/test_generator_two.sh
+DEBUG: run bwrap with command /nix/store/gvl5rgmpdf10ibc73gkpi5x3zbi9gfsk-test_generator_two.sh/bin/test_generator_two.sh
+TRACE: bwrap \
+TRACE: --unshare-all \
+TRACE: --unshare-user \
+TRACE: --uid 1000 \
+TRACE: --gid 1000 \
+TRACE: --tmpfs / \
+TRACE: --chdir / \
+TRACE: --ro-bind /nix/store /nix/store \
+TRACE: --tmpfs /usr/lib/systemd \
+TRACE: --proc /proc \
+TRACE: --dev /dev \
+TRACE: --bind /tmp/artifacts-cli/prompt-artifact-two /tmp/artifacts-cli/prompt-artifact-two \
+TRACE: --bind /tmp/artifacts-cli/out-artifact-two /tmp/artifacts-cli/out-artifact-two \
+TRACE: --ro-bind /nix/store/gvl5rgmpdf10ibc73gkpi5x3zbi9gfsk-test_generator_two.sh/bin /nix/store/gvl5rgmpdf10ibc73gkpi5x3zbi9gfsk-test_generator_two.sh/bin \
+TRACE: --ro-bind /bin /bin \
+TRACE: --ro-bind /usr/bin /usr/bin \
+TRACE: --ro-bind /tmp/artifacts-cli/artifacts-cli-passwd-8e43491af6eee0ab.txt /etc/passwd \
+TRACE: -- /bin/sh /nix/store/gvl5rgmpdf10ibc73gkpi5x3zbi9gfsk-test_generator_two.sh/bin/test_generator_two.sh
 💾 serialize secrets
 === Content of /tmp/artifacts-cli/out-artifact-two/second-secret ===
 two

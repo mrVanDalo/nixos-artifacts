@@ -1,9 +1,9 @@
 ---
-source: tests/command_tests.rs
+source: tests/cli/command_tests.rs
 info:
   program: artifacts
   args:
-    - "--log-level=debug"
+    - "--log-level=trace"
     - list
     - /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/bigger_setup
   env:
@@ -14,48 +14,49 @@ info:
 success: true
 exit_code: 0
 ----- stdout -----
-DEBUG: Running nix build: /run/current-system/sw/bin/nix build --impure -I flake=/home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/bigger_setup --no-link --print-out-paths --expr '
-DEBUG: let
-DEBUG:   system = "x86_64-linux";
-DEBUG:   filterAttrs =
-DEBUG:     pred: set:
-DEBUG:     builtins.removeAttrs set (builtins.filter (name: !pred name set.${name}) (builtins.attrNames set));
-DEBUG:   flake = builtins.getFlake (toString <flake>);
-DEBUG:   pkgs = flake.inputs.nixpkgs.legacyPackages.${system};
-DEBUG:   nixosConfigurations = builtins.attrNames (
-DEBUG:     filterAttrs (
-DEBUG:       machine: configuration: builtins.hasAttr "artifacts" configuration.options
-DEBUG:     ) flake.nixosConfigurations
-DEBUG:   );
-DEBUG:   homeConfigurations =
-DEBUG:     let hc = if builtins.hasAttr "homeConfigurations" flake then flake.homeConfigurations else {};
-DEBUG:     in builtins.attrNames (
-DEBUG:       filterAttrs (
-DEBUG:         user: configuration: builtins.hasAttr "artifacts" configuration.options
-DEBUG:       ) hc
-DEBUG:     );
-DEBUG:   nixos = map (name: {
-DEBUG:     machine = name;
-DEBUG:     artifacts = flake.nixosConfigurations.${name}.config.artifacts.store;
-DEBUG:     config =
-DEBUG:       if (builtins.hasAttr "config" flake.nixosConfigurations.${name}.config.artifacts) then
-DEBUG:         flake.nixosConfigurations.${name}.config.artifacts.config
-DEBUG:       else
-DEBUG:         { };
-DEBUG:   }) nixosConfigurations;
-DEBUG:   home = map (name: {
-DEBUG:     user = name;
-DEBUG:     artifacts = flake.homeConfigurations.${name}.config.artifacts.store;
-DEBUG:     config =
-DEBUG:       if (builtins.hasAttr "config" flake.homeConfigurations.${name}.config.artifacts) then
-DEBUG:         flake.homeConfigurations.${name}.config.artifacts.config
-DEBUG:       else
-DEBUG:         { };
-DEBUG:   }) homeConfigurations;
-DEBUG:   make = { inherit nixos home; };
-DEBUG: in
-DEBUG: pkgs.writeText "test.json" (builtins.toJSON make)
-DEBUG: '
+DEBUG: Running nix build on /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/bigger_setup
+TRACE: /run/current-system/sw/bin/nix build --impure -I flake=/home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/bigger_setup --no-link --print-out-paths --expr '
+TRACE: let
+TRACE:   system = "x86_64-linux";
+TRACE:   filterAttrs =
+TRACE:     pred: set:
+TRACE:     builtins.removeAttrs set (builtins.filter (name: !pred name set.${name}) (builtins.attrNames set));
+TRACE:   flake = builtins.getFlake (toString <flake>);
+TRACE:   pkgs = flake.inputs.nixpkgs.legacyPackages.${system};
+TRACE:   nixosConfigurations = builtins.attrNames (
+TRACE:     filterAttrs (
+TRACE:       machine: configuration: builtins.hasAttr "artifacts" configuration.options
+TRACE:     ) flake.nixosConfigurations
+TRACE:   );
+TRACE:   homeConfigurations =
+TRACE:     let hc = if builtins.hasAttr "homeConfigurations" flake then flake.homeConfigurations else {};
+TRACE:     in builtins.attrNames (
+TRACE:       filterAttrs (
+TRACE:         user: configuration: builtins.hasAttr "artifacts" configuration.options
+TRACE:       ) hc
+TRACE:     );
+TRACE:   nixos = map (name: {
+TRACE:     machine = name;
+TRACE:     artifacts = flake.nixosConfigurations.${name}.config.artifacts.store;
+TRACE:     config =
+TRACE:       if (builtins.hasAttr "config" flake.nixosConfigurations.${name}.config.artifacts) then
+TRACE:         flake.nixosConfigurations.${name}.config.artifacts.config
+TRACE:       else
+TRACE:         { };
+TRACE:   }) nixosConfigurations;
+TRACE:   home = map (name: {
+TRACE:     user = name;
+TRACE:     artifacts = flake.homeConfigurations.${name}.config.artifacts.store;
+TRACE:     config =
+TRACE:       if (builtins.hasAttr "config" flake.homeConfigurations.${name}.config.artifacts) then
+TRACE:         flake.homeConfigurations.${name}.config.artifacts.config
+TRACE:       else
+TRACE:         { };
+TRACE:   }) homeConfigurations;
+TRACE:   make = { inherit nixos home; };
+TRACE: in
+TRACE: pkgs.writeText "test.json" (builtins.toJSON make)
+TRACE: '
 DEBUG: make config (pretty):
 DEBUG: {
 DEBUG:   "home": [],

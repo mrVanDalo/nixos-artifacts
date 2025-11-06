@@ -2,7 +2,7 @@ use crate::backend::helpers::{escape_single_quoted, fnv1a64, resolve_path};
 use crate::config::make::ArtifactDef;
 use crate::string_vec;
 use anyhow::{Context, Result, bail};
-use log::debug;
+use log::{debug, trace};
 use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
@@ -134,7 +134,11 @@ pub fn run_generator_script(
         result
     };
     // Keep the original prefix but print as multiline for readability
-    debug!("bwrap command: \n{}", bwrap_pretty);
+    debug!(
+        "run bwrap with command {}",
+        generator_script_absolut_path.display()
+    );
+    trace!("{}", bwrap_pretty);
 
     // Ensure that our 'out' and 'prompts' override any nix-shell provided 'out'
     let out_quoted = escape_single_quoted(&out.display().to_string());
