@@ -14,90 +14,90 @@ info:
 success: true
 exit_code: 0
 ----- stdout -----
-DEBUG: Running nix build on /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/simple-home-manager
-TRACE: /run/current-system/sw/bin/nix build --impure -I flake=/home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/simple-home-manager --no-link --print-out-paths --expr 'let
-TRACE:   system = "x86_64-linux";
-TRACE:   filterAttrs =
-TRACE:     pred: set:
-TRACE:     builtins.removeAttrs set (builtins.filter (name: !pred name set.${name}) (builtins.attrNames set));
-TRACE:   flake = builtins.getFlake (toString <flake>);
-TRACE:   pkgs = flake.inputs.nixpkgs.legacyPackages.${system};
-TRACE:   nixosConfigurations = builtins.attrNames (
-TRACE:     filterAttrs (
-TRACE:       machine: configuration: builtins.hasAttr "artifacts" configuration.options
-TRACE:     ) flake.nixosConfigurations
-TRACE:   );
-TRACE:   homeConfigurations =
-TRACE:     let
-TRACE:       hc = if builtins.hasAttr "homeConfigurations" flake then flake.homeConfigurations else { };
-TRACE:     in
-TRACE:     builtins.attrNames (
-TRACE:       filterAttrs (user: configuration: builtins.hasAttr "artifacts" configuration.options) hc
-TRACE:     );
-TRACE:   nixos = map (name: {
-TRACE:     machine = name;
-TRACE:     artifacts = flake.nixosConfigurations.${name}.config.artifacts.store;
-TRACE:     config =
-TRACE:       if (builtins.hasAttr "config" flake.nixosConfigurations.${name}.config.artifacts) then
-TRACE:         flake.nixosConfigurations.${name}.config.artifacts.config
-TRACE:       else
-TRACE:         { };
-TRACE:   }) nixosConfigurations;
-TRACE:   home = map (name: {
-TRACE:     user = name;
-TRACE:     artifacts = flake.homeConfigurations.${name}.config.artifacts.store;
-TRACE:     config =
-TRACE:       if (builtins.hasAttr "config" flake.homeConfigurations.${name}.config.artifacts) then
-TRACE:         flake.homeConfigurations.${name}.config.artifacts.config
-TRACE:       else
-TRACE:         { };
-TRACE:   }) homeConfigurations;
-TRACE:   make = { inherit nixos home; };
-TRACE: in
-TRACE: pkgs.writeText "test.json" (builtins.toJSON make)
-TRACE: '
-DEBUG: make config (pretty):
-DEBUG: {
-DEBUG:   "home": [
-DEBUG:     {
-DEBUG:       "artifacts": {
-DEBUG:         "artifact-one": {
-DEBUG:           "files": {
-DEBUG:             "first-secret": {
-DEBUG:               "mode": "0400",
-DEBUG:               "name": "first-secret",
-DEBUG:               "path": "/run/artifacts/some-test-name/artifact-one/first-secret"
-DEBUG:             }
-DEBUG:           },
-DEBUG:           "generator": "/nix/store/[hash]-test_generator_one.sh",
-DEBUG:           "name": "artifact-one",
-DEBUG:           "prompts": {},
-DEBUG:           "serialization": "test"
-DEBUG:         },
-DEBUG:         "artifact-two": {
-DEBUG:           "files": {
-DEBUG:             "second-secret": {
-DEBUG:               "mode": "0400",
-DEBUG:               "name": "second-secret",
-DEBUG:               "path": "/run/artifacts/some-test-name/artifact-two/second-secret"
-DEBUG:             }
-DEBUG:           },
-DEBUG:           "generator": "/nix/store/[hash]-test_generator_two.sh",
-DEBUG:           "name": "artifact-two",
-DEBUG:           "prompts": {},
-DEBUG:           "serialization": "test"
-DEBUG:         }
-DEBUG:       },
-DEBUG:       "config": {},
-DEBUG:       "user": "test"
-DEBUG:     }
-DEBUG:   ],
-DEBUG:   "nixos": []
-DEBUG: }
+🐛 Running nix build on /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/simple-home-manager
+💬 /run/current-system/sw/bin/nix build --impure -I flake=/home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/simple-home-manager --no-link --print-out-paths --expr 'let
+💬   system = "x86_64-linux";
+💬   filterAttrs =
+💬     pred: set:
+💬     builtins.removeAttrs set (builtins.filter (name: !pred name set.${name}) (builtins.attrNames set));
+💬   flake = builtins.getFlake (toString <flake>);
+💬   pkgs = flake.inputs.nixpkgs.legacyPackages.${system};
+💬   nixosConfigurations = builtins.attrNames (
+💬     filterAttrs (
+💬       machine: configuration: builtins.hasAttr "artifacts" configuration.options
+💬     ) flake.nixosConfigurations
+💬   );
+💬   homeConfigurations =
+💬     let
+💬       hc = if builtins.hasAttr "homeConfigurations" flake then flake.homeConfigurations else { };
+💬     in
+💬     builtins.attrNames (
+💬       filterAttrs (user: configuration: builtins.hasAttr "artifacts" configuration.options) hc
+💬     );
+💬   nixos = map (name: {
+💬     machine = name;
+💬     artifacts = flake.nixosConfigurations.${name}.config.artifacts.store;
+💬     config =
+💬       if (builtins.hasAttr "config" flake.nixosConfigurations.${name}.config.artifacts) then
+💬         flake.nixosConfigurations.${name}.config.artifacts.config
+💬       else
+💬         { };
+💬   }) nixosConfigurations;
+💬   home = map (name: {
+💬     user = name;
+💬     artifacts = flake.homeConfigurations.${name}.config.artifacts.store;
+💬     config =
+💬       if (builtins.hasAttr "config" flake.homeConfigurations.${name}.config.artifacts) then
+💬         flake.homeConfigurations.${name}.config.artifacts.config
+💬       else
+💬         { };
+💬   }) homeConfigurations;
+💬   make = { inherit nixos home; };
+💬 in
+💬 pkgs.writeText "test.json" (builtins.toJSON make)
+💬 '
+💬 make config (pretty):
+💬 {
+💬   "home": [
+💬     {
+💬       "artifacts": {
+💬         "artifact-one": {
+💬           "files": {
+💬             "first-secret": {
+💬               "mode": "0400",
+💬               "name": "first-secret",
+💬               "path": "/run/artifacts/some-test-name/artifact-one/first-secret"
+💬             }
+💬           },
+💬           "generator": "/nix/store/[hash]-test_generator_one.sh",
+💬           "name": "artifact-one",
+💬           "prompts": {},
+💬           "serialization": "test"
+💬         },
+💬         "artifact-two": {
+💬           "files": {
+💬             "second-secret": {
+💬               "mode": "0400",
+💬               "name": "second-secret",
+💬               "path": "/run/artifacts/some-test-name/artifact-two/second-secret"
+💬             }
+💬           },
+💬           "generator": "/nix/store/[hash]-test_generator_two.sh",
+💬           "name": "artifact-two",
+💬           "prompts": {},
+💬           "serialization": "test"
+💬         }
+💬       },
+💬       "config": {},
+💬       "user": "test"
+💬     }
+💬   ],
+💬   "nixos": []
+💬 }
 [generate]
-DEBUG:     files to produce -> 1 files
-DEBUG:       - first-secret => /run/artifacts/some-test-name/artifact-one/first-secret
-DEBUG:     running check_serialization: env inputs="/tmp/artifacts-cli/inputs-artifact-one" username="test" artifact="artifact-one" artifact_context="homemanager" /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/simple-home-manager/test_check.sh
+🐛     files to produce -> 1 files
+🐛       - first-secret => /run/artifacts/some-test-name/artifact-one/first-secret
+🐛     running check_serialization: env inputs="/tmp/artifacts-cli/inputs-artifact-one" username="test" artifact="artifact-one" artifact_context="homemanager" /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/simple-home-manager/test_check.sh
 Environment variables:
 inputs=/tmp/artifacts-cli/inputs-artifact-one
 config=/tmp/artifacts-cli/config-artifact-one/config.json
@@ -109,27 +109,27 @@ artifact_context=homemanager
 {}
 --- End /tmp/artifacts-cli/config-artifact-one/config.json ---
 
-DEBUG:     check_serialization: failed with status exit status: 1 -> continuing with generation
+🐛     check_serialization: failed with status exit status: 1 -> continuing with generation
 ⚡ test/artifact-one
-DEBUG: run bwrap with command /nix/store/[hash]-test_generator_one.sh/bin/test_generator_one.sh
-TRACE: bwrap \
-TRACE: --unshare-all \
-TRACE: --unshare-user \
-TRACE: --uid 1000 \
-TRACE: --gid 1000 \
-TRACE: --tmpfs / \
-TRACE: --chdir / \
-TRACE: --ro-bind /nix/store /nix/store \
-TRACE: --tmpfs /usr/lib/systemd \
-TRACE: --proc /proc \
-TRACE: --dev /dev \
-TRACE: --bind /tmp/artifacts-cli/prompt-artifact-one /tmp/artifacts-cli/prompt-artifact-one \
-TRACE: --bind /tmp/artifacts-cli/out-artifact-one /tmp/artifacts-cli/out-artifact-one \
-TRACE: --ro-bind /nix/store/[hash]-test_generator_one.sh/bin /nix/store/[hash]-test_generator_one.sh/bin \
-TRACE: --ro-bind /bin /bin \
-TRACE: --ro-bind /usr/bin /usr/bin \
-TRACE: --ro-bind /tmp/artifacts-cli/artifacts-cli-passwd-3029b01ac1f84b21.txt /etc/passwd \
-TRACE: -- /bin/sh /nix/store/[hash]-test_generator_one.sh/bin/test_generator_one.sh
+🐛 run bwrap with command /nix/store/[hash]-test_generator_one.sh/bin/test_generator_one.sh
+💬 bwrap \
+💬 --unshare-all \
+💬 --unshare-user \
+💬 --uid 1000 \
+💬 --gid 1000 \
+💬 --tmpfs / \
+💬 --chdir / \
+💬 --ro-bind /nix/store /nix/store \
+💬 --tmpfs /usr/lib/systemd \
+💬 --proc /proc \
+💬 --dev /dev \
+💬 --bind /tmp/artifacts-cli/prompt-artifact-one /tmp/artifacts-cli/prompt-artifact-one \
+💬 --bind /tmp/artifacts-cli/out-artifact-one /tmp/artifacts-cli/out-artifact-one \
+💬 --ro-bind /nix/store/[hash]-test_generator_one.sh/bin /nix/store/[hash]-test_generator_one.sh/bin \
+💬 --ro-bind /bin /bin \
+💬 --ro-bind /usr/bin /usr/bin \
+💬 --ro-bind /tmp/artifacts-cli/artifacts-cli-passwd-3029b01ac1f84b21.txt /etc/passwd \
+💬 -- /bin/sh /nix/store/[hash]-test_generator_one.sh/bin/test_generator_one.sh
 💾 serialize secrets
 Environment variables:
 out=/tmp/artifacts-cli/out-artifact-one
@@ -146,9 +146,9 @@ artifact_context=homemanager
 one
 =========================
 [generate]
-DEBUG:     files to produce -> 1 files
-DEBUG:       - second-secret => /run/artifacts/some-test-name/artifact-two/second-secret
-DEBUG:     running check_serialization: env inputs="/tmp/artifacts-cli/inputs-artifact-two" username="test" artifact="artifact-two" artifact_context="homemanager" /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/simple-home-manager/test_check.sh
+🐛     files to produce -> 1 files
+🐛       - second-secret => /run/artifacts/some-test-name/artifact-two/second-secret
+🐛     running check_serialization: env inputs="/tmp/artifacts-cli/inputs-artifact-two" username="test" artifact="artifact-two" artifact_context="homemanager" /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/simple-home-manager/test_check.sh
 Environment variables:
 inputs=/tmp/artifacts-cli/inputs-artifact-two
 config=/tmp/artifacts-cli/config-artifact-two/config.json
@@ -160,27 +160,27 @@ artifact_context=homemanager
 {}
 --- End /tmp/artifacts-cli/config-artifact-two/config.json ---
 
-DEBUG:     check_serialization: failed with status exit status: 1 -> continuing with generation
+🐛     check_serialization: failed with status exit status: 1 -> continuing with generation
 ⚡ test/artifact-two
-DEBUG: run bwrap with command /nix/store/[hash]-test_generator_two.sh/bin/test_generator_two.sh
-TRACE: bwrap \
-TRACE: --unshare-all \
-TRACE: --unshare-user \
-TRACE: --uid 1000 \
-TRACE: --gid 1000 \
-TRACE: --tmpfs / \
-TRACE: --chdir / \
-TRACE: --ro-bind /nix/store /nix/store \
-TRACE: --tmpfs /usr/lib/systemd \
-TRACE: --proc /proc \
-TRACE: --dev /dev \
-TRACE: --bind /tmp/artifacts-cli/prompt-artifact-two /tmp/artifacts-cli/prompt-artifact-two \
-TRACE: --bind /tmp/artifacts-cli/out-artifact-two /tmp/artifacts-cli/out-artifact-two \
-TRACE: --ro-bind /nix/store/[hash]-test_generator_two.sh/bin /nix/store/[hash]-test_generator_two.sh/bin \
-TRACE: --ro-bind /bin /bin \
-TRACE: --ro-bind /usr/bin /usr/bin \
-TRACE: --ro-bind /tmp/artifacts-cli/artifacts-cli-passwd-8e43491af6eee0ab.txt /etc/passwd \
-TRACE: -- /bin/sh /nix/store/[hash]-test_generator_two.sh/bin/test_generator_two.sh
+🐛 run bwrap with command /nix/store/[hash]-test_generator_two.sh/bin/test_generator_two.sh
+💬 bwrap \
+💬 --unshare-all \
+💬 --unshare-user \
+💬 --uid 1000 \
+💬 --gid 1000 \
+💬 --tmpfs / \
+💬 --chdir / \
+💬 --ro-bind /nix/store /nix/store \
+💬 --tmpfs /usr/lib/systemd \
+💬 --proc /proc \
+💬 --dev /dev \
+💬 --bind /tmp/artifacts-cli/prompt-artifact-two /tmp/artifacts-cli/prompt-artifact-two \
+💬 --bind /tmp/artifacts-cli/out-artifact-two /tmp/artifacts-cli/out-artifact-two \
+💬 --ro-bind /nix/store/[hash]-test_generator_two.sh/bin /nix/store/[hash]-test_generator_two.sh/bin \
+💬 --ro-bind /bin /bin \
+💬 --ro-bind /usr/bin /usr/bin \
+💬 --ro-bind /tmp/artifacts-cli/artifacts-cli-passwd-8e43491af6eee0ab.txt /etc/passwd \
+💬 -- /bin/sh /nix/store/[hash]-test_generator_two.sh/bin/test_generator_two.sh
 💾 serialize secrets
 Environment variables:
 out=/tmp/artifacts-cli/out-artifact-two

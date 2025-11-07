@@ -14,76 +14,76 @@ info:
 success: false
 exit_code: 1
 ----- stdout -----
-DEBUG: Running nix build on /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/missing_generator
-TRACE: /run/current-system/sw/bin/nix build --impure -I flake=/home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/missing_generator --no-link --print-out-paths --expr 'let
-TRACE:   system = "x86_64-linux";
-TRACE:   filterAttrs =
-TRACE:     pred: set:
-TRACE:     builtins.removeAttrs set (builtins.filter (name: !pred name set.${name}) (builtins.attrNames set));
-TRACE:   flake = builtins.getFlake (toString <flake>);
-TRACE:   pkgs = flake.inputs.nixpkgs.legacyPackages.${system};
-TRACE:   nixosConfigurations = builtins.attrNames (
-TRACE:     filterAttrs (
-TRACE:       machine: configuration: builtins.hasAttr "artifacts" configuration.options
-TRACE:     ) flake.nixosConfigurations
-TRACE:   );
-TRACE:   homeConfigurations =
-TRACE:     let
-TRACE:       hc = if builtins.hasAttr "homeConfigurations" flake then flake.homeConfigurations else { };
-TRACE:     in
-TRACE:     builtins.attrNames (
-TRACE:       filterAttrs (user: configuration: builtins.hasAttr "artifacts" configuration.options) hc
-TRACE:     );
-TRACE:   nixos = map (name: {
-TRACE:     machine = name;
-TRACE:     artifacts = flake.nixosConfigurations.${name}.config.artifacts.store;
-TRACE:     config =
-TRACE:       if (builtins.hasAttr "config" flake.nixosConfigurations.${name}.config.artifacts) then
-TRACE:         flake.nixosConfigurations.${name}.config.artifacts.config
-TRACE:       else
-TRACE:         { };
-TRACE:   }) nixosConfigurations;
-TRACE:   home = map (name: {
-TRACE:     user = name;
-TRACE:     artifacts = flake.homeConfigurations.${name}.config.artifacts.store;
-TRACE:     config =
-TRACE:       if (builtins.hasAttr "config" flake.homeConfigurations.${name}.config.artifacts) then
-TRACE:         flake.homeConfigurations.${name}.config.artifacts.config
-TRACE:       else
-TRACE:         { };
-TRACE:   }) homeConfigurations;
-TRACE:   make = { inherit nixos home; };
-TRACE: in
-TRACE: pkgs.writeText "test.json" (builtins.toJSON make)
-TRACE: '
-DEBUG: make config (pretty):
-DEBUG: {
-DEBUG:   "home": [],
-DEBUG:   "nixos": [
-DEBUG:     {
-DEBUG:       "artifacts": {
-DEBUG:         "artifact": {
-DEBUG:           "files": {
-DEBUG:             "first-secret": {
-DEBUG:               "group": "root",
-DEBUG:               "mode": "0400",
-DEBUG:               "name": "first-secret",
-DEBUG:               "owner": "root",
-DEBUG:               "path": "/run/secrets/first-secret"
-DEBUG:             }
-DEBUG:           },
-DEBUG:           "generator": null,
-DEBUG:           "name": "artifact",
-DEBUG:           "prompts": {},
-DEBUG:           "serialization": "test",
-DEBUG:           "shared": false
-DEBUG:         }
-DEBUG:       },
-DEBUG:       "config": {},
-DEBUG:       "machine": "machine-name"
-DEBUG:     }
-DEBUG:   ]
-DEBUG: }
+🐛 Running nix build on /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/missing_generator
+💬 /run/current-system/sw/bin/nix build --impure -I flake=/home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/missing_generator --no-link --print-out-paths --expr 'let
+💬   system = "x86_64-linux";
+💬   filterAttrs =
+💬     pred: set:
+💬     builtins.removeAttrs set (builtins.filter (name: !pred name set.${name}) (builtins.attrNames set));
+💬   flake = builtins.getFlake (toString <flake>);
+💬   pkgs = flake.inputs.nixpkgs.legacyPackages.${system};
+💬   nixosConfigurations = builtins.attrNames (
+💬     filterAttrs (
+💬       machine: configuration: builtins.hasAttr "artifacts" configuration.options
+💬     ) flake.nixosConfigurations
+💬   );
+💬   homeConfigurations =
+💬     let
+💬       hc = if builtins.hasAttr "homeConfigurations" flake then flake.homeConfigurations else { };
+💬     in
+💬     builtins.attrNames (
+💬       filterAttrs (user: configuration: builtins.hasAttr "artifacts" configuration.options) hc
+💬     );
+💬   nixos = map (name: {
+💬     machine = name;
+💬     artifacts = flake.nixosConfigurations.${name}.config.artifacts.store;
+💬     config =
+💬       if (builtins.hasAttr "config" flake.nixosConfigurations.${name}.config.artifacts) then
+💬         flake.nixosConfigurations.${name}.config.artifacts.config
+💬       else
+💬         { };
+💬   }) nixosConfigurations;
+💬   home = map (name: {
+💬     user = name;
+💬     artifacts = flake.homeConfigurations.${name}.config.artifacts.store;
+💬     config =
+💬       if (builtins.hasAttr "config" flake.homeConfigurations.${name}.config.artifacts) then
+💬         flake.homeConfigurations.${name}.config.artifacts.config
+💬       else
+💬         { };
+💬   }) homeConfigurations;
+💬   make = { inherit nixos home; };
+💬 in
+💬 pkgs.writeText "test.json" (builtins.toJSON make)
+💬 '
+💬 make config (pretty):
+💬 {
+💬   "home": [],
+💬   "nixos": [
+💬     {
+💬       "artifacts": {
+💬         "artifact": {
+💬           "files": {
+💬             "first-secret": {
+💬               "group": "root",
+💬               "mode": "0400",
+💬               "name": "first-secret",
+💬               "owner": "root",
+💬               "path": "/run/secrets/first-secret"
+💬             }
+💬           },
+💬           "generator": null,
+💬           "name": "artifact",
+💬           "prompts": {},
+💬           "serialization": "test",
+💬           "shared": false
+💬         }
+💬       },
+💬       "config": {},
+💬       "machine": "machine-name"
+💬     }
+💬   ]
+💬 }
 
 ----- stderr -----
-ERROR: parsing make config /nix/store/[hash]-test.json: generator must be set at line 1 column 261
+❌ parsing make config /nix/store/[hash]-test.json: generator must be set at line 1 column 261

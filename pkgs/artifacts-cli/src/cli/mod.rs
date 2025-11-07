@@ -1,62 +1,11 @@
 pub mod args;
 pub mod commands;
+mod logging;
 
 use crate::config::nix::build_make_from_flake;
 use anyhow::Result;
 use clap::Parser;
-use log::{Level, LevelFilter, Metadata, Record};
-use std::io::{self, Write};
-
-struct StdSplitLogger;
-
-impl log::Log for StdSplitLogger {
-    fn enabled(&self, _metadata: &Metadata) -> bool {
-        true
-    }
-
-    fn log(&self, record: &Record) {
-        if !self.enabled(record.metadata()) {
-            return;
-        }
-        match record.level() {
-            Level::Error => {
-                let msg = record.args().to_string();
-                for line in msg.lines() {
-                    let _ = writeln!(io::stderr(), "ERROR: {}", line);
-                }
-            }
-            Level::Warn => {
-                let msg = record.args().to_string();
-                for line in msg.lines() {
-                    let _ = writeln!(io::stdout(), "WARNING: {}", line);
-                }
-            }
-            Level::Debug => {
-                let msg = record.args().to_string();
-                for line in msg.lines() {
-                    let _ = writeln!(io::stdout(), "DEBUG: {}", line);
-                }
-            }
-            Level::Info => {
-                let _ = writeln!(io::stdout(), "{}", record.args());
-            }
-            Level::Trace => {
-                let msg = record.args().to_string();
-                for line in msg.lines() {
-                    let _ = writeln!(io::stdout(), "TRACE: {}", line);
-                }
-            }
-        }
-    }
-    fn flush(&self) {}
-}
-
-static LOGGER: StdSplitLogger = StdSplitLogger;
-
-fn init_logger() {
-    // Set once; ignore error if already set
-    let _ = log::set_logger(&LOGGER).map(|()| log::set_max_level(LevelFilter::Debug));
-}
+use log::LevelFilter;
 
 fn resolve_flake_path(p: &Option<std::path::PathBuf>) -> std::path::PathBuf {
     p.clone().unwrap_or_else(|| {
@@ -93,8 +42,10 @@ fn resolve_backend_toml(flake_path: &std::path::Path) -> anyhow::Result<std::pat
 }
 
 pub fn run() -> Result<()> {
-    init_logger();
     let cli = args::Cli::parse();
+
+    // Initialize logger based on emoji preference
+    logging::init_logger(!cli.no_emoji);
 
     // Configure log level based on CLI argument (default is Debug from init, but override if provided)
     let level_filter = match cli.log_level {

@@ -17,6 +17,10 @@ pub struct Cli {
     #[arg(long = "log-level", value_enum, default_value_t = LogLevel::Info)]
     pub log_level: LogLevel,
 
+    /// don't use emojis
+    #[arg(long = "no-emoji")]
+    pub no_emoji: bool,
+
     #[command(subcommand)]
     pub command: Command,
 }
