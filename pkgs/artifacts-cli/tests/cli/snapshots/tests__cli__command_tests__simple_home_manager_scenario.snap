@@ -4,19 +4,18 @@ info:
   program: artifacts
   args:
     - "--log-level=trace"
-    - regenerate
-    - /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/bigger_setup
-    - "--machine=machine-one"
+    - generate
+    - /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/simple-home-manager
   env:
-    NIXOS_ARTIFACTS_BACKEND_CONFIG: /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/bigger_setup/backend.toml
+    NIXOS_ARTIFACTS_BACKEND_CONFIG: /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/simple-home-manager/backend.toml
     TMPDIR: /tmp/artifacts-cli
   stdin: ""
 ---
 success: true
 exit_code: 0
 ----- stdout -----
-DEBUG: Running nix build on /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/bigger_setup
-TRACE: /run/current-system/sw/bin/nix build --impure -I flake=/home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/bigger_setup --no-link --print-out-paths --expr 'let
+DEBUG: Running nix build on /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/simple-home-manager
+TRACE: /run/current-system/sw/bin/nix build --impure -I flake=/home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/simple-home-manager --no-link --print-out-paths --expr 'let
 TRACE:   system = "x86_64-linux";
 TRACE:   filterAttrs =
 TRACE:     pred: set:
@@ -59,90 +58,59 @@ TRACE: pkgs.writeText "test.json" (builtins.toJSON make)
 TRACE: '
 DEBUG: make config (pretty):
 DEBUG: {
-DEBUG:   "home": [],
-DEBUG:   "nixos": [
+DEBUG:   "home": [
 DEBUG:     {
 DEBUG:       "artifacts": {
 DEBUG:         "artifact-one": {
 DEBUG:           "files": {
 DEBUG:             "first-secret": {
-DEBUG:               "group": "root",
 DEBUG:               "mode": "0400",
 DEBUG:               "name": "first-secret",
-DEBUG:               "owner": "root",
-DEBUG:               "path": "/run/secrets/first-secret"
+DEBUG:               "path": "/run/artifacts/some-test-name/artifact-one/first-secret"
 DEBUG:             }
 DEBUG:           },
 DEBUG:           "generator": "/nix/store/[hash]-test_generator_one.sh",
 DEBUG:           "name": "artifact-one",
 DEBUG:           "prompts": {},
-DEBUG:           "serialization": "test",
-DEBUG:           "shared": false
+DEBUG:           "serialization": "test"
 DEBUG:         },
 DEBUG:         "artifact-two": {
 DEBUG:           "files": {
 DEBUG:             "second-secret": {
-DEBUG:               "group": "root",
 DEBUG:               "mode": "0400",
 DEBUG:               "name": "second-secret",
-DEBUG:               "owner": "root",
-DEBUG:               "path": "/run/secrets/second-secret"
+DEBUG:               "path": "/run/artifacts/some-test-name/artifact-two/second-secret"
 DEBUG:             }
 DEBUG:           },
 DEBUG:           "generator": "/nix/store/[hash]-test_generator_two.sh",
 DEBUG:           "name": "artifact-two",
 DEBUG:           "prompts": {},
-DEBUG:           "serialization": "test",
-DEBUG:           "shared": false
+DEBUG:           "serialization": "test"
 DEBUG:         }
 DEBUG:       },
 DEBUG:       "config": {},
-DEBUG:       "machine": "machine-one"
-DEBUG:     },
-DEBUG:     {
-DEBUG:       "artifacts": {
-DEBUG:         "artifact-one": {
-DEBUG:           "files": {
-DEBUG:             "first-secret": {
-DEBUG:               "group": "root",
-DEBUG:               "mode": "0400",
-DEBUG:               "name": "first-secret",
-DEBUG:               "owner": "root",
-DEBUG:               "path": "/run/secrets/first-secret"
-DEBUG:             }
-DEBUG:           },
-DEBUG:           "generator": "/nix/store/[hash]-test_generator_one.sh",
-DEBUG:           "name": "artifact-one",
-DEBUG:           "prompts": {},
-DEBUG:           "serialization": "test",
-DEBUG:           "shared": false
-DEBUG:         },
-DEBUG:         "artifact-two": {
-DEBUG:           "files": {
-DEBUG:             "second-secret": {
-DEBUG:               "group": "root",
-DEBUG:               "mode": "0400",
-DEBUG:               "name": "second-secret",
-DEBUG:               "owner": "root",
-DEBUG:               "path": "/run/secrets/second-secret"
-DEBUG:             }
-DEBUG:           },
-DEBUG:           "generator": "/nix/store/[hash]-test_generator_two.sh",
-DEBUG:           "name": "artifact-two",
-DEBUG:           "prompts": {},
-DEBUG:           "serialization": "test",
-DEBUG:           "shared": false
-DEBUG:         }
-DEBUG:       },
-DEBUG:       "config": {},
-DEBUG:       "machine": "machine-two"
+DEBUG:       "user": "test"
 DEBUG:     }
-DEBUG:   ]
+DEBUG:   ],
+DEBUG:   "nixos": []
 DEBUG: }
-[regenerate]
+[generate]
 DEBUG:     files to produce -> 1 files
-DEBUG:       - first-secret => /run/secrets/first-secret owner=root group=root
-⚡ machine-one/artifact-one
+DEBUG:       - first-secret => /run/artifacts/some-test-name/artifact-one/first-secret
+DEBUG:     running check_serialization: env inputs="/tmp/artifacts-cli/inputs-artifact-one" username="test" artifact="artifact-one" artifact_context="homemanager" /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/simple-home-manager/test_check.sh
+Environment variables:
+inputs=/tmp/artifacts-cli/inputs-artifact-one
+config=/tmp/artifacts-cli/config-artifact-one/config.json
+machine=
+artifact=artifact-one
+username=test
+artifact_context=homemanager
+--- Begin /tmp/artifacts-cli/config-artifact-one/config.json ---
+{}
+--- End /tmp/artifacts-cli/config-artifact-one/config.json ---
+
+DEBUG:     check_serialization: failed with status exit status: 1 -> continuing with generation
+⚡ test/artifact-one
 DEBUG: run bwrap with command /nix/store/[hash]-test_generator_one.sh/bin/test_generator_one.sh
 TRACE: bwrap \
 TRACE: --unshare-all \
@@ -166,10 +134,10 @@ TRACE: -- /bin/sh /nix/store/[hash]-test_generator_one.sh/bin/test_generator_one
 Environment variables:
 out=/tmp/artifacts-cli/out-artifact-one
 config=/tmp/artifacts-cli/config/config.json
-machine=machine-one
+machine=
 artifact=artifact-one
-username=
-artifact_context=nixos
+username=test
+artifact_context=homemanager
 --- Begin /tmp/artifacts-cli/config/config.json ---
 {}
 --- End /tmp/artifacts-cli/config/config.json ---
@@ -177,10 +145,23 @@ artifact_context=nixos
 === Content of /tmp/artifacts-cli/out-artifact-one/first-secret ===
 one
 =========================
-[regenerate]
+[generate]
 DEBUG:     files to produce -> 1 files
-DEBUG:       - second-secret => /run/secrets/second-secret owner=root group=root
-⚡ machine-one/artifact-two
+DEBUG:       - second-secret => /run/artifacts/some-test-name/artifact-two/second-secret
+DEBUG:     running check_serialization: env inputs="/tmp/artifacts-cli/inputs-artifact-two" username="test" artifact="artifact-two" artifact_context="homemanager" /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/simple-home-manager/test_check.sh
+Environment variables:
+inputs=/tmp/artifacts-cli/inputs-artifact-two
+config=/tmp/artifacts-cli/config-artifact-two/config.json
+machine=
+artifact=artifact-two
+username=test
+artifact_context=homemanager
+--- Begin /tmp/artifacts-cli/config-artifact-two/config.json ---
+{}
+--- End /tmp/artifacts-cli/config-artifact-two/config.json ---
+
+DEBUG:     check_serialization: failed with status exit status: 1 -> continuing with generation
+⚡ test/artifact-two
 DEBUG: run bwrap with command /nix/store/[hash]-test_generator_two.sh/bin/test_generator_two.sh
 TRACE: bwrap \
 TRACE: --unshare-all \
@@ -204,10 +185,10 @@ TRACE: -- /bin/sh /nix/store/[hash]-test_generator_two.sh/bin/test_generator_two
 Environment variables:
 out=/tmp/artifacts-cli/out-artifact-two
 config=/tmp/artifacts-cli/config/config.json
-machine=machine-one
+machine=
 artifact=artifact-two
-username=
-artifact_context=nixos
+username=test
+artifact_context=homemanager
 --- Begin /tmp/artifacts-cli/config/config.json ---
 {}
 --- End /tmp/artifacts-cli/config/config.json ---
@@ -215,7 +196,5 @@ artifact_context=nixos
 === Content of /tmp/artifacts-cli/out-artifact-two/second-secret ===
 two
 =========================
-✅ machine-two/artifact-one
-✅ machine-two/artifact-two
 
 ----- stderr -----

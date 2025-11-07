@@ -90,7 +90,8 @@ pub fn run_generate_workflow(
             print_files(artifact, &make.make_base);
 
             if check_if_artifact_exists {
-                let skip_rest = run_check_serialization(artifact, machine, &backend, &make)?;
+                let skip_rest =
+                    run_check_serialization(artifact, machine, &backend, &make, "nixos")?;
                 if skip_rest {
                     println!("✅ {}/{}", machine, artifact.name);
                     continue;
@@ -114,12 +115,13 @@ pub fn run_generate_workflow(
                 &make.make_base.clone(),
                 &prompt.path_buf,
                 &out.path_buf,
+                "nixos",
             )
             .context("running generator script")?;
 
             verify_generated_files(artifact, &out.path_buf)?;
 
-            run_serialize(artifact, &backend, &out.path_buf, machine, &make)?
+            run_serialize(artifact, &backend, &out.path_buf, machine, &make, "nixos")?
         }
     }
 
@@ -136,7 +138,8 @@ pub fn run_generate_workflow(
             print_files(artifact, &make.make_base);
 
             if check_if_artifact_exists {
-                let skip_rest = run_check_serialization(artifact, user, &backend, &make)?;
+                let skip_rest =
+                    run_check_serialization(artifact, user, &backend, &make, "homemanager")?;
                 if skip_rest {
                     println!("✅ {}/{}", user, artifact.name);
                     continue;
@@ -160,12 +163,20 @@ pub fn run_generate_workflow(
                 &make.make_base.clone(),
                 &prompt.path_buf,
                 &out.path_buf,
+                "homemanager",
             )
             .context("running generator script")?;
 
             verify_generated_files(artifact, &out.path_buf)?;
 
-            run_serialize(artifact, &backend, &out.path_buf, user, &make)?
+            run_serialize(
+                artifact,
+                &backend,
+                &out.path_buf,
+                user,
+                &make,
+                "homemanager",
+            )?
         }
     }
     Ok(())
@@ -176,6 +187,7 @@ pub(crate) fn run_check_serialization(
     machine: &str,
     backend: &BackendConfiguration,
     make: &MakeConfiguration,
+    context: &str,
 ) -> anyhow::Result<bool> {
     let backend_name = &artifact.serialization;
     let backend_entry = backend.get_backend(backend_name)?;
@@ -213,19 +225,34 @@ pub(crate) fn run_check_serialization(
     let check_path = resolve_path(&backend.base_path, &backend_entry.check_serialization);
     let check_abs = fs::canonicalize(&check_path).unwrap_or_else(|_| check_path.clone());
 
+    let target_label = if context == "homemanager" {
+        "username"
+    } else {
+        "machine"
+    };
     debug!(
-        "    running check_serialization: env inputs=\"{}\" machine=\"{}\" artifact=\"{}\" {}",
+        "    running check_serialization: env inputs=\"{}\" {}=\"{}\" artifact=\"{}\" artifact_context=\"{}\" {}",
         inputs.path_buf.display(),
+        target_label,
         machine,
         artifact.name,
+        context,
         check_abs.display()
     );
 
-    let status = std::process::Command::new(&check_abs)
-        .env("inputs", &inputs.path_buf)
+    let mut cmd = std::process::Command::new(&check_abs);
+    cmd.env("inputs", &inputs.path_buf)
         .env("config", &config_file)
-        .env("machine", machine)
-        .env("artifact", &artifact.name)
+        .env("artifact_context", context)
+        .env("artifact", &artifact.name);
+
+    if context == "homemanager" {
+        cmd.env("username", machine);
+    } else {
+        cmd.env("machine", machine);
+    }
+
+    let status = cmd
         .status()
         .with_context(|| format!("running check_serialization {}", check_abs.display()))?;
 

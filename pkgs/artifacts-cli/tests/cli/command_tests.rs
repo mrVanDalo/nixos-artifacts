@@ -432,8 +432,8 @@ fn artifact_name_scenario() {
     assert_cmd_snapshot!(cmd);
 }
 
-//#[test]
-//#[serial]
+#[test]
+#[serial]
 #[allow(dead_code)]
 fn simple_home_manager_scenario() {
     let root = project_root();

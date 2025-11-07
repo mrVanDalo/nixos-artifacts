@@ -120,7 +120,18 @@ DEBUG:       - first.secret => /run/secrets/first.secret owner=root group=root
 DEBUG:       - forthSecret => /run/secrets/forthSecret owner=root group=root
 DEBUG:       - second_secret => /run/secrets/second_secret owner=root group=root
 DEBUG:       - third-secret => /run/secrets/third-secret owner=root group=root
-DEBUG:     running check_serialization: env inputs="/tmp/artifacts-cli/inputs-artifact.one" machine="machine-name" artifact="artifact.one" /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/artifact_names/test_check.sh
+DEBUG:     running check_serialization: env inputs="/tmp/artifacts-cli/inputs-artifact.one" machine="machine-name" artifact="artifact.one" artifact_context="nixos" /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/artifact_names/test_check.sh
+Environment variables:
+inputs=/tmp/artifacts-cli/inputs-artifact.one
+config=/tmp/artifacts-cli/config-artifact.one/config.json
+machine=machine-name
+artifact=artifact.one
+username=
+artifact_context=nixos
+--- Begin /tmp/artifacts-cli/config-artifact.one/config.json ---
+{}
+--- End /tmp/artifacts-cli/config-artifact.one/config.json ---
+
 fifth secret
 first.secret
 forthSecret
@@ -148,6 +159,17 @@ TRACE: --ro-bind /usr/bin /usr/bin \
 TRACE: --ro-bind /tmp/artifacts-cli/artifacts-cli-passwd-70cab021bfe35e1e.txt /etc/passwd \
 TRACE: -- /bin/sh /nix/store/[hash]-test_generator.sh/bin/test_generator.sh
 💾 serialize secrets
+Environment variables:
+out=/tmp/artifacts-cli/out-artifact.one
+config=/tmp/artifacts-cli/config/config.json
+machine=machine-name
+artifact=artifact.one
+username=
+artifact_context=nixos
+--- Begin /tmp/artifacts-cli/config/config.json ---
+{}
+--- End /tmp/artifacts-cli/config/config.json ---
+
 === Content of /tmp/artifacts-cli/out-artifact.one/fifth secret ===
 test
 =========================

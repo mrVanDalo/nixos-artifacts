@@ -95,7 +95,18 @@ DEBUG: }
 DEBUG:     files to produce -> 2 files
 DEBUG:       - simple-secrets => /run/secrets/simple-secrets owner=deployer group=deployer
 DEBUG:       - very-simple-secrets => /run/secrets/very-simple-secrets owner=root group=root
-DEBUG:     running check_serialization: env inputs="/tmp/artifacts-cli/inputs-test-artifact" machine="missing-files" artifact="test-artifact" /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/missing-files/test_check.sh
+DEBUG:     running check_serialization: env inputs="/tmp/artifacts-cli/inputs-test-artifact" machine="missing-files" artifact="test-artifact" artifact_context="nixos" /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/missing-files/test_check.sh
+Environment variables:
+inputs=/tmp/artifacts-cli/inputs-test-artifact
+config=/tmp/artifacts-cli/config-test-artifact/config.json
+machine=missing-files
+artifact=test-artifact
+username=
+artifact_context=nixos
+--- Begin /tmp/artifacts-cli/config-test-artifact/config.json ---
+{}
+--- End /tmp/artifacts-cli/config-test-artifact/config.json ---
+
 DEBUG:     check_serialization: failed with status exit status: 1 -> continuing with generation
 ⚡ missing-files/test-artifact
 DEBUG: run bwrap with command /nix/store/[hash]-test_generator_missing_files.sh/bin/test_generator_missing_files.sh

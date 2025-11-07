@@ -20,6 +20,7 @@ pub fn run_serialize(
     out: &Path,
     target_name: &str,
     make: &MakeConfiguration,
+    context: &str,
 ) -> Result<()> {
     let backend_name = &artifact.serialization;
     let entry = backend.get_backend(backend_name)?;
@@ -38,13 +39,20 @@ pub fn run_serialize(
     fs::write(&config_file, &config_text)
         .with_context(|| format!("writing {}", config_file.display()))?;
 
-    std::process::Command::new("sh")
-        .arg(&ser_abs)
+    let mut cmd = std::process::Command::new("sh");
+    cmd.arg(&ser_abs)
         .env("out", out)
         .env("config", &config_file)
-        .env("machine", target_name)
-        .env("artifact", &artifact.name)
-        .status()
+        .env("artifact_context", context)
+        .env("artifact", &artifact.name);
+
+    if context == "homemanager" {
+        cmd.env("username", target_name);
+    } else {
+        cmd.env("machine", target_name);
+    }
+
+    cmd.status()
         .with_context(|| format!("running serialize {}", ser_abs.display()))?;
     Ok(())
 }

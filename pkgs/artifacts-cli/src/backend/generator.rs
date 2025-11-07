@@ -52,6 +52,7 @@ pub fn run_generator_script(
     make_base: &Path,
     prompts: &Path,
     out: &Path,
+    context: &str,
 ) -> Result<()> {
     let generator_script = artifact.generator.as_ref();
     let generator_script_path = resolve_path(make_base, generator_script);
@@ -145,10 +146,22 @@ pub fn run_generator_script(
     let prompts_quoted = escape_single_quoted(&prompts.display().to_string());
     let machine_quoted = escape_single_quoted(machine);
     let artifact_quoted = escape_single_quoted(&artifact.name);
-    let nix_shell_run_command = format!(
-        "export out='{}'; export prompts='{}'; export machine='{}'; export artifact='{}'; {}",
-        out_quoted, prompts_quoted, machine_quoted, artifact_quoted, bwrap_command
-    );
+    let context_quoted = escape_single_quoted(context);
+
+    // Build env exports depending on context
+    let env_exports = if context == "homemanager" {
+        format!(
+            "export out='{}'; export prompts='{}'; export artifact_context='{}'; export username='{}'; export artifact='{}';",
+            out_quoted, prompts_quoted, context_quoted, machine_quoted, artifact_quoted
+        )
+    } else {
+        format!(
+            "export out='{}'; export prompts='{}'; export artifact_context='{}'; export machine='{}'; export artifact='{}';",
+            out_quoted, prompts_quoted, context_quoted, machine_quoted, artifact_quoted
+        )
+    };
+
+    let nix_shell_run_command = format!("{} {}", env_exports, bwrap_command);
 
     let mut generator_command = std::process::Command::new(nix_shell);
     generator_command

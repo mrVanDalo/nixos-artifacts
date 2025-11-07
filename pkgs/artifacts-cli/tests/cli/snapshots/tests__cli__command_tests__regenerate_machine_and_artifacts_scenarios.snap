@@ -164,6 +164,17 @@ TRACE: --ro-bind /usr/bin /usr/bin \
 TRACE: --ro-bind /tmp/artifacts-cli/artifacts-cli-passwd-3029b01ac1f84b21.txt /etc/passwd \
 TRACE: -- /bin/sh /nix/store/[hash]-test_generator_one.sh/bin/test_generator_one.sh
 💾 serialize secrets
+Environment variables:
+out=/tmp/artifacts-cli/out-artifact-one
+config=/tmp/artifacts-cli/config/config.json
+machine=machine-one
+artifact=artifact-one
+username=
+artifact_context=nixos
+--- Begin /tmp/artifacts-cli/config/config.json ---
+{}
+--- End /tmp/artifacts-cli/config/config.json ---
+
 === Content of /tmp/artifacts-cli/out-artifact-one/first-secret ===
 one
 =========================
