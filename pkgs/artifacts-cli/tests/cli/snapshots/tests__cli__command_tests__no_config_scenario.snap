@@ -15,8 +15,7 @@ success: true
 exit_code: 0
 ----- stdout -----
 DEBUG: Running nix build on /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/no_config
-TRACE: /run/current-system/sw/bin/nix build --impure -I flake=/home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/no_config --no-link --print-out-paths --expr '
-TRACE: let
+TRACE: /run/current-system/sw/bin/nix build --impure -I flake=/home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/no_config --no-link --print-out-paths --expr 'let
 TRACE:   system = "x86_64-linux";
 TRACE:   filterAttrs =
 TRACE:     pred: set:
@@ -29,11 +28,11 @@ TRACE:       machine: configuration: builtins.hasAttr "artifacts" configuration.
 TRACE:     ) flake.nixosConfigurations
 TRACE:   );
 TRACE:   homeConfigurations =
-TRACE:     let hc = if builtins.hasAttr "homeConfigurations" flake then flake.homeConfigurations else {};
-TRACE:     in builtins.attrNames (
-TRACE:       filterAttrs (
-TRACE:         user: configuration: builtins.hasAttr "artifacts" configuration.options
-TRACE:       ) hc
+TRACE:     let
+TRACE:       hc = if builtins.hasAttr "homeConfigurations" flake then flake.homeConfigurations else { };
+TRACE:     in
+TRACE:     builtins.attrNames (
+TRACE:       filterAttrs (user: configuration: builtins.hasAttr "artifacts" configuration.options) hc
 TRACE:     );
 TRACE:   nixos = map (name: {
 TRACE:     machine = name;

@@ -6,48 +6,10 @@ pub fn build_make_from_flake(flake_path: &std::path::Path) -> anyhow::Result<std
     let nix_bin = which::which("nix")
         .map_err(|_| anyhow::anyhow!("'nix' command not found in PATH. Please install Nix."))?;
     let mut command = std::process::Command::new(&nix_bin);
-    let expr = r#"
-let
-  system = "x86_64-linux";
-  filterAttrs =
-    pred: set:
-    builtins.removeAttrs set (builtins.filter (name: !pred name set.${name}) (builtins.attrNames set));
-  flake = builtins.getFlake (toString <flake>);
-  pkgs = flake.inputs.nixpkgs.legacyPackages.${system};
-  nixosConfigurations = builtins.attrNames (
-    filterAttrs (
-      machine: configuration: builtins.hasAttr "artifacts" configuration.options
-    ) flake.nixosConfigurations
-  );
-  homeConfigurations =
-    let hc = if builtins.hasAttr "homeConfigurations" flake then flake.homeConfigurations else {};
-    in builtins.attrNames (
-      filterAttrs (
-        user: configuration: builtins.hasAttr "artifacts" configuration.options
-      ) hc
-    );
-  nixos = map (name: {
-    machine = name;
-    artifacts = flake.nixosConfigurations.${name}.config.artifacts.store;
-    config =
-      if (builtins.hasAttr "config" flake.nixosConfigurations.${name}.config.artifacts) then
-        flake.nixosConfigurations.${name}.config.artifacts.config
-      else
-        { };
-  }) nixosConfigurations;
-  home = map (name: {
-    user = name;
-    artifacts = flake.homeConfigurations.${name}.config.artifacts.store;
-    config =
-      if (builtins.hasAttr "config" flake.homeConfigurations.${name}.config.artifacts) then
-        flake.homeConfigurations.${name}.config.artifacts.config
-      else
-        { };
-  }) homeConfigurations;
-  make = { inherit nixos home; };
-in
-pkgs.writeText "test.json" (builtins.toJSON make)
-"#;
+    let expr = include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/src/config/make_expr.nix"
+    ));
     // Prepare args using string_vec! so flags and their values stay adjacent in logs
     let mut arguments: Vec<String> = string_vec!["build"];
     arguments.extend(string_vec!["--impure"]);
