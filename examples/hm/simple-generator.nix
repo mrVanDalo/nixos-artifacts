@@ -8,7 +8,7 @@
 
     # used to generate secrets based for rotation
     generator = pkgs.writers.writeBash "generate-attic" ''
-      age-keygen > $out/identities
+      ${pkgs.age}/bin/age-keygen > $out/identities
     '';
   };
 
