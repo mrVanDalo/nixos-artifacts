@@ -114,12 +114,41 @@ exit_code: 0
 💬   ]
 💬 }
 [generate]
-🐛     files to produce -> 5 files
-🐛       - fifth secret => /run/secrets/fifth secret owner=root group=root
-🐛       - first.secret => /run/secrets/first.secret owner=root group=root
-🐛       - forthSecret => /run/secrets/forthSecret owner=root group=root
-🐛       - second_secret => /run/secrets/second_secret owner=root group=root
-🐛       - third-secret => /run/secrets/third-secret owner=root group=root
+🐛 {
+🐛   "files": [
+🐛     {
+🐛       "group": "root",
+🐛       "name": "fifth secret",
+🐛       "owner": "root",
+🐛       "path": "/run/secrets/fifth secret"
+🐛     },
+🐛     {
+🐛       "group": "root",
+🐛       "name": "first.secret",
+🐛       "owner": "root",
+🐛       "path": "/run/secrets/first.secret"
+🐛     },
+🐛     {
+🐛       "group": "root",
+🐛       "name": "forthSecret",
+🐛       "owner": "root",
+🐛       "path": "/run/secrets/forthSecret"
+🐛     },
+🐛     {
+🐛       "group": "root",
+🐛       "name": "second_secret",
+🐛       "owner": "root",
+🐛       "path": "/run/secrets/second_secret"
+🐛     },
+🐛     {
+🐛       "group": "root",
+🐛       "name": "third-secret",
+🐛       "owner": "root",
+🐛       "path": "/run/secrets/third-secret"
+🐛     }
+🐛   ],
+🐛   "files_to_produce": 5
+🐛 }
 🐛     running check_serialization: env inputs="/tmp/artifacts-cli/inputs-artifact.one" machine="machine-name" artifact="artifact.one" artifact_context="nixos" /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/artifact_names/test_check.sh
 Environment variables:
 inputs=/tmp/artifacts-cli/inputs-artifact.one

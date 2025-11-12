@@ -1,29 +1,38 @@
 use crate::config::make::ArtifactDef;
 use log::debug;
+use serde_json::{json, to_string_pretty};
 use std::path::{Path, PathBuf};
 
 pub fn print_files(artifact: &ArtifactDef, make_base: &Path) {
     if artifact.files.is_empty() {
         return;
     }
-    debug!("    files to produce -> {} files", artifact.files.len());
-    for f in artifact.files.values() {
-        let path = f.path.clone().map(|path| resolve_path(make_base, &path));
-        debug!(
-            "      - {} => {}{}{}",
-            f.name,
-            path.as_ref()
-                .map(|p| format!("{}", p.display()))
-                .unwrap_or_default(),
-            f.owner
+
+    let files_json: Vec<_> = artifact
+        .files
+        .values()
+        .map(|f| {
+            let resolved_path = f
+                .path
                 .as_ref()
-                .map(|o| format!(" owner={}", o))
-                .unwrap_or_default(),
-            f.group
-                .as_ref()
-                .map(|g| format!(" group={}", g))
-                .unwrap_or_default(),
-        );
+                .map(|p| resolve_path(make_base, p).display().to_string());
+            json!({
+                "name": f.name,
+                "path": resolved_path,
+                "owner": f.owner,
+                "group": f.group,
+            })
+        })
+        .collect();
+
+    let payload = json!({
+        "files_to_produce": artifact.files.len(),
+        "files": files_json,
+    });
+
+    match to_string_pretty(&payload) {
+        Ok(text) => debug!("{}", text),
+        Err(_) => debug!("{}", payload),
     }
 }
 

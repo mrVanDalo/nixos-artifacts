@@ -140,8 +140,17 @@ exit_code: 0
 💬   ]
 💬 }
 [regenerate]
-🐛     files to produce -> 1 files
-🐛       - first-secret => /run/secrets/first-secret owner=root group=root
+🐛 {
+🐛   "files": [
+🐛     {
+🐛       "group": "root",
+🐛       "name": "first-secret",
+🐛       "owner": "root",
+🐛       "path": "/run/secrets/first-secret"
+🐛     }
+🐛   ],
+🐛   "files_to_produce": 1
+🐛 }
 ⚡ machine-one/artifact-one
 🐛 run bwrap with command /nix/store/[hash]-test_generator_one.sh/bin/test_generator_one.sh
 💬 bwrap \
@@ -178,8 +187,17 @@ artifact_context=nixos
 one
 =========================
 [regenerate]
-🐛     files to produce -> 1 files
-🐛       - second-secret => /run/secrets/second-secret owner=root group=root
+🐛 {
+🐛   "files": [
+🐛     {
+🐛       "group": "root",
+🐛       "name": "second-secret",
+🐛       "owner": "root",
+🐛       "path": "/run/secrets/second-secret"
+🐛     }
+🐛   ],
+🐛   "files_to_produce": 1
+🐛 }
 ⚡ machine-one/artifact-two
 🐛 run bwrap with command /nix/store/[hash]-test_generator_two.sh/bin/test_generator_two.sh
 💬 bwrap \

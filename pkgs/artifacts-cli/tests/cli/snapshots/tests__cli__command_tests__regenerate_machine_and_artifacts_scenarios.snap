@@ -141,8 +141,17 @@ exit_code: 0
 💬   ]
 💬 }
 [regenerate]
-🐛     files to produce -> 1 files
-🐛       - first-secret => /run/secrets/first-secret owner=root group=root
+🐛 {
+🐛   "files": [
+🐛     {
+🐛       "group": "root",
+🐛       "name": "first-secret",
+🐛       "owner": "root",
+🐛       "path": "/run/secrets/first-secret"
+🐛     }
+🐛   ],
+🐛   "files_to_produce": 1
+🐛 }
 ⚡ machine-one/artifact-one
 🐛 run bwrap with command /nix/store/[hash]-test_generator_one.sh/bin/test_generator_one.sh
 💬 bwrap \

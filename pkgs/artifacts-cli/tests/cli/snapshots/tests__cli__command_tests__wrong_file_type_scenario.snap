@@ -92,9 +92,23 @@ exit_code: 1
 💬   ]
 💬 }
 [generate]
-🐛     files to produce -> 2 files
-🐛       - simple-secrets => /run/secrets/simple-secrets owner=deployer group=deployer
-🐛       - very-simple-secrets => /run/secrets/very-simple-secrets owner=root group=root
+🐛 {
+🐛   "files": [
+🐛     {
+🐛       "group": "deployer",
+🐛       "name": "simple-secrets",
+🐛       "owner": "deployer",
+🐛       "path": "/run/secrets/simple-secrets"
+🐛     },
+🐛     {
+🐛       "group": "root",
+🐛       "name": "very-simple-secrets",
+🐛       "owner": "root",
+🐛       "path": "/run/secrets/very-simple-secrets"
+🐛     }
+🐛   ],
+🐛   "files_to_produce": 2
+🐛 }
 🐛     running check_serialization: env inputs="/tmp/artifacts-cli/inputs-test-artifact" machine="wrong-file-type" artifact="test-artifact" artifact_context="nixos" /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/wrong-file-type/test_check.sh
 Environment variables:
 inputs=/tmp/artifacts-cli/inputs-test-artifact

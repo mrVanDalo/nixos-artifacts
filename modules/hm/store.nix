@@ -40,8 +40,8 @@ with types;
 
                       path = mkOption {
                         type = str;
-                        defaultText = literalExpression "/run/artifacts/${config.home.username}/<artifact-name>/<file-name>";
-                        default = "/run/artifacts/${config.home.username}/${artifactName}/${fileName}";
+                        defaultText = literalExpression "\${XDG_RUNTIME_DIR}/artifacts/<artifact-name>/<file-name>";
+                        default = "\${XDG_RUNTIME_DIR}/artifacts/${artifactName}/${fileName}";
                         example = "${home.homeDirectory}/.ssh/ssh_host_ed25519";
                         description = "Path to the file on the target system.";
                       };

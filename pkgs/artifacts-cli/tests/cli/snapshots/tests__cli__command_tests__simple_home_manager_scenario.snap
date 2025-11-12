@@ -95,8 +95,17 @@ exit_code: 0
 💬   "nixos": []
 💬 }
 [generate]
-🐛     files to produce -> 1 files
-🐛       - first-secret => /run/artifacts/some-test-name/artifact-one/first-secret
+🐛 {
+🐛   "files": [
+🐛     {
+🐛       "group": null,
+🐛       "name": "first-secret",
+🐛       "owner": null,
+🐛       "path": "/run/artifacts/some-test-name/artifact-one/first-secret"
+🐛     }
+🐛   ],
+🐛   "files_to_produce": 1
+🐛 }
 🐛     running check_serialization: env inputs="/tmp/artifacts-cli/inputs-artifact-one" username="test" artifact="artifact-one" artifact_context="homemanager" /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/simple-home-manager/test_check.sh
 Environment variables:
 inputs=/tmp/artifacts-cli/inputs-artifact-one
@@ -146,8 +155,17 @@ artifact_context=homemanager
 one
 =========================
 [generate]
-🐛     files to produce -> 1 files
-🐛       - second-secret => /run/artifacts/some-test-name/artifact-two/second-secret
+🐛 {
+🐛   "files": [
+🐛     {
+🐛       "group": null,
+🐛       "name": "second-secret",
+🐛       "owner": null,
+🐛       "path": "/run/artifacts/some-test-name/artifact-two/second-secret"
+🐛     }
+🐛   ],
+🐛   "files_to_produce": 1
+🐛 }
 🐛     running check_serialization: env inputs="/tmp/artifacts-cli/inputs-artifact-two" username="test" artifact="artifact-two" artifact_context="homemanager" /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/simple-home-manager/test_check.sh
 Environment variables:
 inputs=/tmp/artifacts-cli/inputs-artifact-two

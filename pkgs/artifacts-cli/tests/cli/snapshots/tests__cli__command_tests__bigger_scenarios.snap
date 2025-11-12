@@ -139,8 +139,17 @@ exit_code: 0
 💬   ]
 💬 }
 [generate]
-🐛     files to produce -> 1 files
-🐛       - first-secret => /run/secrets/first-secret owner=root group=root
+🐛 {
+🐛   "files": [
+🐛     {
+🐛       "group": "root",
+🐛       "name": "first-secret",
+🐛       "owner": "root",
+🐛       "path": "/run/secrets/first-secret"
+🐛     }
+🐛   ],
+🐛   "files_to_produce": 1
+🐛 }
 🐛     running check_serialization: env inputs="/tmp/artifacts-cli/inputs-artifact-one" machine="machine-one" artifact="artifact-one" artifact_context="nixos" /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/bigger_setup/test_check.sh
 Environment variables:
 inputs=/tmp/artifacts-cli/inputs-artifact-one
@@ -190,8 +199,17 @@ artifact_context=nixos
 one
 =========================
 [generate]
-🐛     files to produce -> 1 files
-🐛       - second-secret => /run/secrets/second-secret owner=root group=root
+🐛 {
+🐛   "files": [
+🐛     {
+🐛       "group": "root",
+🐛       "name": "second-secret",
+🐛       "owner": "root",
+🐛       "path": "/run/secrets/second-secret"
+🐛     }
+🐛   ],
+🐛   "files_to_produce": 1
+🐛 }
 🐛     running check_serialization: env inputs="/tmp/artifacts-cli/inputs-artifact-two" machine="machine-one" artifact="artifact-two" artifact_context="nixos" /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/bigger_setup/test_check.sh
 Environment variables:
 inputs=/tmp/artifacts-cli/inputs-artifact-two
@@ -207,8 +225,17 @@ artifact_context=nixos
 🐛     check_serialization: OK (exit 0) -> skipping generation and serialization for this artifact
 ✅ machine-one/artifact-two
 [generate]
-🐛     files to produce -> 1 files
-🐛       - first-secret => /run/secrets/first-secret owner=root group=root
+🐛 {
+🐛   "files": [
+🐛     {
+🐛       "group": "root",
+🐛       "name": "first-secret",
+🐛       "owner": "root",
+🐛       "path": "/run/secrets/first-secret"
+🐛     }
+🐛   ],
+🐛   "files_to_produce": 1
+🐛 }
 🐛     running check_serialization: env inputs="/tmp/artifacts-cli/inputs-artifact-one" machine="machine-two" artifact="artifact-one" artifact_context="nixos" /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/bigger_setup/test_check.sh
 Environment variables:
 inputs=/tmp/artifacts-cli/inputs-artifact-one
@@ -258,8 +285,17 @@ artifact_context=nixos
 one
 =========================
 [generate]
-🐛     files to produce -> 1 files
-🐛       - second-secret => /run/secrets/second-secret owner=root group=root
+🐛 {
+🐛   "files": [
+🐛     {
+🐛       "group": "root",
+🐛       "name": "second-secret",
+🐛       "owner": "root",
+🐛       "path": "/run/secrets/second-secret"
+🐛     }
+🐛   ],
+🐛   "files_to_produce": 1
+🐛 }
 🐛     running check_serialization: env inputs="/tmp/artifacts-cli/inputs-artifact-two" machine="machine-two" artifact="artifact-two" artifact_context="nixos" /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/bigger_setup/test_check.sh
 Environment variables:
 inputs=/tmp/artifacts-cli/inputs-artifact-two
