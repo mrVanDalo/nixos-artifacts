@@ -1,7 +1,8 @@
-use crate::backend::helpers::resolve_path;
+use crate::backend::helpers::{escape_single_quoted, fnv1a64, resolve_path};
 use crate::config::make::ArtifactDef;
+use crate::string_vec;
 use anyhow::{Context, Result, bail};
-use log::debug;
+use log::{debug, trace};
 use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
@@ -43,11 +44,6 @@ pub fn verify_generated_files(artifact: &ArtifactDef, out_path: &Path) -> Result
 
     Ok(())
 }
-macro_rules! string_vec {
-    ($($x:expr),* $(,)?) => {
-        vec![$($x.to_string()),*]
-    };
-}
 
 // todo: get rid of nix-shell and use bwrap directly (brwap must be part of the nix-package)
 pub fn run_generator_script(
@@ -56,6 +52,7 @@ pub fn run_generator_script(
     make_base: &Path,
     prompts: &Path,
     out: &Path,
+    context: &str,
 ) -> Result<()> {
     let generator_script = artifact.generator.as_ref();
     let generator_script_path = resolve_path(make_base, generator_script);
@@ -70,16 +67,6 @@ pub fn run_generator_script(
     // Requirement: entries "user:1000:1000:/tmp:/bin/sh"
     let passwd_content = "user:x:1000:1000::/tmp:/bin/sh\n";
 
-    // Compute a deterministic filename based on the 'out' path to keep test snapshots stable
-    fn fnv1a64(s: &str) -> u64 {
-        let mut hash: u64 = 0xcbf29ce484222325; // FNV offset basis
-        const PRIME: u64 = 0x00000100000001B3; // FNV prime
-        for b in s.as_bytes() {
-            hash ^= *b as u64;
-            hash = hash.wrapping_mul(PRIME);
-        }
-        hash
-    }
     let out_path_str = out.display().to_string();
     let hash = fnv1a64(&out_path_str);
     let mut temp_passwd_path = std::env::temp_dir();
@@ -129,21 +116,52 @@ pub fn run_generator_script(
     arguments.extend(string_vec!["--", "/bin/sh"]);
     arguments.push(generator_script_absolut_path.display().to_string());
     let bwrap_command = arguments.join(" ");
-    debug!("bwrap command: {}", bwrap_command);
+    // Pretty-print the bwrap command for readability in logs
+    let bwrap_pretty = {
+        let mut result = String::new();
+        for (index, argument) in arguments.iter().enumerate() {
+            if index == 0 {
+                result.push_str(argument);
+            } else if argument.starts_with("--") {
+                // start a new line for option keys (including the standalone "--")
+                result.push_str(" \\\n");
+                result.push_str(argument);
+            } else {
+                // keep values on the same line as their preceding key
+                result.push(' ');
+                result.push_str(argument);
+            }
+        }
+        result
+    };
+    // Keep the original prefix but print as multiline for readability
+    debug!(
+        "run bwrap with command {}",
+        generator_script_absolut_path.display()
+    );
+    trace!("{}", bwrap_pretty);
 
     // Ensure that our 'out' and 'prompts' override any nix-shell provided 'out'
-    fn sh_escape_single_quoted(s: &str) -> String {
-        // Replace ' with '\'' for safe single-quoting
-        s.replace('\'', "'\\''")
-    }
-    let out_quoted = sh_escape_single_quoted(&out.display().to_string());
-    let prompts_quoted = sh_escape_single_quoted(&prompts.display().to_string());
-    let machine_quoted = sh_escape_single_quoted(machine);
-    let artifact_quoted = sh_escape_single_quoted(&artifact.name);
-    let nix_shell_run_command = format!(
-        "export out='{}'; export prompts='{}'; export machine='{}'; export artifact='{}'; {}",
-        out_quoted, prompts_quoted, machine_quoted, artifact_quoted, bwrap_command
-    );
+    let out_quoted = escape_single_quoted(&out.display().to_string());
+    let prompts_quoted = escape_single_quoted(&prompts.display().to_string());
+    let machine_quoted = escape_single_quoted(machine);
+    let artifact_quoted = escape_single_quoted(&artifact.name);
+    let context_quoted = escape_single_quoted(context);
+
+    // Build env exports depending on context
+    let env_exports = if context == "homemanager" {
+        format!(
+            "export out='{}'; export prompts='{}'; export artifact_context='{}'; export username='{}'; export artifact='{}';",
+            out_quoted, prompts_quoted, context_quoted, machine_quoted, artifact_quoted
+        )
+    } else {
+        format!(
+            "export out='{}'; export prompts='{}'; export artifact_context='{}'; export machine='{}'; export artifact='{}';",
+            out_quoted, prompts_quoted, context_quoted, machine_quoted, artifact_quoted
+        )
+    };
+
+    let nix_shell_run_command = format!("{} {}", env_exports, bwrap_command);
 
     let mut generator_command = std::process::Command::new(nix_shell);
     generator_command

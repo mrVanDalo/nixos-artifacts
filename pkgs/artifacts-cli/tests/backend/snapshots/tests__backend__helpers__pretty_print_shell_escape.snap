@@ -1,0 +1,38 @@
+---
+source: tests/backend/helpers.rs
+expression: outputs
+---
+[
+    (
+        "",
+        "''",
+    ),
+    (
+        "simple",
+        "simple",
+    ),
+    (
+        "with space",
+        "'with space'",
+    ),
+    (
+        "needs$var",
+        "'needs$var'",
+    ),
+    (
+        "it's quoted",
+        "'it'\\''s quoted'",
+    ),
+    (
+        "already\"quoted\"",
+        "'already\"quoted\"'",
+    ),
+    (
+        "path/with[brackets]",
+        "'path/with[brackets]'",
+    ),
+    (
+        "no_specials",
+        "no_specials",
+    ),
+]

@@ -1,0 +1,38 @@
+---
+source: tests/cli/command_tests.rs
+info:
+  program: artifacts
+  args:
+    - regenerate
+    - "--help"
+---
+success: true
+exit_code: 0
+----- stdout -----
+Regenerate selected artifacts (or all)
+
+Backend configuration is read from the environment variable NIXOS_ARTIFACTS_BACKEND_CONFIG if set; otherwise, it falls back to <flake-dir>/backend.toml.
+
+Usage: artifacts regenerate [OPTIONS] [MAKE]
+
+Arguments:
+  [MAKE]
+          Path to flake to read machines/artifacts from (passed as -I flake=<path> to nix). If omitted, uses the current directory
+
+Options:
+      --all
+          Regenerate all artifacts from all machines/users (conflicts with --machine/--home/--artifact)
+
+      --machine <MACHINE>
+          Name of machine(s) to target (repeatable)
+
+      --home <HOME>
+          Name of home user(s) to target (repeatable)
+
+      --artifact <ARTIFACT>
+          Name of artifact(s) to target (repeatable)
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+----- stderr -----

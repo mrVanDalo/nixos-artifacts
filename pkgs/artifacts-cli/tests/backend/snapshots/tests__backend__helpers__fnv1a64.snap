@@ -1,0 +1,42 @@
+---
+source: tests/backend/helpers.rs
+expression: outputs
+---
+[
+    (
+        "",
+        "cbf29ce484222325",
+    ),
+    (
+        "a",
+        "af63dc4c8601ec8c",
+    ),
+    (
+        "hello",
+        "a430d84680aabd0b",
+    ),
+    (
+        "Hello, world!",
+        "38d1334144987bf4",
+    ),
+    (
+        "/abs/path",
+        "edbdbdab7eb2a9b8",
+    ),
+    (
+        "rel/path",
+        "bb8aa5b1ced3321a",
+    ),
+    (
+        "with spaces",
+        "dfe53cdb8993063c",
+    ),
+    (
+        "emoji 😀",
+        "565ac79f864705d6",
+    ),
+    (
+        "mix/With-CHARS_123",
+        "742876e4b89d3cbd",
+    ),
+]

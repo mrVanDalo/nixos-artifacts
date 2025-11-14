@@ -1,0 +1,21 @@
+---
+source: tests/backend/helpers.rs
+expression: lines
+---
+{
+  "files": [
+    {
+      "group": "root",
+      "name": "config.toml",
+      "owner": "root",
+      "path": "/make/base/etc/app/config.toml"
+    },
+    {
+      "group": "app",
+      "name": "secret.key",
+      "owner": null,
+      "path": "/var/lib/app/secret.key"
+    }
+  ],
+  "files_to_produce": 2
+}

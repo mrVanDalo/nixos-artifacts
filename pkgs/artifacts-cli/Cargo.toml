@@ -25,4 +25,3 @@ serial_test = "3"
 name = "artifacts"
 path = "src/bin/artifacts.rs"
 test = false
-

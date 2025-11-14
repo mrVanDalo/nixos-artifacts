@@ -15,18 +15,23 @@ pub fn run_generate_command(
     backend_toml: &Path,
     make_json: &Path,
     all: bool,
-    machines_to_regenerate: &Vec<String>,
-    artifacts_to_regenerate: &Vec<String>,
+    machines_to_regenerate: &[String],
+    home_users_to_regenerate: &[String],
+    artifacts_to_regenerate: &[String],
 ) -> Result<()> {
     // Validate argument rules
-    if all {
-        if !machines_to_regenerate.is_empty() || !artifacts_to_regenerate.is_empty() {
-            bail!("--all conflicts with --machine/--artifact");
-        }
+    if all
+        && (!machines_to_regenerate.is_empty()
+            || !home_users_to_regenerate.is_empty()
+            || !artifacts_to_regenerate.is_empty())
+    {
+        bail!("--all conflicts with --machine/--home/--artifact");
     }
 
     let all = if !all {
-        machines_to_regenerate.is_empty() && artifacts_to_regenerate.is_empty()
+        machines_to_regenerate.is_empty()
+            && home_users_to_regenerate.is_empty()
+            && artifacts_to_regenerate.is_empty()
     } else {
         all
     };
@@ -36,18 +41,21 @@ pub fn run_generate_command(
         make_json,
         all,
         machines_to_regenerate,
+        home_users_to_regenerate,
         artifacts_to_regenerate,
         true,
         "[generate]",
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn run_generate_workflow(
     backend_toml: &Path,
     make_json: &Path,
     all: bool,
-    machines_to_regenerate: &Vec<String>,
-    artifacts_to_regenerate: &Vec<String>,
+    machines_to_regenerate: &[String],
+    home_users_to_regenerate: &[String],
+    artifacts_to_regenerate: &[String],
     check_if_artifact_exists: bool,
     header: &str,
 ) -> Result<()> {
@@ -65,19 +73,25 @@ pub fn run_generate_workflow(
             || artifacts_to_regenerate.iter().any(|a| a == &artifact.name)
     };
 
-    for (machine, artifacts) in &make.make_map {
+    let check_user = |user: &str| -> bool {
+        home_users_to_regenerate.is_empty() || home_users_to_regenerate.iter().any(|u| u == user)
+    };
+
+    // NixOS machines
+    for (machine, artifacts) in &make.nixos_map {
         for artifact in artifacts.values() {
-            if !(check_all() || check_machine(machine) && check_artifact(&artifact)) {
+            if !(check_all() || (check_machine(machine) && check_artifact(artifact))) {
                 println!("✅ {}/{}", machine, artifact.name);
                 continue;
             }
 
             info!("{}", header);
 
-            print_files(&artifact, &make.make_base);
+            print_files(artifact, &make.make_base);
 
             if check_if_artifact_exists {
-                let skip_rest = run_check_serialization(&artifact, &machine, &backend, &make)?;
+                let skip_rest =
+                    run_check_serialization(artifact, machine, &backend, &make, "nixos")?;
                 if skip_rest {
                     println!("✅ {}/{}", machine, artifact.name);
                     continue;
@@ -86,7 +100,7 @@ pub fn run_generate_workflow(
 
             println!("⚡ {}/{}", machine, artifact.name);
             let prompt_results =
-                read_artifact_prompts(&artifact).context("could not query all prompts")?;
+                read_artifact_prompts(artifact).context("could not query all prompts")?;
 
             let prompt = create_temp_dir(Some(&format!("prompt-{}", artifact.name)))?;
             prompt_results
@@ -96,17 +110,73 @@ pub fn run_generate_workflow(
             let out = create_temp_dir(Some(&format!("out-{}", artifact.name)))?;
 
             run_generator_script(
-                &artifact,
-                &machine,
+                artifact,
+                machine,
                 &make.make_base.clone(),
                 &prompt.path_buf,
                 &out.path_buf,
+                "nixos",
             )
             .context("running generator script")?;
 
             verify_generated_files(artifact, &out.path_buf)?;
 
-            run_serialize(&artifact, &backend, &out.path_buf, &machine, &make)?
+            run_serialize(artifact, &backend, &out.path_buf, machine, &make, "nixos")?
+        }
+    }
+
+    // Home users
+    for (user, artifacts) in &make.home_map {
+        for artifact in artifacts.values() {
+            if !(check_all() || (check_user(user) && check_artifact(artifact))) {
+                println!("✅ {}/{}", user, artifact.name);
+                continue;
+            }
+
+            info!("{}", header);
+
+            print_files(artifact, &make.make_base);
+
+            if check_if_artifact_exists {
+                let skip_rest =
+                    run_check_serialization(artifact, user, &backend, &make, "homemanager")?;
+                if skip_rest {
+                    println!("✅ {}/{}", user, artifact.name);
+                    continue;
+                }
+            }
+
+            println!("⚡ {}/{}", user, artifact.name);
+            let prompt_results =
+                read_artifact_prompts(artifact).context("could not query all prompts")?;
+
+            let prompt = create_temp_dir(Some(&format!("prompt-{}", artifact.name)))?;
+            prompt_results
+                .write_prompts_to_files(&prompt.path_buf)
+                .context("writing prompts to files")?;
+
+            let out = create_temp_dir(Some(&format!("out-{}", artifact.name)))?;
+
+            run_generator_script(
+                artifact,
+                user,
+                &make.make_base.clone(),
+                &prompt.path_buf,
+                &out.path_buf,
+                "homemanager",
+            )
+            .context("running generator script")?;
+
+            verify_generated_files(artifact, &out.path_buf)?;
+
+            run_serialize(
+                artifact,
+                &backend,
+                &out.path_buf,
+                user,
+                &make,
+                "homemanager",
+            )?
         }
     }
     Ok(())
@@ -117,6 +187,7 @@ pub(crate) fn run_check_serialization(
     machine: &str,
     backend: &BackendConfiguration,
     make: &MakeConfiguration,
+    context: &str,
 ) -> anyhow::Result<bool> {
     let backend_name = &artifact.serialization;
     let backend_entry = backend.get_backend(backend_name)?;
@@ -127,9 +198,7 @@ pub(crate) fn run_check_serialization(
     let config_dir = create_temp_dir(Some(&format!("config-{}", artifact.name)))?;
     let config_file = config_dir.path_buf.join("config.json");
     let config_value = make
-        .machine_config
-        .get(machine)
-        .and_then(|per_machine| per_machine.get(backend_name))
+        .get_backend_config_for(machine, backend_name)
         .map(|m| serde_json::to_value(m).unwrap_or(serde_json::json!({})))
         .unwrap_or(serde_json::json!({}));
     let config_text = to_string_pretty(&config_value)?;
@@ -137,10 +206,10 @@ pub(crate) fn run_check_serialization(
         .with_context(|| format!("writing {}", config_file.display()))?;
 
     for file in artifact.files.values() {
-        let resolved_path = match &file.path.clone() {
-            None => None,
-            Some(path) => Some(resolve_path(&make.make_base, path)),
-        };
+        let resolved_path = file
+            .path
+            .as_ref()
+            .map(|path| resolve_path(&make.make_base, path));
         let json_path = inputs.path_buf.join(&file.name);
 
         let text = to_string_pretty(&json!({
@@ -156,19 +225,34 @@ pub(crate) fn run_check_serialization(
     let check_path = resolve_path(&backend.base_path, &backend_entry.check_serialization);
     let check_abs = fs::canonicalize(&check_path).unwrap_or_else(|_| check_path.clone());
 
+    let target_label = if context == "homemanager" {
+        "username"
+    } else {
+        "machine"
+    };
     debug!(
-        "    running check_serialization: env inputs=\"{}\" machine=\"{}\" artifact=\"{}\" {}",
+        "    running check_serialization: env inputs=\"{}\" {}=\"{}\" artifact=\"{}\" artifact_context=\"{}\" {}",
         inputs.path_buf.display(),
+        target_label,
         machine,
         artifact.name,
+        context,
         check_abs.display()
     );
 
-    let status = std::process::Command::new(&check_abs)
-        .env("inputs", &inputs.path_buf)
+    let mut cmd = std::process::Command::new(&check_abs);
+    cmd.env("inputs", &inputs.path_buf)
         .env("config", &config_file)
-        .env("machine", machine)
-        .env("artifact", &artifact.name)
+        .env("artifact_context", context)
+        .env("artifact", &artifact.name);
+
+    if context == "homemanager" {
+        cmd.env("username", machine);
+    } else {
+        cmd.env("machine", machine);
+    }
+
+    let status = cmd
         .status()
         .with_context(|| format!("running check_serialization {}", check_abs.display()))?;
 
@@ -207,16 +291,23 @@ pub fn run_regenerate_command(
     backend_toml: &Path,
     make_json: &Path,
     all: bool,
-    machines_to_regenerate: &Vec<String>,
-    artifacts_to_regenerate: &Vec<String>,
+    machines_to_regenerate: &[String],
+    home_users_to_regenerate: &[String],
+    artifacts_to_regenerate: &[String],
 ) -> Result<()> {
     // Validate argument rules
     if all {
-        if !machines_to_regenerate.is_empty() || !artifacts_to_regenerate.is_empty() {
-            bail!("--all conflicts with --machine/--artifact");
+        if !machines_to_regenerate.is_empty()
+            || !home_users_to_regenerate.is_empty()
+            || !artifacts_to_regenerate.is_empty()
+        {
+            bail!("--all conflicts with --machine/--home/--artifact");
         }
-    } else if machines_to_regenerate.is_empty() && artifacts_to_regenerate.is_empty() {
-        bail!("provide --all or at least one of --machine/--artifact");
+    } else if machines_to_regenerate.is_empty()
+        && home_users_to_regenerate.is_empty()
+        && artifacts_to_regenerate.is_empty()
+    {
+        bail!("provide --all or at least one of --machine/--home/--artifact");
     }
 
     run_generate_workflow(
@@ -224,6 +315,7 @@ pub fn run_regenerate_command(
         make_json,
         all,
         machines_to_regenerate,
+        home_users_to_regenerate,
         artifacts_to_regenerate,
         false,
         "[regenerate]",

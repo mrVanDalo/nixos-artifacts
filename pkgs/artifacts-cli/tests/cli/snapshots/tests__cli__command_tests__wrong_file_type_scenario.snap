@@ -1,0 +1,147 @@
+---
+source: tests/cli/command_tests.rs
+info:
+  program: artifacts
+  args:
+    - "--log-level=trace"
+    - generate
+    - /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/wrong-file-type
+  env:
+    NIXOS_ARTIFACTS_BACKEND_CONFIG: /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/wrong-file-type/backend.toml
+    TMPDIR: /tmp/artifacts-cli
+  stdin: "one\ntwo\n"
+---
+success: false
+exit_code: 1
+----- stdout -----
+🐛 Running nix build on /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/wrong-file-type
+💬 /run/current-system/sw/bin/nix build --impure -I flake=/home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/wrong-file-type --no-link --print-out-paths --expr 'let
+💬   system = "x86_64-linux";
+💬   filterAttrs =
+💬     pred: set:
+💬     builtins.removeAttrs set (builtins.filter (name: !pred name set.${name}) (builtins.attrNames set));
+💬   flake = builtins.getFlake (toString <flake>);
+💬   pkgs = flake.inputs.nixpkgs.legacyPackages.${system};
+💬   nixosConfigurations = builtins.attrNames (
+💬     filterAttrs (
+💬       machine: configuration: builtins.hasAttr "artifacts" configuration.options
+💬     ) flake.nixosConfigurations
+💬   );
+💬   homeConfigurations =
+💬     let
+💬       hc = if builtins.hasAttr "homeConfigurations" flake then flake.homeConfigurations else { };
+💬     in
+💬     builtins.attrNames (
+💬       filterAttrs (user: configuration: builtins.hasAttr "artifacts" configuration.options) hc
+💬     );
+💬   nixos = map (name: {
+💬     machine = name;
+💬     artifacts = flake.nixosConfigurations.${name}.config.artifacts.store;
+💬     config =
+💬       if (builtins.hasAttr "config" flake.nixosConfigurations.${name}.config.artifacts) then
+💬         flake.nixosConfigurations.${name}.config.artifacts.config
+💬       else
+💬         { };
+💬   }) nixosConfigurations;
+💬   home = map (name: {
+💬     user = name;
+💬     artifacts = flake.homeConfigurations.${name}.config.artifacts.store;
+💬     config =
+💬       if (builtins.hasAttr "config" flake.homeConfigurations.${name}.config.artifacts) then
+💬         flake.homeConfigurations.${name}.config.artifacts.config
+💬       else
+💬         { };
+💬   }) homeConfigurations;
+💬   make = { inherit nixos home; };
+💬 in
+💬 pkgs.writeText "test.json" (builtins.toJSON make)
+💬 '
+💬 make config (pretty):
+💬 {
+💬   "home": [],
+💬   "nixos": [
+💬     {
+💬       "artifacts": {
+💬         "test-artifact": {
+💬           "files": {
+💬             "simple-secrets": {
+💬               "group": "deployer",
+💬               "mode": "0400",
+💬               "name": "simple-secrets",
+💬               "owner": "deployer",
+💬               "path": "/run/secrets/simple-secrets"
+💬             },
+💬             "very-simple-secrets": {
+💬               "group": "root",
+💬               "mode": "0400",
+💬               "name": "very-simple-secrets",
+💬               "owner": "root",
+💬               "path": "/run/secrets/very-simple-secrets"
+💬             }
+💬           },
+💬           "generator": "/nix/store/[hash]-test_generator_wrong_file_type.sh",
+💬           "name": "test-artifact",
+💬           "prompts": {},
+💬           "serialization": "test",
+💬           "shared": false
+💬         }
+💬       },
+💬       "config": {},
+💬       "machine": "wrong-file-type"
+💬     }
+💬   ]
+💬 }
+[generate]
+🐛 {
+🐛   "files": [
+🐛     {
+🐛       "group": "deployer",
+🐛       "name": "simple-secrets",
+🐛       "owner": "deployer",
+🐛       "path": "/run/secrets/simple-secrets"
+🐛     },
+🐛     {
+🐛       "group": "root",
+🐛       "name": "very-simple-secrets",
+🐛       "owner": "root",
+🐛       "path": "/run/secrets/very-simple-secrets"
+🐛     }
+🐛   ],
+🐛   "files_to_produce": 2
+🐛 }
+🐛     running check_serialization: env inputs="/tmp/artifacts-cli/inputs-test-artifact" machine="wrong-file-type" artifact="test-artifact" artifact_context="nixos" /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/wrong-file-type/test_check.sh
+Environment variables:
+inputs=/tmp/artifacts-cli/inputs-test-artifact
+config=/tmp/artifacts-cli/config-test-artifact/config.json
+machine=wrong-file-type
+artifact=test-artifact
+username=
+artifact_context=nixos
+--- Begin /tmp/artifacts-cli/config-test-artifact/config.json ---
+{}
+--- End /tmp/artifacts-cli/config-test-artifact/config.json ---
+
+🐛     check_serialization: failed with status exit status: 1 -> continuing with generation
+⚡ wrong-file-type/test-artifact
+🐛 run bwrap with command /nix/store/[hash]-test_generator_wrong_file_type.sh/bin/test_generator_wrong_file_type.sh
+💬 bwrap \
+💬 --unshare-all \
+💬 --unshare-user \
+💬 --uid 1000 \
+💬 --gid 1000 \
+💬 --tmpfs / \
+💬 --chdir / \
+💬 --ro-bind /nix/store /nix/store \
+💬 --tmpfs /usr/lib/systemd \
+💬 --proc /proc \
+💬 --dev /dev \
+💬 --bind /tmp/artifacts-cli/prompt-test-artifact /tmp/artifacts-cli/prompt-test-artifact \
+💬 --bind /tmp/artifacts-cli/out-test-artifact /tmp/artifacts-cli/out-test-artifact \
+💬 --ro-bind /nix/store/[hash]-test_generator_wrong_file_type.sh/bin /nix/store/[hash]-test_generator_wrong_file_type.sh/bin \
+💬 --ro-bind /bin /bin \
+💬 --ro-bind /usr/bin /usr/bin \
+💬 --ro-bind /tmp/artifacts-cli/artifacts-cli-passwd-820e090949e37de7.txt /etc/passwd \
+💬 -- /bin/sh /nix/store/[hash]-test_generator_wrong_file_type.sh/bin/test_generator_wrong_file_type.sh
+
+----- stderr -----
+❌ generator missing required files for artifact 'test-artifact': [simple-secrets, very-simple-secrets]

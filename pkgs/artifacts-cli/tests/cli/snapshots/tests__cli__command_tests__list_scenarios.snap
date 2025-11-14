@@ -1,0 +1,150 @@
+---
+source: tests/cli/command_tests.rs
+info:
+  program: artifacts
+  args:
+    - "--log-level=trace"
+    - list
+    - /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/bigger_setup
+  env:
+    NIXOS_ARTIFACTS_BACKEND_CONFIG: /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/bigger_setup/backend.toml
+    TMPDIR: /tmp/artifacts-cli
+  stdin: ""
+---
+success: true
+exit_code: 0
+----- stdout -----
+🐛 Running nix build on /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/bigger_setup
+💬 /run/current-system/sw/bin/nix build --impure -I flake=/home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/bigger_setup --no-link --print-out-paths --expr 'let
+💬   system = "x86_64-linux";
+💬   filterAttrs =
+💬     pred: set:
+💬     builtins.removeAttrs set (builtins.filter (name: !pred name set.${name}) (builtins.attrNames set));
+💬   flake = builtins.getFlake (toString <flake>);
+💬   pkgs = flake.inputs.nixpkgs.legacyPackages.${system};
+💬   nixosConfigurations = builtins.attrNames (
+💬     filterAttrs (
+💬       machine: configuration: builtins.hasAttr "artifacts" configuration.options
+💬     ) flake.nixosConfigurations
+💬   );
+💬   homeConfigurations =
+💬     let
+💬       hc = if builtins.hasAttr "homeConfigurations" flake then flake.homeConfigurations else { };
+💬     in
+💬     builtins.attrNames (
+💬       filterAttrs (user: configuration: builtins.hasAttr "artifacts" configuration.options) hc
+💬     );
+💬   nixos = map (name: {
+💬     machine = name;
+💬     artifacts = flake.nixosConfigurations.${name}.config.artifacts.store;
+💬     config =
+💬       if (builtins.hasAttr "config" flake.nixosConfigurations.${name}.config.artifacts) then
+💬         flake.nixosConfigurations.${name}.config.artifacts.config
+💬       else
+💬         { };
+💬   }) nixosConfigurations;
+💬   home = map (name: {
+💬     user = name;
+💬     artifacts = flake.homeConfigurations.${name}.config.artifacts.store;
+💬     config =
+💬       if (builtins.hasAttr "config" flake.homeConfigurations.${name}.config.artifacts) then
+💬         flake.homeConfigurations.${name}.config.artifacts.config
+💬       else
+💬         { };
+💬   }) homeConfigurations;
+💬   make = { inherit nixos home; };
+💬 in
+💬 pkgs.writeText "test.json" (builtins.toJSON make)
+💬 '
+💬 make config (pretty):
+💬 {
+💬   "home": [],
+💬   "nixos": [
+💬     {
+💬       "artifacts": {
+💬         "artifact-one": {
+💬           "files": {
+💬             "first-secret": {
+💬               "group": "root",
+💬               "mode": "0400",
+💬               "name": "first-secret",
+💬               "owner": "root",
+💬               "path": "/run/secrets/first-secret"
+💬             }
+💬           },
+💬           "generator": "/nix/store/[hash]-test_generator_one.sh",
+💬           "name": "artifact-one",
+💬           "prompts": {},
+💬           "serialization": "test",
+💬           "shared": false
+💬         },
+💬         "artifact-two": {
+💬           "files": {
+💬             "second-secret": {
+💬               "group": "root",
+💬               "mode": "0400",
+💬               "name": "second-secret",
+💬               "owner": "root",
+💬               "path": "/run/secrets/second-secret"
+💬             }
+💬           },
+💬           "generator": "/nix/store/[hash]-test_generator_two.sh",
+💬           "name": "artifact-two",
+💬           "prompts": {},
+💬           "serialization": "test",
+💬           "shared": false
+💬         }
+💬       },
+💬       "config": {},
+💬       "machine": "machine-one"
+💬     },
+💬     {
+💬       "artifacts": {
+💬         "artifact-one": {
+💬           "files": {
+💬             "first-secret": {
+💬               "group": "root",
+💬               "mode": "0400",
+💬               "name": "first-secret",
+💬               "owner": "root",
+💬               "path": "/run/secrets/first-secret"
+💬             }
+💬           },
+💬           "generator": "/nix/store/[hash]-test_generator_one.sh",
+💬           "name": "artifact-one",
+💬           "prompts": {},
+💬           "serialization": "test",
+💬           "shared": false
+💬         },
+💬         "artifact-two": {
+💬           "files": {
+💬             "second-secret": {
+💬               "group": "root",
+💬               "mode": "0400",
+💬               "name": "second-secret",
+💬               "owner": "root",
+💬               "path": "/run/secrets/second-secret"
+💬             }
+💬           },
+💬           "generator": "/nix/store/[hash]-test_generator_two.sh",
+💬           "name": "artifact-two",
+💬           "prompts": {},
+💬           "serialization": "test",
+💬           "shared": false
+💬         }
+💬       },
+💬       "config": {},
+💬       "machine": "machine-two"
+💬     }
+💬   ]
+💬 }
+[list]
+nixos machine: machine-one
+artifact: artifact-one
+artifact: artifact-two
+[list]
+nixos machine: machine-two
+artifact: artifact-one
+artifact: artifact-two
+
+----- stderr -----

@@ -18,8 +18,9 @@ pub fn run_serialize(
     artifact: &ArtifactDef,
     backend: &BackendConfiguration,
     out: &Path,
-    machine_name: &str,
+    target_name: &str,
     make: &MakeConfiguration,
+    context: &str,
 ) -> Result<()> {
     let backend_name = &artifact.serialization;
     let entry = backend.get_backend(backend_name)?;
@@ -31,22 +32,27 @@ pub fn run_serialize(
     let config_dir = create_temp_dir(Some("config"))?;
     let config_file = config_dir.path_buf.join("config.json");
     let config_value = make
-        .machine_config
-        .get(machine_name)
-        .and_then(|per_machine| per_machine.get(backend_name))
+        .get_backend_config_for(target_name, backend_name)
         .map(|m| serde_json::to_value(m).unwrap_or(serde_json::json!({})))
         .unwrap_or(serde_json::json!({}));
     let config_text = to_string_pretty(&config_value)?;
     fs::write(&config_file, &config_text)
         .with_context(|| format!("writing {}", config_file.display()))?;
 
-    std::process::Command::new("sh")
-        .arg(&ser_abs)
+    let mut cmd = std::process::Command::new("sh");
+    cmd.arg(&ser_abs)
         .env("out", out)
         .env("config", &config_file)
-        .env("machine", machine_name)
-        .env("artifact", &artifact.name)
-        .status()
+        .env("artifact_context", context)
+        .env("artifact", &artifact.name);
+
+    if context == "homemanager" {
+        cmd.env("username", target_name);
+    } else {
+        cmd.env("machine", target_name);
+    }
+
+    cmd.status()
         .with_context(|| format!("running serialize {}", ser_abs.display()))?;
     Ok(())
 }
