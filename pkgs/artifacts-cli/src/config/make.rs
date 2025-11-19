@@ -1,5 +1,5 @@
 use anyhow::Context;
-use log::{debug, trace};
+use log::trace;
 use serde::de::{self, Deserializer};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, from_str as json_from_str, to_string_pretty};
