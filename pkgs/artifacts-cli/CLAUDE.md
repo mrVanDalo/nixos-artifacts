@@ -19,7 +19,8 @@ interactive user prompts for secret generation.
 2. **Flake Configuration (`flake.nix`)**
    - Contains `nixosConfigurations` and `homeConfigurations`
    - Each configuration defines `artifacts.store` options
-   - CLI extracts artifacts, files, prompts, and relationships directly from the flake
+   - CLI extracts artifacts, files, prompts, and relationships directly from the
+     flake
    - Metadata for secret generation and deployment
 
 ## Configuration Reference
@@ -39,7 +40,8 @@ another_key = 123
 
 ### flake.nix Structure
 
-The CLI extracts configuration from `nixosConfigurations` and `homeConfigurations` in the flake:
+The CLI extracts configuration from `nixosConfigurations` and
+`homeConfigurations` in the flake:
 
 ```nix
 {
@@ -63,22 +65,27 @@ The CLI extracts configuration from `nixosConfigurations` and `homeConfiguration
 ```
 
 **Artifacts** (defined in `artifacts.store.<name>`):
+
 - `name`: Artifact identifier
 - `shared`: Boolean - shared across systems or per-machine
 - `files`: File definitions for deployment
 - `prompts`: User input definitions
-- `generator`: Path to the generator script (usually created with `pkgs.writers.writeBash`)
+- `generator`: Path to the generator script (usually created with
+  `pkgs.writers.writeBash`)
 - `serialization`: Backend name (must exist in backend.toml)
 
 **Files**:
+
 - `name`: File identifier
 - `path`: Target system path
 - `owner`: File permissions owner (only in `nixosConfigurations` context)
 - `group`: File permissions group (only in `nixosConfigurations` context)
 
-**Note**: In `homeConfigurations` context, `owner` and `group` are not available since home-manager doesn't manage system-level permissions.
+**Note**: In `homeConfigurations` context, `owner` and `group` are not available
+since home-manager doesn't manage system-level permissions.
 
 **Prompts**:
+
 - `name`: Prompt identifier
 - `description`: User-facing description
 
@@ -155,7 +162,8 @@ pkgs/artifacts-cli/
 
 - **Version**: Rust 1.87.0
 - **Linting**: Clippy with default settings (treat warnings as errors)
-- **Error Handling**: Use `anyhow::Result<T>` for application errors, avoid panicking
+- **Error Handling**: Use `anyhow::Result<T>` for application errors, avoid
+  panicking
 - **Testing**: Use `insta_cmd` for snapshot testing
 
 ### Key Dependencies
@@ -257,6 +265,7 @@ mod tests {
 **Important**: Tests should run in serial order
 
 **Test Organization**:
+
 - `tests/backend/` - Backend operation tests
 - `tests/cli/` - CLI command tests
 - Snapshots stored in respective `snapshots/` subdirectories
@@ -306,7 +315,8 @@ cargo clippy
 - CLI evaluates flake to extract `nixosConfigurations` and `homeConfigurations`
 - Validate serialization backend exists in both backend.toml and flake
 - Check artifact references are valid
-- Handle differences between `nixosConfigurations` (with owner/group) and `homeConfigurations` (without owner/group)
+- Handle differences between `nixosConfigurations` (with owner/group) and
+  `homeConfigurations` (without owner/group)
 
 ### Adding Test Scenarios
 
