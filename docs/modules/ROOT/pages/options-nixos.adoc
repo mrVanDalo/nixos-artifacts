@@ -1,0 +1,212 @@
+== artifacts{zwsp}.default{zwsp}.backend{zwsp}.serialization
+
+script for serialization
+
+
+
+__Type:__ string
+
+
+
+== artifacts{zwsp}.store
+
+
+
+Artifacts store definitions
+
+
+
+__Type:__ attribute set of (submodule)
+
+
+
+__Default:__ ``{ }``
+
+
+
+== artifacts{zwsp}.store{zwsp}.{zwsp}+<+{zwsp}name{gt}{zwsp}.files
+
+
+
+file definition on the target system
+
+
+
+__Type:__ attribute set of (submodule)
+
+
+
+__Default:__ ``{ }``
+
+
+
+== artifacts{zwsp}.store{zwsp}.{zwsp}+<+{zwsp}name{gt}{zwsp}.files{zwsp}.{zwsp}+<+{zwsp}name{gt}{zwsp}.group
+
+
+
+group of the file on the target system{zwsp}.
+
+
+
+__Type:__ string
+
+
+
+__Default:__ ``{quot}root{quot}``
+
+
+
+== artifacts{zwsp}.store{zwsp}.{zwsp}+<+{zwsp}name{gt}{zwsp}.files{zwsp}.{zwsp}+<+{zwsp}name{gt}{zwsp}.mode
+
+
+
+Permissions mode of the decrypted secret in a format understood by chmod{zwsp}.
+
+
+
+__Type:__ string
+
+
+
+__Default:__ ``{quot}0400{quot}``
+
+
+
+== artifacts{zwsp}.store{zwsp}.{zwsp}+<+{zwsp}name{gt}{zwsp}.files{zwsp}.{zwsp}+<+{zwsp}name{gt}{zwsp}.owner
+
+
+
+owner of the file on the target system{zwsp}.
+
+
+
+__Type:__ string
+
+
+
+__Default:__ ``{quot}root{quot}``
+
+
+
+== artifacts{zwsp}.store{zwsp}.{zwsp}+<+{zwsp}name{gt}{zwsp}.files{zwsp}.{zwsp}+<+{zwsp}name{gt}{zwsp}.path
+
+
+
+Path to the file on the target system{zwsp}.
+
+
+
+__Type:__ string
+
+
+
+__Default:__ ``/run/artifacts/{zwsp}+<+{zwsp}artifact-name{gt}/{zwsp}+<+{zwsp}file-name{gt}``
+
+
+
+__Example:__ ``{quot}/etc/ssh/ssh_host_ed25519_key{quot}``
+
+
+
+== artifacts{zwsp}.store{zwsp}.{zwsp}+<+{zwsp}name{gt}{zwsp}.generator
+
+
+
+Generator Script{zwsp}. These environment variables are handed over to this script{zwsp}.
+
+[options="compact"]
+* {empty}``$machine`` machine name{zwsp}.
+
+* {empty}``$artifact`` artifact name{zwsp}.
+
+* {empty}``$config`` a file which contains ``artifact{zwsp}.config{zwsp}.{zwsp}+<+{zwsp}backend{gt}`` values as json{zwsp}.
+
+* {empty}``$prompt`` a folder containing files containing the prompt inputs (defined by the prompt option){zwsp}.
+
+* {empty}``$out`` a folder the generator script must create a file for each file definition of the artifact{zwsp}.
+
+
+
+
+__Type:__ null or package
+
+
+
+__Default:__ ``null``
+
+
+
+__Example:__
+
+----
+pkgs.write.writeBash "random" ''
+  ${pkgs.xkcdpass}/bin/xkcdpass --numwords 10 > $out/random_password
+'';
+
+----
+
+
+
+== artifacts{zwsp}.store{zwsp}.{zwsp}+<+{zwsp}name{gt}{zwsp}.prompts
+
+
+
+Prompts end up in $prompt/{zwsp}+<+{zwsp}name{gt} in the generator script
+
+
+
+__Type:__ attribute set of (submodule)
+
+
+
+__Default:__ ``{ }``
+
+
+
+== artifacts{zwsp}.store{zwsp}.{zwsp}+<+{zwsp}name{gt}{zwsp}.prompts{zwsp}.{zwsp}+<+{zwsp}name{gt}{zwsp}.description
+
+
+
+description shown during prompt entry
+
+
+
+__Type:__ string
+
+
+
+__Default:__ ``{quot}input for ‹name›{quot}``
+
+
+
+== artifacts{zwsp}.store{zwsp}.{zwsp}+<+{zwsp}name{gt}{zwsp}.serialization
+
+
+
+Serialization definition
+
+
+
+__Type:__ string
+
+
+
+__Default:__ ``config{zwsp}.artifacts{zwsp}.default{zwsp}.backend{zwsp}.serialization``
+
+
+
+== artifacts{zwsp}.store{zwsp}.{zwsp}+<+{zwsp}name{gt}{zwsp}.shared
+
+
+
+Whether the store is shared
+
+
+
+__Type:__ boolean
+
+
+
+__Default:__ ``false``
+
+

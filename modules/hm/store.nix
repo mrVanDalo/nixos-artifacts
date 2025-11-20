@@ -42,7 +42,7 @@ with types;
                         type = str;
                         defaultText = literalExpression "\${XDG_RUNTIME_DIR}/artifacts/<artifact-name>/<file-name>";
                         default = "\${XDG_RUNTIME_DIR}/artifacts/${artifactName}/${fileName}";
-                        example = "${home.homeDirectory}/.ssh/ssh_host_ed25519";
+                        example = literalExpression "\${XDG_CONFIG_DIR}/artifacts/${artifactName}/${fileName}";
                         description = "Path to the file on the target system.";
                       };
 

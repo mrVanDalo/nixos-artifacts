@@ -17,8 +17,9 @@
     inputs@{ flake-parts, self, ... }:
     flake-parts.lib.mkFlake { inherit inputs; } {
       imports = [
-        ./nix/formatter.nix
         ./nix/devshells.nix
+        ./nix/docs.nix
+        ./nix/formatter.nix
         ./nix/options.nix
       ];
       perSystem =
@@ -67,36 +68,6 @@
                   '';
                 };
               };
-
-          apps = {
-            build-docs = {
-              type = "app";
-              program = "${
-                pkgs.writeShellApplication {
-                  name = "build-docs";
-                  runtimeInputs = [
-                    pkgs.antora
-                    pkgs.git
-                    pkgs.nodejs
-                  ];
-                  text = ''
-                    set -euo pipefail
-                    export ANTORA_CACHE_DIR="$PWD/.cache"
-                    antora \
-                      --stacktrace \
-                      --to-dir /tmp/antora-public \
-                      --extension ${pkgs.antora-lunr-extension}/node_modules/@antora/lunr-extension \
-                      --extension ${
-                        inputs.antora-flake.packages.${system}.antora-mermaid-extension
-                      }/lib/node_modules/@sntke/antora-mermaid-extension \
-                      antora-playbook.yml
-                    echo
-                    echo "Site generated in: docs/public"
-                  '';
-                }
-              }/bin/build-docs";
-            };
-          };
         };
       systems = [
         "x86_64-linux"

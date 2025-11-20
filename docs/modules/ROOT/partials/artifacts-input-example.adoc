@@ -24,7 +24,7 @@
 <2> nixos-artifacts-agenix backend input (other backends can be used here as well)
 <3> import nixos-artifacts nixos module
 <4> import nixos-artifacts-agenix nixos module (contains `agenix.nixosModules.default`).
-<5> use agenix as default backend, if xref:options.adoc#_artifactszwsp_storezwsp_zwspzwspnamegtzwsp_serialization[backend] is not explicitly set, this backend will be used.
-<6> xref:latest@nixos-artifacts-agenix:ROOT:options.adoc[nixos-artifacts-agenix configuration options]
+<5> use agenix as default backend, if xref:options-nixos.adoc#_artifacts_store_serialization[backend] is not explicitly set, this backend will be used.
+<6> xref:latest@nixos-artifacts-agenix:ROOT:options-nixos.adoc[nixos-artifacts-agenix configuration options]
 
 

@@ -40,9 +40,9 @@ Inspired by:
 
 Artifacts are organized into two top-level option trees.
 
-- xref:options.adoc#_artifactszwsp_store[artifacts.store] — What are the artifacts and where should they end up on the target system?
+- xref:options-nixos.adoc#_artifacts_store[artifacts.store] — What are the artifacts and where should they end up on the target system?
 - `artifacts.config` — How do we customize or parameterize backend behavior and define defaults? This is backend-specific.
-(See xref:latest@nixos-artifacts-agenix:ROOT:options.adoc[agenix backend] for example).
+(See xref:latest@nixos-artifacts-agenix:ROOT:options-nixos.adoc[agenix backend] for example).
 
 See xref:artifact-definition-example.adoc[Artifact definition example] for a concrete artifact and the fields available in artifacts.store.
 

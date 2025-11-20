@@ -4,4 +4,6 @@
 * xref:defining-backends.adoc[How to define backends]
 * xref:how-to-use-a-backend.adoc[How to use a backend]
 * xref:artifacts-workflow-diagrams.adoc[Workflow diagrams]
-* xref:options.adoc[Options]
+* Options
+** xref:options-nixos.adoc[NixOS]
+** xref:options-homemanager.adoc[Home Manager]

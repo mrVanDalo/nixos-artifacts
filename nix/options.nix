@@ -5,21 +5,52 @@
     { pkgs, system, ... }:
 
     let
-      eval = import (inputs.nixpkgs + "/nixos/lib/eval-config.nix") {
+      # NixOS options
+      nixosEval = import (inputs.nixpkgs + "/nixos/lib/eval-config.nix") {
         modules = [ ../modules ];
         inherit system;
       };
-      json = (pkgs.nixosOptionsDoc { options = eval.options.artifacts; }).optionsJSON;
-      fixedJSON = pkgs.runCommand "fix_json" { nativeBuildInputs = [ pkgs.gojq ]; } ''
-        gojq 'del(.. | .declarations?)' ${json}/share/doc/nixos/options.json > $out
+      nixosJson = (pkgs.nixosOptionsDoc { options = nixosEval.options.artifacts; }).optionsJSON;
+      nixosFixedJSON = pkgs.runCommand "fix_nixos_json" { nativeBuildInputs = [ pkgs.gojq ]; } ''
+        gojq 'del(.. | .declarations?)' ${nixosJson}/share/doc/nixos/options.json > $out
       '';
-      asciidoc = pkgs.runCommand "options.adoc" { nativeBuildInputs = [ pkgs.nixos-render-docs ]; } ''
-        nixos-render-docs -j $NIX_BUILD_CORES options asciidoc \
-          --manpage-urls ${pkgs.path + "/doc/manpage-urls.json"} \
-          --revision "" \
-          ${fixedJSON} \
-          $out
+      nixosAsciidoc =
+        pkgs.runCommand "nixos-options.adoc"
+          {
+            nativeBuildInputs = [ pkgs.nixos-render-docs ];
+          }
+          ''
+            nixos-render-docs -j $NIX_BUILD_CORES options asciidoc \
+              --manpage-urls ${pkgs.path + "/doc/manpage-urls.json"} \
+              --revision "" \
+              ${nixosFixedJSON} \
+              $out
+          '';
+
+      # Home Manager options
+      hmEval = pkgs.lib.evalModules {
+        modules = [
+          ../modules/hm
+          { _module.check = false; }
+        ];
+        specialArgs = { inherit pkgs; };
+      };
+      hmJson = (pkgs.nixosOptionsDoc { options = hmEval.options.artifacts; }).optionsJSON;
+      hmFixedJSON = pkgs.runCommand "fix_hm_json" { nativeBuildInputs = [ pkgs.gojq ]; } ''
+        gojq 'del(.. | .declarations?)' ${hmJson}/share/doc/nixos/options.json > $out
       '';
+      hmAsciidoc =
+        pkgs.runCommand "hm-options.adoc"
+          {
+            nativeBuildInputs = [ pkgs.nixos-render-docs ];
+          }
+          ''
+            nixos-render-docs -j $NIX_BUILD_CORES options asciidoc \
+              --manpage-urls ${pkgs.path + "/doc/manpage-urls.json"} \
+              --revision "" \
+              ${hmFixedJSON} \
+              $out
+          '';
     in
     {
       apps.build-docs-options = {
@@ -27,9 +58,11 @@
         program = pkgs.writeShellApplication {
           name = "eval-options-json";
           runtimeInputs = [ pkgs.coreutils ];
-          text = "cat ${asciidoc} > docs/modules/ROOT/pages/options.adoc";
+          text = ''
+            cat ${nixosAsciidoc} > docs/modules/ROOT/pages/options-nixos.adoc
+            cat ${hmAsciidoc} > docs/modules/ROOT/pages/options-homemanager.adoc
+          '';
         };
       };
-      packages.asdf = asciidoc;
     };
 }
