@@ -1,0 +1,4 @@
+[test]
+check_serialization = "./check.sh"
+serialize = "./serialize.sh"
+deserialize = "./deserialize.sh"

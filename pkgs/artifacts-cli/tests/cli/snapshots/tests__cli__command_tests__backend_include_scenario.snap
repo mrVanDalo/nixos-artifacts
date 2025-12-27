@@ -96,7 +96,7 @@ exit_code: 0
 🐛   ],
 🐛   "files_to_produce": 1
 🐛 }
-🐛     running check_serialization: env inputs="/tmp/artifacts-cli/inputs-test-artifact" machine="machine-name" artifact="test-artifact" artifact_context="nixos" /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/backend_include/test_check.sh
+🐛     running check_serialization: env inputs="/tmp/artifacts-cli/inputs-test-artifact" machine="machine-name" artifact="test-artifact" artifact_context="nixos" /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/backend_include/backend_test/check.sh
 Environment variables:
 inputs=/tmp/artifacts-cli/inputs-test-artifact
 config=/tmp/artifacts-cli/config-test-artifact/config.json

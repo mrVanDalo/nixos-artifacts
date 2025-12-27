@@ -1,4 +1,0 @@
-[test]
-check_serialization = "../test_check.sh"
-serialize = "../test_serialize.sh"
-deserialize = "../test_deserialize.sh"

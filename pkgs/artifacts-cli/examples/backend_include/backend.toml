@@ -1,2 +1,2 @@
 # Main backend config demonstrating include feature
-include = ["./backends/test.toml"]
+include = ["./backend_test/backend.toml"]
