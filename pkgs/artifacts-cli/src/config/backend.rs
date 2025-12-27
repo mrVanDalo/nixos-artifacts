@@ -68,10 +68,26 @@ impl BackendConfiguration {
         let raw: BackendFileRaw = toml::from_str(&text)
             .with_context(|| format!("parsing backend config {}", toml_path.display()))?;
 
-        let mut result = raw.backends;
-
         // Get the directory containing this file for relative path resolution
         let base_dir = canonical.parent().unwrap_or(Path::new("."));
+
+        // Resolve script paths relative to this file's directory
+        let mut result: HashMap<String, BackendEntry> = raw
+            .backends
+            .into_iter()
+            .map(|(name, entry)| {
+                let resolved_entry = BackendEntry {
+                    check_serialization: Self::resolve_script_path(
+                        base_dir,
+                        &entry.check_serialization,
+                    ),
+                    serialize: Self::resolve_script_path(base_dir, &entry.serialize),
+                    deserialize: Self::resolve_script_path(base_dir, &entry.deserialize),
+                    settings: entry.settings,
+                };
+                (name, resolved_entry)
+            })
+            .collect();
 
         for include_path in raw.include {
             let resolved_path = base_dir.join(&include_path);
@@ -91,6 +107,18 @@ impl BackendConfiguration {
         }
 
         Ok(result)
+    }
+
+    /// Resolve a script path relative to the given base directory.
+    /// If the path is already absolute, return it as-is.
+    /// Otherwise, join with base_dir and convert to string.
+    fn resolve_script_path(base_dir: &Path, script_path: &str) -> String {
+        let path = Path::new(script_path);
+        if path.is_absolute() {
+            script_path.to_string()
+        } else {
+            base_dir.join(path).to_string_lossy().to_string()
+        }
     }
 
     pub(crate) fn get_backend(&self, backend_name: &String) -> Result<BackendEntry> {

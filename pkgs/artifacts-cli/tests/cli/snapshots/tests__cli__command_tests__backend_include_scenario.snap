@@ -11,8 +11,8 @@ info:
     TMPDIR: /tmp/artifacts-cli
   stdin: ""
 ---
-success: false
-exit_code: 1
+success: true
+exit_code: 0
 ----- stdout -----
 🐛 Running nix build on /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/backend_include
 💬 /run/current-system/sw/bin/nix build --impure -I flake=/home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/backend_include --no-link --print-out-paths --expr 'let
@@ -96,7 +96,53 @@ exit_code: 1
 🐛   ],
 🐛   "files_to_produce": 1
 🐛 }
-🐛     running check_serialization: env inputs="/tmp/artifacts-cli/inputs-test-artifact" machine="machine-name" artifact="test-artifact" artifact_context="nixos" /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/backend_include/../test_check.sh
+🐛     running check_serialization: env inputs="/tmp/artifacts-cli/inputs-test-artifact" machine="machine-name" artifact="test-artifact" artifact_context="nixos" /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/backend_include/test_check.sh
+Environment variables:
+inputs=/tmp/artifacts-cli/inputs-test-artifact
+config=/tmp/artifacts-cli/config-test-artifact/config.json
+machine=machine-name
+artifact=test-artifact
+username=
+artifact_context=nixos
+--- Begin /tmp/artifacts-cli/config-test-artifact/config.json ---
+{}
+--- End /tmp/artifacts-cli/config-test-artifact/config.json ---
+
+🐛     check_serialization: failed with status exit status: 1 -> continuing with generation
+⚡ machine-name/test-artifact
+🐛 run bwrap with command /nix/store/[hash]-test_generator.sh/bin/test_generator.sh
+💬 bwrap \
+💬 --unshare-all \
+💬 --unshare-user \
+💬 --uid 1000 \
+💬 --gid 1000 \
+💬 --tmpfs / \
+💬 --chdir / \
+💬 --ro-bind /nix/store /nix/store \
+💬 --tmpfs /usr/lib/systemd \
+💬 --proc /proc \
+💬 --dev /dev \
+💬 --bind /tmp/artifacts-cli/prompt-test-artifact /tmp/artifacts-cli/prompt-test-artifact \
+💬 --bind /tmp/artifacts-cli/out-test-artifact /tmp/artifacts-cli/out-test-artifact \
+💬 --ro-bind /nix/store/[hash]-test_generator.sh/bin /nix/store/[hash]-test_generator.sh/bin \
+💬 --ro-bind /bin /bin \
+💬 --ro-bind /usr/bin /usr/bin \
+💬 --ro-bind /tmp/artifacts-cli/artifacts-cli-passwd-820e090949e37de7.txt /etc/passwd \
+💬 -- /bin/sh /nix/store/[hash]-test_generator.sh/bin/test_generator.sh
+💾 serialize secrets
+Environment variables:
+out=/tmp/artifacts-cli/out-test-artifact
+config=/tmp/artifacts-cli/config/config.json
+machine=machine-name
+artifact=test-artifact
+username=
+artifact_context=nixos
+--- Begin /tmp/artifacts-cli/config/config.json ---
+{}
+--- End /tmp/artifacts-cli/config/config.json ---
+
+=== Content of /tmp/artifacts-cli/out-test-artifact/secret-file ===
+secret content
+=========================
 
 ----- stderr -----
-❌ running check_serialization /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts-cli/examples/backend_include/../test_check.sh: No such file or directory (os error 2)
