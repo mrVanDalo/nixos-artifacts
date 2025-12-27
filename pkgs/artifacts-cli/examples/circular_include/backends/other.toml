@@ -1,0 +1,7 @@
+# This file includes the main backend.toml, creating a circular dependency
+include = ["../backend.toml"]
+
+[other]
+check_serialization = "../test_check.sh"
+serialize = "../test_serialize.sh"
+deserialize = "../test_deserialize.sh"

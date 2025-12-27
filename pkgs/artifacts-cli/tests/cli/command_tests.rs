@@ -455,3 +455,49 @@ fn simple_home_manager_scenario() {
 
     assert_cmd_snapshot!(cmd);
 }
+
+#[test]
+#[serial]
+fn backend_include_scenario() {
+    let root = project_root();
+    let test_dir = root.join("examples/backend_include");
+
+    let env = TempTestEnv::new();
+
+    let mut cmd = sdtin_cli("");
+
+    cmd.arg("generate")
+        .env(
+            "NIXOS_ARTIFACTS_BACKEND_CONFIG",
+            test_dir.join("backend.toml"),
+        )
+        .arg(test_dir);
+
+    // Verify and cleanup
+    env.finish().expect("temp folder not empty at end of test");
+
+    assert_cmd_snapshot!(cmd);
+}
+
+#[test]
+#[serial]
+fn circular_include_scenario() {
+    let root = project_root();
+    let test_dir = root.join("examples/circular_include");
+
+    let env = TempTestEnv::new();
+
+    let mut cmd = sdtin_cli("");
+
+    cmd.arg("generate")
+        .env(
+            "NIXOS_ARTIFACTS_BACKEND_CONFIG",
+            test_dir.join("backend.toml"),
+        )
+        .arg(test_dir);
+
+    // Verify and cleanup
+    env.finish().expect("temp folder not empty at end of test");
+
+    assert_cmd_snapshot!(cmd);
+}

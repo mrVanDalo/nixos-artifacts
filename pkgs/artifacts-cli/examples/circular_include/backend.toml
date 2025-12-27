@@ -1,0 +1,7 @@
+# Main backend config that includes another file which includes this file back
+include = ["./backends/other.toml"]
+
+[test]
+check_serialization = "./test_check.sh"
+serialize = "./test_serialize.sh"
+deserialize = "./test_deserialize.sh"
