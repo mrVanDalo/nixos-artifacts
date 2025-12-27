@@ -38,6 +38,37 @@ key = "value"
 another_key = 123
 ```
 
+### Splitting backend.toml with Includes
+
+Backend configuration can be split across multiple files using the `include`
+directive. Paths are relative to the file containing the include.
+
+```toml
+# backend.toml
+include = ["./backends/agenix.toml", "./backends/sops.toml"]
+
+[test]
+check_serialization = "./test_check.sh"
+serialize = "./test_serialize.sh"
+deserialize = "./test_deserialize.sh"
+```
+
+```toml
+# backends/agenix.toml
+[agenix]
+check_serialization = "./agenix_check.sh"
+serialize = "./agenix_serialize.sh"
+deserialize = "./agenix_deserialize.sh"
+```
+
+**Include behavior:**
+
+- Paths are resolved relative to the file containing the `include` directive
+- Nested includes are supported (included files can include other files)
+- Circular includes are detected and rejected
+- Duplicate backend names across files produce an error
+- Fully backwards compatible (files without `include` work unchanged)
+
 ### flake.nix Structure
 
 The CLI extracts configuration from `nixosConfigurations` and
