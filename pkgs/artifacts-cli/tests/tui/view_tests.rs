@@ -2,27 +2,8 @@ use artifacts_cli::app::model::*;
 use artifacts_cli::config::make::{ArtifactDef, FileDef, PromptDef};
 use artifacts_cli::tui::views::{render_artifact_list, render_progress, render_prompt};
 use insta::assert_snapshot;
-use ratatui::{Terminal, backend::TestBackend, buffer::Buffer};
+use ratatui::{Terminal, backend::TestBackend};
 use std::collections::BTreeMap;
-
-/// Convert a ratatui Buffer to a string for snapshot testing.
-/// This produces a human-readable representation of the terminal output.
-fn buffer_to_string(buf: &Buffer) -> String {
-    let mut output = String::new();
-    for y in 0..buf.area.height {
-        for x in 0..buf.area.width {
-            let cell = &buf[(x, y)];
-            output.push_str(cell.symbol());
-        }
-        output.push('\n');
-    }
-    // Trim trailing whitespace from each line for cleaner snapshots
-    output
-        .lines()
-        .map(|l| l.trim_end())
-        .collect::<Vec<_>>()
-        .join("\n")
-}
 
 fn make_test_artifact(name: &str, prompts: Vec<&str>) -> ArtifactDef {
     let mut prompt_map = BTreeMap::new();
@@ -96,7 +77,7 @@ fn test_artifact_list_initial() {
         .draw(|f| render_artifact_list(f, &model, f.area()))
         .unwrap();
 
-    let output = buffer_to_string(terminal.backend().buffer());
+    let output = terminal.backend().to_string();
     assert_snapshot!(output);
 }
 
@@ -112,7 +93,7 @@ fn test_artifact_list_with_selection() {
         .draw(|f| render_artifact_list(f, &model, f.area()))
         .unwrap();
 
-    let output = buffer_to_string(terminal.backend().buffer());
+    let output = terminal.backend().to_string();
     assert_snapshot!(output);
 }
 
@@ -129,7 +110,7 @@ fn test_artifact_list_with_failed_status() {
         .draw(|f| render_artifact_list(f, &model, f.area()))
         .unwrap();
 
-    let output = buffer_to_string(terminal.backend().buffer());
+    let output = terminal.backend().to_string();
     assert_snapshot!(output);
 }
 
@@ -159,7 +140,7 @@ fn test_prompt_initial_line_mode() {
         .draw(|f| render_prompt(f, &state, f.area()))
         .unwrap();
 
-    let output = buffer_to_string(terminal.backend().buffer());
+    let output = terminal.backend().to_string();
     assert_snapshot!(output);
 }
 
@@ -185,7 +166,7 @@ fn test_prompt_with_input() {
         .draw(|f| render_prompt(f, &state, f.area()))
         .unwrap();
 
-    let output = buffer_to_string(terminal.backend().buffer());
+    let output = terminal.backend().to_string();
     assert_snapshot!(output);
 }
 
@@ -211,7 +192,7 @@ fn test_prompt_hidden_mode() {
         .draw(|f| render_prompt(f, &state, f.area()))
         .unwrap();
 
-    let output = buffer_to_string(terminal.backend().buffer());
+    let output = terminal.backend().to_string();
     assert_snapshot!(output);
 }
 
@@ -237,7 +218,7 @@ fn test_prompt_multiline_mode() {
         .draw(|f| render_prompt(f, &state, f.area()))
         .unwrap();
 
-    let output = buffer_to_string(terminal.backend().buffer());
+    let output = terminal.backend().to_string();
     assert_snapshot!(output);
 }
 
@@ -276,7 +257,7 @@ fn test_prompt_second_of_three() {
         .draw(|f| render_prompt(f, &state, f.area()))
         .unwrap();
 
-    let output = buffer_to_string(terminal.backend().buffer());
+    let output = terminal.backend().to_string();
     assert_snapshot!(output);
 }
 
@@ -300,7 +281,7 @@ fn test_progress_running_generator() {
         .draw(|f| render_progress(f, &state, f.area()))
         .unwrap();
 
-    let output = buffer_to_string(terminal.backend().buffer());
+    let output = terminal.backend().to_string();
     assert_snapshot!(output);
 }
 
@@ -323,6 +304,6 @@ fn test_progress_serializing() {
         .draw(|f| render_progress(f, &state, f.area()))
         .unwrap();
 
-    let output = buffer_to_string(terminal.backend().buffer());
+    let output = terminal.backend().to_string();
     assert_snapshot!(output);
 }
