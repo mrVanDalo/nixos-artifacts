@@ -53,7 +53,6 @@ pub enum ArtifactStatus {
     NeedsGeneration,
     UpToDate,
     Generating,
-    Done,
     Failed(String),
 }
 

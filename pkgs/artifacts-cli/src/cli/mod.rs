@@ -119,21 +119,23 @@ fn run_tui(
 
     match result {
         Ok(run_result) => {
-            let generated = run_result
+            let failed: Vec<_> = run_result
                 .final_model
                 .artifacts
                 .iter()
-                .filter(|a| matches!(a.status, crate::app::model::ArtifactStatus::Done))
-                .count();
-            let failed = run_result
-                .final_model
-                .artifacts
-                .iter()
-                .filter(|a| matches!(a.status, crate::app::model::ArtifactStatus::Failed(_)))
-                .count();
+                .filter_map(|a| match &a.status {
+                    crate::app::model::ArtifactStatus::Failed(msg) => {
+                        Some(format!("{}/{}: {}", a.target, a.artifact.name, msg))
+                    }
+                    _ => None,
+                })
+                .collect();
 
-            if generated > 0 || failed > 0 {
-                println!("Generated: {}, Failed: {}", generated, failed);
+            if !failed.is_empty() {
+                eprintln!("Failed artifacts:");
+                for msg in &failed {
+                    eprintln!("  {}", msg);
+                }
             }
             Ok(())
         }

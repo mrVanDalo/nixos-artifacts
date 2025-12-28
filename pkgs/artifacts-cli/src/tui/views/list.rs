@@ -63,7 +63,6 @@ fn status_display(status: &ArtifactStatus) -> (&'static str, Style) {
         ArtifactStatus::NeedsGeneration => ("◐", Style::default().fg(Color::Yellow)),
         ArtifactStatus::UpToDate => ("✓", Style::default().fg(Color::Green)),
         ArtifactStatus::Generating => ("⟳", Style::default().fg(Color::Cyan)),
-        ArtifactStatus::Done => ("✓", Style::default().fg(Color::Green)),
         ArtifactStatus::Failed(_) => ("✗", Style::default().fg(Color::Red)),
     }
 }

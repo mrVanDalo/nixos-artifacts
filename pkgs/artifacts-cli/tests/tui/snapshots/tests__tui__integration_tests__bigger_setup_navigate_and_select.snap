@@ -47,7 +47,7 @@ TestResult {
             ArtifactState {
                 target: "machine-two",
                 name: "artifact-one",
-                status: "Done",
+                status: "UpToDate",
             },
             ArtifactState {
                 target: "machine-two",

@@ -32,7 +32,7 @@ TestResult {
             ArtifactState {
                 target: "machine-name",
                 name: "artifact-two",
-                status: "Done",
+                status: "UpToDate",
             },
         ],
         error: None,

@@ -328,7 +328,7 @@ fn handle_serialize_finished(
     match result {
         Ok(()) => {
             if let Some(entry) = model.artifacts.get_mut(artifact_index) {
-                entry.status = ArtifactStatus::Done;
+                entry.status = ArtifactStatus::UpToDate;
             }
         }
         Err(e) => {

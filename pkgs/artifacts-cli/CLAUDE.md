@@ -441,7 +441,7 @@ mod tests {
 **Snapshot Review Workflow**: When running tests that generate new snapshots,
 run `cargo test` without accepting snapshots automatically. Then inform the user
 to run `cargo insta review` in a separate terminal to review and accept/reject
-the snapshots manually. Never use `cargo insta test --accept` automatically.
+the snapshots manually. NEVER run `cargo insta accept` or `cargo insta test --accept`.
 
 **Test Organization**:
 
