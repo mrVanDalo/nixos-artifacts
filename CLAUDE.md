@@ -69,6 +69,7 @@ nix fmt          # Format code (REQUIRED before commits)
    - Structural changes
 3. **Maintain consistency** — Align terminology with README.md
 4. **Format before committing** — Always run `nix fmt`
+5. **Commit without signing** — Always use `git -c commit.gpgsign=false commit`
 
 ### Code Organization Principles
 
