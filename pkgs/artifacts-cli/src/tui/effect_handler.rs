@@ -1,9 +1,8 @@
 use crate::app::model::Model;
 use crate::app::{Effect, Msg};
 use crate::backend::generator::{run_generator_script, verify_generated_files};
-use crate::backend::serialization::run_serialize;
+use crate::backend::serialization::{run_check_serialization, run_serialize};
 use crate::backend::temp_dir::create_temp_dir;
-use crate::cli::commands::generate::run_check_serialization;
 use crate::config::backend::BackendConfiguration;
 use crate::config::make::MakeConfiguration;
 use crate::tui::runtime::EffectHandler;

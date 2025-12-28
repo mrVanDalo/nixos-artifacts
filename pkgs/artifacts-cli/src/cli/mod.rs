@@ -1,26 +1,24 @@
 pub mod args;
-pub mod commands;
 mod logging;
 
 use crate::config::backend::BackendConfiguration;
 use crate::config::make::MakeConfiguration;
 use crate::config::nix::build_make_from_flake;
 use crate::tui::{
-    BackendEffectHandler, TerminalEventSource, TerminalGuard, build_filtered_model,
-    install_panic_hook, run as run_tui_loop,
+    build_filtered_model, install_panic_hook, run as run_tui_loop, BackendEffectHandler,
+    TerminalEventSource, TerminalGuard,
 };
 use anyhow::{Context, Result};
 use clap::Parser;
 use log::LevelFilter;
+use std::path::{Path, PathBuf};
 
-fn resolve_flake_path(p: &Option<std::path::PathBuf>) -> std::path::PathBuf {
-    p.clone().unwrap_or_else(|| {
-        std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."))
-    })
+fn resolve_flake_path(p: &Option<PathBuf>) -> PathBuf {
+    p.clone()
+        .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")))
 }
 
-fn resolve_backend_toml(flake_path: &std::path::Path) -> anyhow::Result<std::path::PathBuf> {
-    use std::path::PathBuf;
+fn resolve_backend_toml(flake_path: &Path) -> Result<PathBuf> {
     match std::env::var("NIXOS_ARTIFACTS_BACKEND_CONFIG") {
         Ok(val) => {
             let p = PathBuf::from(val);
@@ -50,10 +48,9 @@ fn resolve_backend_toml(flake_path: &std::path::Path) -> anyhow::Result<std::pat
 pub fn run() -> Result<()> {
     let cli = args::Cli::parse();
 
-    // Initialize logger based on emoji preference
+    // Initialize logger
     logging::init_logger(!cli.no_emoji);
 
-    // Configure log level based on CLI argument (default is Debug from init, but override if provided)
     let level_filter = match cli.log_level {
         args::LogLevel::Error => LevelFilter::Error,
         args::LogLevel::Warning => LevelFilter::Warn,
@@ -63,71 +60,24 @@ pub fn run() -> Result<()> {
     };
     log::set_max_level(level_filter);
 
-    match cli.command {
-        args::Command::Generate {
-            make,
-            all,
-            machine,
-            home,
-            artifact,
-        } => {
-            let flake_path = resolve_flake_path(&make);
-            let backend_path = resolve_backend_toml(&flake_path)?;
-            let make_path = build_make_from_flake(&flake_path)?;
+    // Resolve paths
+    let flake_path = resolve_flake_path(&cli.flake);
+    let backend_path = resolve_backend_toml(&flake_path)?;
+    let make_path = build_make_from_flake(&flake_path)?;
 
-            commands::generate::run_generate_command(
-                &backend_path,
-                &make_path,
-                all,
-                &machine,
-                &home,
-                &artifact,
-            )?
-        }
-        args::Command::Regenerate {
-            make,
-            all,
-            machine,
-            home,
-            artifact,
-        } => {
-            let flake_path = resolve_flake_path(&make);
-            let backend_path = resolve_backend_toml(&flake_path)?;
-            let make_path = build_make_from_flake(&flake_path)?;
-            commands::generate::run_regenerate_command(
-                &backend_path,
-                &make_path,
-                all,
-                &machine,
-                &home,
-                &artifact,
-            )?
-        }
-        args::Command::List { make } => {
-            let flake_path = resolve_flake_path(&make);
-            // Resolve backend too, to meet the requirement that all commands read it.
-            let _backend_path = resolve_backend_toml(&flake_path)?;
-            let make_path = build_make_from_flake(&flake_path)?;
-            commands::list::run(&make_path)?
-        }
-        args::Command::Tui {
-            make,
-            machine,
-            home,
-            artifact,
-        } => {
-            let flake_path = resolve_flake_path(&make);
-            let backend_path = resolve_backend_toml(&flake_path)?;
-            let make_path = build_make_from_flake(&flake_path)?;
-            run_tui(&backend_path, &make_path, &machine, &home, &artifact)?
-        }
-    }
-    Ok(())
+    // Run TUI
+    run_tui(
+        &backend_path,
+        &make_path,
+        &cli.machine,
+        &cli.home,
+        &cli.artifact,
+    )
 }
 
 fn run_tui(
-    backend_path: &std::path::Path,
-    make_path: &std::path::Path,
+    backend_path: &Path,
+    make_path: &Path,
     machines: &[String],
     home_users: &[String],
     artifacts: &[String],
@@ -155,7 +105,12 @@ fn run_tui(
     let mut effects = BackendEffectHandler::new(backend, make);
 
     // Run the TUI
-    let result = run_tui_loop(terminal_guard.terminal(), &mut events, &mut effects, model);
+    let result = run_tui_loop(
+        terminal_guard.terminal(),
+        &mut events,
+        &mut effects,
+        model,
+    );
 
     // Restore terminal before handling result
     terminal_guard
@@ -164,7 +119,6 @@ fn run_tui(
 
     match result {
         Ok(run_result) => {
-            // Print summary
             let generated = run_result
                 .final_model
                 .artifacts
