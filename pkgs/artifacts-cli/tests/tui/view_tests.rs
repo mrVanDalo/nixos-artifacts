@@ -2,7 +2,7 @@ use artifacts_cli::app::model::*;
 use artifacts_cli::config::make::{ArtifactDef, FileDef, PromptDef};
 use artifacts_cli::tui::views::{render_artifact_list, render_progress, render_prompt};
 use insta::assert_snapshot;
-use ratatui::{backend::TestBackend, buffer::Buffer, Terminal};
+use ratatui::{Terminal, backend::TestBackend, buffer::Buffer};
 use std::collections::BTreeMap;
 
 /// Convert a ratatui Buffer to a string for snapshot testing.
@@ -119,7 +119,8 @@ fn test_artifact_list_with_selection() {
 #[test]
 fn test_artifact_list_with_failed_status() {
     let mut model = make_test_model();
-    model.artifacts[0].status = ArtifactStatus::Failed("Generator script exited with code 1".to_string());
+    model.artifacts[0].status =
+        ArtifactStatus::Failed("Generator script exited with code 1".to_string());
 
     let backend = TestBackend::new(70, 10);
     let mut terminal = Terminal::new(backend).unwrap();

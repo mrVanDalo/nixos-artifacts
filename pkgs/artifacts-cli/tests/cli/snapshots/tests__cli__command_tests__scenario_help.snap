@@ -16,6 +16,7 @@ Commands:
   generate    Generate artifacts
   regenerate  Regenerate selected artifacts (or all)
   list        List all machines and artifacts defined by the flake
+  tui         Launch interactive TUI for managing artifacts
   help        Print this message or the help of the given subcommand(s)
 
 Options:

@@ -31,9 +31,7 @@ pub fn build_model(make: &MakeConfiguration) -> Model {
     }
 
     // Sort artifacts by target then name for consistent ordering
-    artifacts.sort_by(|a, b| {
-        (&a.target, &a.artifact.name).cmp(&(&b.target, &b.artifact.name))
-    });
+    artifacts.sort_by(|a, b| (&a.target, &a.artifact.name).cmp(&(&b.target, &b.artifact.name)));
 
     Model {
         screen: Screen::ArtifactList,

@@ -1,9 +1,9 @@
 use crate::app::model::Model;
-use crate::app::{update, Effect, Msg};
+use crate::app::{Effect, Msg, update};
 use crate::tui::events::EventSource;
 use crate::tui::views::render;
 use anyhow::Result;
-use ratatui::{backend::Backend, Terminal};
+use ratatui::{Terminal, backend::Backend};
 
 /// The result of running the TUI application
 #[derive(Debug, Clone)]
@@ -183,8 +183,8 @@ mod tests {
     use super::*;
     use crate::app::model::*;
     use crate::config::make::{ArtifactDef, FileDef, PromptDef};
-    use crate::tui::events::test_helpers::*;
     use crate::tui::events::ScriptedEventSource;
+    use crate::tui::events::test_helpers::*;
     use ratatui::backend::TestBackend;
     use std::collections::BTreeMap;
 
@@ -337,10 +337,10 @@ mod tests {
     fn test_cancel_prompt_with_esc() {
         let model = make_test_model();
         let mut events = ScriptedEventSource::new(vec![
-            enter(),              // Enter prompt
-            char('a'),            // Type something
+            enter(),   // Enter prompt
+            char('a'), // Type something
             char('b'),
-            esc(),                // Cancel
+            esc(), // Cancel
         ]);
 
         let final_model = simulate(&mut events, model);

@@ -122,7 +122,7 @@ struct MakeRoot {
 }
 
 impl MakeConfiguration {
-    pub(crate) fn read_make_config(make_json: &Path) -> anyhow::Result<MakeConfiguration> {
+    pub fn read_make_config(make_json: &Path) -> anyhow::Result<MakeConfiguration> {
         let make_text = fs::read_to_string(make_json)
             .with_context(|| format!("reading make config {}", make_json.display()))?;
 

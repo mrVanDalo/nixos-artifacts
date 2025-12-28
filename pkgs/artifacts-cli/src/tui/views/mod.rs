@@ -1,13 +1,13 @@
 mod list;
-mod prompt;
 mod progress;
+mod prompt;
 
 use crate::app::model::{Model, Screen};
 use ratatui::Frame;
 
 pub use list::render_artifact_list;
-pub use prompt::render_prompt;
 pub use progress::render_progress;
+pub use prompt::render_prompt;
 
 /// Top-level view dispatcher - renders the appropriate screen based on model state
 pub fn render(frame: &mut Frame, model: &Model) {
@@ -26,7 +26,11 @@ pub fn render(frame: &mut Frame, model: &Model) {
     }
 }
 
-fn render_done(frame: &mut Frame, state: &crate::app::model::DoneState, area: ratatui::layout::Rect) {
+fn render_done(
+    frame: &mut Frame,
+    state: &crate::app::model::DoneState,
+    area: ratatui::layout::Rect,
+) {
     use ratatui::{
         style::{Color, Modifier, Style},
         text::Line,
@@ -37,7 +41,9 @@ fn render_done(frame: &mut Frame, state: &crate::app::model::DoneState, area: ra
         Line::from(""),
         Line::styled(
             "Generation Complete",
-            Style::default().fg(Color::Green).add_modifier(Modifier::BOLD),
+            Style::default()
+                .fg(Color::Green)
+                .add_modifier(Modifier::BOLD),
         ),
         Line::from(""),
     ];
@@ -73,7 +79,8 @@ fn render_done(frame: &mut Frame, state: &crate::app::model::DoneState, area: ra
         Style::default().fg(Color::DarkGray),
     ));
 
-    let paragraph = Paragraph::new(lines).block(Block::default().borders(Borders::ALL).title("Done"));
+    let paragraph =
+        Paragraph::new(lines).block(Block::default().borders(Borders::ALL).title("Done"));
     frame.render_widget(paragraph, area);
 }
 
@@ -105,7 +112,11 @@ fn render_error_popup(frame: &mut Frame, error: &str) {
 }
 
 /// Helper function to create a centered rect
-fn centered_rect(percent_x: u16, percent_y: u16, area: ratatui::layout::Rect) -> ratatui::layout::Rect {
+fn centered_rect(
+    percent_x: u16,
+    percent_y: u16,
+    area: ratatui::layout::Rect,
+) -> ratatui::layout::Rect {
     use ratatui::layout::{Constraint, Flex, Layout};
 
     let vertical = Layout::vertical([Constraint::Percentage(percent_y)]).flex(Flex::Center);

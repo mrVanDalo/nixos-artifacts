@@ -14,17 +14,29 @@ pub fn update(model: Model, msg: Msg) -> (Model, Effect) {
         (Screen::Prompt(_), Msg::Key(key)) => update_prompt(model, key),
 
         // === Generating Screen ===
-        (Screen::Generating(_), Msg::GeneratorFinished { artifact_index, result }) => {
-            handle_generator_finished(model, artifact_index, result)
-        }
-        (Screen::Generating(_), Msg::SerializeFinished { artifact_index, result }) => {
-            handle_serialize_finished(model, artifact_index, result)
-        }
+        (
+            Screen::Generating(_),
+            Msg::GeneratorFinished {
+                artifact_index,
+                result,
+            },
+        ) => handle_generator_finished(model, artifact_index, result),
+        (
+            Screen::Generating(_),
+            Msg::SerializeFinished {
+                artifact_index,
+                result,
+            },
+        ) => handle_serialize_finished(model, artifact_index, result),
 
         // === Check serialization results (any screen) ===
-        (_, Msg::CheckSerializationResult { artifact_index, needs_generation }) => {
-            handle_check_result(model, artifact_index, needs_generation)
-        }
+        (
+            _,
+            Msg::CheckSerializationResult {
+                artifact_index,
+                needs_generation,
+            },
+        ) => handle_check_result(model, artifact_index, needs_generation),
 
         // === Global ===
         (_, Msg::Quit) => (model, Effect::Quit),
@@ -129,7 +141,11 @@ fn update_prompt(mut model: Model, key: KeyEvent) -> (Model, Effect) {
             handle_prompt_ctrl_d(model)
         }
 
-        KeyCode::Char(c) if !key.modifiers.intersects(KeyModifiers::CONTROL | KeyModifiers::ALT) => {
+        KeyCode::Char(c)
+            if !key
+                .modifiers
+                .intersects(KeyModifiers::CONTROL | KeyModifiers::ALT) =>
+        {
             let Screen::Prompt(ref mut state) = model.screen else {
                 return (model, Effect::None);
             };
@@ -158,7 +174,9 @@ fn handle_prompt_enter(mut model: Model) -> (Model, Effect) {
         InputMode::Line | InputMode::Hidden => {
             // Submit current prompt
             let name = state.prompts[state.current_prompt_index].name.clone();
-            state.collected.insert(name, std::mem::take(&mut state.buffer));
+            state
+                .collected
+                .insert(name, std::mem::take(&mut state.buffer));
             state.current_prompt_index += 1;
 
             if state.is_complete() {
@@ -187,7 +205,9 @@ fn handle_prompt_ctrl_d(mut model: Model) -> (Model, Effect) {
     if state.input_mode == InputMode::Multiline {
         // Submit multiline input
         let name = state.prompts[state.current_prompt_index].name.clone();
-        state.collected.insert(name, std::mem::take(&mut state.buffer));
+        state
+            .collected
+            .insert(name, std::mem::take(&mut state.buffer));
         state.current_prompt_index += 1;
 
         if state.is_complete() {
@@ -276,7 +296,9 @@ fn handle_generator_finished(
             // Move to serialization
             if let Screen::Generating(ref mut state) = model.screen {
                 state.step = GenerationStep::Serializing;
-                state.log_lines.push("Generator completed successfully".into());
+                state
+                    .log_lines
+                    .push("Generator completed successfully".into());
             }
             let entry = &model.artifacts[artifact_index];
             let effect = Effect::Serialize {

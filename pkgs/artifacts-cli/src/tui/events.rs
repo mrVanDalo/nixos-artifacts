@@ -160,16 +160,12 @@ pub mod test_helpers {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::test_helpers::*;
+    use super::*;
 
     #[test]
     fn test_scripted_event_source() {
-        let mut source = ScriptedEventSource::new(vec![
-            char('a'),
-            char('b'),
-            enter(),
-        ]);
+        let mut source = ScriptedEventSource::new(vec![char('a'), char('b'), enter()]);
 
         assert_eq!(source.len(), 3);
         assert!(!source.is_empty());

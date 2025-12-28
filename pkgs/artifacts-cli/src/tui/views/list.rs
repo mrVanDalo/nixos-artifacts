@@ -1,10 +1,10 @@
 use crate::app::model::{ArtifactStatus, Model, TargetType};
 use ratatui::{
+    Frame,
     layout::Rect,
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, ListState},
-    Frame,
 };
 
 /// Render the artifact list view

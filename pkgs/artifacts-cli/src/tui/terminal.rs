@@ -1,9 +1,9 @@
 use anyhow::{Context, Result};
 use crossterm::{
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
-use ratatui::{backend::CrosstermBackend, Terminal};
+use ratatui::{Terminal, backend::CrosstermBackend};
 use std::io::{self, Stdout};
 
 /// Type alias for our terminal type
@@ -43,7 +43,9 @@ impl TerminalGuard {
         disable_raw_mode().context("Failed to disable raw mode")?;
         execute!(self.terminal.backend_mut(), LeaveAlternateScreen)
             .context("Failed to leave alternate screen")?;
-        self.terminal.show_cursor().context("Failed to show cursor")?;
+        self.terminal
+            .show_cursor()
+            .context("Failed to show cursor")?;
         Ok(())
     }
 }

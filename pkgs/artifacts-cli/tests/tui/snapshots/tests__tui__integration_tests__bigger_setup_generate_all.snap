@@ -1,0 +1,60 @@
+---
+source: tests/tui/integration_tests.rs
+expression: "run_tui(\"bigger_setup\", events)"
+---
+TestResult {
+    before: ModelState {
+        screen: "ArtifactList",
+        selected_index: 0,
+        artifacts: [
+            ArtifactState {
+                target: "machine-one",
+                name: "artifact-one",
+                status: "Pending",
+            },
+            ArtifactState {
+                target: "machine-one",
+                name: "artifact-two",
+                status: "Pending",
+            },
+            ArtifactState {
+                target: "machine-two",
+                name: "artifact-one",
+                status: "Pending",
+            },
+            ArtifactState {
+                target: "machine-two",
+                name: "artifact-two",
+                status: "Pending",
+            },
+        ],
+        error: None,
+    },
+    after: ModelState {
+        screen: "ArtifactList",
+        selected_index: 0,
+        artifacts: [
+            ArtifactState {
+                target: "machine-one",
+                name: "artifact-one",
+                status: "NeedsGeneration",
+            },
+            ArtifactState {
+                target: "machine-one",
+                name: "artifact-two",
+                status: "UpToDate",
+            },
+            ArtifactState {
+                target: "machine-two",
+                name: "artifact-one",
+                status: "NeedsGeneration",
+            },
+            ArtifactState {
+                target: "machine-two",
+                name: "artifact-two",
+                status: "NeedsGeneration",
+            },
+        ],
+        error: None,
+    },
+}

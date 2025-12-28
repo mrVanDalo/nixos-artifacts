@@ -255,6 +255,7 @@ loop {
 ### Effect Handler (`tui/effect_handler.rs`)
 
 Connects TUI to existing backend:
+
 - `Effect::CheckSerialization` → `run_check_serialization()`
 - `Effect::RunGenerator` → `run_generator_script()` + `verify_generated_files()`
 - `Effect::Serialize` → `run_serialize()`
@@ -262,6 +263,7 @@ Connects TUI to existing backend:
 ### Testing Patterns
 
 **1. State transition tests** (fast, pure):
+
 ```rust
 #[test]
 fn test_navigate_down() {
@@ -273,6 +275,7 @@ fn test_navigate_down() {
 ```
 
 **2. View snapshot tests** (using TestBackend):
+
 ```rust
 #[test]
 fn test_prompt_view() {
@@ -285,6 +288,7 @@ fn test_prompt_view() {
 ```
 
 **3. Simulation tests** (scripted event sequences):
+
 ```rust
 #[test]
 fn test_complete_flow() {
@@ -363,6 +367,7 @@ List all artifacts defined in the configuration.
 Launch interactive TUI for managing artifacts.
 
 **Usage**:
+
 ```bash
 artifacts tui                      # Show all artifacts
 artifacts tui --machine server-1   # Filter by NixOS machine
@@ -371,12 +376,14 @@ artifacts tui --artifact ssh-key   # Filter by artifact name
 ```
 
 **Keybindings** (artifact list):
+
 - `j`/`k` or arrows: Navigate
 - `Enter`: Generate selected artifact
 - `a`: Generate all artifacts
 - `q`/`Esc`: Quit
 
 **Keybindings** (prompt input):
+
 - `Tab`: Cycle input mode (line/multiline/hidden) - only when empty
 - `Enter`: Submit (line/hidden) or newline (multiline)
 - `Ctrl+D`: Submit multiline input

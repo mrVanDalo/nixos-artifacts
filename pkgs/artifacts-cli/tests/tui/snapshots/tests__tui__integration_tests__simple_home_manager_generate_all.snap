@@ -1,0 +1,40 @@
+---
+source: tests/tui/integration_tests.rs
+expression: "run_tui(\"simple-home-manager\", events)"
+---
+TestResult {
+    before: ModelState {
+        screen: "ArtifactList",
+        selected_index: 0,
+        artifacts: [
+            ArtifactState {
+                target: "test",
+                name: "artifact-one",
+                status: "Pending",
+            },
+            ArtifactState {
+                target: "test",
+                name: "artifact-two",
+                status: "Pending",
+            },
+        ],
+        error: None,
+    },
+    after: ModelState {
+        screen: "ArtifactList",
+        selected_index: 0,
+        artifacts: [
+            ArtifactState {
+                target: "test",
+                name: "artifact-one",
+                status: "NeedsGeneration",
+            },
+            ArtifactState {
+                target: "test",
+                name: "artifact-two",
+                status: "NeedsGeneration",
+            },
+        ],
+        error: None,
+    },
+}

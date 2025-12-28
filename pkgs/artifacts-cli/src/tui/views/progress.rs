@@ -1,10 +1,10 @@
 use crate::app::model::{GeneratingState, GenerationStep};
 use ratatui::{
+    Frame,
     layout::{Constraint, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph},
-    Frame,
 };
 
 /// Render the generation progress view
@@ -58,11 +58,20 @@ fn render_steps(frame: &mut Frame, state: &GeneratingState, area: Rect) {
     let lines = vec![
         Line::from(vec![
             Span::styled(
-                if generator_done { "✓" } else if generator_current { "⟳" } else { "○" },
+                if generator_done {
+                    "✓"
+                } else if generator_current {
+                    "⟳"
+                } else {
+                    "○"
+                },
                 step_style(generator_current, generator_done),
             ),
             Span::raw(" "),
-            Span::styled("Running generator", step_style(generator_current, generator_done)),
+            Span::styled(
+                "Running generator",
+                step_style(generator_current, generator_done),
+            ),
         ]),
         Line::from(vec![
             Span::styled(
@@ -80,7 +89,11 @@ fn render_steps(frame: &mut Frame, state: &GeneratingState, area: Rect) {
 }
 
 fn render_logs(frame: &mut Frame, state: &GeneratingState, area: Rect) {
-    let lines: Vec<Line> = state.log_lines.iter().map(|l| Line::from(l.as_str())).collect();
+    let lines: Vec<Line> = state
+        .log_lines
+        .iter()
+        .map(|l| Line::from(l.as_str()))
+        .collect();
 
     let logs = Paragraph::new(lines)
         .style(Style::default().fg(Color::DarkGray))

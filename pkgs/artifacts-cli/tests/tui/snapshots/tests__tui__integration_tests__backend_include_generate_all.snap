@@ -1,0 +1,30 @@
+---
+source: tests/tui/integration_tests.rs
+expression: "run_tui(\"backend_include\", events)"
+---
+TestResult {
+    before: ModelState {
+        screen: "ArtifactList",
+        selected_index: 0,
+        artifacts: [
+            ArtifactState {
+                target: "machine-name",
+                name: "test-artifact",
+                status: "Pending",
+            },
+        ],
+        error: None,
+    },
+    after: ModelState {
+        screen: "ArtifactList",
+        selected_index: 0,
+        artifacts: [
+            ArtifactState {
+                target: "machine-name",
+                name: "test-artifact",
+                status: "NeedsGeneration",
+            },
+        ],
+        error: None,
+    },
+}

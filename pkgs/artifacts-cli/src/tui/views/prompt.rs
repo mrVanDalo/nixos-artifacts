@@ -1,10 +1,10 @@
 use crate::app::model::{InputMode, PromptState};
 use ratatui::{
+    Frame,
     layout::{Constraint, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph},
-    Frame,
 };
 
 /// Render the prompt input view
@@ -94,7 +94,9 @@ fn render_help(frame: &mut Frame, state: &PromptState, area: Rect) {
     let help_text = if state.buffer.is_empty() {
         match state.input_mode {
             InputMode::Line => "Tab: change mode | Enter: submit | Esc: cancel",
-            InputMode::Multiline => "Tab: change mode | Ctrl+D: submit | Enter: newline | Esc: cancel",
+            InputMode::Multiline => {
+                "Tab: change mode | Ctrl+D: submit | Enter: newline | Esc: cancel"
+            }
             InputMode::Hidden => "Tab: change mode | Enter: submit | Esc: cancel",
         }
     } else {

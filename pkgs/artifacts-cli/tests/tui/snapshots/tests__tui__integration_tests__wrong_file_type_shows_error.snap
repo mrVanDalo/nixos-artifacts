@@ -1,0 +1,30 @@
+---
+source: tests/tui/integration_tests.rs
+expression: "run_tui(\"wrong-file-type\", events)"
+---
+TestResult {
+    before: ModelState {
+        screen: "ArtifactList",
+        selected_index: 0,
+        artifacts: [
+            ArtifactState {
+                target: "wrong-file-type",
+                name: "test-artifact",
+                status: "Pending",
+            },
+        ],
+        error: None,
+    },
+    after: ModelState {
+        screen: "ArtifactList",
+        selected_index: 0,
+        artifacts: [
+            ArtifactState {
+                target: "wrong-file-type",
+                name: "test-artifact",
+                status: "Failed(\"generator missing required files for artifact 'test-artifact': [simple-secrets, very-simple-secrets]\")",
+            },
+        ],
+        error: None,
+    },
+}

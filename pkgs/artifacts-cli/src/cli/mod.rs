@@ -6,8 +6,8 @@ use crate::config::backend::BackendConfiguration;
 use crate::config::make::MakeConfiguration;
 use crate::config::nix::build_make_from_flake;
 use crate::tui::{
-    build_filtered_model, install_panic_hook, run as run_tui_loop, BackendEffectHandler,
-    TerminalEventSource, TerminalGuard,
+    BackendEffectHandler, TerminalEventSource, TerminalGuard, build_filtered_model,
+    install_panic_hook, run as run_tui_loop,
 };
 use anyhow::{Context, Result};
 use clap::Parser;
@@ -155,15 +155,12 @@ fn run_tui(
     let mut effects = BackendEffectHandler::new(backend, make);
 
     // Run the TUI
-    let result = run_tui_loop(
-        terminal_guard.terminal(),
-        &mut events,
-        &mut effects,
-        model,
-    );
+    let result = run_tui_loop(terminal_guard.terminal(), &mut events, &mut effects, model);
 
     // Restore terminal before handling result
-    terminal_guard.restore().context("Failed to restore terminal")?;
+    terminal_guard
+        .restore()
+        .context("Failed to restore terminal")?;
 
     match result {
         Ok(run_result) => {
