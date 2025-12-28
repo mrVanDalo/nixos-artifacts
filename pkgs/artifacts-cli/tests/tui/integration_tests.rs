@@ -41,14 +41,14 @@ fn load_example(name: &str) -> (BackendConfiguration, MakeConfiguration) {
     (backend, make)
 }
 
-fn run_tui(example: &str, events: Vec<Msg>) -> TestResult {
+fn run_tui(example: &str, events: Events) -> TestResult {
     let (backend, make) = load_example(example);
     let model = build_model(&make);
 
     let before = ModelState::from_model(&model);
 
     let mut terminal = Terminal::new(TestBackend::new(80, 24)).unwrap();
-    let mut event_source = ScriptedEventSource::new(events);
+    let mut event_source = ScriptedEventSource::new(events.messages);
     let mut effect_handler = BackendEffectHandler::new(backend, make);
 
     let result = run(&mut terminal, &mut event_source, &mut effect_handler, model)
@@ -56,7 +56,11 @@ fn run_tui(example: &str, events: Vec<Msg>) -> TestResult {
 
     let after = ModelState::from_model(&result.final_model);
 
-    TestResult { before, after }
+    TestResult {
+        events: events.descriptions,
+        before,
+        after,
+    }
 }
 
 // =============================================================================
@@ -65,6 +69,7 @@ fn run_tui(example: &str, events: Vec<Msg>) -> TestResult {
 
 #[derive(Debug)]
 struct TestResult {
+    events: Vec<String>,
     before: ModelState,
     after: ModelState,
 }
@@ -113,54 +118,66 @@ impl ModelState {
 // =============================================================================
 
 #[derive(Default)]
-struct Events(Vec<Msg>);
+struct Events {
+    messages: Vec<Msg>,
+    descriptions: Vec<String>,
+}
 
 impl Events {
     fn new() -> Self {
-        Self(Vec::new())
+        Self::default()
     }
 
     fn navigate_down(mut self, n: usize) -> Self {
-        self.0.extend((0..n).map(|_| down()));
+        self.messages.extend((0..n).map(|_| down()));
+        self.descriptions.push(format!("navigate_down({})", n));
         self
     }
 
     fn navigate_up(mut self, n: usize) -> Self {
-        self.0.extend((0..n).map(|_| up()));
+        self.messages.extend((0..n).map(|_| up()));
+        self.descriptions.push(format!("navigate_up({})", n));
         self
     }
 
     fn select(mut self) -> Self {
-        self.0.push(enter());
+        self.messages.push(enter());
+        self.descriptions.push("select".to_string());
         self
     }
 
     fn fill_prompts(mut self, values: &[&str]) -> Self {
         for value in values {
-            self.0.extend(type_string(value));
-            self.0.push(enter());
+            self.messages.extend(type_string(value));
+            self.messages.push(enter());
+        }
+        if values.is_empty() {
+            self.descriptions.push("fill_prompts([])".to_string());
+        } else {
+            self.descriptions
+                .push(format!("fill_prompts({:?})", values));
         }
         self
     }
 
     fn type_and_cancel(mut self, partial: &str) -> Self {
-        self.0.extend(type_string(partial));
-        self.0.push(esc());
+        self.messages.extend(type_string(partial));
+        self.messages.push(esc());
+        self.descriptions
+            .push(format!("type_and_cancel({:?})", partial));
         self
     }
 
     fn generate_all(mut self) -> Self {
-        self.0.push(char('a'));
+        self.messages.push(char('a'));
+        self.descriptions.push("generate_all".to_string());
         self
     }
 
     fn quit(mut self) -> Self {
-        self.0.push(char('q'));
+        self.messages.push(char('q'));
+        self.descriptions.push("quit".to_string());
         self
-    }
-
-    fn build(self) -> Vec<Msg> {
-        self.0
     }
 }
 
@@ -174,8 +191,7 @@ fn scenario_simple_generate_one() {
     let events = Events::new()
         .select()
         .fill_prompts(&["secret-one", "secret-two"])
-        .quit()
-        .build();
+        .quit();
     assert_debug_snapshot!(run_tui("scenario_simple", events));
 }
 
@@ -185,15 +201,14 @@ fn scenario_simple_cancel_prompt() {
     let events = Events::new()
         .select()
         .type_and_cancel("partial-input")
-        .quit()
-        .build();
+        .quit();
     assert_debug_snapshot!(run_tui("scenario_simple", events));
 }
 
 #[test]
 #[serial]
 fn scenario_simple_quit_immediately() {
-    let events = Events::new().quit().build();
+    let events = Events::new().quit();
     assert_debug_snapshot!(run_tui("scenario_simple", events));
 }
 
@@ -204,18 +219,14 @@ fn scenario_simple_quit_immediately() {
 #[test]
 #[serial]
 fn two_artifacts_generate_all() {
-    let events = Events::new().generate_all().quit().build();
+    let events = Events::new().generate_all().quit();
     assert_debug_snapshot!(run_tui("2_artifacts", events));
 }
 
 #[test]
 #[serial]
 fn two_artifacts_select_first() {
-    let events = Events::new()
-        .select()
-        .fill_prompts(&[])
-        .quit()
-        .build();
+    let events = Events::new().select().fill_prompts(&[]).quit();
     assert_debug_snapshot!(run_tui("2_artifacts", events));
 }
 
@@ -226,8 +237,7 @@ fn two_artifacts_select_second() {
         .navigate_down(1)
         .select()
         .fill_prompts(&[])
-        .quit()
-        .build();
+        .quit();
     assert_debug_snapshot!(run_tui("2_artifacts", events));
 }
 
@@ -238,7 +248,7 @@ fn two_artifacts_select_second() {
 #[test]
 #[serial]
 fn bigger_setup_generate_all() {
-    let events = Events::new().generate_all().quit().build();
+    let events = Events::new().generate_all().quit();
     assert_debug_snapshot!(run_tui("bigger_setup", events));
 }
 
@@ -249,8 +259,7 @@ fn bigger_setup_navigate_and_select() {
         .navigate_down(2)
         .select()
         .fill_prompts(&[])
-        .quit()
-        .build();
+        .quit();
     assert_debug_snapshot!(run_tui("bigger_setup", events));
 }
 
@@ -264,8 +273,7 @@ fn missing_files_shows_error() {
     let events = Events::new()
         .select()
         .fill_prompts(&["one", "two"])
-        .quit()
-        .build();
+        .quit();
     assert_debug_snapshot!(run_tui("missing-files", events));
 }
 
@@ -275,8 +283,7 @@ fn wrong_file_type_shows_error() {
     let events = Events::new()
         .select()
         .fill_prompts(&["one", "two"])
-        .quit()
-        .build();
+        .quit();
     assert_debug_snapshot!(run_tui("wrong-file-type", events));
 }
 
@@ -286,8 +293,7 @@ fn unwanted_files_shows_error() {
     let events = Events::new()
         .select()
         .fill_prompts(&["one", "two"])
-        .quit()
-        .build();
+        .quit();
     assert_debug_snapshot!(run_tui("unwanted-files", events));
 }
 
@@ -298,7 +304,7 @@ fn unwanted_files_shows_error() {
 #[test]
 #[serial]
 fn simple_home_manager_generate_all() {
-    let events = Events::new().generate_all().quit().build();
+    let events = Events::new().generate_all().quit();
     assert_debug_snapshot!(run_tui("simple-home-manager", events));
 }
 
@@ -309,7 +315,7 @@ fn simple_home_manager_generate_all() {
 #[test]
 #[serial]
 fn backend_include_generate_all() {
-    let events = Events::new().generate_all().quit().build();
+    let events = Events::new().generate_all().quit();
     assert_debug_snapshot!(run_tui("backend_include", events));
 }
 
@@ -320,7 +326,7 @@ fn backend_include_generate_all() {
 #[test]
 #[serial]
 fn artifact_names_generate_all() {
-    let events = Events::new().generate_all().quit().build();
+    let events = Events::new().generate_all().quit();
     assert_debug_snapshot!(run_tui("artifact_names", events));
 }
 
@@ -330,7 +336,6 @@ fn no_config_generate_one() {
     let events = Events::new()
         .select()
         .fill_prompts(&["one", "two"])
-        .quit()
-        .build();
+        .quit();
     assert_debug_snapshot!(run_tui("no_config", events));
 }

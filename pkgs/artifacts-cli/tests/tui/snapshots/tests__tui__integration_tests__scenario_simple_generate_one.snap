@@ -3,6 +3,11 @@ source: tests/tui/integration_tests.rs
 expression: "run_tui(\"scenario_simple\", events)"
 ---
 TestResult {
+    events: [
+        "select",
+        "fill_prompts([\"secret-one\", \"secret-two\"])",
+        "quit",
+    ],
     before: ModelState {
         screen: "ArtifactList",
         selected_index: 0,
