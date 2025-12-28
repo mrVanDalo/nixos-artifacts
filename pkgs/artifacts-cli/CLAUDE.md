@@ -125,60 +125,54 @@ since home-manager doesn't manage system-level permissions.
 ```
 pkgs/artifacts-cli/
 ├── examples/                # Test scenarios (each is a complete flake)
-│   ├── 2_artifacts/         # Multiple artifacts example
-│   ├── artifact_names/      # Artifact naming example
-│   ├── bigger_setup/        # Complex setup example
-│   ├── missing-files/       # Error case: missing files
-│   ├── missing_generator/   # Error case: missing generator
-│   ├── no_config/           # Error case: no configuration
 │   ├── scenario_simple/     # Simple scenario example
-│   ├── simple-home-manager/ # Home-manager integration
-│   ├── unwanted-files/      # Error case: unwanted files
-│   └── wrong-file-type/     # Error case: wrong file type
-│       ├── backend.toml     # Backend configuration
-│       ├── flake.nix        # NixOS flake with artifacts
-│       ├── flake.lock
-│       ├── test_check.sh    # Check serialization script
-│       └── test_serialize.sh # Serialization script
+│   ├── 2_artifacts/         # Multiple artifacts example
+│   ├── bigger_setup/        # Complex setup example
+│   └── ...                  # Other test scenarios
 ├── src/
 │   ├── bin/
 │   │   └── artifacts.rs     # CLI entry point
+│   ├── app/                 # TUI application state (Elm Architecture)
+│   │   ├── mod.rs           # Module exports
+│   │   ├── model.rs         # State types (Model, Screen, PromptState)
+│   │   ├── message.rs       # Event types (Msg, KeyEvent)
+│   │   ├── effect.rs        # Side effect descriptors
+│   │   └── update.rs        # Pure state transitions
+│   ├── tui/                 # Terminal UI
+│   │   ├── mod.rs           # Module exports
+│   │   ├── views/           # Render functions
+│   │   │   ├── list.rs      # Artifact list view
+│   │   │   ├── prompt.rs    # Prompt input view
+│   │   │   └── progress.rs  # Generation progress view
+│   │   ├── events.rs        # EventSource trait + implementations
+│   │   ├── runtime.rs       # Main loop, effect execution
+│   │   ├── terminal.rs      # Terminal setup/teardown
+│   │   ├── effect_handler.rs # Backend integration
+│   │   └── model_builder.rs # Build Model from config
 │   ├── backend/             # Backend operations
 │   │   ├── generator.rs     # Generator script execution
-│   │   ├── helpers.rs       # Helper functions
-│   │   ├── prompt.rs        # User prompt handling
 │   │   ├── serialization.rs # Serialization operations
+│   │   ├── helpers.rs       # Helper functions
 │   │   └── temp_dir.rs      # Temporary directory management
 │   ├── cli/                 # Command-line interface
-│   │   ├── commands/
-│   │   │   ├── generate.rs  # Generate command
-│   │   │   ├── list.rs      # List command
-│   │   │   └── mod.rs
-│   │   ├── args.rs          # Argument parsing
-│   │   ├── logging.rs       # Logging setup
-│   │   └── mod.rs
+│   │   ├── commands/        # Command implementations
+│   │   ├── args.rs          # Argument parsing (clap)
+│   │   └── mod.rs           # CLI orchestration
 │   ├── config/              # Configuration management
 │   │   ├── backend.rs       # Backend config parsing
 │   │   ├── make.rs          # Make config parsing
-│   │   ├── make_expr.nix    # Nix expression for make config
-│   │   ├── nix.rs           # Nix evaluation helpers
-│   │   └── mod.rs
-│   ├── error.rs             # Error types
+│   │   └── nix.rs           # Nix evaluation helpers
 │   ├── lib.rs               # Library root
 │   └── macros.rs            # Utility macros
-├── tests/                   # Integration tests
-│   ├── backend/
-│   │   ├── helpers.rs       # Backend test helpers
-│   │   ├── snapshots/       # Backend test snapshots
-│   │   └── mod.rs
-│   ├── cli/
-│   │   ├── command_tests.rs # CLI command tests
-│   │   ├── snapshots/       # CLI test snapshots
-│   │   └── mod.rs
+├── tests/
+│   ├── tui/                 # TUI tests
+│   │   ├── view_tests.rs    # View snapshot tests
+│   │   └── snapshots/       # View snapshots
+│   ├── cli/                 # CLI command tests
+│   ├── backend/             # Backend tests
 │   └── tests.rs             # Test entry point
-├── Cargo.toml               # Rust dependencies
-├── default.nix              # Nix build file
-└── CLAUDE.md                # CLAUDE.md for this project
+├── Cargo.toml
+└── CLAUDE.md
 ```
 
 ## Development Standards
@@ -202,7 +196,123 @@ pkgs/artifacts-cli/
 - `clap` - Command-line argument parsing
 - `serde`, `serde_json`, `toml` - Serialization
 - `anyhow` - Error handling
-- `insta_cmd` - Snapshot testing
+- `ratatui` - Terminal UI framework
+- `crossterm` - Terminal manipulation
+- `insta`, `insta_cmd` - Snapshot testing
+
+## TUI Architecture (Elm Architecture)
+
+The TUI uses the **Elm Architecture** pattern for testability. All state
+transitions are pure functions, and side effects are described as data.
+
+### Core Concepts
+
+```
+┌─────────────┐     ┌──────────────┐     ┌─────────────┐
+│   Model     │────▶│    View      │────▶│   Frame     │
+│  (state)    │     │ (pure func)  │     │ (rendered)  │
+└─────────────┘     └──────────────┘     └─────────────┘
+       ▲
+       │
+┌──────┴──────┐
+│   Update    │◀──── Msg (event)
+│ (pure func) │────▶ Effect (side effect descriptor)
+└─────────────┘
+```
+
+- **Model** (`app/model.rs`): Application state - Screen, artifacts, prompts
+- **Msg** (`app/message.rs`): Events - keyboard input, async results
+- **Effect** (`app/effect.rs`): Side effect descriptors (not executed in update)
+- **Update** (`app/update.rs`): `(Model, Msg) -> (Model, Effect)` - pure!
+- **View** (`tui/views/`): `(&Model) -> Frame` - pure rendering
+
+### Key Types
+
+```rust
+// State
+enum Screen { ArtifactList, Prompt(PromptState), Generating(...), Done(...) }
+enum InputMode { Line, Multiline, Hidden }
+enum ArtifactStatus { Pending, NeedsGeneration, UpToDate, Generating, Done, Failed }
+
+// Events
+enum Msg { Key(KeyEvent), Tick, GeneratorFinished{..}, SerializeFinished{..}, Quit }
+
+// Side effects (descriptors, not actions)
+enum Effect { None, Quit, CheckSerialization{..}, RunGenerator{..}, Serialize{..} }
+```
+
+### Runtime Loop (`tui/runtime.rs`)
+
+```rust
+loop {
+    terminal.draw(|f| render(f, &model))?;  // View
+    let msg = events.next_event()?;          // Get event
+    let (model, effect) = update(model, msg); // Pure update
+    execute_effect(effect)?;                  // Side effects
+}
+```
+
+### Effect Handler (`tui/effect_handler.rs`)
+
+Connects TUI to existing backend:
+- `Effect::CheckSerialization` → `run_check_serialization()`
+- `Effect::RunGenerator` → `run_generator_script()` + `verify_generated_files()`
+- `Effect::Serialize` → `run_serialize()`
+
+### Testing Patterns
+
+**1. State transition tests** (fast, pure):
+```rust
+#[test]
+fn test_navigate_down() {
+    let model = make_test_model();
+    let (new_model, effect) = update(model, Msg::Key(KeyEvent::char('j')));
+    assert_eq!(new_model.selected_index, 1);
+    assert!(effect.is_none());
+}
+```
+
+**2. View snapshot tests** (using TestBackend):
+```rust
+#[test]
+fn test_prompt_view() {
+    let backend = TestBackend::new(60, 12);
+    let mut terminal = Terminal::new(backend).unwrap();
+    terminal.draw(|f| render_prompt(f, &state, f.area())).unwrap();
+    let output = buffer_to_string(terminal.backend().buffer());
+    assert_snapshot!(output);
+}
+```
+
+**3. Simulation tests** (scripted event sequences):
+```rust
+#[test]
+fn test_complete_flow() {
+    let mut events = ScriptedEventSource::new(vec![
+        enter(),                    // Start generation
+        ...type_string("secret"),   // Type prompt value
+        enter(),                    // Submit
+    ]);
+    let final_model = simulate(&mut events, model);
+    assert!(matches!(final_model.screen, Screen::Generating(_)));
+}
+```
+
+### Adding a New Screen
+
+1. Add variant to `Screen` enum in `app/model.rs`
+2. Add state struct if needed (e.g., `NewScreenState`)
+3. Handle in `update()` - add match arm for `(Screen::NewScreen, Msg::Key(_))`
+4. Create view in `tui/views/new_screen.rs`
+5. Add to dispatcher in `tui/views/mod.rs`
+6. Write tests: state transitions + view snapshots
+
+### Adding a New Effect
+
+1. Add variant to `Effect` enum in `app/effect.rs`
+2. Return it from `update()` when appropriate
+3. Handle in `BackendEffectHandler::execute()`
+4. Return result `Msg` to feed back into update loop
 
 ## Commands
 
@@ -247,6 +357,32 @@ pkgs/artifacts-cli/
 List all artifacts defined in the configuration.
 
 **Implementation**: `src/cli/commands/list.rs`
+
+### `tui` Command
+
+Launch interactive TUI for managing artifacts.
+
+**Usage**:
+```bash
+artifacts tui                      # Show all artifacts
+artifacts tui --machine server-1   # Filter by NixOS machine
+artifacts tui --home alice@host    # Filter by home-manager user
+artifacts tui --artifact ssh-key   # Filter by artifact name
+```
+
+**Keybindings** (artifact list):
+- `j`/`k` or arrows: Navigate
+- `Enter`: Generate selected artifact
+- `a`: Generate all artifacts
+- `q`/`Esc`: Quit
+
+**Keybindings** (prompt input):
+- `Tab`: Cycle input mode (line/multiline/hidden) - only when empty
+- `Enter`: Submit (line/hidden) or newline (multiline)
+- `Ctrl+D`: Submit multiline input
+- `Esc`: Cancel and return to list
+
+**Implementation**: `src/cli/mod.rs` → `run_tui()`
 
 ### `help` Command
 
@@ -367,9 +503,23 @@ cargo clippy
 
 - **Language**: Rust 1.87.0
 - **Entry point**: `src/bin/artifacts.rs`
-- **Test scenarios**: `examples/{2_artifacts,scenario_simple,bigger_setup,...}/`
-- **Integration tests**: `tests/backend/`, `tests/cli/`
-- **Snapshot tests**: `tests/backend/snapshots/`, `tests/cli/snapshots/`
-- **Lint**: `cargo lint` or `./test-lint.sh`
-- **Container isolation**: bubblewrap for generator and serialize scripts
+- **TUI entry**: `src/cli/mod.rs` → `run_tui()`
+- **Elm Architecture**: `src/app/` (model, message, effect, update)
+- **TUI views**: `src/tui/views/` (list, prompt, progress)
 - **Backend operations**: `src/backend/` directory
+- **Test scenarios**: `examples/{scenario_simple,2_artifacts,...}/`
+- **Unit tests**: `cargo test --lib` (38 tests)
+- **View snapshots**: `tests/tui/snapshots/` (10 snapshots)
+- **Snapshot review**: `cargo insta review`
+- **Container isolation**: bubblewrap for generator and serialize scripts
+
+## Test Commands
+
+```bash
+cargo test --lib                    # Run all unit tests (38 tests)
+cargo test app::                    # Test app module only
+cargo test tui::                    # Test TUI module only
+cargo test --test tests             # Run integration tests
+cargo insta review                  # Review pending snapshots
+cargo clippy                        # Run linter
+```

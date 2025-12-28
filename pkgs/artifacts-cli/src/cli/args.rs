@@ -75,4 +75,22 @@ pub enum Command {
         /// Path to flake to read machines/artifacts from (passed as -I flake=<path> to nix). If omitted, uses the current directory.
         make: Option<PathBuf>,
     },
+    /// Launch interactive TUI for managing artifacts
+    ///
+    /// Backend configuration is read from the environment variable NIXOS_ARTIFACTS_BACKEND_CONFIG
+    /// if set; otherwise, it falls back to <flake-dir>/backend.toml.
+    #[command(name = "tui")]
+    Tui {
+        /// Path to flake to read machines/artifacts from (passed as -I flake=<path> to nix). If omitted, uses the current directory.
+        make: Option<PathBuf>,
+        /// Name of machine(s) to show (repeatable, default: all)
+        #[arg(long = "machine")]
+        machine: Vec<String>,
+        /// Name of home user(s) to show (repeatable, default: all)
+        #[arg(long = "home")]
+        home: Vec<String>,
+        /// Name of artifact(s) to show (repeatable, default: all)
+        #[arg(long = "artifact")]
+        artifact: Vec<String>,
+    },
 }
