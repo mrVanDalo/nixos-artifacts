@@ -2,7 +2,7 @@
 
 ## Project Context
 
-You are working on **artifacts-cli**, a Rust-based Command Line Interface for
+You are working on **artifacts**, a Rust-based Command Line Interface for
 generating, serializing, and deserializing secrets (artifacts) for NixOS
 configurations. This tool manages artifacts through configurable backends with
 interactive user prompts for secret generation.
@@ -123,7 +123,7 @@ since home-manager doesn't manage system-level permissions.
 ## Project Structure
 
 ```
-pkgs/artifacts-cli/
+pkgs/artifacts/
 ├── examples/
 │   ├── backends/                       # Reusable backend definitions
 │   │   ├── test/                       # Standard test backend (always passes)

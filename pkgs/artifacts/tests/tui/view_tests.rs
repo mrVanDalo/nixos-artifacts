@@ -1,6 +1,6 @@
-use artifacts_cli::app::model::*;
-use artifacts_cli::config::make::{ArtifactDef, FileDef, PromptDef};
-use artifacts_cli::tui::views::{render_artifact_list, render_progress, render_prompt};
+use artifacts::app::model::*;
+use artifacts::config::make::{ArtifactDef, FileDef, PromptDef};
+use artifacts::tui::views::{render_artifact_list, render_progress, render_prompt};
 use insta::assert_snapshot;
 use ratatui::{Terminal, backend::TestBackend};
 use std::collections::BTreeMap;

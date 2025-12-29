@@ -32,10 +32,10 @@
         }:
         {
 
-          packages.default = self'.packages.artifacts-cli;
-          packages.artifacts-cli-bin = pkgs.callPackage ./pkgs/artifacts-cli { };
+          packages.default = self'.packages.artifacts;
+          packages.artifacts-bin = pkgs.callPackage ./pkgs/artifacts { };
 
-          packages.artifacts-cli =
+          packages.artifacts =
             pkgs.callPackage
               (
                 {
@@ -48,7 +48,7 @@
                   set -e
                   set -o pipefail
                   export NIXOS_ARTIFACTS_BACKEND_CONFIG=${backendsFile}
-                  ${self'.packages.artifacts-cli-bin}/bin/artifacts "$@"
+                  ${self'.packages.artifacts-bin}/bin/artifacts "$@"
                 ''
               )
               {

@@ -35,18 +35,18 @@ abstraction over multiple backends (agenix, sops-nix, colmena, etc.).
 │   ├── default.nix        # Module aggregation
 │   ├── backend.nix        # Backend serialization options
 │   └── store.nix          # Artifacts store tree options
-├── pkgs/artifacts-cli/    # Rust CLI implementation (has own CLAUDE.md)
+├── pkgs/artifacts/        # Rust CLI implementation (has own CLAUDE.md)
 └── examples/              # Example scenarios (backend.toml, flake.nix)
 ```
 
 ## Flake Outputs Reference
 
-- `packages.artifacts-cli-bin` — Pure Rust CLI binary
-- `packages.artifacts-cli` — Bash wrapper that:
+- `packages.artifacts-bin` — Pure Rust CLI binary
+- `packages.artifacts` — Bash wrapper that:
   - Generates backends.toml from Nix attrset
   - Computes path to make file generator derivation
   - Invokes CLI with proper arguments
-- `packages.default` — Points to artifacts-cli
+- `packages.default` — Points to artifacts
 - `nixosModules.default` — Main module system
 - `nixosModules.examples` — Example configurations
 - `nixosConfigurations.{machine-one,machine-two}` — Test NixOS systems
@@ -74,7 +74,7 @@ nix fmt          # Format code (REQUIRED before commits)
 ### Code Organization Principles
 
 - Modules define options structure (`modules/`)
-- CLI implements generation/serialization logic (`pkgs/artifacts-cli/`)
+- CLI implements generation/serialization logic (`pkgs/artifacts/`)
 - Examples provide test cases and reference implementations (`examples/`)
 - Backends are pluggable (test backend wired in flake for development)
 
@@ -112,6 +112,6 @@ nix fmt          # Format code (REQUIRED before commits)
 
 - Primary language: Nix (modules/flake), Rust (CLI)
 - Entry point: `flake.nix`
-- CLI source: `pkgs/artifacts-cli/` (check its guidelines.md)
+- CLI source: `pkgs/artifacts/` (check its CLAUDE.md)
 - Module system: `modules/default.nix`
 - Test configs: `nixosConfigurations.machine-one` and `machine-two`

@@ -5,15 +5,15 @@
 //! 2. Define event sequence
 //! 3. Run with real effect handler and snapshot result
 
-use artifacts_cli::app::Msg;
-use artifacts_cli::app::model::Screen;
-use artifacts_cli::config::backend::BackendConfiguration;
-use artifacts_cli::config::make::MakeConfiguration;
-use artifacts_cli::config::nix::build_make_from_flake;
-use artifacts_cli::tui::events::ScriptedEventSource;
-use artifacts_cli::tui::events::test_helpers::*;
-use artifacts_cli::tui::model_builder::build_model;
-use artifacts_cli::tui::{BackendEffectHandler, run};
+use artifacts::app::Msg;
+use artifacts::app::model::Screen;
+use artifacts::config::backend::BackendConfiguration;
+use artifacts::config::make::MakeConfiguration;
+use artifacts::config::nix::build_make_from_flake;
+use artifacts::tui::events::ScriptedEventSource;
+use artifacts::tui::events::test_helpers::*;
+use artifacts::tui::model_builder::build_model;
+use artifacts::tui::{BackendEffectHandler, run};
 use insta::assert_debug_snapshot;
 use ratatui::Terminal;
 use ratatui::backend::TestBackend;
@@ -92,7 +92,7 @@ struct ArtifactState {
 }
 
 impl ModelState {
-    fn from_model(model: &artifacts_cli::app::model::Model) -> Self {
+    fn from_model(model: &artifacts::app::model::Model) -> Self {
         Self {
             screen: match &model.screen {
                 Screen::ArtifactList => "ArtifactList",

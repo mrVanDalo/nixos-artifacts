@@ -1,4 +1,4 @@
-use artifacts_cli::backend::helpers::{escape_single_quoted, fnv1a64, pretty_print_shell_escape};
+use artifacts::backend::helpers::{escape_single_quoted, fnv1a64, pretty_print_shell_escape};
 use insta::assert_debug_snapshot;
 
 // ---- Tests ----

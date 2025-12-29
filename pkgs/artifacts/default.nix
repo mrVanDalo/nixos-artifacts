@@ -3,7 +3,7 @@
 }:
 
 pkgs.rustPlatform.buildRustPackage rec {
-  pname = "artifacts-cli";
+  pname = "artifacts";
   version = "0.2.0";
 
   src = ./.;
@@ -31,6 +31,6 @@ pkgs.rustPlatform.buildRustPackage rec {
     license = licenses.mit; # adjust if different
     maintainers = [ ];
     platforms = platforms.unix;
-    mainProgram = "artifacts-cli";
+    mainProgram = "artifacts";
   };
 }

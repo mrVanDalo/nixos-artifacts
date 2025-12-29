@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-artifacts-cli is a Command Line Interface application written in Rust for
+artifacts is a Command Line Interface application written in Rust for
 generating, serializing, and deserializing secrets (aka artifacts) for NixOS
 configurations. The tool provides a user-friendly interface for managing
 artifacts through configurable backends.
@@ -116,7 +116,7 @@ mod tests {
     use std::process::Command;
 
     fn cli() -> Command {
-        Command::new(get_cargo_bin("artifacts-cli"))
+        Command::new(get_cargo_bin("artifacts"))
     }
 
     #[test]
@@ -172,7 +172,7 @@ src/
 
 ### Commands
 
-artifacts-cli should have the following commands:
+artifacts should have the following commands:
 
 - `generate`: Generate artifacts
 - `help`: Print help message
@@ -184,7 +184,7 @@ artifacts-cli should have the following commands:
 
 #### generate Command workflow definition
 
-artifacts-cli should have the following workflow for the `generate` command:
+artifacts should have the following workflow for the `generate` command:
 
 - for each artifact
   - create a temporary directory which will be referenced as `inputs`
