@@ -1,4 +1,7 @@
-use artifacts::app::model::*;
+use artifacts::app::model::{
+    ArtifactEntry, ArtifactStatus, GeneratingState, GenerationStep, InputMode, LogEntry, LogLevel,
+    Model, PromptEntry, PromptState, Screen, TargetType,
+};
 use artifacts::config::make::{ArtifactDef, FileDef, PromptDef};
 use artifacts::tui::views::{render_artifact_list, render_progress, render_prompt};
 use insta::assert_snapshot;
@@ -43,18 +46,21 @@ fn make_test_model() -> Model {
                 target_type: TargetType::Nixos,
                 artifact: make_test_artifact("ssh-key", vec!["passphrase"]),
                 status: ArtifactStatus::Pending,
+                logs: Vec::new(),
             },
             ArtifactEntry {
                 target: "machine-two".to_string(),
                 target_type: TargetType::Nixos,
                 artifact: make_test_artifact("api-token", vec![]),
                 status: ArtifactStatus::UpToDate,
+                logs: Vec::new(),
             },
             ArtifactEntry {
                 target: "user@host".to_string(),
                 target_type: TargetType::HomeManager,
                 artifact: make_test_artifact("gpg-key", vec!["email", "name"]),
                 status: ArtifactStatus::NeedsGeneration,
+                logs: Vec::new(),
             },
         ],
         selected_index: 0,
@@ -85,6 +91,25 @@ fn test_artifact_list_initial() {
 fn test_artifact_list_with_selection() {
     let mut model = make_test_model();
     model.selected_index = 1;
+    // Add realistic logs for the selected artifact (api-token)
+    model.artifacts[1].logs = vec![
+        LogEntry {
+            level: LogLevel::Output,
+            message: "Generating API token...".to_string(),
+        },
+        LogEntry {
+            level: LogLevel::Output,
+            message: "Token generated successfully".to_string(),
+        },
+        LogEntry {
+            level: LogLevel::Success,
+            message: "Generated 1 file(s)".to_string(),
+        },
+        LogEntry {
+            level: LogLevel::Success,
+            message: "Serialized to backend".to_string(),
+        },
+    ];
 
     let backend = TestBackend::new(70, 10);
     let mut terminal = Terminal::new(backend).unwrap();
@@ -102,6 +127,25 @@ fn test_artifact_list_with_failed_status() {
     let mut model = make_test_model();
     model.artifacts[0].status =
         ArtifactStatus::Failed("Generator script exited with code 1".to_string());
+    // Add realistic logs showing the failure
+    model.artifacts[0].logs = vec![
+        LogEntry {
+            level: LogLevel::Info,
+            message: "Artifact needs regeneration".to_string(),
+        },
+        LogEntry {
+            level: LogLevel::Output,
+            message: "Generating SSH key pair...".to_string(),
+        },
+        LogEntry {
+            level: LogLevel::Error,
+            message: "ssh-keygen: permission denied".to_string(),
+        },
+        LogEntry {
+            level: LogLevel::Error,
+            message: "Generator failed: exit code 1".to_string(),
+        },
+    ];
 
     let backend = TestBackend::new(70, 10);
     let mut terminal = Terminal::new(backend).unwrap();
@@ -341,24 +385,28 @@ fn test_multiple_machines_before_generate_all() {
                 target_type: TargetType::Nixos,
                 artifact: make_multiple_machines_artifact("artifact-one"),
                 status: ArtifactStatus::Pending,
+                logs: Vec::new(),
             },
             ArtifactEntry {
                 target: "machine-one".to_string(),
                 target_type: TargetType::Nixos,
                 artifact: make_multiple_machines_artifact("artifact-two"),
                 status: ArtifactStatus::Pending,
+                logs: Vec::new(),
             },
             ArtifactEntry {
                 target: "machine-two".to_string(),
                 target_type: TargetType::Nixos,
                 artifact: make_multiple_machines_artifact("artifact-one"),
                 status: ArtifactStatus::Pending,
+                logs: Vec::new(),
             },
             ArtifactEntry {
                 target: "machine-two".to_string(),
                 target_type: TargetType::Nixos,
                 artifact: make_multiple_machines_artifact("artifact-two"),
                 status: ArtifactStatus::Pending,
+                logs: Vec::new(),
             },
         ],
         selected_index: 0,
@@ -386,24 +434,28 @@ fn test_multiple_machines_after_generate_all() {
                 target_type: TargetType::Nixos,
                 artifact: make_multiple_machines_artifact("artifact-one"),
                 status: ArtifactStatus::NeedsGeneration,
+                logs: Vec::new(),
             },
             ArtifactEntry {
                 target: "machine-one".to_string(),
                 target_type: TargetType::Nixos,
                 artifact: make_multiple_machines_artifact("artifact-two"),
                 status: ArtifactStatus::UpToDate,
+                logs: Vec::new(),
             },
             ArtifactEntry {
                 target: "machine-two".to_string(),
                 target_type: TargetType::Nixos,
                 artifact: make_multiple_machines_artifact("artifact-one"),
                 status: ArtifactStatus::NeedsGeneration,
+                logs: Vec::new(),
             },
             ArtifactEntry {
                 target: "machine-two".to_string(),
                 target_type: TargetType::Nixos,
                 artifact: make_multiple_machines_artifact("artifact-two"),
                 status: ArtifactStatus::NeedsGeneration,
+                logs: Vec::new(),
             },
         ],
         selected_index: 0,

@@ -27,6 +27,7 @@ pub struct ArtifactEntry {
     pub target_type: TargetType,
     pub artifact: ArtifactDef,
     pub status: ArtifactStatus,
+    pub logs: Vec<LogEntry>,
 }
 
 /// Whether this is a NixOS machine or home-manager user
@@ -54,6 +55,22 @@ pub enum ArtifactStatus {
     UpToDate,
     Generating,
     Failed(String),
+}
+
+/// A single log entry for an artifact
+#[derive(Debug, Clone)]
+pub struct LogEntry {
+    pub level: LogLevel,
+    pub message: String,
+}
+
+/// Log severity/category
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LogLevel {
+    Info,    // Summary messages
+    Output,  // Stdout from scripts
+    Error,   // Stderr from scripts
+    Success, // Completion messages
 }
 
 /// State for the prompt input screen

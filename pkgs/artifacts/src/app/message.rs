@@ -18,17 +18,32 @@ pub enum Msg {
     /// Generator script finished
     GeneratorFinished {
         artifact_index: usize,
-        result: Result<(), String>,
+        result: Result<GeneratorOutput, String>,
     },
 
     /// Serialize script finished
     SerializeFinished {
         artifact_index: usize,
-        result: Result<(), String>,
+        result: Result<SerializeOutput, String>,
     },
 
     /// Request to quit the application
     Quit,
+}
+
+/// Output captured from generator script execution
+#[derive(Debug, Clone)]
+pub struct GeneratorOutput {
+    pub stdout_lines: Vec<String>,
+    pub stderr_lines: Vec<String>,
+    pub files_generated: usize,
+}
+
+/// Output captured from serialization script execution
+#[derive(Debug, Clone)]
+pub struct SerializeOutput {
+    pub stdout_lines: Vec<String>,
+    pub stderr_lines: Vec<String>,
 }
 
 /// Wrapper around crossterm key events for easier construction in tests

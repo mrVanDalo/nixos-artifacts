@@ -2,13 +2,13 @@
 source: tests/tui/view_tests.rs
 expression: output
 ---
-"┌Artifacts (3) - j/k: move, Enter: generate, q: quit─────────────────┐"
-"│> ✗ [N] machine-one/ssh-key                                         │"
-"│  ✓ [N] machine-two/api-token                                       │"
-"│  ◐ [H] user@host/gpg-key                                           │"
-"│                                                                    │"
-"│                                                                    │"
-"│                                                                    │"
-"│                                                                    │"
-"└────────────────────────────────────────────────────────────────────┘"
-"○ Pending  ◐ Needs Gen  ✓ Up To Date  ✗ Failed  │ [N] NixOS  [H] Home "
+"┌Artifacts (3) - j/k: move, Enter:┐┌Logs: machine-one/ssh-key────────┐"
+"│> ✗ [N] machine-one/ssh-key      ││i Artifact needs regeneration    │"
+"│  ✓ [N] machine-two/api-token    ││| Generating SSH key pair...     │"
+"│  ◐ [H] user@host/gpg-key        ││! ssh-keygen: permission denied  │"
+"│                                 ││! Generator failed: exit code 1  │"
+"│                                 ││                                 │"
+"│                                 ││                                 │"
+"│                                 ││                                 │"
+"└─────────────────────────────────┘│                                 │"
+"○ Pend ◐ Need ✓ OK ✗ Fail          └─────────────────────────────────┘"

@@ -1,6 +1,8 @@
+use crate::app::message::{GeneratorOutput, SerializeOutput};
 use crate::app::model::{ArtifactEntry, Model, TargetType};
 use crate::app::{Effect, Msg};
 use crate::backend::generator::{run_generator_script, verify_generated_files};
+use crate::backend::output_capture::{CapturedOutput, OutputStream};
 use crate::backend::serialization::{run_check_serialization, run_serialize};
 use crate::backend::temp_dir::create_temp_dir;
 use crate::config::backend::BackendConfiguration;
@@ -49,7 +51,7 @@ impl BackendEffectHandler {
         target: &str,
         target_type: TargetType,
         prompts: &HashMap<String, String>,
-    ) -> Result<(), String> {
+    ) -> Result<GeneratorOutput, String> {
         let context = target_type.context_str();
 
         let prompt_dir = create_temp_dir(Some(&format!("prompt-{}", artifact_name)))
@@ -62,7 +64,7 @@ impl BackendEffectHandler {
 
         self.write_prompts_to_directory(prompts, &prompt_dir.path_buf)?;
 
-        run_generator_script(
+        let captured = run_generator_script(
             &entry.artifact,
             target,
             &self.make.make_base,
@@ -74,10 +76,18 @@ impl BackendEffectHandler {
 
         verify_generated_files(&entry.artifact, &out_dir.path_buf).map_err(|e| e.to_string())?;
 
+        let files_generated = entry.artifact.files.len();
+
         self.current_out_dir = Some(out_dir.path_buf.clone());
         std::mem::forget(out_dir);
 
-        Ok(())
+        let (stdout_lines, stderr_lines) = split_captured_output(&captured);
+
+        Ok(GeneratorOutput {
+            stdout_lines,
+            stderr_lines,
+            files_generated,
+        })
     }
 
     fn write_prompts_to_directory(
@@ -99,7 +109,7 @@ impl BackendEffectHandler {
         entry: &ArtifactEntry,
         target: &str,
         target_type: TargetType,
-    ) -> Result<(), String> {
+    ) -> Result<SerializeOutput, String> {
         let context = target_type.context_str();
 
         let out_path = self
@@ -107,19 +117,40 @@ impl BackendEffectHandler {
             .take()
             .expect("Serialize called without prior RunGenerator");
 
-        let result = run_serialize(
+        let captured = run_serialize(
             &entry.artifact,
             &self.backend,
             &out_path,
             target,
             &self.make,
             context,
-        );
+        )
+        .map_err(|e| e.to_string())?;
 
         let _ = std::fs::remove_dir_all(&out_path);
 
-        result.map_err(|e| e.to_string())
+        let (stdout_lines, stderr_lines) = split_captured_output(&captured);
+
+        Ok(SerializeOutput {
+            stdout_lines,
+            stderr_lines,
+        })
     }
+}
+
+/// Split captured output into separate stdout and stderr line vectors
+fn split_captured_output(captured: &CapturedOutput) -> (Vec<String>, Vec<String>) {
+    let mut stdout_lines = Vec::new();
+    let mut stderr_lines = Vec::new();
+
+    for line in &captured.lines {
+        match line.stream {
+            OutputStream::Stdout => stdout_lines.push(line.content.clone()),
+            OutputStream::Stderr => stderr_lines.push(line.content.clone()),
+        }
+    }
+
+    (stdout_lines, stderr_lines)
 }
 
 impl EffectHandler for BackendEffectHandler {

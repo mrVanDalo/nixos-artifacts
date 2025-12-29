@@ -14,6 +14,7 @@ pub fn build_model(make: &MakeConfiguration) -> Model {
                 target_type: TargetType::Nixos,
                 artifact: artifact.clone(),
                 status: ArtifactStatus::Pending,
+                logs: Vec::new(),
             });
         }
     }
@@ -26,6 +27,7 @@ pub fn build_model(make: &MakeConfiguration) -> Model {
                 target_type: TargetType::HomeManager,
                 artifact: artifact.clone(),
                 status: ArtifactStatus::Pending,
+                logs: Vec::new(),
             });
         }
     }

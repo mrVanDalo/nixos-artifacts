@@ -1,12 +1,14 @@
 use crate::backend::helpers::resolve_path;
+use crate::backend::output_capture::{CapturedOutput, run_with_captured_output};
 use crate::backend::temp_dir::create_temp_dir;
 use crate::config::backend::BackendConfiguration;
 use crate::config::make::{ArtifactDef, MakeConfiguration};
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 use log::debug;
 use serde_json::{json, to_string_pretty};
 use std::fs;
 use std::path::Path;
+use std::process::Stdio;
 
 /// Run the serialize script for a generated artifact.
 ///
@@ -22,12 +24,11 @@ pub fn run_serialize(
     target_name: &str,
     make: &MakeConfiguration,
     context: &str,
-) -> Result<()> {
+) -> Result<CapturedOutput> {
     let backend_name = &artifact.serialization;
     let entry = backend.get_backend(backend_name)?;
     let ser_path = resolve_path(&backend.base_path, &entry.serialize);
     let ser_abs = fs::canonicalize(&ser_path).unwrap_or_else(|_| ser_path.clone());
-    println!("💾 serialize secrets");
 
     // Create config file for the selected backend and machine
     let config_dir = create_temp_dir(Some("config"))?;
@@ -45,7 +46,9 @@ pub fn run_serialize(
         .env("out", out)
         .env("config", &config_file)
         .env("artifact_context", context)
-        .env("artifact", &artifact.name);
+        .env("artifact", &artifact.name)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
 
     if context == "homemanager" {
         cmd.env("username", target_name);
@@ -53,9 +56,18 @@ pub fn run_serialize(
         cmd.env("machine", target_name);
     }
 
-    cmd.status()
-        .with_context(|| format!("running serialize {}", ser_abs.display()))?;
-    Ok(())
+    let child = cmd
+        .spawn()
+        .with_context(|| format!("spawning serialize {}", ser_abs.display()))?;
+
+    let output =
+        run_with_captured_output(child).context("failed to capture serialize script output")?;
+
+    if !output.exit_success {
+        bail!("serialize script failed with non-zero exit status");
+    }
+
+    Ok(output)
 }
 
 /// Check if serialization is up to date.

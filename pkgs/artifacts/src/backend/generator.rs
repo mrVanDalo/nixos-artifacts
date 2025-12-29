@@ -1,4 +1,5 @@
 use crate::backend::helpers::{escape_single_quoted, fnv1a64, resolve_path};
+use crate::backend::output_capture::{CapturedOutput, run_with_captured_output};
 use crate::config::make::ArtifactDef;
 use crate::string_vec;
 use anyhow::{Context, Result, bail};
@@ -6,6 +7,7 @@ use log::{debug, trace};
 use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
+use std::process::Stdio;
 
 /// Verify that the generator produced exactly the expected files for the given artifact
 pub fn verify_generated_files(artifact: &ArtifactDef, out_path: &Path) -> Result<()> {
@@ -53,7 +55,7 @@ pub fn run_generator_script(
     prompts: &Path,
     out: &Path,
     context: &str,
-) -> Result<()> {
+) -> Result<CapturedOutput> {
     let generator_script = artifact.generator.as_ref();
     let generator_script_path = resolve_path(make_base, generator_script);
     let generator_script_absolut_path =
@@ -169,22 +171,23 @@ pub fn run_generator_script(
         .arg("bash")
         .arg("bubblewrap")
         .arg("--run")
-        .arg(&nix_shell_run_command);
+        .arg(&nix_shell_run_command)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
 
     // Do not pass 'out' or 'prompt' here to avoid being overridden by nix-shell internals
-    let status = generator_command
-        .status()
+    let child = generator_command
+        .spawn()
         .context("failed to start generator in nix-shell")?;
+
+    let output = run_with_captured_output(child).context("failed to capture generator output")?;
 
     // Best-effort cleanup of the temporary passwd file
     let _ = fs::remove_file(&temp_passwd_path);
 
-    if !status.success() {
-        bail!(
-            "generator failed inside nix-shell with exit status: {}",
-            status
-        );
+    if !output.exit_success {
+        bail!("generator failed inside nix-shell with non-zero exit status");
     }
 
-    Ok(())
+    Ok(output)
 }

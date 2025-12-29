@@ -1,5 +1,5 @@
 use super::effect::Effect;
-use super::message::{KeyEvent, Msg};
+use super::message::{GeneratorOutput, KeyEvent, Msg, SerializeOutput};
 use super::model::*;
 use crossterm::event::{KeyCode, KeyModifiers};
 
@@ -277,11 +277,19 @@ fn handle_check_result(
     needs_generation: bool,
 ) -> (Model, Effect) {
     if let Some(entry) = model.artifacts.get_mut(artifact_index) {
-        entry.status = if needs_generation {
-            ArtifactStatus::NeedsGeneration
+        if needs_generation {
+            entry.status = ArtifactStatus::NeedsGeneration;
+            entry.logs.push(LogEntry {
+                level: LogLevel::Info,
+                message: "Artifact needs regeneration".to_string(),
+            });
         } else {
-            ArtifactStatus::UpToDate
-        };
+            entry.status = ArtifactStatus::UpToDate;
+            entry.logs.push(LogEntry {
+                level: LogLevel::Success,
+                message: "Already up to date".to_string(),
+            });
+        }
     }
     (model, Effect::None)
 }
@@ -289,16 +297,33 @@ fn handle_check_result(
 fn handle_generator_finished(
     mut model: Model,
     artifact_index: usize,
-    result: Result<(), String>,
+    result: Result<GeneratorOutput, String>,
 ) -> (Model, Effect) {
     match result {
-        Ok(()) => {
+        Ok(output) => {
+            // Store logs in ArtifactEntry
+            if let Some(entry) = model.artifacts.get_mut(artifact_index) {
+                for line in &output.stdout_lines {
+                    entry.logs.push(LogEntry {
+                        level: LogLevel::Output,
+                        message: line.clone(),
+                    });
+                }
+                for line in &output.stderr_lines {
+                    entry.logs.push(LogEntry {
+                        level: LogLevel::Error,
+                        message: line.clone(),
+                    });
+                }
+                entry.logs.push(LogEntry {
+                    level: LogLevel::Success,
+                    message: format!("Generated {} file(s)", output.files_generated),
+                });
+            }
+
             // Move to serialization
             if let Screen::Generating(ref mut state) = model.screen {
                 state.step = GenerationStep::Serializing;
-                state
-                    .log_lines
-                    .push("Generator completed successfully".into());
             }
             let entry = &model.artifacts[artifact_index];
             let effect = Effect::Serialize {
@@ -306,12 +331,16 @@ fn handle_generator_finished(
                 artifact_name: entry.artifact.name.clone(),
                 target: entry.target.clone(),
                 target_type: entry.target_type,
-                out_dir: Default::default(), // Would come from generator result
+                out_dir: Default::default(),
             };
             (model, effect)
         }
         Err(e) => {
             if let Some(entry) = model.artifacts.get_mut(artifact_index) {
+                entry.logs.push(LogEntry {
+                    level: LogLevel::Error,
+                    message: format!("Generator failed: {}", e),
+                });
                 entry.status = ArtifactStatus::Failed(e);
             }
             model.screen = Screen::ArtifactList;
@@ -323,16 +352,36 @@ fn handle_generator_finished(
 fn handle_serialize_finished(
     mut model: Model,
     artifact_index: usize,
-    result: Result<(), String>,
+    result: Result<SerializeOutput, String>,
 ) -> (Model, Effect) {
     match result {
-        Ok(()) => {
+        Ok(output) => {
             if let Some(entry) = model.artifacts.get_mut(artifact_index) {
+                for line in &output.stdout_lines {
+                    entry.logs.push(LogEntry {
+                        level: LogLevel::Output,
+                        message: line.clone(),
+                    });
+                }
+                for line in &output.stderr_lines {
+                    entry.logs.push(LogEntry {
+                        level: LogLevel::Error,
+                        message: line.clone(),
+                    });
+                }
+                entry.logs.push(LogEntry {
+                    level: LogLevel::Success,
+                    message: "Serialized to backend".to_string(),
+                });
                 entry.status = ArtifactStatus::UpToDate;
             }
         }
         Err(e) => {
             if let Some(entry) = model.artifacts.get_mut(artifact_index) {
+                entry.logs.push(LogEntry {
+                    level: LogLevel::Error,
+                    message: format!("Serialization failed: {}", e),
+                });
                 entry.status = ArtifactStatus::Failed(e);
             }
         }
@@ -385,12 +434,14 @@ mod tests {
                     target_type: TargetType::Nixos,
                     artifact: make_test_artifact("ssh-key", vec!["passphrase"]),
                     status: ArtifactStatus::Pending,
+                    logs: Vec::new(),
                 },
                 ArtifactEntry {
                     target: "machine-two".to_string(),
                     target_type: TargetType::Nixos,
                     artifact: make_test_artifact("api-token", vec![]),
                     status: ArtifactStatus::Pending,
+                    logs: Vec::new(),
                 },
             ],
             selected_index: 0,
