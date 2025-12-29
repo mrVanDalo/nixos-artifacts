@@ -5,18 +5,18 @@
 //! 2. Define event sequence
 //! 3. Run with real effect handler and snapshot result
 
-use artifacts_cli::app::model::Screen;
 use artifacts_cli::app::Msg;
+use artifacts_cli::app::model::Screen;
 use artifacts_cli::config::backend::BackendConfiguration;
 use artifacts_cli::config::make::MakeConfiguration;
 use artifacts_cli::config::nix::build_make_from_flake;
-use artifacts_cli::tui::events::test_helpers::*;
 use artifacts_cli::tui::events::ScriptedEventSource;
+use artifacts_cli::tui::events::test_helpers::*;
 use artifacts_cli::tui::model_builder::build_model;
-use artifacts_cli::tui::{run, BackendEffectHandler};
+use artifacts_cli::tui::{BackendEffectHandler, run};
 use insta::assert_debug_snapshot;
-use ratatui::backend::TestBackend;
 use ratatui::Terminal;
+use ratatui::backend::TestBackend;
 use serial_test::serial;
 use std::path::PathBuf;
 
@@ -35,8 +35,7 @@ fn load_example(name: &str) -> (BackendConfiguration, MakeConfiguration) {
         .expect("Failed to read backend.toml");
 
     let make_path = build_make_from_flake(&example_dir).expect("Failed to build make from flake");
-    let make =
-        MakeConfiguration::read_make_config(&make_path).expect("Failed to read make config");
+    let make = MakeConfiguration::read_make_config(&make_path).expect("Failed to read make config");
 
     (backend, make)
 }
@@ -51,8 +50,8 @@ fn run_tui(example: &str, events: Events) -> TestResult {
     let mut event_source = ScriptedEventSource::new(events.messages);
     let mut effect_handler = BackendEffectHandler::new(backend, make);
 
-    let result = run(&mut terminal, &mut event_source, &mut effect_handler, model)
-        .expect("TUI run failed");
+    let result =
+        run(&mut terminal, &mut event_source, &mut effect_handler, model).expect("TUI run failed");
 
     let after = ModelState::from_model(&result.final_model);
 
@@ -64,9 +63,10 @@ fn run_tui(example: &str, events: Events) -> TestResult {
 }
 
 // =============================================================================
-// Snapshot types
+// Snapshot types (fields are read via Debug formatting in assert_debug_snapshot!)
 // =============================================================================
 
+#[allow(dead_code)]
 #[derive(Debug)]
 struct TestResult {
     events: Vec<String>,
@@ -74,6 +74,7 @@ struct TestResult {
     after: ModelState,
 }
 
+#[allow(dead_code)]
 #[derive(Debug)]
 struct ModelState {
     screen: &'static str,
@@ -82,6 +83,7 @@ struct ModelState {
     error: Option<String>,
 }
 
+#[allow(dead_code)]
 #[derive(Debug)]
 struct ArtifactState {
     target: String,
@@ -131,12 +133,6 @@ impl Events {
     fn navigate_down(mut self, n: usize) -> Self {
         self.messages.extend((0..n).map(|_| down()));
         self.descriptions.push(format!("navigate_down({})", n));
-        self
-    }
-
-    fn navigate_up(mut self, n: usize) -> Self {
-        self.messages.extend((0..n).map(|_| up()));
-        self.descriptions.push(format!("navigate_up({})", n));
         self
     }
 
@@ -270,30 +266,21 @@ fn bigger_setup_navigate_and_select() {
 #[test]
 #[serial]
 fn missing_files_shows_error() {
-    let events = Events::new()
-        .select()
-        .fill_prompts(&["one", "two"])
-        .quit();
+    let events = Events::new().select().fill_prompts(&["one", "two"]).quit();
     assert_debug_snapshot!(run_tui("scenarios/error-missing-files", events));
 }
 
 #[test]
 #[serial]
 fn wrong_file_type_shows_error() {
-    let events = Events::new()
-        .select()
-        .fill_prompts(&["one", "two"])
-        .quit();
+    let events = Events::new().select().fill_prompts(&["one", "two"]).quit();
     assert_debug_snapshot!(run_tui("scenarios/error-wrong-file-type", events));
 }
 
 #[test]
 #[serial]
 fn unwanted_files_shows_error() {
-    let events = Events::new()
-        .select()
-        .fill_prompts(&["one", "two"])
-        .quit();
+    let events = Events::new().select().fill_prompts(&["one", "two"]).quit();
     assert_debug_snapshot!(run_tui("scenarios/error-unwanted-files", events));
 }
 
@@ -333,9 +320,6 @@ fn artifact_names_generate_all() {
 #[test]
 #[serial]
 fn no_config_generate_one() {
-    let events = Events::new()
-        .select()
-        .fill_prompts(&["one", "two"])
-        .quit();
+    let events = Events::new().select().fill_prompts(&["one", "two"]).quit();
     assert_debug_snapshot!(run_tui("scenarios/no-config-section", events));
 }

@@ -3,9 +3,10 @@ use std::path::PathBuf;
 
 /// Side effects that the runtime must execute.
 /// These are returned by update(), not executed inside it.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub enum Effect {
     /// No side effect
+    #[default]
     None,
 
     /// Multiple effects to execute
@@ -64,12 +65,6 @@ impl Effect {
     /// Check if this is the Quit variant
     pub fn is_quit(&self) -> bool {
         matches!(self, Effect::Quit)
-    }
-}
-
-impl Default for Effect {
-    fn default() -> Self {
-        Self::None
     }
 }
 
