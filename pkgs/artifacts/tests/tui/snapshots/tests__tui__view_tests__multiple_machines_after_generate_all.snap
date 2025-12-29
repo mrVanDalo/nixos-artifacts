@@ -1,0 +1,16 @@
+---
+source: tests/tui/view_tests.rs
+expression: output
+---
+"┌Artifacts (4) - j/k: move, Enter: generate, q: quit─────────────────┐"
+"│> ◐ [N] machine-one/artifact-one                                    │"
+"│  ✓ [N] machine-one/artifact-two                                    │"
+"│  ◐ [N] machine-two/artifact-one                                    │"
+"│  ◐ [N] machine-two/artifact-two                                    │"
+"│                                                                    │"
+"│                                                                    │"
+"│                                                                    │"
+"│                                                                    │"
+"│                                                                    │"
+"└────────────────────────────────────────────────────────────────────┘"
+"○ Pending  ◐ Needs Gen  ✓ Up To Date  ✗ Failed  │ [N] NixOS  [H] Home "

@@ -307,3 +307,116 @@ fn test_progress_serializing() {
     let output = terminal.backend().to_string();
     assert_snapshot!(output);
 }
+
+// ============================================================================
+// Multiple Machines Generate All View Tests
+// ============================================================================
+
+fn make_multiple_machines_artifact(name: &str) -> ArtifactDef {
+    ArtifactDef {
+        name: name.to_string(),
+        shared: false,
+        files: BTreeMap::from([(
+            "test".to_string(),
+            FileDef {
+                name: "test".to_string(),
+                path: Some("/test/path".to_string()),
+                owner: None,
+                group: None,
+            },
+        )]),
+        prompts: BTreeMap::new(),
+        generator: "/nix/store/xxx-gen".to_string(),
+        serialization: "test-backend".to_string(),
+    }
+}
+
+#[test]
+fn test_multiple_machines_before_generate_all() {
+    let model = Model {
+        screen: Screen::ArtifactList,
+        artifacts: vec![
+            ArtifactEntry {
+                target: "machine-one".to_string(),
+                target_type: TargetType::Nixos,
+                artifact: make_multiple_machines_artifact("artifact-one"),
+                status: ArtifactStatus::Pending,
+            },
+            ArtifactEntry {
+                target: "machine-one".to_string(),
+                target_type: TargetType::Nixos,
+                artifact: make_multiple_machines_artifact("artifact-two"),
+                status: ArtifactStatus::Pending,
+            },
+            ArtifactEntry {
+                target: "machine-two".to_string(),
+                target_type: TargetType::Nixos,
+                artifact: make_multiple_machines_artifact("artifact-one"),
+                status: ArtifactStatus::Pending,
+            },
+            ArtifactEntry {
+                target: "machine-two".to_string(),
+                target_type: TargetType::Nixos,
+                artifact: make_multiple_machines_artifact("artifact-two"),
+                status: ArtifactStatus::Pending,
+            },
+        ],
+        selected_index: 0,
+        error: None,
+    };
+
+    let backend = TestBackend::new(70, 12);
+    let mut terminal = Terminal::new(backend).unwrap();
+
+    terminal
+        .draw(|f| render_artifact_list(f, &model, f.area()))
+        .unwrap();
+
+    let output = terminal.backend().to_string();
+    assert_snapshot!(output);
+}
+
+#[test]
+fn test_multiple_machines_after_generate_all() {
+    let model = Model {
+        screen: Screen::ArtifactList,
+        artifacts: vec![
+            ArtifactEntry {
+                target: "machine-one".to_string(),
+                target_type: TargetType::Nixos,
+                artifact: make_multiple_machines_artifact("artifact-one"),
+                status: ArtifactStatus::NeedsGeneration,
+            },
+            ArtifactEntry {
+                target: "machine-one".to_string(),
+                target_type: TargetType::Nixos,
+                artifact: make_multiple_machines_artifact("artifact-two"),
+                status: ArtifactStatus::UpToDate,
+            },
+            ArtifactEntry {
+                target: "machine-two".to_string(),
+                target_type: TargetType::Nixos,
+                artifact: make_multiple_machines_artifact("artifact-one"),
+                status: ArtifactStatus::NeedsGeneration,
+            },
+            ArtifactEntry {
+                target: "machine-two".to_string(),
+                target_type: TargetType::Nixos,
+                artifact: make_multiple_machines_artifact("artifact-two"),
+                status: ArtifactStatus::NeedsGeneration,
+            },
+        ],
+        selected_index: 0,
+        error: None,
+    };
+
+    let backend = TestBackend::new(70, 12);
+    let mut terminal = Terminal::new(backend).unwrap();
+
+    terminal
+        .draw(|f| render_artifact_list(f, &model, f.area()))
+        .unwrap();
+
+    let output = terminal.backend().to_string();
+    assert_snapshot!(output);
+}
