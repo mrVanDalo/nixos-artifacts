@@ -1,0 +1,3 @@
+{
+  "rust-analyzer.linkedProjects": ["pkgs/artifacts-cli/Cargo.toml"]
+}
