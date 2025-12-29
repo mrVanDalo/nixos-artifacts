@@ -1,4 +1,4 @@
-use crate::app::model::Model;
+use crate::app::model::{ArtifactEntry, Model, TargetType};
 use crate::app::{Effect, Msg};
 use crate::backend::generator::{run_generator_script, verify_generated_files};
 use crate::backend::serialization::{run_check_serialization, run_serialize};
@@ -7,7 +7,8 @@ use crate::config::backend::BackendConfiguration;
 use crate::config::make::MakeConfiguration;
 use crate::tui::runtime::EffectHandler;
 use anyhow::{Context, Result};
-use std::path::PathBuf;
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 
 /// Effect handler that executes real backend operations.
 /// This connects the TUI to the existing backend infrastructure.
@@ -27,6 +28,98 @@ impl BackendEffectHandler {
             current_out_dir: None,
         }
     }
+
+    fn check_if_artifact_needs_generation(
+        &self,
+        entry: &ArtifactEntry,
+        target: &str,
+        target_type: TargetType,
+    ) -> bool {
+        let context = target_type.context_str();
+        match run_check_serialization(&entry.artifact, target, &self.backend, &self.make, context) {
+            Ok(skip) => !skip, // run_check_serialization returns true if we can skip
+            Err(_) => true,    // On error, assume we need generation
+        }
+    }
+
+    fn run_generator_and_store_output(
+        &mut self,
+        entry: &ArtifactEntry,
+        artifact_name: &str,
+        target: &str,
+        target_type: TargetType,
+        prompts: &HashMap<String, String>,
+    ) -> Result<(), String> {
+        let context = target_type.context_str();
+
+        let prompt_dir = create_temp_dir(Some(&format!("prompt-{}", artifact_name)))
+            .context("creating prompt temp dir")
+            .map_err(|e| e.to_string())?;
+
+        let out_dir = create_temp_dir(Some(&format!("out-{}", artifact_name)))
+            .context("creating output temp dir")
+            .map_err(|e| e.to_string())?;
+
+        self.write_prompts_to_directory(prompts, &prompt_dir.path_buf)?;
+
+        run_generator_script(
+            &entry.artifact,
+            target,
+            &self.make.make_base,
+            &prompt_dir.path_buf,
+            &out_dir.path_buf,
+            context,
+        )
+        .map_err(|e| e.to_string())?;
+
+        verify_generated_files(&entry.artifact, &out_dir.path_buf).map_err(|e| e.to_string())?;
+
+        self.current_out_dir = Some(out_dir.path_buf.clone());
+        std::mem::forget(out_dir);
+
+        Ok(())
+    }
+
+    fn write_prompts_to_directory(
+        &self,
+        prompts: &HashMap<String, String>,
+        prompt_dir: &Path,
+    ) -> Result<(), String> {
+        for (name, value) in prompts {
+            let path = prompt_dir.join(name);
+            std::fs::write(&path, value)
+                .with_context(|| format!("writing prompt file {}", path.display()))
+                .map_err(|e| e.to_string())?;
+        }
+        Ok(())
+    }
+
+    fn serialize_generated_output_to_backend(
+        &mut self,
+        entry: &ArtifactEntry,
+        target: &str,
+        target_type: TargetType,
+    ) -> Result<(), String> {
+        let context = target_type.context_str();
+
+        let out_path = self
+            .current_out_dir
+            .take()
+            .expect("Serialize called without prior RunGenerator");
+
+        let result = run_serialize(
+            &entry.artifact,
+            &self.backend,
+            &out_path,
+            target,
+            &self.make,
+            context,
+        );
+
+        let _ = std::fs::remove_dir_all(&out_path);
+
+        result.map_err(|e| e.to_string())
+    }
 }
 
 impl EffectHandler for BackendEffectHandler {
@@ -41,18 +134,8 @@ impl EffectHandler for BackendEffectHandler {
                 target_type,
             } => {
                 let entry = &model.artifacts[artifact_index];
-                let context = target_type.context_str();
-
-                let needs_generation = match run_check_serialization(
-                    &entry.artifact,
-                    &target,
-                    &self.backend,
-                    &self.make,
-                    context,
-                ) {
-                    Ok(skip) => !skip, // run_check_serialization returns true if we can skip
-                    Err(_) => true,    // On error, assume we need generation
-                };
+                let needs_generation =
+                    self.check_if_artifact_needs_generation(entry, &target, target_type);
 
                 Ok(vec![Msg::CheckSerializationResult {
                     artifact_index,
@@ -68,57 +151,18 @@ impl EffectHandler for BackendEffectHandler {
                 prompts,
             } => {
                 let entry = &model.artifacts[artifact_index];
-                let context = target_type.context_str();
-
-                // Create temp directories for prompts and output
-                let prompt_dir = create_temp_dir(Some(&format!("prompt-{}", artifact_name)))
-                    .context("creating prompt temp dir")?;
-                let out_dir = create_temp_dir(Some(&format!("out-{}", artifact_name)))
-                    .context("creating output temp dir")?;
-
-                // Write prompts to files
-                for (name, value) in &prompts {
-                    let path = prompt_dir.path_buf.join(name);
-                    std::fs::write(&path, value)
-                        .with_context(|| format!("writing prompt file {}", path.display()))?;
-                }
-
-                // Run the generator
-                let result = run_generator_script(
-                    &entry.artifact,
+                let result = self.run_generator_and_store_output(
+                    entry,
+                    &artifact_name,
                     &target,
-                    &self.make.make_base,
-                    &prompt_dir.path_buf,
-                    &out_dir.path_buf,
-                    context,
+                    target_type,
+                    &prompts,
                 );
 
-                match result {
-                    Ok(()) => {
-                        // Verify generated files
-                        if let Err(e) = verify_generated_files(&entry.artifact, &out_dir.path_buf) {
-                            return Ok(vec![Msg::GeneratorFinished {
-                                artifact_index,
-                                result: Err(e.to_string()),
-                            }]);
-                        }
-
-                        // Store the output directory for serialization
-                        // We need to keep out_dir alive, so we store its path
-                        self.current_out_dir = Some(out_dir.path_buf.clone());
-                        // Prevent the TempDirGuard from cleaning up
-                        std::mem::forget(out_dir);
-
-                        Ok(vec![Msg::GeneratorFinished {
-                            artifact_index,
-                            result: Ok(()),
-                        }])
-                    }
-                    Err(e) => Ok(vec![Msg::GeneratorFinished {
-                        artifact_index,
-                        result: Err(e.to_string()),
-                    }]),
-                }
+                Ok(vec![Msg::GeneratorFinished {
+                    artifact_index,
+                    result,
+                }])
             }
 
             Effect::Serialize {
@@ -129,36 +173,13 @@ impl EffectHandler for BackendEffectHandler {
                 out_dir: _,
             } => {
                 let entry = &model.artifacts[artifact_index];
-                let context = target_type.context_str();
+                let result =
+                    self.serialize_generated_output_to_backend(entry, &target, target_type);
 
-                // Use the stored output directory from the generator
-                let out_path = self
-                    .current_out_dir
-                    .take()
-                    .expect("Serialize called without prior RunGenerator");
-
-                let result = run_serialize(
-                    &entry.artifact,
-                    &self.backend,
-                    &out_path,
-                    &target,
-                    &self.make,
-                    context,
-                );
-
-                // Clean up the output directory
-                let _ = std::fs::remove_dir_all(&out_path);
-
-                match result {
-                    Ok(()) => Ok(vec![Msg::SerializeFinished {
-                        artifact_index,
-                        result: Ok(()),
-                    }]),
-                    Err(e) => Ok(vec![Msg::SerializeFinished {
-                        artifact_index,
-                        result: Err(e.to_string()),
-                    }]),
-                }
+                Ok(vec![Msg::SerializeFinished {
+                    artifact_index,
+                    result,
+                }])
             }
         }
     }

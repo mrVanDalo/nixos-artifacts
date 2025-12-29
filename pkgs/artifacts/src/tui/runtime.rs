@@ -108,7 +108,13 @@ where
 
     // Execute the initial effect (check serialization for all pending artifacts)
     let initial_effect = init(&model);
-    model = execute_effect_loop(terminal, effects, model, initial_effect, &mut frames_rendered)?;
+    model = execute_effect_loop(
+        terminal,
+        effects,
+        model,
+        initial_effect,
+        &mut frames_rendered,
+    )?;
 
     loop {
         // Render the current state
