@@ -2,7 +2,7 @@
 source: tests/tui/view_tests.rs
 expression: output
 ---
-"┌Artifacts (3) - j/k: move, Enter: generate, a: all, q: quit─────────┐"
+"┌Artifacts (3) - j/k: move, Enter: generate, q: quit─────────────────┐"
 "│> ○ [N] machine-one/ssh-key                                         │"
 "│  ✓ [N] machine-two/api-token                                       │"
 "│  ◐ [H] user@host/gpg-key                                           │"

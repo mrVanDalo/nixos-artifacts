@@ -3,6 +3,24 @@ use super::message::{KeyEvent, Msg};
 use super::model::*;
 use crossterm::event::{KeyCode, KeyModifiers};
 
+/// Compute the initial effect to run when the app starts.
+/// This triggers check_serialization for all pending artifacts.
+pub fn init(model: &Model) -> Effect {
+    let effects: Vec<Effect> = model
+        .artifacts
+        .iter()
+        .enumerate()
+        .filter(|(_, e)| e.status == ArtifactStatus::Pending)
+        .map(|(i, e)| Effect::CheckSerialization {
+            artifact_index: i,
+            artifact_name: e.artifact.name.clone(),
+            target: e.target.clone(),
+            target_type: e.target_type,
+        })
+        .collect();
+    Effect::batch(effects)
+}
+
 /// Pure state transition: (Model, Msg) -> (Model, Effect)
 /// This function has NO side effects - it only computes new state.
 pub fn update(model: Model, msg: Msg) -> (Model, Effect) {
@@ -67,8 +85,6 @@ fn update_artifact_list(mut model: Model, key: KeyEvent) -> (Model, Effect) {
 
         KeyCode::Enter => start_generation_for_selected(model),
 
-        KeyCode::Char('a') => start_generation_for_all(model),
-
         _ => (model, Effect::None),
     }
 }
@@ -100,22 +116,6 @@ fn start_generation_for_selected(mut model: Model) -> (Model, Effect) {
         model.screen = Screen::Prompt(prompt_state);
         (model, Effect::None)
     }
-}
-
-fn start_generation_for_all(model: Model) -> (Model, Effect) {
-    let effects: Vec<Effect> = model
-        .artifacts
-        .iter()
-        .enumerate()
-        .filter(|(_, e)| e.status == ArtifactStatus::Pending)
-        .map(|(i, e)| Effect::CheckSerialization {
-            artifact_index: i,
-            artifact_name: e.artifact.name.clone(),
-            target: e.target.clone(),
-            target_type: e.target_type,
-        })
-        .collect();
-    (model, Effect::batch(effects))
 }
 
 fn update_prompt(mut model: Model, key: KeyEvent) -> (Model, Effect) {

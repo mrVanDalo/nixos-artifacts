@@ -1,6 +1,6 @@
 ---
 source: tests/tui/integration_tests.rs
-expression: "run_tui(\"2_artifacts\", events)"
+expression: "run_tui(\"scenarios/two-artifacts-no-prompts\", events)"
 ---
 TestResult {
     events: [
@@ -33,7 +33,7 @@ TestResult {
             ArtifactState {
                 target: "machine-name",
                 name: "artifact-one",
-                status: "Pending",
+                status: "NeedsGeneration",
             },
             ArtifactState {
                 target: "machine-name",

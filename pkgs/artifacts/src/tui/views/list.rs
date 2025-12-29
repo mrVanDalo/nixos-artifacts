@@ -43,7 +43,7 @@ pub fn render_artifact_list(frame: &mut Frame, model: &Model, area: Rect) {
         .collect();
 
     let title = format!(
-        "Artifacts ({}) - j/k: move, Enter: generate, a: all, q: quit",
+        "Artifacts ({}) - j/k: move, Enter: generate, q: quit",
         model.artifacts.len()
     );
 

@@ -1,5 +1,5 @@
 use crate::app::model::Model;
-use crate::app::{Effect, Msg, update};
+use crate::app::{Effect, Msg, init, update};
 use crate::tui::events::EventSource;
 use crate::tui::views::render;
 use anyhow::Result;
@@ -31,6 +31,56 @@ impl EffectHandler for NoOpEffectHandler {
     }
 }
 
+/// Execute an effect and all resulting effects until completion.
+/// Re-renders after each batch of effects.
+fn execute_effect_loop<B, H>(
+    terminal: &mut Terminal<B>,
+    effects: &mut H,
+    mut model: Model,
+    initial_effect: Effect,
+    frames_rendered: &mut usize,
+) -> Result<Model>
+where
+    B: Backend,
+    H: EffectHandler,
+{
+    if initial_effect.is_none() {
+        return Ok(model);
+    }
+
+    let mut pending_effect = initial_effect;
+    loop {
+        let result_msgs = execute_effect(effects, pending_effect, &model)?;
+        if result_msgs.is_empty() {
+            break;
+        }
+
+        // Process all result messages
+        let mut next_effect = Effect::None;
+        for msg in result_msgs {
+            let (new_model, new_effect) = update(model, msg);
+            model = new_model;
+            // Note: We don't handle quit here for the initial effect
+            // as it only triggers CheckSerialization which doesn't quit
+            if !new_effect.is_none() {
+                next_effect = new_effect;
+            }
+        }
+
+        if next_effect.is_none() {
+            break;
+        }
+
+        // Re-render to show progress
+        terminal.draw(|f| render(f, &model))?;
+        *frames_rendered += 1;
+
+        pending_effect = next_effect;
+    }
+
+    Ok(model)
+}
+
 /// Run the TUI application with the given components.
 ///
 /// This is the main entry point for running the Elm-architecture loop:
@@ -51,6 +101,14 @@ where
     H: EffectHandler,
 {
     let mut frames_rendered = 0;
+
+    // Render the initial state
+    terminal.draw(|f| render(f, &model))?;
+    frames_rendered += 1;
+
+    // Execute the initial effect (check serialization for all pending artifacts)
+    let initial_effect = init(&model);
+    model = execute_effect_loop(terminal, effects, model, initial_effect, &mut frames_rendered)?;
 
     loop {
         // Render the current state
@@ -304,8 +362,8 @@ mod tests {
 
         let result = run(&mut terminal, &mut events, &mut effects, model).unwrap();
 
-        // Should render once then exit
-        assert_eq!(result.frames_rendered, 1);
+        // Should render twice (initial + after init effects) then exit
+        assert_eq!(result.frames_rendered, 2);
     }
 
     #[test]

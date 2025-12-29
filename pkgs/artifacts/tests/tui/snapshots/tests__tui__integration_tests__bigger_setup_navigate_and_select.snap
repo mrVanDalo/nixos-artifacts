@@ -1,6 +1,6 @@
 ---
 source: tests/tui/integration_tests.rs
-expression: "run_tui(\"bigger_setup\", events)"
+expression: "run_tui(\"scenarios/multiple-machines\", events)"
 ---
 TestResult {
     events: [
@@ -43,12 +43,12 @@ TestResult {
             ArtifactState {
                 target: "machine-one",
                 name: "artifact-one",
-                status: "Pending",
+                status: "NeedsGeneration",
             },
             ArtifactState {
                 target: "machine-one",
                 name: "artifact-two",
-                status: "Pending",
+                status: "UpToDate",
             },
             ArtifactState {
                 target: "machine-two",
@@ -58,7 +58,7 @@ TestResult {
             ArtifactState {
                 target: "machine-two",
                 name: "artifact-two",
-                status: "Pending",
+                status: "NeedsGeneration",
             },
         ],
         error: None,
