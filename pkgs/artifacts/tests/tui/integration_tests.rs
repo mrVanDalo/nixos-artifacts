@@ -260,6 +260,17 @@ fn multiple_machines_navigate_and_select() {
 }
 
 // =============================================================================
+// Python scripts tests
+// =============================================================================
+
+#[test]
+#[serial]
+fn python_scripts_generate_all() {
+    let events = Events::new().generate_all().quit();
+    assert_debug_snapshot!(run_tui("scenarios/python-scripts", events));
+}
+
+// =============================================================================
 // Error scenario tests
 // =============================================================================
 

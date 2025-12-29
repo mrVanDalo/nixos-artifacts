@@ -1,0 +1,65 @@
+---
+source: tests/tui/integration_tests.rs
+assertion_line: 270
+expression: "run_tui(\"scenarios/python-scripts\", events)"
+---
+TestResult {
+    events: [
+        "generate_all",
+        "quit",
+    ],
+    before: ModelState {
+        screen: "ArtifactList",
+        selected_index: 0,
+        artifacts: [
+            ArtifactState {
+                target: "machine-one",
+                name: "artifact-one",
+                status: "Pending",
+            },
+            ArtifactState {
+                target: "machine-one",
+                name: "artifact-two",
+                status: "Pending",
+            },
+            ArtifactState {
+                target: "machine-two",
+                name: "artifact-one",
+                status: "Pending",
+            },
+            ArtifactState {
+                target: "machine-two",
+                name: "artifact-two",
+                status: "Pending",
+            },
+        ],
+        error: None,
+    },
+    after: ModelState {
+        screen: "ArtifactList",
+        selected_index: 0,
+        artifacts: [
+            ArtifactState {
+                target: "machine-one",
+                name: "artifact-one",
+                status: "NeedsGeneration",
+            },
+            ArtifactState {
+                target: "machine-one",
+                name: "artifact-two",
+                status: "UpToDate",
+            },
+            ArtifactState {
+                target: "machine-two",
+                name: "artifact-one",
+                status: "NeedsGeneration",
+            },
+            ArtifactState {
+                target: "machine-two",
+                name: "artifact-two",
+                status: "NeedsGeneration",
+            },
+        ],
+        error: None,
+    },
+}

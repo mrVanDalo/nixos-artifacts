@@ -1,0 +1,4 @@
+[test]
+check_serialization = "./check.py"
+serialize = "./serialize.py"
+deserialize = "./deserialize.py"
