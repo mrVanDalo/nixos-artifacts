@@ -182,7 +182,7 @@ impl Events {
 }
 
 // =============================================================================
-// scenario_simple tests
+// single-artifact-with-prompts tests (formerly scenario_simple)
 // =============================================================================
 
 #[test]
@@ -192,7 +192,7 @@ fn scenario_simple_generate_one() {
         .select()
         .fill_prompts(&["secret-one", "secret-two"])
         .quit();
-    assert_debug_snapshot!(run_tui("scenario_simple", events));
+    assert_debug_snapshot!(run_tui("scenarios/single-artifact-with-prompts", events));
 }
 
 #[test]
@@ -202,32 +202,32 @@ fn scenario_simple_cancel_prompt() {
         .select()
         .type_and_cancel("partial-input")
         .quit();
-    assert_debug_snapshot!(run_tui("scenario_simple", events));
+    assert_debug_snapshot!(run_tui("scenarios/single-artifact-with-prompts", events));
 }
 
 #[test]
 #[serial]
 fn scenario_simple_quit_immediately() {
     let events = Events::new().quit();
-    assert_debug_snapshot!(run_tui("scenario_simple", events));
+    assert_debug_snapshot!(run_tui("scenarios/single-artifact-with-prompts", events));
 }
 
 // =============================================================================
-// 2_artifacts tests
+// two-artifacts-no-prompts tests (formerly 2_artifacts)
 // =============================================================================
 
 #[test]
 #[serial]
 fn two_artifacts_generate_all() {
     let events = Events::new().generate_all().quit();
-    assert_debug_snapshot!(run_tui("2_artifacts", events));
+    assert_debug_snapshot!(run_tui("scenarios/two-artifacts-no-prompts", events));
 }
 
 #[test]
 #[serial]
 fn two_artifacts_select_first() {
     let events = Events::new().select().fill_prompts(&[]).quit();
-    assert_debug_snapshot!(run_tui("2_artifacts", events));
+    assert_debug_snapshot!(run_tui("scenarios/two-artifacts-no-prompts", events));
 }
 
 #[test]
@@ -238,18 +238,18 @@ fn two_artifacts_select_second() {
         .select()
         .fill_prompts(&[])
         .quit();
-    assert_debug_snapshot!(run_tui("2_artifacts", events));
+    assert_debug_snapshot!(run_tui("scenarios/two-artifacts-no-prompts", events));
 }
 
 // =============================================================================
-// bigger_setup tests
+// multiple-machines tests (formerly bigger_setup)
 // =============================================================================
 
 #[test]
 #[serial]
 fn bigger_setup_generate_all() {
     let events = Events::new().generate_all().quit();
-    assert_debug_snapshot!(run_tui("bigger_setup", events));
+    assert_debug_snapshot!(run_tui("scenarios/multiple-machines", events));
 }
 
 #[test]
@@ -260,7 +260,7 @@ fn bigger_setup_navigate_and_select() {
         .select()
         .fill_prompts(&[])
         .quit();
-    assert_debug_snapshot!(run_tui("bigger_setup", events));
+    assert_debug_snapshot!(run_tui("scenarios/multiple-machines", events));
 }
 
 // =============================================================================
@@ -274,7 +274,7 @@ fn missing_files_shows_error() {
         .select()
         .fill_prompts(&["one", "two"])
         .quit();
-    assert_debug_snapshot!(run_tui("missing-files", events));
+    assert_debug_snapshot!(run_tui("scenarios/error-missing-files", events));
 }
 
 #[test]
@@ -284,7 +284,7 @@ fn wrong_file_type_shows_error() {
         .select()
         .fill_prompts(&["one", "two"])
         .quit();
-    assert_debug_snapshot!(run_tui("wrong-file-type", events));
+    assert_debug_snapshot!(run_tui("scenarios/error-wrong-file-type", events));
 }
 
 #[test]
@@ -294,7 +294,7 @@ fn unwanted_files_shows_error() {
         .select()
         .fill_prompts(&["one", "two"])
         .quit();
-    assert_debug_snapshot!(run_tui("unwanted-files", events));
+    assert_debug_snapshot!(run_tui("scenarios/error-unwanted-files", events));
 }
 
 // =============================================================================
@@ -305,7 +305,7 @@ fn unwanted_files_shows_error() {
 #[serial]
 fn simple_home_manager_generate_all() {
     let events = Events::new().generate_all().quit();
-    assert_debug_snapshot!(run_tui("simple-home-manager", events));
+    assert_debug_snapshot!(run_tui("scenarios/home-manager", events));
 }
 
 // =============================================================================
@@ -316,7 +316,7 @@ fn simple_home_manager_generate_all() {
 #[serial]
 fn backend_include_generate_all() {
     let events = Events::new().generate_all().quit();
-    assert_debug_snapshot!(run_tui("backend_include", events));
+    assert_debug_snapshot!(run_tui("scenarios/backend-include", events));
 }
 
 // =============================================================================
@@ -327,7 +327,7 @@ fn backend_include_generate_all() {
 #[serial]
 fn artifact_names_generate_all() {
     let events = Events::new().generate_all().quit();
-    assert_debug_snapshot!(run_tui("artifact_names", events));
+    assert_debug_snapshot!(run_tui("scenarios/artifact-name-formats", events));
 }
 
 #[test]
@@ -337,5 +337,5 @@ fn no_config_generate_one() {
         .select()
         .fill_prompts(&["one", "two"])
         .quit();
-    assert_debug_snapshot!(run_tui("no_config", events));
+    assert_debug_snapshot!(run_tui("scenarios/no-config-section", events));
 }

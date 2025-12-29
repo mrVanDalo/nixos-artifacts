@@ -124,11 +124,28 @@ since home-manager doesn't manage system-level permissions.
 
 ```
 pkgs/artifacts-cli/
-├── examples/                # Test scenarios (each is a complete flake)
-│   ├── scenario_simple/     # Simple scenario example
-│   ├── 2_artifacts/         # Multiple artifacts example
-│   ├── bigger_setup/        # Complex setup example
-│   └── ...                  # Other test scenarios
+├── examples/
+│   ├── backends/                       # Reusable backend definitions
+│   │   ├── test/                       # Standard test backend (always passes)
+│   │   │   ├── backend.toml            # Backend configuration with include
+│   │   │   ├── check.sh                # Check serialization script
+│   │   │   ├── serialize.sh            # Serialize script
+│   │   │   └── deserialize.sh          # Deserialize script
+│   │   └── test-skip-one/              # Test backend that skips one artifact
+│   │       └── ...                     # Same structure as test/
+│   └── scenarios/                      # Test scenarios (each is a complete flake)
+│       ├── single-artifact-with-prompts/   # Simple scenario with prompts
+│       ├── two-artifacts-no-prompts/       # Multiple artifacts, no prompts
+│       ├── multiple-machines/              # Multi-machine NixOS setup
+│       ├── home-manager/                   # Home-manager configuration
+│       ├── artifact-name-formats/          # Various artifact naming patterns
+│       ├── backend-include/                # Backend include directive test
+│       ├── backend-circular-include/       # Circular include detection test
+│       ├── no-config-section/              # Backend without [config] section
+│       ├── error-missing-files/            # Error case: missing generated files
+│       ├── error-missing-generator/        # Error case: missing generator
+│       ├── error-unwanted-files/           # Error case: unwanted extra files
+│       └── error-wrong-file-type/          # Error case: wrong file type
 ├── src/
 │   ├── bin/
 │   │   └── artifacts.rs     # CLI entry point
@@ -499,12 +516,17 @@ cargo clippy
 
 ### Adding Test Scenarios
 
-1. Create new directory in `examples/`
+1. Create new directory in `examples/scenarios/`
 2. Add `flake.nix` with artifact configuration
-3. Add `backend.toml` with test backend scripts
-4. Create `test_check.sh` and `test_serialize.sh` scripts
+3. Add `backend.toml` that includes a backend from `../backends/`:
+   ```toml
+   include = ["../backends/test/backend.toml"]
+   ```
+4. Create `test_check.sh` and `test_serialize.sh` scripts for testing
 5. Add `flake.lock` if needed
-6. Document the scenario purpose (error case or feature demo)
+6. Use descriptive kebab-case naming:
+   - Feature demos: `single-artifact-with-prompts`, `multiple-machines`
+   - Error cases: `error-missing-files`, `error-wrong-file-type`
 
 ## Quick Reference
 
@@ -514,7 +536,8 @@ cargo clippy
 - **Elm Architecture**: `src/app/` (model, message, effect, update)
 - **TUI views**: `src/tui/views/` (list, prompt, progress)
 - **Backend operations**: `src/backend/` directory
-- **Test scenarios**: `examples/{scenario_simple,2_artifacts,...}/`
+- **Backends**: `examples/backends/{test,test-skip-one}/`
+- **Test scenarios**: `examples/scenarios/{single-artifact-with-prompts,...}/`
 - **Unit tests**: `cargo test --lib` (38 tests)
 - **View snapshots**: `tests/tui/snapshots/` (10 snapshots)
 - **Snapshot review**: `cargo insta review`
