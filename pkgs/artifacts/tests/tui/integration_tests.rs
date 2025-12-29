@@ -243,14 +243,14 @@ fn two_artifacts_select_second() {
 
 #[test]
 #[serial]
-fn bigger_setup_generate_all() {
+fn multiple_machines_generate_all() {
     let events = Events::new().generate_all().quit();
     assert_debug_snapshot!(run_tui("scenarios/multiple-machines", events));
 }
 
 #[test]
 #[serial]
-fn bigger_setup_navigate_and_select() {
+fn multiple_machines_navigate_and_select() {
     let events = Events::new()
         .navigate_down(2)
         .select()
