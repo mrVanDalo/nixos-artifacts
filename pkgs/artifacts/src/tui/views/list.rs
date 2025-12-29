@@ -1,14 +1,19 @@
 use crate::app::model::{ArtifactStatus, Model, TargetType};
 use ratatui::{
     Frame,
-    layout::Rect,
+    layout::{Constraint, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, ListState},
+    widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
 };
 
 /// Render the artifact list view
 pub fn render_artifact_list(frame: &mut Frame, model: &Model, area: Rect) {
+    // Split area: list takes most space, legend gets 1 line at bottom
+    let chunks = Layout::vertical([Constraint::Min(3), Constraint::Length(1)]).split(area);
+    let list_area = chunks[0];
+    let legend_area = chunks[1];
+
     let items: Vec<ListItem> = model
         .artifacts
         .iter()
@@ -54,7 +59,26 @@ pub fn render_artifact_list(frame: &mut Frame, model: &Model, area: Rect) {
     let mut state = ListState::default();
     state.select(Some(model.selected_index));
 
-    frame.render_stateful_widget(list, area, &mut state);
+    frame.render_stateful_widget(list, list_area, &mut state);
+
+    // Render legend
+    let legend = Line::from(vec![
+        Span::styled("○", Style::default().fg(Color::Gray)),
+        Span::raw(" Pending  "),
+        Span::styled("◐", Style::default().fg(Color::Yellow)),
+        Span::raw(" Needs Gen  "),
+        Span::styled("✓", Style::default().fg(Color::Green)),
+        Span::raw(" Up To Date  "),
+        Span::styled("✗", Style::default().fg(Color::Red)),
+        Span::raw(" Failed  "),
+        Span::styled("│", Style::default().fg(Color::DarkGray)),
+        Span::raw(" "),
+        Span::styled("[N]", Style::default().fg(Color::DarkGray)),
+        Span::raw(" NixOS  "),
+        Span::styled("[H]", Style::default().fg(Color::DarkGray)),
+        Span::raw(" Home"),
+    ]);
+    frame.render_widget(Paragraph::new(legend), legend_area);
 }
 
 fn status_display(status: &ArtifactStatus) -> (&'static str, Style) {

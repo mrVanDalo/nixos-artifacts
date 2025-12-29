@@ -10,5 +10,5 @@ expression: output
 "│                                                                    │"
 "│                                                                    │"
 "│                                                                    │"
-"│                                                                    │"
 "└────────────────────────────────────────────────────────────────────┘"
+"○ Pending  ◐ Needs Gen  ✓ Up To Date  ✗ Failed  │ [N] NixOS  [H] Home "
