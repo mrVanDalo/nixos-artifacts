@@ -13,6 +13,7 @@ pub enum Msg {
     CheckSerializationResult {
         artifact_index: usize,
         result: Result<bool, String>, // Ok(true) = needs generation, Ok(false) = up to date, Err = failed
+        output: Option<CheckOutput>,  // Captured stdout/stderr from the check script
     },
 
     /// Generator script finished
@@ -42,6 +43,13 @@ pub struct GeneratorOutput {
 /// Output captured from serialization script execution
 #[derive(Debug, Clone)]
 pub struct SerializeOutput {
+    pub stdout_lines: Vec<String>,
+    pub stderr_lines: Vec<String>,
+}
+
+/// Output captured from check_serialization script execution
+#[derive(Debug, Clone)]
+pub struct CheckOutput {
     pub stdout_lines: Vec<String>,
     pub stderr_lines: Vec<String>,
 }

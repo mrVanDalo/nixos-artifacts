@@ -1,5 +1,5 @@
 use super::effect::Effect;
-use super::message::{GeneratorOutput, KeyEvent, Msg, SerializeOutput};
+use super::message::{CheckOutput, GeneratorOutput, KeyEvent, Msg, SerializeOutput};
 use super::model::*;
 use crossterm::event::{KeyCode, KeyModifiers};
 
@@ -53,8 +53,9 @@ pub fn update(model: Model, msg: Msg) -> (Model, Effect) {
             Msg::CheckSerializationResult {
                 artifact_index,
                 result,
+                output,
             },
-        ) => handle_check_result(model, artifact_index, result),
+        ) => handle_check_result(model, artifact_index, result, output),
 
         // === Global ===
         (_, Msg::Quit) => (model, Effect::Quit),
@@ -280,8 +281,26 @@ fn handle_check_result(
     mut model: Model,
     artifact_index: usize,
     result: Result<bool, String>,
+    output: Option<CheckOutput>,
 ) -> (Model, Effect) {
     if let Some(entry) = model.artifacts.get_mut(artifact_index) {
+        // Add captured script output to logs
+        if let Some(check_output) = output {
+            for line in &check_output.stdout_lines {
+                entry.step_logs.check.push(LogEntry {
+                    level: LogLevel::Output,
+                    message: line.clone(),
+                });
+            }
+            for line in &check_output.stderr_lines {
+                entry.step_logs.check.push(LogEntry {
+                    level: LogLevel::Error,
+                    message: line.clone(),
+                });
+            }
+        }
+
+        // Add status summary
         match result {
             Ok(true) => {
                 entry.status = ArtifactStatus::NeedsGeneration;

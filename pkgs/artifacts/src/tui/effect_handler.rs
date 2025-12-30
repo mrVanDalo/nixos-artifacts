@@ -1,4 +1,4 @@
-use crate::app::message::{GeneratorOutput, SerializeOutput};
+use crate::app::message::{CheckOutput, GeneratorOutput, SerializeOutput};
 use crate::app::model::{ArtifactEntry, Model, TargetType};
 use crate::app::{Effect, Msg};
 use crate::backend::generator::{run_generator_script, verify_generated_files};
@@ -36,11 +36,19 @@ impl BackendEffectHandler {
         entry: &ArtifactEntry,
         target: &str,
         target_type: TargetType,
-    ) -> Result<bool, String> {
+    ) -> (Result<bool, String>, Option<CheckOutput>) {
         let context = target_type.context_str();
-        run_check_serialization(&entry.artifact, target, &self.backend, &self.make, context)
-            .map(|skip| !skip) // run_check_serialization returns true if we can skip
-            .map_err(|e| e.to_string())
+        match run_check_serialization(&entry.artifact, target, &self.backend, &self.make, context) {
+            Ok(check_result) => {
+                let (stdout_lines, stderr_lines) = split_captured_output(&check_result.output);
+                let output = CheckOutput {
+                    stdout_lines,
+                    stderr_lines,
+                };
+                (Ok(check_result.needs_generation), Some(output))
+            }
+            Err(e) => (Err(e.to_string()), None),
+        }
     }
 
     fn run_generator_and_store_output(
@@ -164,11 +172,13 @@ impl EffectHandler for BackendEffectHandler {
                 target_type,
             } => {
                 let entry = &model.artifacts[artifact_index];
-                let result = self.check_if_artifact_needs_generation(entry, &target, target_type);
+                let (result, output) =
+                    self.check_if_artifact_needs_generation(entry, &target, target_type);
 
                 Ok(vec![Msg::CheckSerializationResult {
                     artifact_index,
                     result,
+                    output,
                 }])
             }
 

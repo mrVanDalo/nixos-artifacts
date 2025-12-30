@@ -10,6 +10,14 @@ use std::fs;
 use std::path::Path;
 use std::process::Stdio;
 
+/// Result of running check_serialization script
+pub struct CheckResult {
+    /// True if the artifact needs generation, false if up-to-date
+    pub needs_generation: bool,
+    /// Captured stdout/stderr from the script
+    pub output: CapturedOutput,
+}
+
 /// Run the serialize script for a generated artifact.
 ///
 /// This function resolves the serialize script path from the backend
@@ -76,15 +84,16 @@ pub fn run_serialize(
 
 /// Check if serialization is up to date.
 ///
-/// Returns Ok(true) if the artifact can be skipped (already serialized),
-/// Ok(false) if regeneration is needed.
+/// Returns CheckResult containing:
+/// - needs_generation: true if regeneration is needed, false if up-to-date
+/// - output: captured stdout/stderr from the check script
 pub fn run_check_serialization(
     artifact: &ArtifactDef,
     target: &str,
     backend: &BackendConfiguration,
     make: &MakeConfiguration,
     context: &str,
-) -> Result<bool> {
+) -> Result<CheckResult> {
     let backend_name = &artifact.serialization;
     let backend_entry = backend.get_backend(backend_name)?;
 
@@ -144,7 +153,9 @@ pub fn run_check_serialization(
     cmd.env("inputs", &inputs.path_buf)
         .env("config", &config_file)
         .env("artifact_context", context)
-        .env("artifact", &artifact.name);
+        .env("artifact", &artifact.name)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
 
     if context == "homemanager" {
         cmd.env("username", target);
@@ -152,15 +163,23 @@ pub fn run_check_serialization(
         cmd.env("machine", target);
     }
 
-    let status = cmd
-        .status()
-        .with_context(|| format!("running check_serialization {}", check_abs.display()))?;
+    let child = cmd
+        .spawn()
+        .with_context(|| format!("spawning check_serialization {}", check_abs.display()))?;
 
-    if status.success() {
+    let output = run_with_captured_output(child)
+        .context("failed to capture check_serialization script output")?;
+
+    let needs_generation = !output.exit_success;
+
+    if output.exit_success {
         debug!("check_serialization: OK -> skipping generation");
-        Ok(true)
     } else {
         debug!("check_serialization: needs generation");
-        Ok(false)
     }
+
+    Ok(CheckResult {
+        needs_generation,
+        output,
+    })
 }
