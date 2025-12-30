@@ -83,6 +83,11 @@ fn update_artifact_list(mut model: Model, key: KeyEvent) -> (Model, Effect) {
             (model, Effect::None)
         }
 
+        KeyCode::Tab => {
+            model.selected_log_step = model.selected_log_step.next();
+            (model, Effect::None)
+        }
+
         KeyCode::Enter => start_generation_for_selected(model),
 
         _ => (model, Effect::None),
@@ -279,13 +284,13 @@ fn handle_check_result(
     if let Some(entry) = model.artifacts.get_mut(artifact_index) {
         if needs_generation {
             entry.status = ArtifactStatus::NeedsGeneration;
-            entry.logs.push(LogEntry {
+            entry.step_logs.check.push(LogEntry {
                 level: LogLevel::Info,
                 message: "Artifact needs regeneration".to_string(),
             });
         } else {
             entry.status = ArtifactStatus::UpToDate;
-            entry.logs.push(LogEntry {
+            entry.step_logs.check.push(LogEntry {
                 level: LogLevel::Success,
                 message: "Already up to date".to_string(),
             });
@@ -304,18 +309,18 @@ fn handle_generator_finished(
             // Store logs in ArtifactEntry
             if let Some(entry) = model.artifacts.get_mut(artifact_index) {
                 for line in &output.stdout_lines {
-                    entry.logs.push(LogEntry {
+                    entry.step_logs.generate.push(LogEntry {
                         level: LogLevel::Output,
                         message: line.clone(),
                     });
                 }
                 for line in &output.stderr_lines {
-                    entry.logs.push(LogEntry {
+                    entry.step_logs.generate.push(LogEntry {
                         level: LogLevel::Error,
                         message: line.clone(),
                     });
                 }
-                entry.logs.push(LogEntry {
+                entry.step_logs.generate.push(LogEntry {
                     level: LogLevel::Success,
                     message: format!("Generated {} file(s)", output.files_generated),
                 });
@@ -337,7 +342,7 @@ fn handle_generator_finished(
         }
         Err(e) => {
             if let Some(entry) = model.artifacts.get_mut(artifact_index) {
-                entry.logs.push(LogEntry {
+                entry.step_logs.generate.push(LogEntry {
                     level: LogLevel::Error,
                     message: format!("Generator failed: {}", e),
                 });
@@ -358,18 +363,18 @@ fn handle_serialize_finished(
         Ok(output) => {
             if let Some(entry) = model.artifacts.get_mut(artifact_index) {
                 for line in &output.stdout_lines {
-                    entry.logs.push(LogEntry {
+                    entry.step_logs.serialize.push(LogEntry {
                         level: LogLevel::Output,
                         message: line.clone(),
                     });
                 }
                 for line in &output.stderr_lines {
-                    entry.logs.push(LogEntry {
+                    entry.step_logs.serialize.push(LogEntry {
                         level: LogLevel::Error,
                         message: line.clone(),
                     });
                 }
-                entry.logs.push(LogEntry {
+                entry.step_logs.serialize.push(LogEntry {
                     level: LogLevel::Success,
                     message: "Serialized to backend".to_string(),
                 });
@@ -378,7 +383,7 @@ fn handle_serialize_finished(
         }
         Err(e) => {
             if let Some(entry) = model.artifacts.get_mut(artifact_index) {
-                entry.logs.push(LogEntry {
+                entry.step_logs.serialize.push(LogEntry {
                     level: LogLevel::Error,
                     message: format!("Serialization failed: {}", e),
                 });
@@ -434,17 +439,18 @@ mod tests {
                     target_type: TargetType::Nixos,
                     artifact: make_test_artifact("ssh-key", vec!["passphrase"]),
                     status: ArtifactStatus::Pending,
-                    logs: Vec::new(),
+                    step_logs: StepLogs::default(),
                 },
                 ArtifactEntry {
                     target: "machine-two".to_string(),
                     target_type: TargetType::Nixos,
                     artifact: make_test_artifact("api-token", vec![]),
                     status: ArtifactStatus::Pending,
-                    logs: Vec::new(),
+                    step_logs: StepLogs::default(),
                 },
             ],
             selected_index: 0,
+            selected_log_step: LogStep::default(),
             error: None,
         }
     }
@@ -636,5 +642,21 @@ mod tests {
         let (model, _) = update(model, Msg::Key(KeyEvent::esc()));
 
         assert!(matches!(model.screen, Screen::ArtifactList));
+    }
+
+    #[test]
+    fn test_tab_cycles_log_step_on_list_screen() {
+        let model = make_test_model();
+        assert_eq!(model.selected_log_step, LogStep::Check);
+
+        let (model, effect) = update(model, Msg::Key(KeyEvent::tab()));
+        assert_eq!(model.selected_log_step, LogStep::Generate);
+        assert!(effect.is_none());
+
+        let (model, _) = update(model, Msg::Key(KeyEvent::tab()));
+        assert_eq!(model.selected_log_step, LogStep::Serialize);
+
+        let (model, _) = update(model, Msg::Key(KeyEvent::tab()));
+        assert_eq!(model.selected_log_step, LogStep::Check);
     }
 }

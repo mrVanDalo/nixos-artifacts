@@ -7,6 +7,7 @@ pub struct Model {
     pub screen: Screen,
     pub artifacts: Vec<ArtifactEntry>,
     pub selected_index: usize,
+    pub selected_log_step: LogStep,
     pub error: Option<String>,
 }
 
@@ -27,7 +28,7 @@ pub struct ArtifactEntry {
     pub target_type: TargetType,
     pub artifact: ArtifactDef,
     pub status: ArtifactStatus,
-    pub logs: Vec<LogEntry>,
+    pub step_logs: StepLogs,
 }
 
 /// Whether this is a NixOS machine or home-manager user
@@ -71,6 +72,59 @@ pub enum LogLevel {
     Output,  // Stdout from scripts
     Error,   // Stderr from scripts
     Success, // Completion messages
+}
+
+/// The three generation steps that produce logs
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum LogStep {
+    #[default]
+    Check,
+    Generate,
+    Serialize,
+}
+
+impl LogStep {
+    pub fn next(self) -> Self {
+        match self {
+            Self::Check => Self::Generate,
+            Self::Generate => Self::Serialize,
+            Self::Serialize => Self::Check,
+        }
+    }
+
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Check => "Check",
+            Self::Generate => "Generate",
+            Self::Serialize => "Serialize",
+        }
+    }
+}
+
+/// Logs organized by step
+#[derive(Debug, Clone, Default)]
+pub struct StepLogs {
+    pub check: Vec<LogEntry>,
+    pub generate: Vec<LogEntry>,
+    pub serialize: Vec<LogEntry>,
+}
+
+impl StepLogs {
+    pub fn get(&self, step: LogStep) -> &Vec<LogEntry> {
+        match step {
+            LogStep::Check => &self.check,
+            LogStep::Generate => &self.generate,
+            LogStep::Serialize => &self.serialize,
+        }
+    }
+
+    pub fn get_mut(&mut self, step: LogStep) -> &mut Vec<LogEntry> {
+        match step {
+            LogStep::Check => &mut self.check,
+            LogStep::Generate => &mut self.generate,
+            LogStep::Serialize => &mut self.serialize,
+        }
+    }
 }
 
 /// State for the prompt input screen
@@ -180,5 +234,20 @@ mod tests {
     fn test_target_type_context_str() {
         assert_eq!(TargetType::Nixos.context_str(), "nixos");
         assert_eq!(TargetType::HomeManager.context_str(), "homemanager");
+    }
+
+    #[test]
+    fn test_log_step_cycles() {
+        let step = LogStep::Check;
+        assert_eq!(step.next(), LogStep::Generate);
+        assert_eq!(step.next().next(), LogStep::Serialize);
+        assert_eq!(step.next().next().next(), LogStep::Check);
+    }
+
+    #[test]
+    fn test_log_step_labels() {
+        assert_eq!(LogStep::Check.label(), "Check");
+        assert_eq!(LogStep::Generate.label(), "Generate");
+        assert_eq!(LogStep::Serialize.label(), "Serialize");
     }
 }

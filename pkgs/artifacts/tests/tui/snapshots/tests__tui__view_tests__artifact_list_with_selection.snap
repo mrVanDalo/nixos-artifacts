@@ -2,13 +2,13 @@
 source: tests/tui/view_tests.rs
 expression: output
 ---
-"┌Artifacts (3) - j/k: move, Enter:┐┌Logs: machine-two/api-token──────┐"
-"│  ○ [N] machine-one/ssh-key      ││| Generating API token...        │"
-"│> ✓ [N] machine-two/api-token    ││| Token generated successfully   │"
-"│  ◐ [H] user@host/gpg-key        ││✓ Generated 1 file(s)            │"
-"│                                 ││✓ Serialized to backend          │"
-"│                                 ││                                 │"
-"│                                 ││                                 │"
+"┌Artifacts (3) - j/k: move, Tab: l┐┌Logs: machine-two/api-token──────┐"
+"│  ○ [N] machine-one/ssh-key      ││▶ Check                          │"
+"│> ✓ [N] machine-two/api-token    ││▼ Generate                       │"
+"│  ◐ [H] user@host/gpg-key        ││  | Generating API token...      │"
+"│                                 ││  | Token generated successfully │"
+"│                                 ││  ✓ Generated 1 file(s)          │"
+"│                                 ││▶ Serialize                      │"
 "│                                 ││                                 │"
 "└─────────────────────────────────┘│                                 │"
 "○ Pend ◐ Need ✓ OK ✗ Fail          └─────────────────────────────────┘"

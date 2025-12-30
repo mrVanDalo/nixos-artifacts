@@ -1,4 +1,4 @@
-use crate::app::model::{ArtifactStatus, LogLevel, Model, TargetType};
+use crate::app::model::{ArtifactStatus, LogLevel, LogStep, Model, TargetType};
 use ratatui::{
     Frame,
     layout::{Constraint, Layout, Rect},
@@ -58,7 +58,7 @@ fn render_artifact_list_panel(frame: &mut Frame, model: &Model, area: Rect) {
         .collect();
 
     let title = format!(
-        "Artifacts ({}) - j/k: move, Enter: generate, q: quit",
+        "Artifacts ({}) - j/k: move, Tab: logs, Enter: gen, q: quit",
         model.artifacts.len()
     );
 
@@ -93,15 +93,42 @@ fn render_artifact_list_panel(frame: &mut Frame, model: &Model, area: Rect) {
 fn render_log_panel(frame: &mut Frame, model: &Model, area: Rect) {
     let selected_artifact = model.artifacts.get(model.selected_index);
 
-    let (title, content) = match selected_artifact {
-        Some(entry) if !entry.logs.is_empty() => {
-            let title = format!("Logs: {}/{}", entry.target, entry.artifact.name);
+    let title = match selected_artifact {
+        Some(entry) => format!("Logs: {}/{}", entry.target, entry.artifact.name),
+        None => "Logs".to_string(),
+    };
 
-            // Render log entries with styling based on level
-            let lines: Vec<Line> = entry
-                .logs
-                .iter()
-                .map(|log_entry| {
+    let mut lines: Vec<Line> = Vec::new();
+
+    // Determine which steps have logs (only show steps that have happened)
+    let visible_steps: Vec<LogStep> = match selected_artifact {
+        Some(entry) => [LogStep::Check, LogStep::Generate, LogStep::Serialize]
+            .into_iter()
+            .filter(|step| !entry.step_logs.get(*step).is_empty())
+            .collect(),
+        None => vec![],
+    };
+
+    if visible_steps.is_empty() {
+        lines.push(Line::from(Span::styled(
+            "No logs yet. Generate this artifact to see output.",
+            Style::default().fg(Color::DarkGray),
+        )));
+    } else {
+        // Render accordion-style steps (only those with logs)
+        for step in &visible_steps {
+            let is_selected = *step == model.selected_log_step;
+            let icon = if is_selected { "▼" } else { "▶" };
+
+            // Step header line
+            lines.push(Line::from(vec![
+                Span::styled(format!("{} ", icon), Style::default().fg(Color::Cyan)),
+                Span::styled(step.label(), Style::default().add_modifier(Modifier::BOLD)),
+            ]));
+
+            // If expanded, show logs indented
+            if is_selected && let Some(entry) = selected_artifact {
+                for log_entry in entry.step_logs.get(*step) {
                     let (prefix, style) = match log_entry.level {
                         LogLevel::Info => ("i", Style::default().fg(Color::Blue)),
                         LogLevel::Output => ("|", Style::default().fg(Color::White)),
@@ -109,42 +136,24 @@ fn render_log_panel(frame: &mut Frame, model: &Model, area: Rect) {
                         LogLevel::Success => ("✓", Style::default().fg(Color::Green)),
                     };
 
-                    Line::from(vec![
-                        Span::styled(format!("{} ", prefix), style),
+                    lines.push(Line::from(vec![
+                        Span::styled(format!("  {} ", prefix), style),
                         Span::styled(&log_entry.message, style),
-                    ])
-                })
-                .collect();
+                    ]));
+                }
+            }
+        }
+    }
 
-            (title, lines)
-        }
-        Some(entry) => {
-            let title = format!("Logs: {}/{}", entry.target, entry.artifact.name);
-            let lines = vec![Line::from(Span::styled(
-                "No logs yet. Generate this artifact to see output.",
-                Style::default().fg(Color::DarkGray),
-            ))];
-            (title, lines)
-        }
-        None => {
-            let title = "Logs".to_string();
-            let lines = vec![Line::from(Span::styled(
-                "No artifact selected",
-                Style::default().fg(Color::DarkGray),
-            ))];
-            (title, lines)
-        }
-    };
-
-    // Calculate scroll offset to show latest logs (auto-scroll to bottom)
+    // Calculate scroll offset to show latest logs in expanded section
     let visible_height = area.height.saturating_sub(2) as usize; // Subtract border
-    let scroll_offset = if content.len() > visible_height {
-        (content.len() - visible_height) as u16
+    let scroll_offset = if lines.len() > visible_height {
+        (lines.len() - visible_height) as u16
     } else {
         0
     };
 
-    let log_paragraph = Paragraph::new(content)
+    let log_paragraph = Paragraph::new(lines)
         .block(Block::default().borders(Borders::ALL).title(title))
         .wrap(Wrap { trim: false })
         .scroll((scroll_offset, 0));

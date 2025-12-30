@@ -2,12 +2,12 @@
 source: tests/tui/view_tests.rs
 expression: output
 ---
-"┌Artifacts (3) - j/k: move, Enter:┐┌Logs: machine-one/ssh-key────────┐"
-"│> ✗ [N] machine-one/ssh-key      ││i Artifact needs regeneration    │"
-"│  ✓ [N] machine-two/api-token    ││| Generating SSH key pair...     │"
-"│  ◐ [H] user@host/gpg-key        ││! ssh-keygen: permission denied  │"
-"│                                 ││! Generator failed: exit code 1  │"
-"│                                 ││                                 │"
+"┌Artifacts (3) - j/k: move, Tab: l┐┌Logs: machine-one/ssh-key────────┐"
+"│> ✗ [N] machine-one/ssh-key      ││▶ Check                          │"
+"│  ✓ [N] machine-two/api-token    ││▼ Generate                       │"
+"│  ◐ [H] user@host/gpg-key        ││  | Generating SSH key pair...   │"
+"│                                 ││  ! ssh-keygen: permission denied│"
+"│                                 ││  ! Generator failed: exit code 1│"
 "│                                 ││                                 │"
 "│                                 ││                                 │"
 "└─────────────────────────────────┘│                                 │"

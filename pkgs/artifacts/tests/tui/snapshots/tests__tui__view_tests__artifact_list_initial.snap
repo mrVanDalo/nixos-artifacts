@@ -2,7 +2,7 @@
 source: tests/tui/view_tests.rs
 expression: output
 ---
-"┌Artifacts (3) - j/k: move, Enter:┐┌Logs: machine-one/ssh-key────────┐"
+"┌Artifacts (3) - j/k: move, Tab: l┐┌Logs: machine-one/ssh-key────────┐"
 "│> ○ [N] machine-one/ssh-key      ││No logs yet. Generate this       │"
 "│  ✓ [N] machine-two/api-token    ││artifact to see output.          │"
 "│  ◐ [H] user@host/gpg-key        ││                                 │"

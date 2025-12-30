@@ -1,4 +1,6 @@
-use crate::app::model::{ArtifactEntry, ArtifactStatus, Model, Screen, TargetType};
+use crate::app::model::{
+    ArtifactEntry, ArtifactStatus, LogStep, Model, Screen, StepLogs, TargetType,
+};
 use crate::config::make::MakeConfiguration;
 
 /// Build the initial Model from a MakeConfiguration.
@@ -14,7 +16,7 @@ pub fn build_model(make: &MakeConfiguration) -> Model {
                 target_type: TargetType::Nixos,
                 artifact: artifact.clone(),
                 status: ArtifactStatus::Pending,
-                logs: Vec::new(),
+                step_logs: StepLogs::default(),
             });
         }
     }
@@ -27,7 +29,7 @@ pub fn build_model(make: &MakeConfiguration) -> Model {
                 target_type: TargetType::HomeManager,
                 artifact: artifact.clone(),
                 status: ArtifactStatus::Pending,
-                logs: Vec::new(),
+                step_logs: StepLogs::default(),
             });
         }
     }
@@ -39,6 +41,7 @@ pub fn build_model(make: &MakeConfiguration) -> Model {
         screen: Screen::ArtifactList,
         artifacts,
         selected_index: 0,
+        selected_log_step: LogStep::default(),
         error: None,
     }
 }

@@ -290,17 +290,18 @@ mod tests {
                     target_type: TargetType::Nixos,
                     artifact: make_test_artifact("ssh-key", vec!["passphrase"]),
                     status: ArtifactStatus::Pending,
-                    logs: Vec::new(),
+                    step_logs: StepLogs::default(),
                 },
                 ArtifactEntry {
                     target: "machine-two".to_string(),
                     target_type: TargetType::Nixos,
                     artifact: make_test_artifact("api-token", vec![]),
                     status: ArtifactStatus::Pending,
-                    logs: Vec::new(),
+                    step_logs: StepLogs::default(),
                 },
             ],
             selected_index: 0,
+            selected_log_step: LogStep::default(),
             error: None,
         }
     }

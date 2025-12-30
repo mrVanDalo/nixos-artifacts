@@ -2,7 +2,7 @@
 source: tests/tui/view_tests.rs
 expression: output
 ---
-"┌Artifacts (4) - j/k: move, Enter:┐┌Logs: machine-one/artifact-one───┐"
+"┌Artifacts (4) - j/k: move, Tab: l┐┌Logs: machine-one/artifact-one───┐"
 "│> ◐ [N] machine-one/artifact-one ││No logs yet. Generate this       │"
 "│  ✓ [N] machine-one/artifact-two ││artifact to see output.          │"
 "│  ◐ [N] machine-two/artifact-one ││                                 │"
