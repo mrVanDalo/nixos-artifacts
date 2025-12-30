@@ -1,4 +1,4 @@
-use crate::backend::helpers::resolve_path;
+use crate::backend::helpers::{resolve_path, validate_backend_script};
 use crate::backend::output_capture::{CapturedOutput, run_with_captured_output};
 use crate::backend::temp_dir::create_temp_dir;
 use crate::config::backend::BackendConfiguration;
@@ -27,8 +27,12 @@ pub fn run_serialize(
 ) -> Result<CapturedOutput> {
     let backend_name = &artifact.serialization;
     let entry = backend.get_backend(backend_name)?;
-    let ser_path = resolve_path(&backend.base_path, &entry.serialize);
-    let ser_abs = fs::canonicalize(&ser_path).unwrap_or_else(|_| ser_path.clone());
+    let ser_abs = validate_backend_script(
+        backend_name,
+        "serialize",
+        &backend.base_path,
+        &entry.serialize,
+    )?;
 
     // Create config file for the selected backend and machine
     let config_dir = create_temp_dir(Some("config"))?;
@@ -115,8 +119,12 @@ pub fn run_check_serialization(
     }
 
     // Run check_serialization script
-    let check_path = resolve_path(&backend.base_path, &backend_entry.check_serialization);
-    let check_abs = fs::canonicalize(&check_path).unwrap_or_else(|_| check_path.clone());
+    let check_abs = validate_backend_script(
+        backend_name,
+        "check_serialization",
+        &backend.base_path,
+        &backend_entry.check_serialization,
+    )?;
 
     let target_label = if context == "homemanager" {
         "username"

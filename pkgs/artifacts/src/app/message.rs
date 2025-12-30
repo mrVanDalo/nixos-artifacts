@@ -12,7 +12,7 @@ pub enum Msg {
     /// Check serialization completed for an artifact
     CheckSerializationResult {
         artifact_index: usize,
-        needs_generation: bool,
+        result: Result<bool, String>, // Ok(true) = needs generation, Ok(false) = up to date, Err = failed
     },
 
     /// Generator script finished

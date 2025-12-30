@@ -19,6 +19,7 @@ ratatui = "0.29"
 insta-cmd = "0.6"
 insta = { version ="1.43.1" , features = ["filters"]}
 serial_test = "3"
+tempfile = "3"
 
 # Single binary target
 [[bin]]

@@ -36,12 +36,11 @@ impl BackendEffectHandler {
         entry: &ArtifactEntry,
         target: &str,
         target_type: TargetType,
-    ) -> bool {
+    ) -> Result<bool, String> {
         let context = target_type.context_str();
-        match run_check_serialization(&entry.artifact, target, &self.backend, &self.make, context) {
-            Ok(skip) => !skip, // run_check_serialization returns true if we can skip
-            Err(_) => true,    // On error, assume we need generation
-        }
+        run_check_serialization(&entry.artifact, target, &self.backend, &self.make, context)
+            .map(|skip| !skip) // run_check_serialization returns true if we can skip
+            .map_err(|e| e.to_string())
     }
 
     fn run_generator_and_store_output(
@@ -165,12 +164,11 @@ impl EffectHandler for BackendEffectHandler {
                 target_type,
             } => {
                 let entry = &model.artifacts[artifact_index];
-                let needs_generation =
-                    self.check_if_artifact_needs_generation(entry, &target, target_type);
+                let result = self.check_if_artifact_needs_generation(entry, &target, target_type);
 
                 Ok(vec![Msg::CheckSerializationResult {
                     artifact_index,
-                    needs_generation,
+                    result,
                 }])
             }
 

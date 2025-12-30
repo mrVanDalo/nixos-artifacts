@@ -28,6 +28,13 @@ fn project_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
 }
 
+/// Normalize status strings by replacing absolute paths with a placeholder.
+/// This ensures snapshots are stable across different environments.
+fn normalize_status(status: String) -> String {
+    let project = project_root().display().to_string();
+    status.replace(&project, "[PROJECT]")
+}
+
 fn load_example(name: &str) -> (BackendConfiguration, MakeConfiguration) {
     let example_dir = project_root().join("examples").join(name);
 
@@ -107,7 +114,7 @@ impl ModelState {
                 .map(|a| ArtifactState {
                     target: a.target.clone(),
                     name: a.artifact.name.clone(),
-                    status: format!("{:?}", a.status),
+                    status: normalize_status(format!("{:?}", a.status)),
                 })
                 .collect(),
             error: model.error.clone(),
@@ -293,6 +300,30 @@ fn wrong_file_type_shows_error() {
 fn unwanted_files_shows_error() {
     let events = Events::new().select().fill_prompts(&["one", "two"]).quit();
     assert_debug_snapshot!(run_tui("scenarios/error-unwanted-files", events));
+}
+
+#[test]
+#[serial]
+fn script_not_exists_shows_error() {
+    // Script validation happens during check_serialization, which runs on startup
+    let events = Events::new().quit();
+    assert_debug_snapshot!(run_tui("scenarios/error-script-not-exists", events));
+}
+
+#[test]
+#[serial]
+fn script_not_executable_shows_error() {
+    // Script validation happens during check_serialization, which runs on startup
+    let events = Events::new().quit();
+    assert_debug_snapshot!(run_tui("scenarios/error-script-not-executable", events));
+}
+
+#[test]
+#[serial]
+fn script_is_directory_shows_error() {
+    // Script validation happens during check_serialization, which runs on startup
+    let events = Events::new().quit();
+    assert_debug_snapshot!(run_tui("scenarios/error-script-is-directory", events));
 }
 
 // =============================================================================

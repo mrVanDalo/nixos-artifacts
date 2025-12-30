@@ -52,9 +52,9 @@ pub fn update(model: Model, msg: Msg) -> (Model, Effect) {
             _,
             Msg::CheckSerializationResult {
                 artifact_index,
-                needs_generation,
+                result,
             },
-        ) => handle_check_result(model, artifact_index, needs_generation),
+        ) => handle_check_result(model, artifact_index, result),
 
         // === Global ===
         (_, Msg::Quit) => (model, Effect::Quit),
@@ -279,21 +279,31 @@ fn create_prompt_state(artifact_index: usize, entry: &ArtifactEntry) -> PromptSt
 fn handle_check_result(
     mut model: Model,
     artifact_index: usize,
-    needs_generation: bool,
+    result: Result<bool, String>,
 ) -> (Model, Effect) {
     if let Some(entry) = model.artifacts.get_mut(artifact_index) {
-        if needs_generation {
-            entry.status = ArtifactStatus::NeedsGeneration;
-            entry.step_logs.check.push(LogEntry {
-                level: LogLevel::Info,
-                message: "Artifact needs regeneration".to_string(),
-            });
-        } else {
-            entry.status = ArtifactStatus::UpToDate;
-            entry.step_logs.check.push(LogEntry {
-                level: LogLevel::Success,
-                message: "Already up to date".to_string(),
-            });
+        match result {
+            Ok(true) => {
+                entry.status = ArtifactStatus::NeedsGeneration;
+                entry.step_logs.check.push(LogEntry {
+                    level: LogLevel::Info,
+                    message: "Artifact needs regeneration".to_string(),
+                });
+            }
+            Ok(false) => {
+                entry.status = ArtifactStatus::UpToDate;
+                entry.step_logs.check.push(LogEntry {
+                    level: LogLevel::Success,
+                    message: "Already up to date".to_string(),
+                });
+            }
+            Err(e) => {
+                entry.status = ArtifactStatus::Failed(e.clone());
+                entry.step_logs.check.push(LogEntry {
+                    level: LogLevel::Error,
+                    message: e,
+                });
+            }
         }
     }
     (model, Effect::None)
