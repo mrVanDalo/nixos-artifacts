@@ -1,0 +1,31 @@
+---
+source: tests/tui/view_tests.rs
+expression: result.to_string()
+---
+State:
+ArtifactListState {
+    selected_index: 0,
+    selected_log_step: "Check",
+    artifacts: [
+        ArtifactSnapshot {
+            target: "machine-one",
+            target_type: "nixos",
+            name: "local-secret",
+            status: "Pending",
+            has_logs: false,
+        },
+    ],
+    error: None,
+}
+
+Rendered:
+"┌Artifacts (2) - j/k: move, Tab: l┐┌Logs: shared-secret──────────────┐"
+"│> ◐ [S] shared-secret (2 targets)││No logs yet. Generate this       │"
+"│  ○ [N] machine-one/local-secret ││artifact to see output.          │"
+"│                                 ││                                 │"
+"│                                 ││                                 │"
+"│                                 ││                                 │"
+"│                                 ││                                 │"
+"│                                 ││                                 │"
+"└─────────────────────────────────┘│                                 │"
+"○ Pend ◐ Need ✓ OK ✗ Fail          └─────────────────────────────────┘"

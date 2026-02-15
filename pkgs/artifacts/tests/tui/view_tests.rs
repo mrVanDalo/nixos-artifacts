@@ -1,12 +1,199 @@
 use artifacts::app::model::{
-    ArtifactEntry, ArtifactStatus, GeneratingState, GenerationStep, InputMode, LogEntry, LogLevel,
-    LogStep, Model, PromptEntry, PromptState, Screen, StepLogs, TargetType,
+    ArtifactEntry, ArtifactStatus, GeneratingState, GenerationStep, InputMode, ListEntry, LogEntry,
+    LogLevel, LogStep, Model, PromptEntry, PromptState, Screen, SelectGeneratorState, SharedEntry,
+    StepLogs, TargetType,
 };
-use artifacts::config::make::{ArtifactDef, FileDef, PromptDef};
-use artifacts::tui::views::{render_artifact_list, render_progress, render_prompt};
+use artifacts::config::make::{
+    ArtifactDef, FileDef, GeneratorInfo, GeneratorSource, PromptDef, TargetType as ConfigTargetType,
+};
+use artifacts::tui::views::{
+    render_artifact_list, render_generator_selection, render_progress, render_prompt,
+};
 use insta::assert_snapshot;
 use ratatui::{Terminal, backend::TestBackend};
 use std::collections::BTreeMap;
+use std::fmt;
+
+// ============================================================================
+// Snapshot types - capture input state alongside rendered output
+// ============================================================================
+
+struct ViewTestResult<S: fmt::Debug> {
+    state: S,
+    rendered: String,
+}
+
+impl<S: fmt::Debug> fmt::Display for ViewTestResult<S> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // Write state with Debug formatting
+        writeln!(f, "State:")?;
+        writeln!(f, "{:#?}", self.state)?;
+        writeln!(f)?;
+        writeln!(f, "Rendered:")?;
+        // Write rendered output as-is (already has line-by-line format from TestBackend)
+        write!(f, "{}", self.rendered)
+    }
+}
+
+/// Snapshot representation of Model for artifact list views
+#[allow(dead_code)]
+#[derive(Debug)]
+struct ArtifactListState {
+    selected_index: usize,
+    selected_log_step: &'static str,
+    artifacts: Vec<ArtifactSnapshot>,
+    error: Option<String>,
+}
+
+#[allow(dead_code)]
+#[derive(Debug)]
+struct ArtifactSnapshot {
+    target: String,
+    target_type: &'static str,
+    name: String,
+    status: String,
+    has_logs: bool,
+}
+
+impl ArtifactListState {
+    fn from_model(model: &Model) -> Self {
+        Self {
+            selected_index: model.selected_index,
+            selected_log_step: model.selected_log_step.label(),
+            artifacts: model
+                .artifacts
+                .iter()
+                .map(|a| ArtifactSnapshot {
+                    target: a.target.clone(),
+                    target_type: match a.target_type {
+                        TargetType::Nixos => "nixos",
+                        TargetType::HomeManager => "homemanager",
+                    },
+                    name: a.artifact.name.clone(),
+                    status: format!("{:?}", a.status),
+                    has_logs: !a.step_logs.check.is_empty()
+                        || !a.step_logs.generate.is_empty()
+                        || !a.step_logs.serialize.is_empty(),
+                })
+                .collect(),
+            error: model.error.clone(),
+        }
+    }
+}
+
+/// Snapshot representation of PromptState
+#[allow(dead_code)]
+#[derive(Debug)]
+struct PromptSnapshot {
+    artifact_name: String,
+    prompt_index: usize,
+    total_prompts: usize,
+    current_prompt: Option<PromptSnapshotEntry>,
+    input_mode: &'static str,
+    buffer: String,
+    collected_count: usize,
+}
+
+#[allow(dead_code)]
+#[derive(Debug)]
+struct PromptSnapshotEntry {
+    name: String,
+    description: Option<String>,
+}
+
+impl PromptSnapshot {
+    fn from_state(state: &PromptState) -> Self {
+        Self {
+            artifact_name: state.artifact_name.clone(),
+            prompt_index: state.current_prompt_index,
+            total_prompts: state.prompts.len(),
+            current_prompt: state.current_prompt().map(|p| PromptSnapshotEntry {
+                name: p.name.clone(),
+                description: p.description.clone(),
+            }),
+            input_mode: state.input_mode.label(),
+            buffer: state.buffer.clone(),
+            collected_count: state.collected.len(),
+        }
+    }
+}
+
+/// Snapshot representation of GeneratingState
+#[allow(dead_code)]
+#[derive(Debug)]
+struct GeneratingSnapshot {
+    artifact_name: String,
+    step: &'static str,
+    log_line_count: usize,
+}
+
+impl GeneratingSnapshot {
+    fn from_state(state: &GeneratingState) -> Self {
+        Self {
+            artifact_name: state.artifact_name.clone(),
+            step: match state.step {
+                GenerationStep::CheckSerialization => "CheckSerialization",
+                GenerationStep::RunningGenerator => "RunningGenerator",
+                GenerationStep::Serializing => "Serializing",
+            },
+            log_line_count: state.log_lines.len(),
+        }
+    }
+}
+
+/// Snapshot representation of SelectGeneratorState
+#[allow(dead_code)]
+#[derive(Debug)]
+struct GeneratorSelectionSnapshot {
+    artifact_name: String,
+    selected_index: usize,
+    generators: Vec<GeneratorSnapshot>,
+}
+
+#[allow(dead_code)]
+#[derive(Debug)]
+struct GeneratorSnapshot {
+    path: String,
+    sources: Vec<SourceSnapshot>,
+}
+
+#[allow(dead_code)]
+#[derive(Debug)]
+struct SourceSnapshot {
+    target: String,
+    target_type: &'static str,
+}
+
+impl GeneratorSelectionSnapshot {
+    fn from_state(state: &SelectGeneratorState) -> Self {
+        Self {
+            artifact_name: state.artifact_name.clone(),
+            selected_index: state.selected_index,
+            generators: state
+                .generators
+                .iter()
+                .map(|g| GeneratorSnapshot {
+                    path: g.path.clone(),
+                    sources: g
+                        .sources
+                        .iter()
+                        .map(|s| SourceSnapshot {
+                            target: s.target.clone(),
+                            target_type: match s.target_type {
+                                ConfigTargetType::Nixos => "nixos",
+                                ConfigTargetType::HomeManager => "homemanager",
+                            },
+                        })
+                        .collect(),
+                })
+                .collect(),
+        }
+    }
+}
+
+// ============================================================================
+// Test helpers
+// ============================================================================
 
 fn make_test_artifact(name: &str, prompts: Vec<&str>) -> ArtifactDef {
     let mut prompt_map = BTreeMap::new();
@@ -38,34 +225,51 @@ fn make_test_artifact(name: &str, prompts: Vec<&str>) -> ArtifactDef {
 }
 
 fn make_test_model() -> Model {
+    let entry1 = ArtifactEntry {
+        target: "machine-one".to_string(),
+        target_type: TargetType::Nixos,
+        artifact: make_test_artifact("ssh-key", vec!["passphrase"]),
+        status: ArtifactStatus::Pending,
+        step_logs: StepLogs::default(),
+    };
+    let entry2 = ArtifactEntry {
+        target: "machine-two".to_string(),
+        target_type: TargetType::Nixos,
+        artifact: make_test_artifact("api-token", vec![]),
+        status: ArtifactStatus::UpToDate,
+        step_logs: StepLogs::default(),
+    };
+    let entry3 = ArtifactEntry {
+        target: "user@host".to_string(),
+        target_type: TargetType::HomeManager,
+        artifact: make_test_artifact("gpg-key", vec!["email", "name"]),
+        status: ArtifactStatus::NeedsGeneration,
+        step_logs: StepLogs::default(),
+    };
+
     Model {
         screen: Screen::ArtifactList,
-        artifacts: vec![
-            ArtifactEntry {
-                target: "machine-one".to_string(),
-                target_type: TargetType::Nixos,
-                artifact: make_test_artifact("ssh-key", vec!["passphrase"]),
-                status: ArtifactStatus::Pending,
-                step_logs: StepLogs::default(),
-            },
-            ArtifactEntry {
-                target: "machine-two".to_string(),
-                target_type: TargetType::Nixos,
-                artifact: make_test_artifact("api-token", vec![]),
-                status: ArtifactStatus::UpToDate,
-                step_logs: StepLogs::default(),
-            },
-            ArtifactEntry {
-                target: "user@host".to_string(),
-                target_type: TargetType::HomeManager,
-                artifact: make_test_artifact("gpg-key", vec!["email", "name"]),
-                status: ArtifactStatus::NeedsGeneration,
-                step_logs: StepLogs::default(),
-            },
+        artifacts: vec![entry1.clone(), entry2.clone(), entry3.clone()],
+        entries: vec![
+            ListEntry::Single(entry1),
+            ListEntry::Single(entry2),
+            ListEntry::Single(entry3),
         ],
         selected_index: 0,
         selected_log_step: LogStep::default(),
         error: None,
+        warnings: Vec::new(),
+        tick_count: 0,
+    }
+}
+
+// Helper to sync changes from artifacts to entries (for tests that modify artifacts directly)
+fn sync_artifacts_to_entries(model: &mut Model) {
+    for (i, artifact) in model.artifacts.iter().enumerate() {
+        if let Some(ListEntry::Single(entry)) = model.entries.get_mut(i) {
+            entry.status = artifact.status.clone();
+            entry.step_logs = artifact.step_logs.clone();
+        }
     }
 }
 
@@ -84,8 +288,11 @@ fn test_artifact_list_initial() {
         .draw(|f| render_artifact_list(f, &model, f.area()))
         .unwrap();
 
-    let output = terminal.backend().to_string();
-    assert_snapshot!(output);
+    let result = ViewTestResult {
+        state: ArtifactListState::from_model(&model),
+        rendered: terminal.backend().to_string(),
+    };
+    assert_snapshot!(result.to_string());
 }
 
 #[test]
@@ -93,6 +300,7 @@ fn test_artifact_list_with_selection() {
     let mut model = make_test_model();
     model.selected_index = 1;
     model.selected_log_step = LogStep::Generate;
+
     // Add realistic logs for the selected artifact (api-token)
     model.artifacts[1].step_logs.check = vec![LogEntry {
         level: LogLevel::Success,
@@ -117,6 +325,9 @@ fn test_artifact_list_with_selection() {
         message: "Serialized to backend".to_string(),
     }];
 
+    // Sync changes to entries (used for rendering)
+    sync_artifacts_to_entries(&mut model);
+
     let backend = TestBackend::new(70, 10);
     let mut terminal = Terminal::new(backend).unwrap();
 
@@ -124,17 +335,24 @@ fn test_artifact_list_with_selection() {
         .draw(|f| render_artifact_list(f, &model, f.area()))
         .unwrap();
 
-    let output = terminal.backend().to_string();
-    assert_snapshot!(output);
+    let result = ViewTestResult {
+        state: ArtifactListState::from_model(&model),
+        rendered: terminal.backend().to_string(),
+    };
+    assert_snapshot!(result.to_string());
 }
 
 #[test]
 fn test_artifact_list_with_failed_status() {
     let mut model = make_test_model();
-    model.artifacts[0].status =
-        ArtifactStatus::Failed("Generator script exited with code 1".to_string());
+
+    // Update artifacts (legacy field)
+    model.artifacts[0].status = ArtifactStatus::Failed {
+        error: "Generator script exited with code 1".to_string(),
+        output: String::new(),
+        retry_available: true,
+    };
     model.selected_log_step = LogStep::Generate;
-    // Add realistic logs showing the failure
     model.artifacts[0].step_logs.check = vec![LogEntry {
         level: LogLevel::Info,
         message: "Artifact needs regeneration".to_string(),
@@ -154,6 +372,33 @@ fn test_artifact_list_with_failed_status() {
         },
     ];
 
+    // Update entries (current field used for rendering)
+    if let ListEntry::Single(ref mut entry) = model.entries[0] {
+        entry.status = ArtifactStatus::Failed {
+            error: "Generator script exited with code 1".to_string(),
+            output: String::new(),
+            retry_available: true,
+        };
+        entry.step_logs.check = vec![LogEntry {
+            level: LogLevel::Info,
+            message: "Artifact needs regeneration".to_string(),
+        }];
+        entry.step_logs.generate = vec![
+            LogEntry {
+                level: LogLevel::Output,
+                message: "Generating SSH key pair...".to_string(),
+            },
+            LogEntry {
+                level: LogLevel::Error,
+                message: "ssh-keygen: permission denied".to_string(),
+            },
+            LogEntry {
+                level: LogLevel::Error,
+                message: "Generator failed: exit code 1".to_string(),
+            },
+        ];
+    }
+
     let backend = TestBackend::new(70, 10);
     let mut terminal = Terminal::new(backend).unwrap();
 
@@ -161,8 +406,11 @@ fn test_artifact_list_with_failed_status() {
         .draw(|f| render_artifact_list(f, &model, f.area()))
         .unwrap();
 
-    let output = terminal.backend().to_string();
-    assert_snapshot!(output);
+    let result = ViewTestResult {
+        state: ArtifactListState::from_model(&model),
+        rendered: terminal.backend().to_string(),
+    };
+    assert_snapshot!(result.to_string());
 }
 
 // ============================================================================
@@ -191,8 +439,11 @@ fn test_prompt_initial_line_mode() {
         .draw(|f| render_prompt(f, &state, f.area()))
         .unwrap();
 
-    let output = terminal.backend().to_string();
-    assert_snapshot!(output);
+    let result = ViewTestResult {
+        state: PromptSnapshot::from_state(&state),
+        rendered: terminal.backend().to_string(),
+    };
+    assert_snapshot!(result.to_string());
 }
 
 #[test]
@@ -217,8 +468,11 @@ fn test_prompt_with_input() {
         .draw(|f| render_prompt(f, &state, f.area()))
         .unwrap();
 
-    let output = terminal.backend().to_string();
-    assert_snapshot!(output);
+    let result = ViewTestResult {
+        state: PromptSnapshot::from_state(&state),
+        rendered: terminal.backend().to_string(),
+    };
+    assert_snapshot!(result.to_string());
 }
 
 #[test]
@@ -243,8 +497,11 @@ fn test_prompt_hidden_mode() {
         .draw(|f| render_prompt(f, &state, f.area()))
         .unwrap();
 
-    let output = terminal.backend().to_string();
-    assert_snapshot!(output);
+    let result = ViewTestResult {
+        state: PromptSnapshot::from_state(&state),
+        rendered: terminal.backend().to_string(),
+    };
+    assert_snapshot!(result.to_string());
 }
 
 #[test]
@@ -269,8 +526,11 @@ fn test_prompt_multiline_mode() {
         .draw(|f| render_prompt(f, &state, f.area()))
         .unwrap();
 
-    let output = terminal.backend().to_string();
-    assert_snapshot!(output);
+    let result = ViewTestResult {
+        state: PromptSnapshot::from_state(&state),
+        rendered: terminal.backend().to_string(),
+    };
+    assert_snapshot!(result.to_string());
 }
 
 #[test]
@@ -308,8 +568,11 @@ fn test_prompt_second_of_three() {
         .draw(|f| render_prompt(f, &state, f.area()))
         .unwrap();
 
-    let output = terminal.backend().to_string();
-    assert_snapshot!(output);
+    let result = ViewTestResult {
+        state: PromptSnapshot::from_state(&state),
+        rendered: terminal.backend().to_string(),
+    };
+    assert_snapshot!(result.to_string());
 }
 
 // ============================================================================
@@ -332,8 +595,11 @@ fn test_progress_running_generator() {
         .draw(|f| render_progress(f, &state, f.area()))
         .unwrap();
 
-    let output = terminal.backend().to_string();
-    assert_snapshot!(output);
+    let result = ViewTestResult {
+        state: GeneratingSnapshot::from_state(&state),
+        rendered: terminal.backend().to_string(),
+    };
+    assert_snapshot!(result.to_string());
 }
 
 #[test]
@@ -355,8 +621,11 @@ fn test_progress_serializing() {
         .draw(|f| render_progress(f, &state, f.area()))
         .unwrap();
 
-    let output = terminal.backend().to_string();
-    assert_snapshot!(output);
+    let result = ViewTestResult {
+        state: GeneratingSnapshot::from_state(&state),
+        rendered: terminal.backend().to_string(),
+    };
+    assert_snapshot!(result.to_string());
 }
 
 // ============================================================================
@@ -384,41 +653,54 @@ fn make_multiple_machines_artifact(name: &str) -> ArtifactDef {
 
 #[test]
 fn test_multiple_machines_before_generate_all() {
+    let entry1 = ArtifactEntry {
+        target: "machine-one".to_string(),
+        target_type: TargetType::Nixos,
+        artifact: make_multiple_machines_artifact("artifact-one"),
+        status: ArtifactStatus::Pending,
+        step_logs: StepLogs::default(),
+    };
+    let entry2 = ArtifactEntry {
+        target: "machine-one".to_string(),
+        target_type: TargetType::Nixos,
+        artifact: make_multiple_machines_artifact("artifact-two"),
+        status: ArtifactStatus::Pending,
+        step_logs: StepLogs::default(),
+    };
+    let entry3 = ArtifactEntry {
+        target: "machine-two".to_string(),
+        target_type: TargetType::Nixos,
+        artifact: make_multiple_machines_artifact("artifact-one"),
+        status: ArtifactStatus::Pending,
+        step_logs: StepLogs::default(),
+    };
+    let entry4 = ArtifactEntry {
+        target: "machine-two".to_string(),
+        target_type: TargetType::Nixos,
+        artifact: make_multiple_machines_artifact("artifact-two"),
+        status: ArtifactStatus::Pending,
+        step_logs: StepLogs::default(),
+    };
+
     let model = Model {
         screen: Screen::ArtifactList,
         artifacts: vec![
-            ArtifactEntry {
-                target: "machine-one".to_string(),
-                target_type: TargetType::Nixos,
-                artifact: make_multiple_machines_artifact("artifact-one"),
-                status: ArtifactStatus::Pending,
-                step_logs: StepLogs::default(),
-            },
-            ArtifactEntry {
-                target: "machine-one".to_string(),
-                target_type: TargetType::Nixos,
-                artifact: make_multiple_machines_artifact("artifact-two"),
-                status: ArtifactStatus::Pending,
-                step_logs: StepLogs::default(),
-            },
-            ArtifactEntry {
-                target: "machine-two".to_string(),
-                target_type: TargetType::Nixos,
-                artifact: make_multiple_machines_artifact("artifact-one"),
-                status: ArtifactStatus::Pending,
-                step_logs: StepLogs::default(),
-            },
-            ArtifactEntry {
-                target: "machine-two".to_string(),
-                target_type: TargetType::Nixos,
-                artifact: make_multiple_machines_artifact("artifact-two"),
-                status: ArtifactStatus::Pending,
-                step_logs: StepLogs::default(),
-            },
+            entry1.clone(),
+            entry2.clone(),
+            entry3.clone(),
+            entry4.clone(),
+        ],
+        entries: vec![
+            ListEntry::Single(entry1),
+            ListEntry::Single(entry2),
+            ListEntry::Single(entry3),
+            ListEntry::Single(entry4),
         ],
         selected_index: 0,
         selected_log_step: LogStep::default(),
         error: None,
+        warnings: Vec::new(),
+        tick_count: 0,
     };
 
     let backend = TestBackend::new(70, 12);
@@ -428,47 +710,63 @@ fn test_multiple_machines_before_generate_all() {
         .draw(|f| render_artifact_list(f, &model, f.area()))
         .unwrap();
 
-    let output = terminal.backend().to_string();
-    assert_snapshot!(output);
+    let result = ViewTestResult {
+        state: ArtifactListState::from_model(&model),
+        rendered: terminal.backend().to_string(),
+    };
+    assert_snapshot!(result.to_string());
 }
 
 #[test]
 fn test_multiple_machines_after_generate_all() {
+    let entry1 = ArtifactEntry {
+        target: "machine-one".to_string(),
+        target_type: TargetType::Nixos,
+        artifact: make_multiple_machines_artifact("artifact-one"),
+        status: ArtifactStatus::NeedsGeneration,
+        step_logs: StepLogs::default(),
+    };
+    let entry2 = ArtifactEntry {
+        target: "machine-one".to_string(),
+        target_type: TargetType::Nixos,
+        artifact: make_multiple_machines_artifact("artifact-two"),
+        status: ArtifactStatus::UpToDate,
+        step_logs: StepLogs::default(),
+    };
+    let entry3 = ArtifactEntry {
+        target: "machine-two".to_string(),
+        target_type: TargetType::Nixos,
+        artifact: make_multiple_machines_artifact("artifact-one"),
+        status: ArtifactStatus::NeedsGeneration,
+        step_logs: StepLogs::default(),
+    };
+    let entry4 = ArtifactEntry {
+        target: "machine-two".to_string(),
+        target_type: TargetType::Nixos,
+        artifact: make_multiple_machines_artifact("artifact-two"),
+        status: ArtifactStatus::NeedsGeneration,
+        step_logs: StepLogs::default(),
+    };
+
     let model = Model {
         screen: Screen::ArtifactList,
         artifacts: vec![
-            ArtifactEntry {
-                target: "machine-one".to_string(),
-                target_type: TargetType::Nixos,
-                artifact: make_multiple_machines_artifact("artifact-one"),
-                status: ArtifactStatus::NeedsGeneration,
-                step_logs: StepLogs::default(),
-            },
-            ArtifactEntry {
-                target: "machine-one".to_string(),
-                target_type: TargetType::Nixos,
-                artifact: make_multiple_machines_artifact("artifact-two"),
-                status: ArtifactStatus::UpToDate,
-                step_logs: StepLogs::default(),
-            },
-            ArtifactEntry {
-                target: "machine-two".to_string(),
-                target_type: TargetType::Nixos,
-                artifact: make_multiple_machines_artifact("artifact-one"),
-                status: ArtifactStatus::NeedsGeneration,
-                step_logs: StepLogs::default(),
-            },
-            ArtifactEntry {
-                target: "machine-two".to_string(),
-                target_type: TargetType::Nixos,
-                artifact: make_multiple_machines_artifact("artifact-two"),
-                status: ArtifactStatus::NeedsGeneration,
-                step_logs: StepLogs::default(),
-            },
+            entry1.clone(),
+            entry2.clone(),
+            entry3.clone(),
+            entry4.clone(),
+        ],
+        entries: vec![
+            ListEntry::Single(entry1),
+            ListEntry::Single(entry2),
+            ListEntry::Single(entry3),
+            ListEntry::Single(entry4),
         ],
         selected_index: 0,
         selected_log_step: LogStep::default(),
         error: None,
+        warnings: Vec::new(),
+        tick_count: 0,
     };
 
     let backend = TestBackend::new(70, 12);
@@ -478,6 +776,185 @@ fn test_multiple_machines_after_generate_all() {
         .draw(|f| render_artifact_list(f, &model, f.area()))
         .unwrap();
 
-    let output = terminal.backend().to_string();
-    assert_snapshot!(output);
+    let result = ViewTestResult {
+        state: ArtifactListState::from_model(&model),
+        rendered: terminal.backend().to_string(),
+    };
+    assert_snapshot!(result.to_string());
+}
+
+#[test]
+fn test_artifact_list_with_shared_artifacts() {
+    use artifacts::config::make::SharedArtifactInfo;
+
+    let single_entry = ArtifactEntry {
+        target: "machine-one".to_string(),
+        target_type: TargetType::Nixos,
+        artifact: make_test_artifact("local-secret", vec![]),
+        status: ArtifactStatus::Pending,
+        step_logs: StepLogs::default(),
+    };
+
+    let shared_entry = SharedEntry {
+        info: SharedArtifactInfo {
+            artifact_name: "shared-secret".to_string(),
+            generators: vec![],
+            nixos_targets: vec!["machine-one".to_string(), "machine-two".to_string()],
+            home_targets: vec![],
+            backend_name: "test".to_string(),
+            prompts: std::collections::BTreeMap::new(),
+            files: std::collections::BTreeMap::new(),
+        },
+        status: ArtifactStatus::NeedsGeneration,
+        step_logs: StepLogs::default(),
+        selected_generator: None,
+    };
+
+    let model = Model {
+        screen: Screen::ArtifactList,
+        artifacts: vec![single_entry.clone()],
+        entries: vec![
+            ListEntry::Shared(shared_entry), // Shared artifacts sorted first
+            ListEntry::Single(single_entry),
+        ],
+        selected_index: 0,
+        selected_log_step: LogStep::default(),
+        error: None,
+        warnings: Vec::new(),
+        tick_count: 0,
+    };
+
+    let backend = TestBackend::new(70, 10);
+    let mut terminal = Terminal::new(backend).unwrap();
+
+    terminal
+        .draw(|f| render_artifact_list(f, &model, f.area()))
+        .unwrap();
+
+    let result = ViewTestResult {
+        state: ArtifactListState::from_model(&model),
+        rendered: terminal.backend().to_string(),
+    };
+    assert_snapshot!(result.to_string());
+}
+
+// ============================================================================
+// Generator Selection View Tests
+// ============================================================================
+
+#[test]
+fn test_generator_selection_single_generator() {
+    let state = SelectGeneratorState {
+        artifact_index: 0,
+        artifact_name: "shared-ssh-key".to_string(),
+        generators: vec![GeneratorInfo {
+            path: "/nix/store/xxx-gen-ssh".to_string(),
+            sources: vec![
+                GeneratorSource {
+                    target: "machine-one".to_string(),
+                    target_type: ConfigTargetType::Nixos,
+                },
+                GeneratorSource {
+                    target: "machine-two".to_string(),
+                    target_type: ConfigTargetType::Nixos,
+                },
+            ],
+        }],
+        selected_index: 0,
+    };
+
+    let backend = TestBackend::new(70, 15);
+    let mut terminal = Terminal::new(backend).unwrap();
+
+    terminal
+        .draw(|f| render_generator_selection(f, &state, f.area()))
+        .unwrap();
+
+    let result = ViewTestResult {
+        state: GeneratorSelectionSnapshot::from_state(&state),
+        rendered: terminal.backend().to_string(),
+    };
+    assert_snapshot!(result.to_string());
+}
+
+#[test]
+fn test_generator_selection_multiple_generators() {
+    let state = SelectGeneratorState {
+        artifact_index: 0,
+        artifact_name: "shared-api-key".to_string(),
+        generators: vec![
+            GeneratorInfo {
+                path: "/nix/store/xxx-gen-prod".to_string(),
+                sources: vec![GeneratorSource {
+                    target: "prod-server".to_string(),
+                    target_type: ConfigTargetType::Nixos,
+                }],
+            },
+            GeneratorInfo {
+                path: "/nix/store/yyy-gen-dev".to_string(),
+                sources: vec![
+                    GeneratorSource {
+                        target: "dev-machine".to_string(),
+                        target_type: ConfigTargetType::Nixos,
+                    },
+                    GeneratorSource {
+                        target: "alice@workstation".to_string(),
+                        target_type: ConfigTargetType::HomeManager,
+                    },
+                ],
+            },
+        ],
+        selected_index: 0,
+    };
+
+    let backend = TestBackend::new(70, 20);
+    let mut terminal = Terminal::new(backend).unwrap();
+
+    terminal
+        .draw(|f| render_generator_selection(f, &state, f.area()))
+        .unwrap();
+
+    let result = ViewTestResult {
+        state: GeneratorSelectionSnapshot::from_state(&state),
+        rendered: terminal.backend().to_string(),
+    };
+    assert_snapshot!(result.to_string());
+}
+
+#[test]
+fn test_generator_selection_second_selected() {
+    let state = SelectGeneratorState {
+        artifact_index: 0,
+        artifact_name: "shared-api-key".to_string(),
+        generators: vec![
+            GeneratorInfo {
+                path: "/nix/store/xxx-gen-prod".to_string(),
+                sources: vec![GeneratorSource {
+                    target: "prod-server".to_string(),
+                    target_type: ConfigTargetType::Nixos,
+                }],
+            },
+            GeneratorInfo {
+                path: "/nix/store/yyy-gen-dev".to_string(),
+                sources: vec![GeneratorSource {
+                    target: "dev-machine".to_string(),
+                    target_type: ConfigTargetType::Nixos,
+                }],
+            },
+        ],
+        selected_index: 1,
+    };
+
+    let backend = TestBackend::new(70, 15);
+    let mut terminal = Terminal::new(backend).unwrap();
+
+    terminal
+        .draw(|f| render_generator_selection(f, &state, f.area()))
+        .unwrap();
+
+    let result = ViewTestResult {
+        state: GeneratorSelectionSnapshot::from_state(&state),
+        rendered: terminal.backend().to_string(),
+    };
+    assert_snapshot!(result.to_string());
 }

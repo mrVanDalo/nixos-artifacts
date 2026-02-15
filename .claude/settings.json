@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/post-response-flake-check.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

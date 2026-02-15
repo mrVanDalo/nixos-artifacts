@@ -2,7 +2,12 @@
   "permissions": {
     "allow": [
       "Bash(cargo test:*)",
-      "Bash(cargo clippy:*)"
+      "Bash(cargo clippy:*)",
+      "Bash(openspec validate:*)",
+      "Bash(cargo check:*)",
+      "Bash(nix flake check:*)",
+      "Bash(nix fmt:*)",
+      "Bash(cargo insta test:*)"
     ]
   }
 }

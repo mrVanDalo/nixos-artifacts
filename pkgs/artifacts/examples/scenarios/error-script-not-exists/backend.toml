@@ -1,5 +1,6 @@
 [test]
 # This script does not exist - should fail with "does not exist" error
-check_serialization = "./nonexistent-check.sh"
-serialize = "./serialize.sh"
-deserialize = "./deserialize.sh"
+nixos_check_serialization = "./nonexistent-check.sh"
+nixos_serialize = "./serialize.sh"
+home_check_serialization = "./nonexistent-check.sh"
+home_serialize = "./serialize.sh"

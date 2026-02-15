@@ -25,9 +25,10 @@ TestResult {
             ArtifactState {
                 target: "machine-name",
                 name: "test-artifact",
-                status: "Failed(\"backend 'test' step 'check_serialization': script '[PROJECT]/examples/scenarios/error-script-not-exists/./nonexistent-check.sh' does not exist\")",
+                status: "Pending",
             },
         ],
         error: None,
     },
+    serialized_artifacts: {},
 }

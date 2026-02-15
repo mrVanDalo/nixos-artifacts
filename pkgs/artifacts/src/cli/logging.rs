@@ -1,6 +1,34 @@
 use log::{Level, LevelFilter, Metadata, Record};
-use std::io;
+use std::fs::OpenOptions;
 use std::io::Write;
+use std::sync::Mutex;
+use std::sync::OnceLock;
+
+/// The log file path for debug output.
+const LOG_FILE_PATH: &str = "/tmp/artifacts_cli.log";
+
+/// Global log file handle protected by a mutex for thread safety.
+static LOG_FILE: OnceLock<Mutex<std::fs::File>> = OnceLock::new();
+
+/// Initialize the log file handle.
+fn init_log_file() -> Mutex<std::fs::File> {
+    let file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .truncate(false)
+        .open(LOG_FILE_PATH)
+        .expect("Failed to open log file");
+    Mutex::new(file)
+}
+
+/// Write a message to the log file.
+fn write_to_log(level: &str, msg: &str) {
+    let file = LOG_FILE.get_or_init(init_log_file);
+    if let Ok(mut guard) = file.lock() {
+        let _ = writeln!(guard, "[{}] {}", level, msg);
+        let _ = guard.flush();
+    }
+}
 
 struct NoEmojiLogger;
 
@@ -17,28 +45,28 @@ impl log::Log for NoEmojiLogger {
             Level::Error => {
                 let msg = record.args().to_string();
                 for line in msg.lines() {
-                    let _ = writeln!(io::stderr(), "ERROR: {}", line);
+                    write_to_log("ERROR", line);
                 }
             }
             Level::Warn => {
                 let msg = record.args().to_string();
                 for line in msg.lines() {
-                    let _ = writeln!(io::stdout(), "WARNING: {}", line);
+                    write_to_log("WARN", line);
                 }
             }
             Level::Debug => {
                 let msg = record.args().to_string();
                 for line in msg.lines() {
-                    let _ = writeln!(io::stdout(), "DEBUG: {}", line);
+                    write_to_log("DEBUG", line);
                 }
             }
             Level::Info => {
-                let _ = writeln!(io::stdout(), "{}", record.args());
+                write_to_log("INFO", &record.args().to_string());
             }
             Level::Trace => {
                 let msg = record.args().to_string();
                 for line in msg.lines() {
-                    let _ = writeln!(io::stdout(), "TRACE: {}", line);
+                    write_to_log("TRACE", line);
                 }
             }
         }
@@ -63,28 +91,28 @@ impl log::Log for EmojiLogger {
             Level::Error => {
                 let msg = record.args().to_string();
                 for line in msg.lines() {
-                    let _ = writeln!(io::stderr(), "❌ {}", line);
+                    write_to_log("ERROR", &format!("❌ {}", line));
                 }
             }
             Level::Warn => {
                 let msg = record.args().to_string();
                 for line in msg.lines() {
-                    let _ = writeln!(io::stdout(), "⚠️ {}", line);
+                    write_to_log("WARN", &format!("⚠️ {}", line));
                 }
             }
             Level::Debug => {
                 let msg = record.args().to_string();
                 for line in msg.lines() {
-                    let _ = writeln!(io::stdout(), "🐛 {}", line);
+                    write_to_log("DEBUG", &format!("🐛 {}", line));
                 }
             }
             Level::Info => {
-                let _ = writeln!(io::stdout(), "{}", record.args());
+                write_to_log("INFO", &record.args().to_string());
             }
             Level::Trace => {
                 let msg = record.args().to_string();
                 for line in msg.lines() {
-                    let _ = writeln!(io::stdout(), "💬 {}", line);
+                    write_to_log("TRACE", &format!("💬 {}", line));
                 }
             }
         }

@@ -1,6 +1,6 @@
 ---
 source: tests/tui/integration_tests.rs
-expression: "run_tui(\"backend_include\", events)"
+expression: "run_tui(\"scenarios/backend-include\", events)"
 ---
 TestResult {
     events: [
@@ -26,9 +26,10 @@ TestResult {
             ArtifactState {
                 target: "machine-name",
                 name: "test-artifact",
-                status: "NeedsGeneration",
+                status: "Pending",
             },
         ],
         error: None,
     },
+    serialized_artifacts: {},
 }

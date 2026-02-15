@@ -1,10 +1,13 @@
+mod generator_selection;
 mod list;
 mod progress;
 mod prompt;
 
-use crate::app::model::{Model, Screen};
+use crate::app::model::{Model, Screen, Warning};
 use ratatui::Frame;
+use ratatui::layout::{Constraint, Layout};
 
+pub use generator_selection::render_generator_selection;
 pub use list::render_artifact_list;
 pub use progress::render_progress;
 pub use prompt::render_prompt;
@@ -13,14 +16,30 @@ pub use prompt::render_prompt;
 pub fn render(frame: &mut Frame, model: &Model) {
     let area = frame.area();
 
+    // If there are warnings, reserve space at the bottom for the banner
+    let (content_area, warning_area) = if !model.warnings.is_empty() {
+        let banner_height = std::cmp::min(model.warnings.len() as u16 + 2, 6);
+        let chunks =
+            Layout::vertical([Constraint::Min(0), Constraint::Length(banner_height)]).split(area);
+        (chunks[0], Some(chunks[1]))
+    } else {
+        (area, None)
+    };
+
     match &model.screen {
-        Screen::ArtifactList => render_artifact_list(frame, model, area),
-        Screen::Prompt(state) => render_prompt(frame, state, area),
-        Screen::Generating(state) => render_progress(frame, state, area),
-        Screen::Done(state) => render_done(frame, state, area),
+        Screen::ArtifactList => render_artifact_list(frame, model, content_area),
+        Screen::SelectGenerator(state) => render_generator_selection(frame, state, content_area),
+        Screen::Prompt(state) => render_prompt(frame, state, content_area),
+        Screen::Generating(state) => render_progress(frame, state, content_area),
+        Screen::Done(state) => render_done(frame, state, content_area),
     }
 
-    // Render error popup if present
+    // Render warning banner if there are warnings
+    if let Some(warning_area) = warning_area {
+        render_warning_banner_to_area(frame, &model.warnings, warning_area);
+    }
+
+    // Render error popup if present (renders on top, after everything else)
     if let Some(ref error) = model.error {
         render_error_popup(frame, error);
     }
@@ -109,6 +128,51 @@ fn render_error_popup(frame: &mut Frame, error: &str) {
         .block(error_block);
 
     frame.render_widget(error_text, popup_area);
+}
+
+fn render_warning_banner(frame: &mut Frame, warnings: &[Warning]) {
+    // Legacy function - uses full frame area
+    // Kept for backward compatibility, but main render() now uses render_warning_banner_to_area
+    let area = frame.area();
+    let banner_height = std::cmp::min(warnings.len() as u16 + 2, 6);
+    let chunks =
+        Layout::vertical([Constraint::Min(0), Constraint::Length(banner_height)]).split(area);
+    render_warning_banner_to_area(frame, warnings, chunks[1]);
+}
+
+fn render_warning_banner_to_area(frame: &mut Frame, warnings: &[Warning], area: ratatui::layout::Rect) {
+    use ratatui::{
+        style::{Color, Style},
+        text::Line,
+        widgets::{Block, Borders, Paragraph},
+    };
+
+    let mut lines: Vec<Line> = warnings
+        .iter()
+        .take(4) // Show max 4 warnings
+        .map(|w| {
+            Line::styled(
+                format!(" {} - {}", w.artifact_name, w.message),
+                Style::default().fg(Color::Yellow),
+            )
+        })
+        .collect();
+
+    if warnings.len() > 4 {
+        lines.push(Line::styled(
+            format!(" ... and {} more warning(s)", warnings.len() - 4),
+            Style::default().fg(Color::Yellow),
+        ));
+    }
+
+    let warning_block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(Color::Yellow))
+        .title("Warnings");
+
+    let warning_text = Paragraph::new(lines).block(warning_block);
+
+    frame.render_widget(warning_text, area);
 }
 
 /// Helper function to create a centered rect

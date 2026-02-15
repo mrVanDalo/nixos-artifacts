@@ -9,6 +9,10 @@ pub trait EventSource {
     /// Get the next event, if available.
     /// Returns None when the event source is exhausted.
     fn next_event(&mut self) -> Option<Msg>;
+
+    /// Check if an event is available without consuming it.
+    /// Returns true if next_event() would return immediately.
+    fn has_event(&mut self) -> bool;
 }
 
 /// Production event source that reads from the terminal via crossterm.
@@ -22,7 +26,7 @@ impl TerminalEventSource {
     }
 
     pub fn default_tick_rate() -> Duration {
-        Duration::from_millis(250)
+        Duration::from_millis(50)
     }
 }
 
@@ -44,6 +48,11 @@ impl EventSource for TerminalEventSource {
         } else {
             Some(Msg::Tick)
         }
+    }
+
+    fn has_event(&mut self) -> bool {
+        // Check if an event is available without consuming it
+        event::poll(std::time::Duration::from_secs(0)).unwrap_or(false)
     }
 }
 
@@ -80,6 +89,10 @@ impl ScriptedEventSource {
 impl EventSource for ScriptedEventSource {
     fn next_event(&mut self) -> Option<Msg> {
         self.events.pop_front()
+    }
+
+    fn has_event(&mut self) -> bool {
+        !self.events.is_empty()
     }
 }
 

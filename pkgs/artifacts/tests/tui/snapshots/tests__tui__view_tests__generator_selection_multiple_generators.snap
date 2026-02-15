@@ -1,0 +1,56 @@
+---
+source: tests/tui/view_tests.rs
+assertion_line: 790
+expression: result.to_string()
+---
+State:
+GeneratorSelectionSnapshot {
+    artifact_name: "shared-api-key",
+    selected_index: 0,
+    generators: [
+        GeneratorSnapshot {
+            path: "/nix/store/xxx-gen-prod",
+            sources: [
+                SourceSnapshot {
+                    target: "prod-server",
+                    target_type: "nixos",
+                },
+            ],
+        },
+        GeneratorSnapshot {
+            path: "/nix/store/yyy-gen-dev",
+            sources: [
+                SourceSnapshot {
+                    target: "dev-machine",
+                    target_type: "nixos",
+                },
+                SourceSnapshot {
+                    target: "alice@workstation",
+                    target_type: "homemanager",
+                },
+            ],
+        },
+    ],
+}
+
+Rendered:
+"┌Select generator for shared artifact "shared-api-key"───────────────┐"
+"│> /nix/store/xxx-gen-prod                                           │"
+"│      - prod-server (nixos)                                         │"
+"│                                                                    │"
+"│  /nix/store/yyy-gen-dev                                            │"
+"│      - dev-machine (nixos)                                         │"
+"│      - alice@workstation (homemanager)                             │"
+"│                                                                    │"
+"│                                                                    │"
+"│                                                                    │"
+"│                                                                    │"
+"│                                                                    │"
+"│                                                                    │"
+"│                                                                    │"
+"│                                                                    │"
+"│                                                                    │"
+"│                                                                    │"
+"│                                                                    │"
+"│                                                                    │"
+"└ j/k: move, Enter: select, Esc: cancel ─────────────────────────────┘"

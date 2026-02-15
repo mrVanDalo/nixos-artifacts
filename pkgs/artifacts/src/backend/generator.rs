@@ -191,3 +191,109 @@ pub fn run_generator_script(
 
     Ok(output)
 }
+
+/// Run a generator script by path (for shared artifacts that have a direct generator path)
+pub fn run_generator_script_with_path(
+    generator_path: &str,
+    make_base: &Path,
+    prompts: &Path,
+    out: &Path,
+) -> Result<CapturedOutput> {
+    let generator_script_path = resolve_path(make_base, generator_path);
+    let generator_script_absolut_path =
+        fs::canonicalize(&generator_script_path).unwrap_or_else(|_| generator_script_path.clone());
+
+    let nix_shell = which::which("nix-shell")
+        .context("nix-shell is required to run the generator but was not found in PATH")?;
+
+    // Prepare a temporary /etc/passwd to be bind-mounted read-only inside bwrap
+    let passwd_content = "user:x:1000:1000::/tmp:/bin/sh\n";
+
+    let out_path_str = out.display().to_string();
+    let hash = fnv1a64(&out_path_str);
+    let mut temp_passwd_path = std::env::temp_dir();
+    let file_name = format!("artifacts-cli-passwd-{:016x}.txt", hash);
+    temp_passwd_path.push(file_name);
+
+    fs::write(&temp_passwd_path, passwd_content).with_context(|| {
+        format!(
+            "failed to create temporary passwd file at {}",
+            temp_passwd_path.display()
+        )
+    })?;
+
+    // Build the bwrap command
+    let mut arguments: Vec<String> = string_vec!["bwrap"];
+    arguments.extend(string_vec!["--unshare-all", "--unshare-user"]);
+    arguments.extend(string_vec!["--uid", "1000"]);
+    arguments.extend(string_vec!["--gid", "1000"]);
+    arguments.extend(string_vec!["--tmpfs", "/"]);
+    arguments.extend(string_vec!["--chdir", "/"]);
+    arguments.extend(string_vec!["--ro-bind", "/nix/store", "/nix/store"]);
+    arguments.extend(string_vec!["--tmpfs", "/usr/lib/systemd"]);
+    arguments.extend(string_vec!["--proc", "/proc"]);
+    arguments.extend(string_vec!["--dev", "/dev"]);
+    arguments.extend(string_vec!["--bind", prompts.display(), prompts.display()]);
+    arguments.extend(string_vec!["--bind", out.display(), out.display()]);
+    if let Some(gen_dir) = generator_script_absolut_path.parent() {
+        arguments.extend(string_vec![
+            "--ro-bind",
+            gen_dir.display(),
+            gen_dir.display()
+        ]);
+    }
+    if Path::new("/bin").exists() {
+        arguments.extend(string_vec!["--ro-bind", "/bin", "/bin"]);
+    }
+    if Path::new("/usr/bin").exists() {
+        arguments.extend(string_vec!["--ro-bind", "/usr/bin", "/usr/bin"]);
+    }
+    arguments.extend(string_vec![
+        "--ro-bind",
+        temp_passwd_path.display(),
+        "/etc/passwd"
+    ]);
+    arguments.extend(string_vec!["--", "/bin/sh"]);
+    arguments.push(generator_script_absolut_path.display().to_string());
+    let bwrap_command = arguments.join(" ");
+
+    debug!(
+        "run shared generator bwrap with command {}",
+        generator_script_absolut_path.display()
+    );
+
+    // Build env exports for shared artifact (no specific target)
+    let out_quoted = escape_single_quoted(&out.display().to_string());
+    let prompts_quoted = escape_single_quoted(&prompts.display().to_string());
+
+    let env_exports = format!(
+        "export out='{}'; export prompts='{}'; export artifact_context='shared';",
+        out_quoted, prompts_quoted
+    );
+
+    let nix_shell_run_command = format!("{} {}", env_exports, bwrap_command);
+
+    let mut generator_command = std::process::Command::new(nix_shell);
+    generator_command
+        .arg("-p")
+        .arg("bash")
+        .arg("bubblewrap")
+        .arg("--run")
+        .arg(&nix_shell_run_command)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+
+    let child = generator_command
+        .spawn()
+        .context("failed to start generator in nix-shell")?;
+
+    let output = run_with_captured_output(child).context("failed to capture generator output")?;
+
+    let _ = fs::remove_file(&temp_passwd_path);
+
+    if !output.exit_success {
+        bail!("shared generator failed inside nix-shell with non-zero exit status");
+    }
+
+    Ok(output)
+}

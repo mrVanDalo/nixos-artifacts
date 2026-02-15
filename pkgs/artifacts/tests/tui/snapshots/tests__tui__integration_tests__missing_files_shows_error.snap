@@ -1,6 +1,6 @@
 ---
 source: tests/tui/integration_tests.rs
-expression: "run_tui(\"missing-files\", events)"
+expression: "run_tui(\"scenarios/error-missing-files\", events)"
 ---
 TestResult {
     events: [
@@ -21,15 +21,16 @@ TestResult {
         error: None,
     },
     after: ModelState {
-        screen: "ArtifactList",
+        screen: "Generating",
         selected_index: 0,
         artifacts: [
             ArtifactState {
                 target: "missing-files",
                 name: "test-artifact",
-                status: "Failed(\"generator missing required files for artifact 'test-artifact': [very-simple-secrets]\")",
+                status: "Pending",
             },
         ],
         error: None,
     },
+    serialized_artifacts: {},
 }

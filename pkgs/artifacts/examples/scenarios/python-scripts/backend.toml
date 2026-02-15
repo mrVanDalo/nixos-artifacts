@@ -1,4 +1,8 @@
 [test]
-check_serialization = "./check.py"
-serialize = "./serialize.py"
-deserialize = "./deserialize.py"
+nixos_check_serialization = "./check.py"
+nixos_serialize = "./serialize.py"
+home_check_serialization = "./check.py"
+home_serialize = "./serialize.py"
+
+[test.capabilities]
+serializes = true

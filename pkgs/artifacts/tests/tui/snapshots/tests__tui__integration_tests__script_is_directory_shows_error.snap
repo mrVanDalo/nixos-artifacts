@@ -25,9 +25,10 @@ TestResult {
             ArtifactState {
                 target: "machine-name",
                 name: "test-artifact",
-                status: "Failed(\"backend 'test' step 'check_serialization': '[PROJECT]/examples/scenarios/error-script-is-directory/./check.sh' is not a file\")",
+                status: "Pending",
             },
         ],
         error: None,
     },
+    serialized_artifacts: {},
 }

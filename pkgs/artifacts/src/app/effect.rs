@@ -40,6 +40,42 @@ pub enum Effect {
         target_type: crate::app::model::TargetType,
         out_dir: PathBuf,
     },
+
+    /// Show generator selection dialog for a shared artifact
+    ShowGeneratorSelection {
+        artifact_index: usize,
+        artifact_name: String,
+    },
+
+    /// Check if a shared artifact needs regeneration
+    SharedCheckSerialization {
+        artifact_index: usize,
+        artifact_name: String,
+        backend_name: String,
+        nixos_targets: Vec<String>,
+        home_targets: Vec<String>,
+    },
+
+    /// Run the generator script for a shared artifact
+    RunSharedGenerator {
+        artifact_index: usize,
+        artifact_name: String,
+        generator_path: String,
+        prompts: HashMap<String, String>,
+        nixos_targets: Vec<String>,
+        home_targets: Vec<String>,
+        files: Vec<String>,
+    },
+
+    /// Serialize the generated files for a shared artifact
+    SharedSerialize {
+        artifact_index: usize,
+        artifact_name: String,
+        backend_name: String,
+        out_dir: PathBuf,
+        nixos_targets: Vec<String>,
+        home_targets: Vec<String>,
+    },
 }
 
 impl Effect {

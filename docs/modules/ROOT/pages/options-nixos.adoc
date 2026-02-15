@@ -199,7 +199,11 @@ __Default:__ ``config{zwsp}.artifacts{zwsp}.default{zwsp}.backend{zwsp}.serializ
 
 
 
-Whether the store is shared
+Whether this artifact is shared across multiple machines and/or home-manager configurations{zwsp}.
+
+When ``true``, the artifact is generated once and distributed to all targets that define it{zwsp}. All definitions with the same artifact name and ``shared = true`` are aggregated together{zwsp}.
+
+The backend must provide a ``shared_serialize`` script to handle serialization for all targets at once{zwsp}. The script receives ``$machines`` and ``$users`` environment variables pointing to JSON files that map target names to their respective ``artifacts{zwsp}.config{zwsp}.{zwsp}+<+{zwsp}backend{gt}`` configurations{zwsp}.
 
 
 

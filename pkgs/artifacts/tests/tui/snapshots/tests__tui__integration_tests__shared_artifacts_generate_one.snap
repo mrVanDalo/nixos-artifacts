@@ -1,0 +1,56 @@
+---
+source: tests/tui/integration_tests.rs
+expression: "run_tui(\"scenarios/shared-artifacts\", events)"
+---
+TestResult {
+    events: [
+        "select",
+        "select",
+        "quit",
+    ],
+    before: ModelState {
+        screen: "ArtifactList",
+        selected_index: 0,
+        artifacts: [
+            ArtifactState {
+                target: "[shared]",
+                name: "shared-secret",
+                status: "Pending",
+            },
+            ArtifactState {
+                target: "machine-one",
+                name: "local-secret",
+                status: "Pending",
+            },
+            ArtifactState {
+                target: "machine-two",
+                name: "local-secret",
+                status: "Pending",
+            },
+        ],
+        error: None,
+    },
+    after: ModelState {
+        screen: "Generating",
+        selected_index: 0,
+        artifacts: [
+            ArtifactState {
+                target: "[shared]",
+                name: "shared-secret",
+                status: "Pending",
+            },
+            ArtifactState {
+                target: "machine-one",
+                name: "local-secret",
+                status: "Pending",
+            },
+            ArtifactState {
+                target: "machine-two",
+                name: "local-secret",
+                status: "Pending",
+            },
+        ],
+        error: None,
+    },
+    serialized_artifacts: {},
+}

@@ -1,0 +1,36 @@
+---
+source: tests/tui/integration_tests.rs
+expression: "run_tui(\"scenarios/error-bubblewrap-blocks-network-calls\", events)"
+---
+TestResult {
+    events: [
+        "select",
+        "fill_prompts([])",
+        "quit",
+    ],
+    before: ModelState {
+        screen: "ArtifactList",
+        selected_index: 0,
+        artifacts: [
+            ArtifactState {
+                target: "machine-one",
+                name: "test-network-block",
+                status: "Pending",
+            },
+        ],
+        error: None,
+    },
+    after: ModelState {
+        screen: "Generating",
+        selected_index: 0,
+        artifacts: [
+            ArtifactState {
+                target: "machine-one",
+                name: "test-network-block",
+                status: "Pending",
+            },
+        ],
+        error: None,
+    },
+    serialized_artifacts: {},
+}

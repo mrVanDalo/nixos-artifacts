@@ -1,5 +1,6 @@
 [test]
 # check.sh is a directory, not a file - should fail with "is not a file" error
-check_serialization = "./check.sh"
-serialize = "./serialize.sh"
-deserialize = "./deserialize.sh"
+nixos_check_serialization = "./check.sh"
+nixos_serialize = "./serialize.sh"
+home_check_serialization = "./check.sh"
+home_serialize = "./serialize.sh"

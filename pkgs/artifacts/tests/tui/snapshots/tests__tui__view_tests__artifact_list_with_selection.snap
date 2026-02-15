@@ -1,7 +1,38 @@
 ---
 source: tests/tui/view_tests.rs
-expression: output
+expression: result.to_string()
 ---
+State:
+ArtifactListState {
+    selected_index: 1,
+    selected_log_step: "Generate",
+    artifacts: [
+        ArtifactSnapshot {
+            target: "machine-one",
+            target_type: "nixos",
+            name: "ssh-key",
+            status: "Pending",
+            has_logs: false,
+        },
+        ArtifactSnapshot {
+            target: "machine-two",
+            target_type: "nixos",
+            name: "api-token",
+            status: "UpToDate",
+            has_logs: true,
+        },
+        ArtifactSnapshot {
+            target: "user@host",
+            target_type: "homemanager",
+            name: "gpg-key",
+            status: "NeedsGeneration",
+            has_logs: false,
+        },
+    ],
+    error: None,
+}
+
+Rendered:
 "┌Artifacts (3) - j/k: move, Tab: l┐┌Logs: machine-two/api-token──────┐"
 "│  ○ [N] machine-one/ssh-key      ││▶ Check                          │"
 "│> ✓ [N] machine-two/api-token    ││▼ Generate                       │"

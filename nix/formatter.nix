@@ -9,6 +9,7 @@
       programs.nixfmt.enable = true;
       programs.deno.enable = true;
       programs.rustfmt.enable = true;
+      programs.deno.excludes = [ "openspec/**" ];
     };
   };
 }

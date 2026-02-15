@@ -25,9 +25,10 @@ TestResult {
             ArtifactState {
                 target: "machine-name",
                 name: "test-artifact",
-                status: "NeedsGeneration",
+                status: "Pending",
             },
         ],
         error: None,
     },
+    serialized_artifacts: {},
 }

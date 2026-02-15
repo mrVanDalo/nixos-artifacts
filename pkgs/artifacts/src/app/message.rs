@@ -28,8 +28,37 @@ pub enum Msg {
         result: Result<SerializeOutput, String>,
     },
 
+    /// Generator selected for a shared artifact
+    GeneratorSelected {
+        artifact_index: usize,
+        generator_path: String,
+    },
+
+    /// Shared check serialization completed for an artifact
+    SharedCheckSerializationResult {
+        artifact_index: usize,
+        result: Result<bool, String>, // Ok(true) = needs generation, Ok(false) = up to date, Err = failed
+        output: Option<CheckOutput>,  // Captured stdout/stderr from the check script
+    },
+
+    /// Shared generator script finished
+    SharedGeneratorFinished {
+        artifact_index: usize,
+        result: Result<GeneratorOutput, String>,
+    },
+
+    /// Shared serialize script finished
+    SharedSerializeFinished {
+        artifact_index: usize,
+        result: Result<SerializeOutput, String>,
+    },
+
     /// Request to quit the application
     Quit,
+
+    /// Effect result from background task (contains EffectResult from channels)
+    /// Note: This wraps the EffectResult from the channels module
+    ChannelResult(crate::tui::channels::EffectResult),
 }
 
 /// Output captured from generator script execution

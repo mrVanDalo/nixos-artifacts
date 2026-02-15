@@ -32,11 +32,20 @@ interactive user prompts for secret generation.
 check_serialization = "/path/to/check/script"
 deserialize = "/path/to/deserialize/script"
 serialize = "/path/to/serialize/script"
+shared_serialize = "/path/to/shared/serialize/script"  # Optional - for shared artifacts
 
 [backend_name.settings]
 key = "value"
 another_key = 123
 ```
+
+**Shared Artifact Scripts**:
+
+- `shared_serialize`: Called instead of `serialize` for shared artifacts
+  - Environment: `$artifact`, `$out`, `$machines` (JSON file), `$users` (JSON
+    file)
+  - The `$machines` and `$users` files contain mappings from target names to
+    their backend configs
 
 ### Splitting backend.toml with Includes
 
@@ -160,7 +169,8 @@ pkgs/artifacts/
 │   │   ├── views/           # Render functions
 │   │   │   ├── list.rs      # Artifact list view
 │   │   │   ├── prompt.rs    # Prompt input view
-│   │   │   └── progress.rs  # Generation progress view
+│   │   │   ├── progress.rs  # Generation progress view
+│   │   │   └── generator_selection.rs  # Generator selection for shared artifacts
 │   │   ├── events.rs        # EventSource trait + implementations
 │   │   ├── runtime.rs       # Main loop, effect execution
 │   │   ├── terminal.rs      # Terminal setup/teardown
@@ -216,6 +226,46 @@ pkgs/artifacts/
 - `ratatui` - Terminal UI framework
 - `crossterm` - Terminal manipulation
 - `insta`, `insta_cmd` - Snapshot testing
+- `tempfile` - Temporary file and directory management
+
+### Temporary File Handling
+
+**Always use the `tempfile` crate** for creating and managing temporary files
+and directories. Never use manual `/tmp` paths or custom temp directory
+creation.
+
+**Why `tempfile`:**
+
+- Automatically creates unique temporary paths to avoid collisions
+- Secure permissions (restricted access by default)
+- Automatic cleanup on drop (or persists if needed via `into_path()`)
+- Cross-platform compatibility (works on Linux, macOS, Windows)
+- Handles edge cases like tmpfs, noexec mounts, and disk space issues
+
+**Common patterns:**
+
+```rust
+use tempfile::{NamedTempFile, TempDir};
+
+// Single temporary file
+let temp_file = NamedTempFile::new()?;
+temp_file.write_all(b"content")?;
+// File is automatically deleted when temp_file goes out of scope
+
+// Temporary directory for multiple files
+let temp_dir = TempDir::new()?;
+let file_path = temp_dir.path().join("generated.txt");
+std::fs::write(&file_path, "content")?;
+// Directory and all contents deleted when temp_dir goes out of scope
+
+// Keep tempfile after scope ends (for passing to external processes)
+let temp_file = NamedTempFile::new()?;
+temp_file.write_all(b"content")?;
+let path = temp_file.keep()?; // File persists, returns PathBuf
+```
+
+**See also:** `src/backend/temp_dir.rs` for the project's temp directory
+utilities.
 
 ## TUI Architecture (Elm Architecture)
 
@@ -247,15 +297,20 @@ transitions are pure functions, and side effects are described as data.
 
 ```rust
 // State
-enum Screen { ArtifactList, Prompt(PromptState), Generating(...), Done(...) }
+enum Screen { ArtifactList, SelectGenerator(..), Prompt(..), Generating(..), Done(..) }
 enum InputMode { Line, Multiline, Hidden }
 enum ArtifactStatus { Pending, NeedsGeneration, UpToDate, Generating, Done, Failed }
 
+// List entries (for artifact list)
+enum ListEntry { Single(ArtifactEntry), Shared(SharedEntry) }
+
 // Events
-enum Msg { Key(KeyEvent), Tick, GeneratorFinished{..}, SerializeFinished{..}, Quit }
+enum Msg { Key(KeyEvent), Tick, GeneratorFinished{..}, SerializeFinished{..},
+           SharedGeneratorFinished{..}, SharedSerializeFinished{..}, Quit }
 
 // Side effects (descriptors, not actions)
-enum Effect { None, Quit, CheckSerialization{..}, RunGenerator{..}, Serialize{..} }
+enum Effect { None, Quit, CheckSerialization{..}, RunGenerator{..}, Serialize{..},
+              ShowGeneratorSelection{..}, RunSharedGenerator{..}, SharedSerialize{..} }
 ```
 
 ### Runtime Loop (`tui/runtime.rs`)
@@ -276,6 +331,9 @@ Connects TUI to existing backend:
 - `Effect::CheckSerialization` → `run_check_serialization()`
 - `Effect::RunGenerator` → `run_generator_script()` + `verify_generated_files()`
 - `Effect::Serialize` → `run_serialize()`
+- `Effect::ShowGeneratorSelection` → Screen transition (no async work)
+- `Effect::RunSharedGenerator` → `run_generator_script_with_path()`
+- `Effect::SharedSerialize` → `run_shared_serialize()`
 
 ### Testing Patterns
 
@@ -537,17 +595,17 @@ cargo clippy
 - **Elm Architecture**: `src/app/` (model, message, effect, update)
 - **TUI views**: `src/tui/views/` (list, prompt, progress)
 - **Backend operations**: `src/backend/` directory
-- **Backends**: `examples/backends/{test,test-skip-one}/`
+- **Backends**: `examples/backends/{test,test-skip-one,test-shared}/`
 - **Test scenarios**: `examples/scenarios/{single-artifact-with-prompts,...}/`
-- **Unit tests**: `cargo test --lib` (38 tests)
-- **View snapshots**: `tests/tui/snapshots/` (10 snapshots)
+- **Unit tests**: `cargo test --lib` (63 tests)
+- **View snapshots**: `tests/tui/snapshots/` (13 snapshots)
 - **Snapshot review**: `cargo insta review`
 - **Container isolation**: bubblewrap for generator and serialize scripts
 
 ## Test Commands
 
 ```bash
-cargo test --lib                    # Run all unit tests (38 tests)
+cargo test --lib                    # Run all unit tests (63 tests)
 cargo test app::                    # Test app module only
 cargo test tui::                    # Test TUI module only
 cargo test --test tests             # Run integration tests

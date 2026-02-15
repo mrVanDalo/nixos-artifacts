@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Test serialization - copy files to test output directory
+set -e
+
+if [ -n "$ARTIFACTS_TEST_OUTPUT_DIR" ]; then
+    # Check if this is a shared artifact (has $machines or $users)
+    if [ -n "$machines" ] || [ -n "$users" ]; then
+        # Shared artifact
+        target_dir="$ARTIFACTS_TEST_OUTPUT_DIR/shared/$artifact"
+    elif [ "$artifact_context" = "homemanager" ]; then
+        target_dir="$ARTIFACTS_TEST_OUTPUT_DIR/users/$username/$artifact"
+    else
+        target_dir="$ARTIFACTS_TEST_OUTPUT_DIR/machines/$machine/$artifact"
+    fi
+    mkdir -p "$target_dir"
+    cp -r "$out"/* "$target_dir/"
+fi

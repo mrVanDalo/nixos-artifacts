@@ -1,0 +1,42 @@
+---
+source: tests/tui/view_tests.rs
+assertion_line: 746
+expression: result.to_string()
+---
+State:
+GeneratorSelectionSnapshot {
+    artifact_name: "shared-ssh-key",
+    selected_index: 0,
+    generators: [
+        GeneratorSnapshot {
+            path: "/nix/store/xxx-gen-ssh",
+            sources: [
+                SourceSnapshot {
+                    target: "machine-one",
+                    target_type: "nixos",
+                },
+                SourceSnapshot {
+                    target: "machine-two",
+                    target_type: "nixos",
+                },
+            ],
+        },
+    ],
+}
+
+Rendered:
+"┌Select generator for shared artifact "shared-ssh-key"───────────────┐"
+"│> /nix/store/xxx-gen-ssh                                            │"
+"│      - machine-one (nixos)                                         │"
+"│      - machine-two (nixos)                                         │"
+"│                                                                    │"
+"│                                                                    │"
+"│                                                                    │"
+"│                                                                    │"
+"│                                                                    │"
+"│                                                                    │"
+"│                                                                    │"
+"│                                                                    │"
+"│                                                                    │"
+"│                                                                    │"
+"└ j/k: move, Enter: select, Esc: cancel ─────────────────────────────┘"

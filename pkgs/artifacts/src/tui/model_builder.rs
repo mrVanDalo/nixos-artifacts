@@ -1,49 +1,148 @@
 use crate::app::model::{
-    ArtifactEntry, ArtifactStatus, LogStep, Model, Screen, StepLogs, TargetType,
+    ArtifactEntry, ArtifactStatus, ListEntry, LogStep, Model, Screen, SharedEntry, StepLogs,
+    TargetType, Warning,
 };
+use crate::config::backend::BackendConfiguration;
 use crate::config::make::MakeConfiguration;
 
 /// Build the initial Model from a MakeConfiguration.
 /// This extracts all artifacts from both nixos and home configurations.
 pub fn build_model(make: &MakeConfiguration) -> Model {
     let mut artifacts = Vec::new();
+    let mut entries = Vec::new();
 
-    // Add NixOS machine artifacts
+    // Get shared artifacts - these will be represented once in the list
+    let shared_artifacts = make.get_shared_artifacts();
+
+    // Track which artifact names are shared so we skip individual instances
+    let shared_names: std::collections::HashSet<&str> =
+        shared_artifacts.keys().map(|s| s.as_str()).collect();
+
+    // Add NixOS machine artifacts (skip shared ones)
     for (machine, machine_artifacts) in &make.nixos_map {
         for artifact in machine_artifacts.values() {
-            artifacts.push(ArtifactEntry {
-                target: machine.clone(),
-                target_type: TargetType::Nixos,
-                artifact: artifact.clone(),
-                status: ArtifactStatus::Pending,
-                step_logs: StepLogs::default(),
-            });
+            if !shared_names.contains(artifact.name.as_str()) {
+                let entry = ArtifactEntry {
+                    target: machine.clone(),
+                    target_type: TargetType::Nixos,
+                    artifact: artifact.clone(),
+                    status: ArtifactStatus::Pending,
+                    step_logs: StepLogs::default(),
+                };
+                artifacts.push(entry.clone());
+                entries.push(ListEntry::Single(entry));
+            }
         }
     }
 
-    // Add home-manager user artifacts
+    // Add home-manager user artifacts (skip shared ones)
     for (user, user_artifacts) in &make.home_map {
         for artifact in user_artifacts.values() {
-            artifacts.push(ArtifactEntry {
-                target: user.clone(),
-                target_type: TargetType::HomeManager,
-                artifact: artifact.clone(),
-                status: ArtifactStatus::Pending,
-                step_logs: StepLogs::default(),
-            });
+            if !shared_names.contains(artifact.name.as_str()) {
+                let entry = ArtifactEntry {
+                    target: user.clone(),
+                    target_type: TargetType::HomeManager,
+                    artifact: artifact.clone(),
+                    status: ArtifactStatus::Pending,
+                    step_logs: StepLogs::default(),
+                };
+                artifacts.push(entry.clone());
+                entries.push(ListEntry::Single(entry));
+            }
         }
     }
 
-    // Sort artifacts by target then name for consistent ordering
+    // Add shared artifacts as SharedEntry
+    for (_name, shared_info) in shared_artifacts {
+        entries.push(ListEntry::Shared(SharedEntry {
+            info: shared_info,
+            status: ArtifactStatus::Pending,
+            step_logs: StepLogs::default(),
+            selected_generator: None,
+        }));
+    }
+
+    // Sort artifacts by target then name for consistent ordering (legacy)
     artifacts.sort_by(|a, b| (&a.target, &a.artifact.name).cmp(&(&b.target, &b.artifact.name)));
+
+    // Sort entries: shared first (by name), then single by target/name
+    entries.sort_by(|a, b| match (a, b) {
+        (ListEntry::Shared(sa), ListEntry::Shared(sb)) => {
+            sa.info.artifact_name.cmp(&sb.info.artifact_name)
+        }
+        (ListEntry::Shared(_), ListEntry::Single(_)) => std::cmp::Ordering::Less,
+        (ListEntry::Single(_), ListEntry::Shared(_)) => std::cmp::Ordering::Greater,
+        (ListEntry::Single(ea), ListEntry::Single(eb)) => {
+            (&ea.target, &ea.artifact.name).cmp(&(&eb.target, &eb.artifact.name))
+        }
+    });
 
     Model {
         screen: Screen::ArtifactList,
         artifacts,
+        entries,
         selected_index: 0,
         selected_log_step: LogStep::default(),
         error: None,
+        warnings: Vec::new(),
+        tick_count: 0,
     }
+}
+
+/// Build a model with backend capability validation.
+/// Adds warnings for any capability issues (e.g., shared artifacts with backends that don't support shared).
+pub fn build_model_with_validation(
+    make: &MakeConfiguration,
+    backend: &BackendConfiguration,
+) -> Model {
+    let mut model = build_model(make);
+    let mut warnings = Vec::new();
+
+    // Check shared artifacts against backend capabilities
+    for entry in &model.entries {
+        if let ListEntry::Shared(shared) = entry {
+            let backend_name = &shared.info.backend_name;
+            if let Ok(backend_entry) = backend.get_backend(backend_name)
+                && !backend_entry.supports_shared()
+            {
+                warnings.push(Warning {
+                        artifact_name: shared.info.artifact_name.clone(),
+                        message: format!(
+                            "Backend '{}' does not support shared artifacts (missing shared_serialize script)",
+                            backend_name
+                        ),
+                    });
+            }
+        }
+    }
+
+    model.warnings = warnings;
+    model
+}
+
+/// Add capability validation warnings to an existing model.
+/// This is useful when you've already built a model (e.g., filtered) and want to add validation.
+pub fn validate_model_capabilities(model: &mut Model, backend: &BackendConfiguration) {
+    let mut warnings = Vec::new();
+
+    for entry in &model.entries {
+        if let ListEntry::Shared(shared) = entry {
+            let backend_name = &shared.info.backend_name;
+            if let Ok(backend_entry) = backend.get_backend(backend_name)
+                && !backend_entry.supports_shared()
+            {
+                warnings.push(Warning {
+                        artifact_name: shared.info.artifact_name.clone(),
+                        message: format!(
+                            "Backend '{}' does not support shared artifacts (missing shared_serialize script)",
+                            backend_name
+                        ),
+                    });
+            }
+        }
+    }
+
+    model.warnings = warnings;
 }
 
 /// Build a model with only specific artifacts (for filtered commands).
@@ -60,7 +159,7 @@ pub fn build_filtered_model(
         return model;
     }
 
-    // Filter artifacts
+    // Filter artifacts (legacy field)
     model.artifacts.retain(|entry| {
         // Target filtering: when a specific target type filter is provided,
         // only include entries of that type that match
@@ -87,6 +186,67 @@ pub fn build_filtered_model(
             artifact_names.is_empty() || artifact_names.contains(&entry.artifact.name);
 
         target_matches && artifact_matches
+    });
+
+    // Filter entries (unified field)
+    model.entries.retain(|entry| match entry {
+        ListEntry::Single(single) => {
+            // Same filtering logic as artifacts above
+            let target_matches = match single.target_type {
+                TargetType::Nixos => {
+                    if !machines.is_empty() {
+                        machines.contains(&single.target)
+                    } else {
+                        home_users.is_empty()
+                    }
+                }
+                TargetType::HomeManager => {
+                    if !home_users.is_empty() {
+                        home_users.contains(&single.target)
+                    } else {
+                        machines.is_empty()
+                    }
+                }
+            };
+
+            let artifact_matches =
+                artifact_names.is_empty() || artifact_names.contains(&single.artifact.name);
+
+            target_matches && artifact_matches
+        }
+        ListEntry::Shared(shared) => {
+            // Shared artifacts match if:
+            // - artifact name matches (if filter specified), AND
+            // - at least one of its targets matches the machine/home filters
+            let artifact_matches =
+                artifact_names.is_empty() || artifact_names.contains(&shared.info.artifact_name);
+
+            if !artifact_matches {
+                return false;
+            }
+
+            // If no target filters, include all shared artifacts
+            if machines.is_empty() && home_users.is_empty() {
+                return true;
+            }
+
+            // Check if any target matches
+            let has_matching_nixos = !machines.is_empty()
+                && shared
+                    .info
+                    .nixos_targets
+                    .iter()
+                    .any(|t| machines.contains(t));
+
+            let has_matching_home = !home_users.is_empty()
+                && shared
+                    .info
+                    .home_targets
+                    .iter()
+                    .any(|u| home_users.contains(u));
+
+            has_matching_nixos || has_matching_home
+        }
     });
 
     model
@@ -241,5 +401,125 @@ mod tests {
         let model = build_filtered_model(&config, &[], &[], &[]);
 
         assert_eq!(model.artifacts.len(), 3);
+    }
+
+    fn make_shared_artifact(name: &str) -> ArtifactDef {
+        ArtifactDef {
+            name: name.to_string(),
+            shared: true,
+            files: BTreeMap::from([(
+                "secret".to_string(),
+                FileDef {
+                    name: "secret".to_string(),
+                    path: Some("/run/secrets/shared".to_string()),
+                    owner: None,
+                    group: None,
+                },
+            )]),
+            prompts: BTreeMap::new(),
+            generator: "/gen/shared".to_string(),
+            serialization: "test".to_string(),
+        }
+    }
+
+    fn make_test_config_with_shared() -> MakeConfiguration {
+        let mut nixos_map = BTreeMap::new();
+        let home_map = BTreeMap::new();
+
+        // Machine one with shared artifact
+        let mut machine_one_artifacts = BTreeMap::new();
+        machine_one_artifacts.insert(
+            "shared-secret".to_string(),
+            make_shared_artifact("shared-secret"),
+        );
+        machine_one_artifacts.insert(
+            "unique-one".to_string(),
+            ArtifactDef {
+                name: "unique-one".to_string(),
+                shared: false,
+                files: BTreeMap::new(),
+                prompts: BTreeMap::new(),
+                generator: "/gen/one".to_string(),
+                serialization: "test".to_string(),
+            },
+        );
+        nixos_map.insert("machine-one".to_string(), machine_one_artifacts);
+
+        // Machine two with same shared artifact
+        let mut machine_two_artifacts = BTreeMap::new();
+        machine_two_artifacts.insert(
+            "shared-secret".to_string(),
+            make_shared_artifact("shared-secret"),
+        );
+        machine_two_artifacts.insert(
+            "unique-two".to_string(),
+            ArtifactDef {
+                name: "unique-two".to_string(),
+                shared: false,
+                files: BTreeMap::new(),
+                prompts: BTreeMap::new(),
+                generator: "/gen/two".to_string(),
+                serialization: "test".to_string(),
+            },
+        );
+        nixos_map.insert("machine-two".to_string(), machine_two_artifacts);
+
+        MakeConfiguration {
+            nixos_map,
+            home_map,
+            nixos_config: BTreeMap::new(),
+            home_config: BTreeMap::new(),
+            make_base: PathBuf::from("/test"),
+            make_json: PathBuf::from("/test/make.json"),
+        }
+    }
+
+    #[test]
+    fn test_build_model_with_shared_artifacts() {
+        let config = make_test_config_with_shared();
+        let model = build_model(&config);
+
+        // Should have 2 non-shared artifacts (unique-one, unique-two)
+        // Shared artifacts are excluded from the legacy `artifacts` field
+        assert_eq!(model.artifacts.len(), 2);
+
+        // entries should have 3 items: 1 shared + 2 unique
+        assert_eq!(model.entries.len(), 3);
+
+        // First should be the shared one (sorted to top)
+        assert!(model.entries[0].is_shared());
+        assert_eq!(model.entries[0].artifact_name(), "shared-secret");
+
+        // Remaining should be single entries
+        assert!(!model.entries[1].is_shared());
+        assert!(!model.entries[2].is_shared());
+    }
+
+    #[test]
+    fn test_shared_entry_has_targets() {
+        let config = make_test_config_with_shared();
+        let model = build_model(&config);
+
+        // Find the shared entry
+        let shared = model.entries.iter().find(|e| e.is_shared()).unwrap();
+
+        if let ListEntry::Shared(entry) = shared {
+            // Should reference both machines
+            assert!(
+                entry
+                    .info
+                    .nixos_targets
+                    .contains(&"machine-one".to_string())
+            );
+            assert!(
+                entry
+                    .info
+                    .nixos_targets
+                    .contains(&"machine-two".to_string())
+            );
+            assert_eq!(entry.info.nixos_targets.len(), 2);
+        } else {
+            panic!("Expected SharedEntry");
+        }
     }
 }

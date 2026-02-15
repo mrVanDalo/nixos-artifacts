@@ -4,6 +4,7 @@
 //! 1. Load flake configuration
 //! 2. Define event sequence
 //! 3. Run with real effect handler and snapshot result
+//! 4. Collect serialized artifacts for snapshot verification
 
 use artifacts::app::Msg;
 use artifacts::app::model::Screen;
@@ -13,11 +14,12 @@ use artifacts::config::nix::build_make_from_flake;
 use artifacts::tui::events::ScriptedEventSource;
 use artifacts::tui::events::test_helpers::*;
 use artifacts::tui::model_builder::build_model;
-use artifacts::tui::{BackendEffectHandler, run};
+use artifacts::tui::run;
 use insta::assert_debug_snapshot;
 use ratatui::Terminal;
 use ratatui::backend::TestBackend;
 use serial_test::serial;
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 // =============================================================================
@@ -47,7 +49,107 @@ fn load_example(name: &str) -> (BackendConfiguration, MakeConfiguration) {
     (backend, make)
 }
 
+/// Generate a short random ID (8 hex characters).
+fn short_uuid() -> String {
+    use std::collections::hash_map::RandomState;
+    use std::hash::{BuildHasher, Hasher};
+
+    let mut hasher = RandomState::new().build_hasher();
+    hasher.write_u64(
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos() as u64,
+    );
+    format!("{:08x}", hasher.finish() as u32)
+}
+
+/// Create a unique temporary directory for test artifacts.
+/// Retries up to 5 times with different UUIDs if creation fails.
+fn create_test_output_dir(test_name: &str) -> PathBuf {
+    let temp_dir = std::env::temp_dir();
+
+    for _ in 0..5 {
+        let unique_dir = temp_dir.join(format!("artifacts-test-{}-{}", test_name, short_uuid()));
+
+        if std::fs::create_dir_all(&unique_dir).is_ok() {
+            return unique_dir;
+        }
+    }
+
+    panic!("Failed to create test output directory after 5 attempts");
+}
+
+/// Clean up the test output directory.
+fn cleanup_test_output_dir(path: &PathBuf) {
+    if path.exists() {
+        let _ = std::fs::remove_dir_all(path);
+    }
+}
+
+/// Collect serialized artifacts from the test output directory.
+/// Returns a map of relative paths to file contents.
+fn collect_serialized_artifacts(output_dir: &PathBuf) -> BTreeMap<String, String> {
+    if !output_dir.exists() {
+        return BTreeMap::new();
+    }
+
+    let mut artifacts = BTreeMap::new();
+    collect_files_recursively(output_dir, output_dir, &mut artifacts);
+    artifacts
+}
+
+/// Recursively collect all files from a directory tree.
+fn collect_files_recursively(
+    base_dir: &PathBuf,
+    current_dir: &PathBuf,
+    artifacts: &mut BTreeMap<String, String>,
+) {
+    let entries = match std::fs::read_dir(current_dir) {
+        Ok(entries) => entries,
+        Err(_) => return,
+    };
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+
+        if path.is_dir() {
+            collect_files_recursively(base_dir, &path, artifacts);
+            continue;
+        }
+
+        if !path.is_file() {
+            continue;
+        }
+
+        let relative_path = path
+            .strip_prefix(base_dir)
+            .unwrap_or(&path)
+            .to_string_lossy()
+            .to_string();
+
+        if let Ok(content) = std::fs::read_to_string(&path) {
+            artifacts.insert(relative_path, content);
+        }
+    }
+}
+
+/// Extract test name from example path (e.g., "scenarios/single-artifact-with-prompts" -> "single-artifact-with-prompts")
+fn extract_test_name(example: &str) -> &str {
+    example.rsplit('/').next().unwrap_or(example)
+}
+
 fn run_tui(example: &str, events: Events) -> TestResult {
+    let test_name = extract_test_name(example);
+    let output_dir = create_test_output_dir(test_name);
+
+    // Set the environment variable for serialize scripts to use
+    // SAFETY: Tests run sequentially (not parallel) so there's no data race concern.
+    // Each test has its own unique output directory based on test_name and a random UUID.
+    unsafe {
+        std::env::set_var("ARTIFACTS_TEST_OUTPUT_DIR", &output_dir);
+    }
+
     let (backend, make) = load_example(example);
     let model = build_model(&make);
 
@@ -55,17 +157,29 @@ fn run_tui(example: &str, events: Events) -> TestResult {
 
     let mut terminal = Terminal::new(TestBackend::new(80, 24)).unwrap();
     let mut event_source = ScriptedEventSource::new(events.messages);
-    let mut effect_handler = BackendEffectHandler::new(backend, make);
 
     let result =
-        run(&mut terminal, &mut event_source, &mut effect_handler, model).expect("TUI run failed");
+        run(&mut terminal, &mut event_source, backend, make, model).expect("TUI run failed");
 
     let after = ModelState::from_model(&result.final_model);
+
+    // Collect serialized artifacts
+    let serialized_artifacts = collect_serialized_artifacts(&output_dir);
+
+    // Clean up the environment variable
+    // SAFETY: Same as above - tests run sequentially.
+    unsafe {
+        std::env::remove_var("ARTIFACTS_TEST_OUTPUT_DIR");
+    }
+
+    // Clean up the test output directory
+    cleanup_test_output_dir(&output_dir);
 
     TestResult {
         events: events.descriptions,
         before,
         after,
+        serialized_artifacts,
     }
 }
 
@@ -79,6 +193,7 @@ struct TestResult {
     events: Vec<String>,
     before: ModelState,
     after: ModelState,
+    serialized_artifacts: BTreeMap<String, String>,
 }
 
 #[allow(dead_code)]
@@ -100,21 +215,31 @@ struct ArtifactState {
 
 impl ModelState {
     fn from_model(model: &artifacts::app::model::Model) -> Self {
+        use artifacts::app::model::ListEntry;
+
         Self {
             screen: match &model.screen {
                 Screen::ArtifactList => "ArtifactList",
+                Screen::SelectGenerator(_) => "SelectGenerator",
                 Screen::Prompt(_) => "Prompt",
                 Screen::Generating(_) => "Generating",
                 Screen::Done(_) => "Done",
             },
             selected_index: model.selected_index,
             artifacts: model
-                .artifacts
+                .entries
                 .iter()
-                .map(|a| ArtifactState {
-                    target: a.target.clone(),
-                    name: a.artifact.name.clone(),
-                    status: normalize_status(format!("{:?}", a.status)),
+                .map(|entry| match entry {
+                    ListEntry::Single(single) => ArtifactState {
+                        target: single.target.clone(),
+                        name: single.artifact.name.clone(),
+                        status: normalize_status(format!("{:?}", single.status)),
+                    },
+                    ListEntry::Shared(shared) => ArtifactState {
+                        target: "[shared]".to_string(),
+                        name: shared.info.artifact_name.clone(),
+                        status: normalize_status(format!("{:?}", shared.status)),
+                    },
                 })
                 .collect(),
             error: model.error.clone(),
@@ -140,6 +265,18 @@ impl Events {
     fn navigate_down(mut self, n: usize) -> Self {
         self.messages.extend((0..n).map(|_| down()));
         self.descriptions.push(format!("navigate_down({})", n));
+        self
+    }
+
+    fn down(mut self) -> Self {
+        self.messages.push(down());
+        self.descriptions.push("down".to_string());
+        self
+    }
+
+    fn up(mut self) -> Self {
+        self.messages.push(up());
+        self.descriptions.push("up".to_string());
         self
     }
 
@@ -364,4 +501,68 @@ fn artifact_names_generate_all() {
 fn no_config_generate_one() {
     let events = Events::new().select().fill_prompts(&["one", "two"]).quit();
     assert_debug_snapshot!(run_tui("scenarios/no-config-section", events));
+}
+
+// =============================================================================
+// shared-artifacts tests
+// =============================================================================
+
+#[test]
+#[serial]
+fn shared_artifacts_display() {
+    // Test displays shared and single artifacts together
+    let events = Events::new().quit();
+    assert_debug_snapshot!(run_tui("scenarios/shared-artifacts", events));
+}
+
+#[test]
+#[serial]
+fn shared_artifacts_navigate() {
+    // Navigate through mixed shared and single artifacts
+    let events = Events::new().down().down().up().quit();
+    assert_debug_snapshot!(run_tui("scenarios/shared-artifacts", events));
+}
+
+#[test]
+#[serial]
+fn shared_artifacts_generate_one() {
+    // Select shared artifact, select generator, run generation
+    // The shared artifact should transition through generator selection to generation
+    let events = Events::new()
+        .select() // Enter on shared artifact -> shows generator selection
+        .select() // Enter on generator selection -> starts generation
+        .quit();
+    assert_debug_snapshot!(run_tui("scenarios/shared-artifacts", events));
+}
+
+// =============================================================================
+// shared-artifacts error tests
+// =============================================================================
+
+#[test]
+#[serial]
+fn shared_artifacts_unwanted_files_shows_error() {
+    // Test that shared artifacts which create wrong files produce an error
+    // The generator creates "shared-unwanted" instead of "shared-key"
+    let events = Events::new()
+        .select() // Enter on shared artifact -> shows generator selection
+        .select() // Enter on generator selection -> starts generation
+        .quit();
+    assert_debug_snapshot!(run_tui("scenarios/error-shared-unwanted-files", events));
+}
+
+// =============================================================================
+// bubblewrap network isolation tests
+// =============================================================================
+
+/// Test that bubblewrap blocks network access in generators
+/// The generator includes a "curl" call that will fail due to --unshare-all
+#[test]
+#[serial]
+fn network_access_blocked_by_bubblewrap() {
+    let events = Events::new().select().fill_prompts(&[]).quit();
+    assert_debug_snapshot!(run_tui(
+        "scenarios/error-bubblewrap-blocks-network-calls",
+        events
+    ));
 }

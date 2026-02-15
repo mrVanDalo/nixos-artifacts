@@ -1,6 +1,5 @@
 ---
 source: tests/tui/integration_tests.rs
-assertion_line: 270
 expression: "run_tui(\"scenarios/python-scripts\", events)"
 ---
 TestResult {
@@ -42,24 +41,25 @@ TestResult {
             ArtifactState {
                 target: "machine-one",
                 name: "artifact-one",
-                status: "NeedsGeneration",
+                status: "Pending",
             },
             ArtifactState {
                 target: "machine-one",
                 name: "artifact-two",
-                status: "UpToDate",
+                status: "Pending",
             },
             ArtifactState {
                 target: "machine-two",
                 name: "artifact-one",
-                status: "NeedsGeneration",
+                status: "Pending",
             },
             ArtifactState {
                 target: "machine-two",
                 name: "artifact-two",
-                status: "NeedsGeneration",
+                status: "Pending",
             },
         ],
         error: None,
     },
+    serialized_artifacts: {},
 }

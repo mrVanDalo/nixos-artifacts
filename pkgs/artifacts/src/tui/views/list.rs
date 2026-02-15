@@ -1,4 +1,4 @@
-use crate::app::model::{ArtifactStatus, LogLevel, LogStep, Model, TargetType};
+use crate::app::model::{ArtifactStatus, ListEntry, LogLevel, LogStep, Model, TargetType};
 use ratatui::{
     Frame,
     layout::{Constraint, Layout, Rect},
@@ -30,36 +30,61 @@ fn render_artifact_list_panel(frame: &mut Frame, model: &Model, area: Rect) {
     let legend_area = chunks[1];
 
     let items: Vec<ListItem> = model
-        .artifacts
+        .entries
         .iter()
         .map(|entry| {
-            let (icon, style) = status_display(&entry.status);
-            let target_type_icon = match entry.target_type {
-                TargetType::Nixos => "N",
-                TargetType::HomeManager => "H",
+            let (icon, style) = status_display(entry.status());
+
+            // Render based on entry type
+            let content = match entry {
+                ListEntry::Single(single) => {
+                    let target_type_icon = match single.target_type {
+                        TargetType::Nixos => "N",
+                        TargetType::HomeManager => "H",
+                    };
+                    Line::from(vec![
+                        Span::styled(icon, style),
+                        Span::raw(" "),
+                        Span::styled(
+                            format!("[{}]", target_type_icon),
+                            Style::default().fg(Color::DarkGray),
+                        ),
+                        Span::raw(" "),
+                        Span::raw(&single.target),
+                        Span::styled("/", Style::default().fg(Color::DarkGray)),
+                        Span::styled(
+                            &single.artifact.name,
+                            Style::default().add_modifier(Modifier::BOLD),
+                        ),
+                    ])
+                }
+                ListEntry::Shared(shared) => {
+                    let target_count =
+                        shared.info.nixos_targets.len() + shared.info.home_targets.len();
+                    Line::from(vec![
+                        Span::styled(icon, style),
+                        Span::raw(" "),
+                        Span::styled("[S]", Style::default().fg(Color::DarkGray)),
+                        Span::raw(" "),
+                        Span::styled(
+                            &shared.info.artifact_name,
+                            Style::default().add_modifier(Modifier::BOLD),
+                        ),
+                        Span::raw(" "),
+                        Span::styled(
+                            format!("({} targets)", target_count),
+                            Style::default().fg(Color::DarkGray),
+                        ),
+                    ])
+                }
             };
-            let content = Line::from(vec![
-                Span::styled(icon, style),
-                Span::raw(" "),
-                Span::styled(
-                    format!("[{}]", target_type_icon),
-                    Style::default().fg(Color::DarkGray),
-                ),
-                Span::raw(" "),
-                Span::raw(&entry.target),
-                Span::styled("/", Style::default().fg(Color::DarkGray)),
-                Span::styled(
-                    &entry.artifact.name,
-                    Style::default().add_modifier(Modifier::BOLD),
-                ),
-            ]);
             ListItem::new(content)
         })
         .collect();
 
     let title = format!(
         "Artifacts ({}) - j/k: move, Tab: logs, Enter: gen, q: quit",
-        model.artifacts.len()
+        model.entries.len()
     );
 
     let list = List::new(items)
@@ -91,30 +116,67 @@ fn render_artifact_list_panel(frame: &mut Frame, model: &Model, area: Rect) {
 }
 
 fn render_log_panel(frame: &mut Frame, model: &Model, area: Rect) {
-    let selected_artifact = model.artifacts.get(model.selected_index);
+    let selected_entry = model.entries.get(model.selected_index);
 
-    let title = match selected_artifact {
-        Some(entry) => format!("Logs: {}/{}", entry.target, entry.artifact.name),
+    let title = match selected_entry {
+        Some(ListEntry::Single(entry)) => format!("Logs: {}/{}", entry.target, entry.artifact.name),
+        Some(ListEntry::Shared(entry)) => format!("Logs: {}", entry.info.artifact_name),
         None => "Logs".to_string(),
     };
 
     let mut lines: Vec<Line> = Vec::new();
 
+    // Show error details if the artifact has failed status
+    if let Some(entry) = selected_entry {
+        if let ArtifactStatus::Failed { error, output, .. } = entry.status() {
+            // Error header
+            lines.push(Line::from(vec![
+                Span::styled("✗ ", Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)),
+                Span::styled("FAILED", Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)),
+            ]));
+            lines.push(Line::from(vec![
+                Span::styled("Error: ", Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)),
+                Span::styled(error, Style::default().fg(Color::Red)),
+            ]));
+
+            // Show output if available
+            if !output.is_empty() {
+                lines.push(Line::from(vec![
+                    Span::styled("Output:", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+                ]));
+                for line in output.lines() {
+                    if !line.is_empty() {
+                        lines.push(Line::from(vec![
+                            Span::styled("  ", Style::default()),
+                            Span::styled(line, Style::default().fg(Color::DarkGray)),
+                        ]));
+                    }
+                }
+            }
+
+            // Separator between error and logs
+            lines.push(Line::from(Span::styled(
+                "─".repeat(area.width as usize),
+                Style::default().fg(Color::DarkGray),
+            )));
+        }
+    }
+
     // Determine which steps have logs (only show steps that have happened)
-    let visible_steps: Vec<LogStep> = match selected_artifact {
+    let visible_steps: Vec<LogStep> = match selected_entry {
         Some(entry) => [LogStep::Check, LogStep::Generate, LogStep::Serialize]
             .into_iter()
-            .filter(|step| !entry.step_logs.get(*step).is_empty())
+            .filter(|step| !entry.step_logs().get(*step).is_empty())
             .collect(),
         None => vec![],
     };
 
-    if visible_steps.is_empty() {
+    if visible_steps.is_empty() && lines.is_empty() {
         lines.push(Line::from(Span::styled(
             "No logs yet. Generate this artifact to see output.",
             Style::default().fg(Color::DarkGray),
         )));
-    } else {
+    } else if !visible_steps.is_empty() {
         // Render accordion-style steps (only those with logs)
         for step in &visible_steps {
             let is_selected = *step == model.selected_log_step;
@@ -127,8 +189,8 @@ fn render_log_panel(frame: &mut Frame, model: &Model, area: Rect) {
             ]));
 
             // If expanded, show logs indented
-            if is_selected && let Some(entry) = selected_artifact {
-                for log_entry in entry.step_logs.get(*step) {
+            if is_selected && let Some(entry) = selected_entry {
+                for log_entry in entry.step_logs().get(*step) {
                     let (prefix, style) = match log_entry.level {
                         LogLevel::Info => ("i", Style::default().fg(Color::Blue)),
                         LogLevel::Output => ("|", Style::default().fg(Color::White)),
@@ -166,7 +228,7 @@ fn status_display(status: &ArtifactStatus) -> (&'static str, Style) {
         ArtifactStatus::Pending => ("○", Style::default().fg(Color::Gray)),
         ArtifactStatus::NeedsGeneration => ("◐", Style::default().fg(Color::Yellow)),
         ArtifactStatus::UpToDate => ("✓", Style::default().fg(Color::Green)),
-        ArtifactStatus::Generating => ("⟳", Style::default().fg(Color::Cyan)),
-        ArtifactStatus::Failed(_) => ("✗", Style::default().fg(Color::Red)),
+        ArtifactStatus::Generating(_) => ("⟳", Style::default().fg(Color::Cyan)),
+        ArtifactStatus::Failed { .. } => ("✗", Style::default().fg(Color::Red)),
     }
 }

@@ -25,9 +25,10 @@ TestResult {
             ArtifactState {
                 target: "machine-name",
                 name: "test-artifact",
-                status: "Failed(\"backend 'test' step 'check_serialization': '[PROJECT]/examples/scenarios/error-script-not-executable/./check.sh' is not executable\")",
+                status: "Pending",
             },
         ],
         error: None,
     },
+    serialized_artifacts: {},
 }

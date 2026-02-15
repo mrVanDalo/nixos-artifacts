@@ -1,7 +1,27 @@
 ---
 source: tests/tui/view_tests.rs
-expression: output
+assertion_line: 523
+expression: result.to_string()
 ---
+State:
+PromptSnapshot {
+    artifact_name: "gpg-key",
+    prompt_index: 1,
+    total_prompts: 3,
+    current_prompt: Some(
+        PromptSnapshotEntry {
+            name: "name",
+            description: Some(
+                "Enter full name",
+            ),
+        },
+    ),
+    input_mode: "line",
+    buffer: "",
+    collected_count: 1,
+}
+
+Rendered:
 "Prompt: gpg-key [2/3]                                       "
 "                                                            "
 "────────────────────────────────────────────────────────────"

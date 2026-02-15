@@ -1,7 +1,27 @@
 ---
 source: tests/tui/view_tests.rs
-expression: output
+assertion_line: 481
+expression: result.to_string()
 ---
+State:
+PromptSnapshot {
+    artifact_name: "certificate",
+    prompt_index: 0,
+    total_prompts: 1,
+    current_prompt: Some(
+        PromptSnapshotEntry {
+            name: "pem",
+            description: Some(
+                "Paste the certificate PEM content",
+            ),
+        },
+    ),
+    input_mode: "multiline",
+    buffer: "-----BEGIN CERT-----",
+    collected_count: 0,
+}
+
+Rendered:
 "Prompt: certificate [1/1]                                   "
 "                                                            "
 "────────────────────────────────────────────────────────────"

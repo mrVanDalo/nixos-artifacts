@@ -1,7 +1,45 @@
 ---
 source: tests/tui/view_tests.rs
-expression: output
+expression: result.to_string()
 ---
+State:
+ArtifactListState {
+    selected_index: 0,
+    selected_log_step: "Check",
+    artifacts: [
+        ArtifactSnapshot {
+            target: "machine-one",
+            target_type: "nixos",
+            name: "artifact-one",
+            status: "NeedsGeneration",
+            has_logs: false,
+        },
+        ArtifactSnapshot {
+            target: "machine-one",
+            target_type: "nixos",
+            name: "artifact-two",
+            status: "UpToDate",
+            has_logs: false,
+        },
+        ArtifactSnapshot {
+            target: "machine-two",
+            target_type: "nixos",
+            name: "artifact-one",
+            status: "NeedsGeneration",
+            has_logs: false,
+        },
+        ArtifactSnapshot {
+            target: "machine-two",
+            target_type: "nixos",
+            name: "artifact-two",
+            status: "NeedsGeneration",
+            has_logs: false,
+        },
+    ],
+    error: None,
+}
+
+Rendered:
 "┌Artifacts (4) - j/k: move, Tab: l┐┌Logs: machine-one/artifact-one───┐"
 "│> ◐ [N] machine-one/artifact-one ││No logs yet. Generate this       │"
 "│  ✓ [N] machine-one/artifact-two ││artifact to see output.          │"

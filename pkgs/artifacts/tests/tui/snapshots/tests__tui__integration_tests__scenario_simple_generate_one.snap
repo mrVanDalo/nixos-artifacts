@@ -1,6 +1,6 @@
 ---
 source: tests/tui/integration_tests.rs
-expression: "run_tui(\"scenario_simple\", events)"
+expression: "run_tui(\"scenarios/single-artifact-with-prompts\", events)"
 ---
 TestResult {
     events: [
@@ -21,15 +21,16 @@ TestResult {
         error: None,
     },
     after: ModelState {
-        screen: "ArtifactList",
+        screen: "Generating",
         selected_index: 0,
         artifacts: [
             ArtifactState {
                 target: "machine-name",
                 name: "test-artifact",
-                status: "UpToDate",
+                status: "Pending",
             },
         ],
         error: None,
     },
+    serialized_artifacts: {},
 }

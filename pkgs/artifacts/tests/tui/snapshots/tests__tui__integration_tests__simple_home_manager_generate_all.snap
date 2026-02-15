@@ -1,6 +1,6 @@
 ---
 source: tests/tui/integration_tests.rs
-expression: "run_tui(\"simple-home-manager\", events)"
+expression: "run_tui(\"scenarios/home-manager\", events)"
 ---
 TestResult {
     events: [
@@ -31,14 +31,15 @@ TestResult {
             ArtifactState {
                 target: "test",
                 name: "artifact-one",
-                status: "NeedsGeneration",
+                status: "Pending",
             },
             ArtifactState {
                 target: "test",
                 name: "artifact-two",
-                status: "NeedsGeneration",
+                status: "Pending",
             },
         ],
         error: None,
     },
+    serialized_artifacts: {},
 }

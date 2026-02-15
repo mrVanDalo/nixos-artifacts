@@ -1,7 +1,27 @@
 ---
 source: tests/tui/view_tests.rs
-expression: output
+assertion_line: 423
+expression: result.to_string()
 ---
+State:
+PromptSnapshot {
+    artifact_name: "ssh-key",
+    prompt_index: 0,
+    total_prompts: 1,
+    current_prompt: Some(
+        PromptSnapshotEntry {
+            name: "passphrase",
+            description: Some(
+                "Enter the SSH key passphrase",
+            ),
+        },
+    ),
+    input_mode: "line",
+    buffer: "my-secret-pass",
+    collected_count: 0,
+}
+
+Rendered:
 "Prompt: ssh-key [1/1]                                       "
 "                                                            "
 "────────────────────────────────────────────────────────────"

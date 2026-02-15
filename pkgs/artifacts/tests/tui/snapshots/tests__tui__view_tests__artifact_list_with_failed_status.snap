@@ -1,14 +1,45 @@
 ---
 source: tests/tui/view_tests.rs
-expression: output
+expression: result.to_string()
 ---
+State:
+ArtifactListState {
+    selected_index: 0,
+    selected_log_step: "Generate",
+    artifacts: [
+        ArtifactSnapshot {
+            target: "machine-one",
+            target_type: "nixos",
+            name: "ssh-key",
+            status: "Failed { error: \"Generator script exited with code 1\", output: \"\", retry_available: true }",
+            has_logs: true,
+        },
+        ArtifactSnapshot {
+            target: "machine-two",
+            target_type: "nixos",
+            name: "api-token",
+            status: "UpToDate",
+            has_logs: false,
+        },
+        ArtifactSnapshot {
+            target: "user@host",
+            target_type: "homemanager",
+            name: "gpg-key",
+            status: "NeedsGeneration",
+            has_logs: false,
+        },
+    ],
+    error: None,
+}
+
+Rendered:
 "┌Artifacts (3) - j/k: move, Tab: l┐┌Logs: machine-one/ssh-key────────┐"
-"│> ✗ [N] machine-one/ssh-key      ││▶ Check                          │"
-"│  ✓ [N] machine-two/api-token    ││▼ Generate                       │"
-"│  ◐ [H] user@host/gpg-key        ││  | Generating SSH key pair...   │"
-"│                                 ││  ! ssh-keygen: permission denied│"
-"│                                 ││  ! Generator failed: exit code 1│"
-"│                                 ││                                 │"
-"│                                 ││                                 │"
-"└─────────────────────────────────┘│                                 │"
+"│> ✗ [N] machine-one/ssh-key      ││✗ FAILED                         │"
+"│  ✓ [N] machine-two/api-token    ││Error: Generator script exited   │"
+"│  ◐ [H] user@host/gpg-key        ││with code 1                      │"
+"│                                 ││─────────────────────────────────│"
+"│                                 ││──                               │"
+"│                                 ││▶ Check                          │"
+"│                                 ││▼ Generate                       │"
+"└─────────────────────────────────┘│  | Generating SSH key pair...   │"
 "○ Pend ◐ Need ✓ OK ✗ Fail          └─────────────────────────────────┘"

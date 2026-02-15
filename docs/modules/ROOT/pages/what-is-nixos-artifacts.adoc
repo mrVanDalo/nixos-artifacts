@@ -56,9 +56,39 @@ NOTE: Have a look at xref:defining-backends.adoc[How to define backends], if you
 
 Use the CLI to drive the main loop for generation and rotation. Start with xref:artifacts-workflow-diagrams.adoc[artifact workflow diagrams] for the high-level flow, then xref:generate-artifacts-cli.adoc[Generate artifacts] for concrete commands.
 
+== Shared artifacts
+
+Shared artifacts allow you to generate a secret once and distribute it to multiple machines and/or home-manager configurations. This is useful for secrets that must be identical across systems, such as:
+
+- Cluster authentication tokens
+- Shared encryption keys
+- OIDC client secrets used by multiple services
+
+To create a shared artifact, set `shared = true` in the artifact definition on each target that should receive it:
+
+[source,nix]
+----
+# In nixosConfigurations.server-one
+artifacts.store.cluster-token = {
+  shared = true;
+  files.token = { };
+  generator = ./gen-token.sh;
+};
+
+# In nixosConfigurations.server-two
+artifacts.store.cluster-token = {
+  shared = true;
+  files.token = { };
+  generator = ./gen-token.sh;
+};
+----
+
+All definitions with the same name and `shared = true` are aggregated. The TUI displays shared artifacts as a single entry showing all targets. See xref:artifact-definition-example.adoc#shared-artifacts[Shared artifact example] for more details.
+
+NOTE: The backend must support shared serialization via a `shared_serialize` script. See xref:defining-backends.adoc#shared-serialization[Shared serialization] for backend requirements.
+
 == Planned features
 
 - Dependencies between artifacts.
-- Shared secrets (same secret content across multiple machines).
-- Publicly readable “secrets” (i.e., public artifacts in the same framework for convenience).
+- Publicly readable "secrets" (i.e., public artifacts in the same framework for convenience).
 

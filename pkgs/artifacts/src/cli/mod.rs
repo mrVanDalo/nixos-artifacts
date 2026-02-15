@@ -5,8 +5,8 @@ use crate::config::backend::BackendConfiguration;
 use crate::config::make::MakeConfiguration;
 use crate::config::nix::build_make_from_flake;
 use crate::tui::{
-    BackendEffectHandler, TerminalEventSource, TerminalGuard, build_filtered_model,
-    install_panic_hook, run as run_tui_loop,
+    TerminalGuard, build_filtered_model, install_panic_hook, run_async,
+    validate_model_capabilities, TerminalEventSource,
 };
 use anyhow::{Context, Result};
 use clap::Parser;
@@ -45,7 +45,7 @@ fn resolve_backend_toml(flake_path: &Path) -> Result<PathBuf> {
     }
 }
 
-pub fn run() -> Result<()> {
+pub async fn run() -> Result<()> {
     let cli = args::Cli::parse();
 
     // Initialize logger
@@ -73,9 +73,10 @@ pub fn run() -> Result<()> {
         &cli.home,
         &cli.artifact,
     )
+    .await
 }
 
-fn run_tui(
+async fn run_tui(
     backend_path: &Path,
     make_path: &Path,
     machines: &[String],
@@ -87,11 +88,31 @@ fn run_tui(
     let make = MakeConfiguration::read_make_config(make_path)?;
 
     // Build the initial model
-    let model = build_filtered_model(&make, machines, home_users, artifacts);
+    let mut model = build_filtered_model(&make, machines, home_users, artifacts);
 
-    if model.artifacts.is_empty() {
+    // Validate backend capabilities and add warnings
+    validate_model_capabilities(&mut model, &backend);
+
+    if model.entries.is_empty() {
         println!("No artifacts found matching the specified filters.");
         return Ok(());
+    }
+
+    // Debug logging - use OpenOptions to append
+    {
+        use std::fs::OpenOptions;
+        use std::io::Write;
+        let mut file = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open("/tmp/artifacts_debug.log")
+            .expect("Failed to open log file");
+        writeln!(
+            file,
+            "[DEBUG] Starting run_tui with {} entries",
+            model.entries.len()
+        )
+        .expect("Failed to write");
     }
 
     // Install panic hook to restore terminal on crash
@@ -100,12 +121,15 @@ fn run_tui(
     // Initialize terminal
     let mut terminal_guard = TerminalGuard::new().context("Failed to initialize terminal")?;
 
-    // Create event source and effect handler
-    let mut events = TerminalEventSource::default();
-    let mut effects = BackendEffectHandler::new(backend, make);
+    std::fs::write(
+        "/tmp/artifacts_debug.log",
+        "[DEBUG] About to call run_async\n",
+    )
+    .ok();
 
-    // Run the TUI
-    let result = run_tui_loop(terminal_guard.terminal(), &mut events, &mut effects, model);
+    // Run the TUI asynchronously with terminal event source
+    let mut events = TerminalEventSource::default();
+    let result = run_async(terminal_guard.terminal(), &mut events, backend, make, model).await;
 
     // Restore terminal before handling result
     terminal_guard
@@ -119,8 +143,8 @@ fn run_tui(
                 .artifacts
                 .iter()
                 .filter_map(|a| match &a.status {
-                    crate::app::model::ArtifactStatus::Failed(msg) => {
-                        Some(format!("{}/{}: {}", a.target, a.artifact.name, msg))
+                    crate::app::model::ArtifactStatus::Failed { error, .. } => {
+                        Some(format!("{}/{}: {}", a.target, a.artifact.name, error))
                     }
                     _ => None,
                 })

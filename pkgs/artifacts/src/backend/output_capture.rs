@@ -2,12 +2,63 @@ use std::io::{BufRead, BufReader};
 use std::process::Child;
 use std::sync::mpsc;
 use std::thread;
+use std::time::Duration;
+
+/// Errors that can occur when running a script
+#[derive(Debug, Clone)]
+pub enum ScriptError {
+    /// Script execution timed out
+    Timeout {
+        script_name: String,
+        timeout_secs: u64,
+    },
+    /// Script failed with non-zero exit code
+    Failed { exit_code: i32, stderr: String },
+    /// I/O error occurred
+    Io { message: String },
+}
+
+impl std::fmt::Display for ScriptError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ScriptError::Timeout {
+                script_name,
+                timeout_secs,
+            } => {
+                write!(
+                    f,
+                    "Script '{}' timed out after {} seconds",
+                    script_name, timeout_secs
+                )
+            }
+            ScriptError::Failed { exit_code, stderr } => {
+                write!(f, "Script failed with exit code {}: {}", exit_code, stderr)
+            }
+            ScriptError::Io { message } => {
+                write!(f, "I/O error: {}", message)
+            }
+        }
+    }
+}
+
+impl std::error::Error for ScriptError {}
 
 /// Captured output from a child process
 #[derive(Debug, Clone, Default)]
 pub struct CapturedOutput {
     pub lines: Vec<OutputLine>,
     pub exit_success: bool,
+}
+
+impl CapturedOutput {
+    /// Convert the captured output to a single string with all lines joined.
+    pub fn to_string(&self) -> String {
+        self.lines
+            .iter()
+            .map(|line| &line.content as &str)
+            .collect::<Vec<&str>>()
+            .join("\n")
+    }
 }
 
 /// A single line of output with its source stream
@@ -68,6 +119,131 @@ pub fn run_with_captured_output(mut child: Child) -> std::io::Result<CapturedOut
     let _ = stderr_thread.join();
 
     let status = child.wait()?;
+
+    Ok(CapturedOutput {
+        lines,
+        exit_success: status.success(),
+    })
+}
+
+/// Run a child process with a timeout and capture its stdout/stderr output.
+///
+/// If the timeout is reached, the child process is killed and a ScriptError::Timeout is returned.
+pub fn run_with_captured_output_and_timeout(
+    mut child: Child,
+    script_name: &str,
+    timeout: Duration,
+) -> Result<CapturedOutput, ScriptError> {
+    let stdout = child.stdout.take().ok_or_else(|| ScriptError::Io {
+        message: "stdout not piped".to_string(),
+    })?;
+    let stderr = child.stderr.take().ok_or_else(|| ScriptError::Io {
+        message: "stderr not piped".to_string(),
+    })?;
+
+    // Get child ID before spawning threads
+    let child_id = child.id();
+
+    let (tx, rx) = mpsc::channel::<OutputLine>();
+    let tx_stdout = tx.clone();
+    let tx_stderr = tx;
+
+    // Spawn thread for stdout
+    let stdout_thread = thread::spawn(move || {
+        let reader = BufReader::new(stdout);
+        for line in reader.lines().map_while(Result::ok) {
+            if tx_stdout
+                .send(OutputLine {
+                    stream: OutputStream::Stdout,
+                    content: line,
+                })
+                .is_err()
+            {
+                break;
+            }
+        }
+    });
+
+    // Spawn thread for stderr
+    let stderr_thread = thread::spawn(move || {
+        let reader = BufReader::new(stderr);
+        for line in reader.lines().map_while(Result::ok) {
+            if tx_stderr
+                .send(OutputLine {
+                    stream: OutputStream::Stderr,
+                    content: line,
+                })
+                .is_err()
+            {
+                break;
+            }
+        }
+    });
+
+    // Collect lines with timeout
+    let mut lines = Vec::new();
+    let start_time = std::time::Instant::now();
+    let timeout_duration = timeout;
+
+    loop {
+        let elapsed = start_time.elapsed();
+        if elapsed >= timeout_duration {
+            // Timeout occurred - kill the process
+            let _ = std::process::Command::new("kill")
+                .arg("-9")
+                .arg(child_id.to_string())
+                .output();
+            // Wait for threads to complete
+            let _ = stdout_thread.join();
+            let _ = stderr_thread.join();
+            // Wait for child to actually terminate
+            let _ = child.wait();
+            return Err(ScriptError::Timeout {
+                script_name: script_name.to_string(),
+                timeout_secs: timeout.as_secs(),
+            });
+        }
+
+        let remaining = timeout_duration - elapsed;
+        match rx.recv_timeout(remaining) {
+            Ok(line) => lines.push(line),
+            Err(mpsc::RecvTimeoutError::Timeout) => {
+                // Check if process has exited
+                match child.try_wait() {
+                    Ok(Some(_)) => break, // Process exited
+                    Ok(None) => continue, // Still running, check again
+                    Err(e) => {
+                        let _ = stdout_thread.join();
+                        let _ = stderr_thread.join();
+                        return Err(ScriptError::Io {
+                            message: e.to_string(),
+                        });
+                    }
+                }
+            }
+            Err(mpsc::RecvTimeoutError::Disconnected) => break,
+        }
+    }
+
+    // Wait for threads to complete
+    let _ = stdout_thread.join();
+    let _ = stderr_thread.join();
+
+    // Get final status
+    let status = match child.try_wait() {
+        Ok(Some(status)) => status,
+        Ok(None) => {
+            // Still running, wait for it
+            child.wait().map_err(|e| ScriptError::Io {
+                message: e.to_string(),
+            })?
+        }
+        Err(e) => {
+            return Err(ScriptError::Io {
+                message: e.to_string(),
+            });
+        }
+    };
 
     Ok(CapturedOutput {
         lines,

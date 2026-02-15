@@ -1,7 +1,8 @@
 use log::error;
 
-fn main() {
-    if let Err(err) = artifacts::cli::run() {
+#[tokio::main]
+async fn main() {
+    if let Err(err) = artifacts::cli::run().await {
         error!("{:#}", err);
         std::process::exit(1);
     }

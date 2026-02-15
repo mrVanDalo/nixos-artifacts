@@ -71,6 +71,25 @@ nix fmt          # Format code (REQUIRED before commits)
 4. **Format before committing** — Always run `nix fmt`
 5. **Commit without signing** — Always use `git -c commit.gpgsign=false commit`
 
+### Git Commit Messages
+
+Follow this format for all commits and squashed merges:
+
+```
+<gitmoji> <short description>
+
+- <detailed point explaining the change>
+- <detailed point explaining the change>
+```
+
+**Guidelines:**
+
+- Use appropriate gitmoji to categorize the change
+- Keep the subject line short and descriptive
+- Use bullet points for detailed changes
+- Focus on readability and clarity
+- Add brief inline comments to code when necessary
+
 ### Code Organization Principles
 
 - Modules define options structure (`modules/`)

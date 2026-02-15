@@ -48,3 +48,66 @@ The generator must:
 The backend will then handle serialization of $out.
 
 See also xref:defining-backends.adoc[Defining backends] for how serialization/deserialization is provided.
+
+[#shared-artifacts]
+== Shared artifact example
+
+Shared artifacts are generated once and distributed to multiple machines. Set `shared = true` on each target that should receive the artifact.
+
+[source,nix]
+----
+# flake.nix
+{
+  outputs = { self, nixpkgs, nixos-artifacts, ... }: {
+    nixosConfigurations.server-one = nixpkgs.lib.nixosSystem {
+      # ...
+      modules = [
+        nixos-artifacts.nixosModules.default
+        ({ pkgs, ... }: {
+          artifacts.store.oidc-secret = {
+            shared = true;  # <1>
+            files.client-secret.path = "/run/secrets/oidc-client-secret";
+            generator = pkgs.writers.writeBash "gen-oidc" ''
+              ${pkgs.openssl}/bin/openssl rand -hex 32 > $out/client-secret
+            '';
+          };
+        })
+      ];
+    };
+
+    nixosConfigurations.server-two = nixpkgs.lib.nixosSystem {
+      # ...
+      modules = [
+        nixos-artifacts.nixosModules.default
+        ({ pkgs, ... }: {
+          artifacts.store.oidc-secret = {
+            shared = true;  # <1>
+            files.client-secret.path = "/run/secrets/oidc-client-secret";
+            generator = pkgs.writers.writeBash "gen-oidc" ''
+              ${pkgs.openssl}/bin/openssl rand -hex 32 > $out/client-secret
+            '';
+          };
+        })
+      ];
+    };
+  };
+}
+----
+<1> Both machines define `shared = true` for the same artifact name `oidc-secret`.
+
+=== How shared artifacts work
+
+When you run the TUI:
+
+1. The CLI aggregates all definitions of `oidc-secret` with `shared = true`.
+2. The TUI displays a single entry for `oidc-secret` showing both targets (server-one, server-two).
+3. When generated, the secret is created once and serialized for all targets using the backend's `shared_serialize` script.
+
+=== Generator selection
+
+If different targets define different generator scripts for the same shared artifact, the TUI displays a selection dialog allowing you to choose which generator to use. Each option shows:
+
+- The generator path (from the Nix store)
+- The list of targets using that generator
+
+This can happen when targets have slightly different generator configurations, for example due to different package versions or generation options.

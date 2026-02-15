@@ -2,6 +2,10 @@
 include = ["../backend.toml"]
 
 [other]
-check_serialization = "../test_check.sh"
-serialize = "../test_serialize.sh"
-deserialize = "../test_deserialize.sh"
+nixos_check_serialization = "../test_check.sh"
+nixos_serialize = "../test_serialize.sh"
+home_check_serialization = "../test_check.sh"
+home_serialize = "../test_serialize.sh"
+
+[other.capabilities]
+serializes = false

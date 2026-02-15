@@ -80,6 +80,51 @@ impl<'de> Deserialize<'de> for ArtifactDef {
     }
 }
 
+/// Type of target that defines an artifact
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub enum TargetType {
+    Nixos,
+    HomeManager,
+}
+
+/// Source of a generator - which target defines it
+#[derive(Debug, Clone, Serialize)]
+pub struct GeneratorSource {
+    /// machine name or user identifier
+    pub target: String,
+    /// type of target
+    pub target_type: TargetType,
+}
+
+/// A unique generator script with its sources
+#[derive(Debug, Clone, Serialize)]
+pub struct GeneratorInfo {
+    /// generator script path
+    pub path: String,
+    /// targets that use this generator
+    pub sources: Vec<GeneratorSource>,
+}
+
+/// Aggregated information about a shared artifact across all targets
+#[derive(Debug, Clone, Serialize)]
+pub struct SharedArtifactInfo {
+    /// artifact name
+    pub artifact_name: String,
+    /// unique generators with their sources
+    pub generators: Vec<GeneratorInfo>,
+    /// NixOS machine names that use this artifact
+    pub nixos_targets: Vec<String>,
+    /// Home-manager user identifiers that use this artifact
+    pub home_targets: Vec<String>,
+    /// serialization backend name
+    pub backend_name: String,
+    /// prompts collected from first definition (shared artifacts should have identical prompts)
+    pub prompts: BTreeMap<String, PromptDef>,
+    /// files collected from first definition (shared artifacts should have identical files)
+    pub files: BTreeMap<String, FileDef>,
+}
+
+#[derive(Clone)]
 pub struct MakeConfiguration {
     // nixos: machine-name -> (artifact-name -> artifact)
     pub nixos_map: BTreeMap<String, BTreeMap<String, ArtifactDef>>,
@@ -190,5 +235,338 @@ impl MakeConfiguration {
                     .get(target_name)
                     .and_then(|m| m.get(backend_name))
             })
+    }
+
+    /// Aggregate all shared artifacts across machines and home-manager users.
+    /// Returns a map from artifact name to SharedArtifactInfo.
+    pub fn get_shared_artifacts(&self) -> BTreeMap<String, SharedArtifactInfo> {
+        // Collect all shared artifacts by name
+        // Structure: artifact_name -> Vec<(target, target_type, artifact)>
+        let mut shared_map: BTreeMap<String, Vec<(String, TargetType, &ArtifactDef)>> =
+            BTreeMap::new();
+
+        // Collect from NixOS configurations
+        for (machine, artifacts) in &self.nixos_map {
+            for (art_name, artifact) in artifacts {
+                if artifact.shared {
+                    shared_map.entry(art_name.clone()).or_default().push((
+                        machine.clone(),
+                        TargetType::Nixos,
+                        artifact,
+                    ));
+                }
+            }
+        }
+
+        // Collect from home-manager configurations
+        for (user, artifacts) in &self.home_map {
+            for (art_name, artifact) in artifacts {
+                if artifact.shared {
+                    shared_map.entry(art_name.clone()).or_default().push((
+                        user.clone(),
+                        TargetType::HomeManager,
+                        artifact,
+                    ));
+                }
+            }
+        }
+
+        // Build SharedArtifactInfo for each shared artifact
+        let mut result: BTreeMap<String, SharedArtifactInfo> = BTreeMap::new();
+
+        for (artifact_name, entries) in shared_map {
+            // Group generators by path
+            let mut generator_map: BTreeMap<String, Vec<GeneratorSource>> = BTreeMap::new();
+            let mut nixos_targets: Vec<String> = Vec::new();
+            let mut home_targets: Vec<String> = Vec::new();
+
+            // Use the first definition for prompts, files, and backend
+            let first_artifact = entries.first().map(|(_, _, a)| *a).unwrap();
+            let backend_name = first_artifact.serialization.clone();
+            let prompts = first_artifact.prompts.clone();
+            let files = first_artifact.files.clone();
+
+            for (target, target_type, artifact) in entries {
+                // Add to generator map
+                generator_map
+                    .entry(artifact.generator.clone())
+                    .or_default()
+                    .push(GeneratorSource {
+                        target: target.clone(),
+                        target_type: target_type.clone(),
+                    });
+
+                // Add to target lists
+                match target_type {
+                    TargetType::Nixos => nixos_targets.push(target),
+                    TargetType::HomeManager => home_targets.push(target),
+                }
+            }
+
+            // Convert generator map to GeneratorInfo vec
+            let generators: Vec<GeneratorInfo> = generator_map
+                .into_iter()
+                .map(|(path, sources)| GeneratorInfo { path, sources })
+                .collect();
+
+            result.insert(
+                artifact_name.clone(),
+                SharedArtifactInfo {
+                    artifact_name,
+                    generators,
+                    nixos_targets,
+                    home_targets,
+                    backend_name,
+                    prompts,
+                    files,
+                },
+            );
+        }
+
+        result
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write;
+    use tempfile::TempDir;
+
+    fn create_temp_make_json(content: &str) -> (TempDir, PathBuf) {
+        let temp_dir = TempDir::new().unwrap();
+        let json_path = temp_dir.path().join("make.json");
+        let mut file = fs::File::create(&json_path).unwrap();
+        file.write_all(content.as_bytes()).unwrap();
+        (temp_dir, json_path)
+    }
+
+    #[test]
+    fn test_get_shared_artifacts_empty() {
+        let content = r#"{"nixos": [], "home": []}"#;
+        let (_temp_dir, json_path) = create_temp_make_json(content);
+        let config = MakeConfiguration::read_make_config(&json_path).unwrap();
+
+        let shared = config.get_shared_artifacts();
+        assert!(shared.is_empty());
+    }
+
+    #[test]
+    fn test_get_shared_artifacts_no_shared() {
+        let content = r#"{
+            "nixos": [{
+                "machine": "machine-one",
+                "artifacts": {
+                    "my-secret": {
+                        "name": "my-secret",
+                        "shared": false,
+                        "files": {},
+                        "prompts": {},
+                        "generator": "/nix/store/gen.sh",
+                        "serialization": "test"
+                    }
+                },
+                "config": {}
+            }],
+            "home": []
+        }"#;
+        let (_temp_dir, json_path) = create_temp_make_json(content);
+        let config = MakeConfiguration::read_make_config(&json_path).unwrap();
+
+        let shared = config.get_shared_artifacts();
+        assert!(shared.is_empty());
+    }
+
+    #[test]
+    fn test_get_shared_artifacts_single_machine() {
+        let content = r#"{
+            "nixos": [{
+                "machine": "machine-one",
+                "artifacts": {
+                    "shared-secret": {
+                        "name": "shared-secret",
+                        "shared": true,
+                        "files": {},
+                        "prompts": {},
+                        "generator": "/nix/store/gen.sh",
+                        "serialization": "test"
+                    }
+                },
+                "config": {}
+            }],
+            "home": []
+        }"#;
+        let (_temp_dir, json_path) = create_temp_make_json(content);
+        let config = MakeConfiguration::read_make_config(&json_path).unwrap();
+
+        let shared = config.get_shared_artifacts();
+        assert_eq!(shared.len(), 1);
+
+        let info = shared.get("shared-secret").unwrap();
+        assert_eq!(info.artifact_name, "shared-secret");
+        assert_eq!(info.nixos_targets, vec!["machine-one"]);
+        assert!(info.home_targets.is_empty());
+        assert_eq!(info.generators.len(), 1);
+        assert_eq!(info.generators[0].path, "/nix/store/gen.sh");
+        assert_eq!(info.backend_name, "test");
+    }
+
+    #[test]
+    fn test_get_shared_artifacts_multiple_machines_same_generator() {
+        let content = r#"{
+            "nixos": [
+                {
+                    "machine": "machine-one",
+                    "artifacts": {
+                        "shared-secret": {
+                            "name": "shared-secret",
+                            "shared": true,
+                            "files": {},
+                            "prompts": {},
+                            "generator": "/nix/store/gen.sh",
+                            "serialization": "test"
+                        }
+                    },
+                    "config": {}
+                },
+                {
+                    "machine": "machine-two",
+                    "artifacts": {
+                        "shared-secret": {
+                            "name": "shared-secret",
+                            "shared": true,
+                            "files": {},
+                            "prompts": {},
+                            "generator": "/nix/store/gen.sh",
+                            "serialization": "test"
+                        }
+                    },
+                    "config": {}
+                }
+            ],
+            "home": []
+        }"#;
+        let (_temp_dir, json_path) = create_temp_make_json(content);
+        let config = MakeConfiguration::read_make_config(&json_path).unwrap();
+
+        let shared = config.get_shared_artifacts();
+        assert_eq!(shared.len(), 1);
+
+        let info = shared.get("shared-secret").unwrap();
+        assert_eq!(info.nixos_targets.len(), 2);
+        assert!(info.nixos_targets.contains(&"machine-one".to_string()));
+        assert!(info.nixos_targets.contains(&"machine-two".to_string()));
+        // Same generator, so only one GeneratorInfo
+        assert_eq!(info.generators.len(), 1);
+        // But it has sources from both machines
+        assert_eq!(info.generators[0].sources.len(), 2);
+    }
+
+    #[test]
+    fn test_get_shared_artifacts_multiple_machines_different_generators() {
+        let content = r#"{
+            "nixos": [
+                {
+                    "machine": "machine-one",
+                    "artifacts": {
+                        "shared-secret": {
+                            "name": "shared-secret",
+                            "shared": true,
+                            "files": {},
+                            "prompts": {},
+                            "generator": "/nix/store/gen-a.sh",
+                            "serialization": "test"
+                        }
+                    },
+                    "config": {}
+                },
+                {
+                    "machine": "machine-two",
+                    "artifacts": {
+                        "shared-secret": {
+                            "name": "shared-secret",
+                            "shared": true,
+                            "files": {},
+                            "prompts": {},
+                            "generator": "/nix/store/gen-b.sh",
+                            "serialization": "test"
+                        }
+                    },
+                    "config": {}
+                }
+            ],
+            "home": []
+        }"#;
+        let (_temp_dir, json_path) = create_temp_make_json(content);
+        let config = MakeConfiguration::read_make_config(&json_path).unwrap();
+
+        let shared = config.get_shared_artifacts();
+        assert_eq!(shared.len(), 1);
+
+        let info = shared.get("shared-secret").unwrap();
+        // Different generators, so two GeneratorInfo entries
+        assert_eq!(info.generators.len(), 2);
+        let paths: Vec<&str> = info.generators.iter().map(|g| g.path.as_str()).collect();
+        assert!(paths.contains(&"/nix/store/gen-a.sh"));
+        assert!(paths.contains(&"/nix/store/gen-b.sh"));
+    }
+
+    #[test]
+    fn test_get_shared_artifacts_mixed_nixos_and_home() {
+        let content = r#"{
+            "nixos": [{
+                "machine": "server",
+                "artifacts": {
+                    "shared-secret": {
+                        "name": "shared-secret",
+                        "shared": true,
+                        "files": {},
+                        "prompts": {},
+                        "generator": "/nix/store/gen.sh",
+                        "serialization": "test"
+                    }
+                },
+                "config": {}
+            }],
+            "home": [{
+                "user": "alice@workstation",
+                "artifacts": {
+                    "shared-secret": {
+                        "name": "shared-secret",
+                        "shared": true,
+                        "files": {},
+                        "prompts": {},
+                        "generator": "/nix/store/gen.sh",
+                        "serialization": "test"
+                    }
+                },
+                "config": {}
+            }]
+        }"#;
+        let (_temp_dir, json_path) = create_temp_make_json(content);
+        let config = MakeConfiguration::read_make_config(&json_path).unwrap();
+
+        let shared = config.get_shared_artifacts();
+        assert_eq!(shared.len(), 1);
+
+        let info = shared.get("shared-secret").unwrap();
+        assert_eq!(info.nixos_targets, vec!["server"]);
+        assert_eq!(info.home_targets, vec!["alice@workstation"]);
+        assert_eq!(info.generators.len(), 1);
+        assert_eq!(info.generators[0].sources.len(), 2);
+
+        // Check that sources have correct target types
+        let nixos_sources: Vec<_> = info.generators[0]
+            .sources
+            .iter()
+            .filter(|s| s.target_type == TargetType::Nixos)
+            .collect();
+        let home_sources: Vec<_> = info.generators[0]
+            .sources
+            .iter()
+            .filter(|s| s.target_type == TargetType::HomeManager)
+            .collect();
+        assert_eq!(nixos_sources.len(), 1);
+        assert_eq!(home_sources.len(), 1);
     }
 }

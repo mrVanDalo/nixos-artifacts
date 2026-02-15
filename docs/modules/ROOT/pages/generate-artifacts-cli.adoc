@@ -48,3 +48,24 @@ artifacts generate --machine my-machine --artifact my-artifact <4>
 <2> regenerate all artifacts on one machine (the `--machine` option can be given multiple times)
 <3> regenerate one artifact on all machines (the `--artifact` option can be given multiple times)
 <4> regenerate one artifact on one machine
+
+== Shared artifacts in the TUI
+
+When running the TUI, shared artifacts (those defined with `shared = true`) are displayed differently from per-machine artifacts:
+
+- **Single entry**: A shared artifact appears once in the list, even if defined on multiple machines.
+- **Target list**: The entry shows all machines and home-manager users that will receive the artifact.
+- **Generator selection**: If different targets use different generator scripts, a selection dialog appears letting you choose which generator to use.
+
+Example TUI display for a shared artifact:
+
+----
+  [shared] cluster-token
+      - server-one (nixos)
+      - server-two (nixos)
+      - alice@workstation (homemanager)
+----
+
+When you generate a shared artifact, the generator runs once and the backend's `shared_serialize` script distributes the result to all targets.
+
+See xref:artifact-definition-example.adoc#shared-artifacts[Shared artifact example] for how to define shared artifacts.

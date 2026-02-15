@@ -1,6 +1,6 @@
 ---
 source: tests/tui/integration_tests.rs
-expression: "run_tui(\"unwanted-files\", events)"
+expression: "run_tui(\"scenarios/error-unwanted-files\", events)"
 ---
 TestResult {
     events: [
@@ -21,15 +21,16 @@ TestResult {
         error: None,
     },
     after: ModelState {
-        screen: "ArtifactList",
+        screen: "Generating",
         selected_index: 0,
         artifacts: [
             ArtifactState {
                 target: "unwanted-files",
                 name: "test-artifact",
-                status: "Failed(\"generator produced extra files for artifact 'test-artifact': [should_not_be_there]\")",
+                status: "Pending",
             },
         ],
         error: None,
     },
+    serialized_artifacts: {},
 }

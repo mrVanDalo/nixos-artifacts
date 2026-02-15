@@ -26,20 +26,21 @@ TestResult {
         error: None,
     },
     after: ModelState {
-        screen: "ArtifactList",
+        screen: "Generating",
         selected_index: 0,
         artifacts: [
             ArtifactState {
                 target: "machine-name",
                 name: "artifact-one",
-                status: "UpToDate",
+                status: "Pending",
             },
             ArtifactState {
                 target: "machine-name",
                 name: "artifact-two",
-                status: "NeedsGeneration",
+                status: "Pending",
             },
         ],
         error: None,
     },
+    serialized_artifacts: {},
 }
