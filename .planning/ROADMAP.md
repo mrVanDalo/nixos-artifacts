@@ -1,56 +1,191 @@
-# Roadmap: Background Job Refactor
+# Roadmap: v2.0 Robustness
 
-**Current Version:** v1.0 ✅ SHIPPED  
-**Created:** 2025-02-13  
-**Last Updated:** 2026-02-15
+**Current Version:** v2.0 🔄 IN PROGRESS  
+**Created:** 2026-02-16  
+**Previous:** v1.0 Background Job Refactor (5 phases, 18 plans, shipped 2026-02-15)
 
 ---
 
 ## Milestones
 
-- ✅ **v1.0 MVP** — Phases 1-5 (shipped 2026-02-15) — [Archive](milestones/v1.0-ROADMAP.md)
+- ✅ **v1.0 Background Job Refactor** — Phases 1-4 (shipped 2026-02-15) — [Archive](milestones/v1.0-ROADMAP.md)
+- 🔄 **v1.0 Phase 5: Validation — Testing** — Async test architecture (planning)
+- 📋 **v2.0 Robustness** — Phases 6-8 (pending) — End-to-end tests, code quality, smart logging
+
+---
 
 ## Current Status
 
-All v1.0 requirements complete. Project ready for next milestone planning.
+v2.0 milestone initialized. 3 phases planned covering 18 requirements.
 
 ---
 
-<details>
-<summary>✅ v1.0 Background Job Refactor (Phases 1-5) — SHIPPED 2026-02-15</summary>
+## Phase Overview
 
-### Phase 1: Foundation — Core Architecture ✅
-- [x] 01-01: Channel Message Types — 2026-02-13
-- [x] 01-02: Background Task — 2026-02-13
-- [x] 01-03: Runtime Integration — 2026-02-13
+| # | Phase | Goal | Requirements | Success Criteria |
+|---|---|-------|------|--------------|------------------|
+| 5 | Validation — Testing | Update tests for async channel architecture | Channel tests, state machine tests, integration tests | 80% coverage, tests pass, insta snapshots |
+| 6 | Integration Testing | Verify artifacts actually get created | TEST-01 to TEST-06 | 6 test programs that verify backend storage |
+| 7 | Code Quality | Refactor for readability and structure | QUAL-01 to QUAL-07 | Flat call chains, no abbreviations, <50 line functions |
+| 8 | Smart Logging | Opt-in debug logging via CLI argument | LOG-01 to LOG-06 | `--log-output` flag works, no logging when omitted |
 
-### Phase 2: Single Artifacts — Basic Effects ✅
-- [x] 02-01: Backend Integration — 2026-02-13
-- [x] 02-02: EffectHandler Bridge — 2026-02-13
-- [x] 02-03: State Management — 2026-02-13
-
-### Phase 3: Shared Artifacts — Shared Effects ✅
-- [x] 03-01: Shared Effects — 2026-02-13
-- [x] 03-02: Tokio Runtime Fix — 2026-02-14
-- [x] 03-03: Debug Logging — 2026-02-14
-- [x] 03-04: Timeout Handling — 2026-02-14
-- [x] 03-05: TUI Freeze Fix — 2026-02-14
-
-### Phase 4: Robustness — Error Handling ✅
-- [x] 04-01: CancellationToken Shutdown — 2026-02-14
-- [x] 04-02: Graceful Shutdown — 2026-02-14
-- [x] 04-03: Error Display Integration — 2026-02-14
-
-### Phase 5: Validation — Testing ✅
-- [x] 05-01: Async Unit Tests — 2026-02-14
-- [x] 05-02: Select and Shutdown Tests — 2026-02-14
-- [x] 05-03: Runtime and Update Tests — 2026-02-14
-
-**Total:** 18 plans, 35/35 requirements, 64 tests passing
-
-</details>
+**Total:** 3 phases | 18 requirements | Goal: Robustness & maintainability
 
 ---
 
-_For full milestone details, see [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)_  
-_For complete requirements, see [milestones/v1.0-REQUIREMENTS.md](milestones/v1.0-REQUIREMENTS.md)_
+## Phase Details
+
+### Phase 5: Validation — Testing
+
+**Goal:** Update all tests to work with the new async channel-based architecture where the TUI runs as foreground, effects execute in a background task, and communication happens via `tokio::sync::mpsc` channels.
+
+**Requirements:**
+- Update async channel tests for tokio mpsc channel communication
+- Create state machine simulation tests with dual assertion strategy (commands + final state)
+- Update runtime async tests covering tokio::select! branches
+- Maintain view tests unchanged (per user decision)
+- Update integration tests to work with async runtime
+- Add CLI-level integration tests with insta-cmd
+
+**Success Criteria:**
+1. State machine tests verify full lifecycle: Pending → Running → Success/Failed
+2. Dual assertion strategy: commands sent match expected variants AND final state correct
+3. 80% coverage for async channel components (channels, select! branches, error handling)
+4. All existing integration tests pass with async runtime
+5. View tests remain unchanged and passing
+6. New CLI integration tests with insta snapshots
+
+**Plans:** 3 plans in 1 wave
+
+Plans:
+- [ ] 05-01-PLAN.md — State machine simulation tests with dual assertion
+- [ ] 05-02-PLAN.md — Async runtime tests with select! branch coverage
+- [ ] 05-03-PLAN.md — Integration test updates for async architecture
+
+---
+
+### Phase 6: Integration Testing ✅ COMPLETE
+
+**Goal:** Create end-to-end tests that verify artifacts are actually created and stored correctly in the backend. ✅
+
+**Completed:** 2026-02-16 | **Score:** 6/6 requirements satisfied
+
+**Requirements:**
+- ✅ TEST-01: Test can programmatically invoke artifact generation without TUI
+- ✅ TEST-02: Test creates a single artifact with simple configuration
+- ✅ TEST-03: Test verifies generated artifact exists at expected backend location
+- ✅ TEST-04: Test verifies artifact content matches expected format
+- ✅ TEST-05: Test covers both single-machine and shared artifacts
+- ✅ TEST-06: Test runs as part of CI/test suite and fails if artifacts not created
+
+**Success Criteria:**
+1. ✅ Headless test harness can invoke artifact generation programmatically
+2. ✅ Test creates artifact and verifies existence in backend storage
+3. ✅ Test verifies artifact content is correct
+4. ✅ Tests for both single and shared artifacts
+5. ✅ All tests pass in CI
+6. ✅ Tests fail meaningfully when artifact creation breaks
+
+**Plans:** 5 plans in 2 waves — COMPLETE
+
+Plans:
+- [x] 06-01-PLAN.md — Headless test harness infrastructure
+- [x] 06-02-PLAN.md — Backend storage verification tests
+- [x] 06-03-PLAN.md — Shared artifact and CI tests
+- [x] 06-04-PLAN.md — Edge case and error scenario tests
+- [x] 06-05-PLAN.md — Diagnostic tooling and failure investigation
+
+**Artifacts Created:**
+- 33+ e2e tests across 5 test modules
+- Headless API for programmatic artifact generation
+- Diagnostic tooling with auto-dump on failure
+- TESTING.md documentation
+
+**Report:** [06-VERIFICATION.md](.planning/phases/06-integration-testing/06-VERIFICATION.md)
+
+---
+
+### Phase 7: Code Quality
+
+**Goal:** Refactor code to improve readability with flattened call chains and clear naming.
+
+**Requirements:**
+- QUAL-01: No function chains deeper than 2 levels (f(g(x)) allowed, f(g(h(x))) not allowed)
+- QUAL-02: Functions return results that are passed to next function, not nested calls
+- QUAL-03: All function names are descriptive and unabbreviated
+- QUAL-04: All variable names are descriptive and unabbreviated
+- QUAL-05: Functions are under 50 lines
+- QUAL-06: Each function has single, clear responsibility
+- QUAL-07: Refactoring limited to `pkgs/artifacts/src/` directory
+
+**Success Criteria:**
+1. No nested function calls deeper than 2 levels in refactored code
+2. All functions have descriptive names (3+ words preferred)
+3. No abbreviated variable names (no `cfg`, `hdl`, `ctx`)
+4. All functions under 50 lines
+5. Each function has single responsibility
+6. Code review confirms improved readability
+
+**Plans:**
+- 07-01: Identify and flatten deep call chains
+- 07-02: Rename abbreviated functions and variables
+- 07-03: Split long functions into smaller units
+
+---
+
+### Phase 8: Smart Logging
+
+**Goal:** Replace hardcoded debug logging with opt-in CLI argument.
+
+**Requirements:**
+- LOG-01: CLI accepts `--log-output <file>` argument
+- LOG-02: When `--log-output` is provided, comprehensive debug logs written to specified file
+- LOG-03: When `--log-output` is not provided, no debug logging occurs
+- LOG-04: Debug logs include: timestamps, effect execution, channel messages, backend calls
+- LOG-05: Log file path can be absolute or relative
+- LOG-06: Existing `/tmp/artifacts_debug.log` hardcoded path removed
+
+**Success Criteria:**
+1. CLI has `--log-output` flag with file path argument
+2. With flag: detailed debug logs written to specified file
+3. Without flag: zero debug logging (silent operation)
+4. Log format includes timestamps and context
+5. Old hardcoded log path removed
+6. Tests verify logging behavior
+
+**Plans:**
+- 08-01: Add --log-output CLI argument
+- 08-02: Implement conditional logging infrastructure
+- 08-03: Replace hardcoded logging with new system
+
+---
+
+## Requirement Traceability
+
+| Requirement | Phase | Plan | Status |
+|-------------|-------|------|--------|
+| TEST-01 | 6 | 06-01 | ✅ Complete |
+| TEST-02 | 6 | 06-02 | ✅ Complete |
+| TEST-03 | 6 | 06-02 | ✅ Complete |
+| TEST-04 | 6 | 06-02 | ✅ Complete |
+| TEST-05 | 6 | 06-03 | ✅ Complete |
+| TEST-06 | 6 | 06-03 | ✅ Complete |
+| QUAL-01 | 7 | 07-01 | Pending |
+| QUAL-02 | 7 | 07-01 | Pending |
+| QUAL-03 | 7 | 07-02 | Pending |
+| QUAL-04 | 7 | 07-02 | Pending |
+| QUAL-05 | 7 | 07-03 | Pending |
+| QUAL-06 | 7 | 07-03 | Pending |
+| QUAL-07 | 7 | All | Pending |
+| LOG-01 | 8 | 08-01 | Pending |
+| LOG-02 | 8 | 08-02 | Pending |
+| LOG-03 | 8 | 08-02 | Pending |
+| LOG-04 | 8 | 08-02 | Pending |
+| LOG-05 | 8 | 08-01 | Pending |
+| LOG-06 | 8 | 08-03 | Pending |
+
+**Coverage:** 18/18 requirements mapped ✓
+
+---
+
+_Updated: 2026-02-16 for v2.0 Robustness milestone_

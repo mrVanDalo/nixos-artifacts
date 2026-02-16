@@ -14,7 +14,7 @@ which = "6"
 log = { version = "0.4", features = ["std", "serde"] }
 crossterm = "0.28"
 ratatui = "0.29"
-tokio = { version = "1", features = ["sync", "rt", "rt-multi-thread", "macros", "time", "signal"] }
+tokio = { version = "1", features = ["sync", "rt", "rt-multi-thread", "macros", "time", "signal", "test-util"] }
 tokio-util = { version = "0.7", features = ["full"] }
 tempfile = "3"
 

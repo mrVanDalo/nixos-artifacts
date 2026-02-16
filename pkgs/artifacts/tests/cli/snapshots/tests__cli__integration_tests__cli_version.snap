@@ -1,0 +1,13 @@
+---
+source: tests/cli/integration_tests.rs
+info:
+  program: artifacts
+  args:
+    - "--version"
+---
+success: true
+exit_code: 0
+----- stdout -----
+artifacts 0.1.0
+
+----- stderr -----

@@ -146,20 +146,21 @@ effect execution runs in a background job while the TUI remains interactive.
 | **File-based logging** | Prevent console corruption | ✓ Good — debug output visible |
 | **Fail-open check_serialization** | Assume generation on error | ✓ Good — safe default |
 
-## Next Milestone Goals (v2.0)
+## Current Milestone: v2.0 Robustness
 
-**Theme:** Enhanced Control & Observability
+**Goal:** Fix critical gaps from v1.0 — ensure artifacts actually get created and improve code quality for long-term maintainability.
 
-**Candidate Features:**
-1. **Progress Reporting** — Show which step is running with time elapsed
-2. **Effect Cancellation** — User can cancel in-flight generation
-3. **Priority Queue** — Urgent artifacts can jump queue
-4. **Concurrent Execution** — Independent effects run in parallel
+**Target features:**
+
+1. **End-to-End Integration Tests** — Verify artifacts are actually created and stored correctly
+2. **Code Quality Refactoring** — Shorter functions, flattened call chains, no abbreviations
+3. **Smart Debug Logging** — Optional `--log-output <file>` argument for comprehensive debug logging
 
 **Success Criteria:**
-- Users can see what's happening during long operations
-- Users can cancel if needed
-- Performance improved through parallelism where safe
+- Tests verify secrets exist at expected backend locations after generation
+- Functions terminate and return results rather than deep call chains
+- All variables and functions have clear, non-abbreviated names
+- Debug logging is opt-in via CLI argument
 
 ---
 

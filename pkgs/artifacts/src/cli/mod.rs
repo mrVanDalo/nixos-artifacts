@@ -1,4 +1,5 @@
 pub mod args;
+pub mod headless;
 mod logging;
 
 use crate::config::backend::BackendConfiguration;

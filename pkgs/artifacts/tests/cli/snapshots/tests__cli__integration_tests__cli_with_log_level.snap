@@ -1,0 +1,13 @@
+---
+source: tests/cli/integration_tests.rs
+info:
+  program: artifacts
+  args:
+    - "--log-level"
+    - debug
+---
+success: false
+exit_code: 1
+----- stdout -----
+
+----- stderr -----

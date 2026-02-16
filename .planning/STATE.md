@@ -1,23 +1,19 @@
-# State: Background Job Refactor
+# State: v2.0 Robustness
 
-**Project:** NixOS Artifacts Store — Background Job Refactor\
-**Current Milestone:** v1.0 ✅ SHIPPED\
-**Status:** Complete — All 35 requirements delivered\
-**Last Updated:** 2026-02-15T00:00:00Z
+**Project:** NixOS Artifacts Store — v2.0 Robustness\  
+**Current Milestone:** v2.0 🔄 EXECUTING\
+**Status:** Phase 6 In Progress — Edge case tests complete (06-04)
+**Last Updated:** 2026-02-16 (completed 06-04)
 
 ---
 
 ## Project Reference
 
-**Core Value:** The TUI must never freeze during long-running operations — all
-effect execution runs in a background job while the TUI remains interactive.
+See: [.planning/PROJECT.md](./PROJECT.md) (updated 2026-02-16)
 
-**Key Constraints:**
+**Core Value:** The TUI must never freeze during long-running operations — all effect execution runs in a background job while the TUI remains interactive.
 
-- Use existing ratatui + tokio (no new dependencies)
-- Preserve Elm Architecture pattern (Model-Update-View-Effect)
-- Maintain bubblewrap sandboxing for script execution
-- Sequential processing of effects (FIFO queue)
+**Current Focus:** Defining v2.0 requirements for end-to-end tests, code quality, and logging improvements
 
 ---
 
@@ -25,178 +21,108 @@ effect execution runs in a background job while the TUI remains interactive.
 
 | Aspect          | Status                      |
 | --------------- | --------------------------- |
-| Milestone       | v1.0 ✅ SHIPPED             |
-| Phases          | 5/5 complete (18 plans)     |
-| Requirements    | 35/35 delivered             |
-| Tests           | 64 passing (21 async)       |
-| Next Milestone  | Planning v2.0               |
+| Milestone       | v2.0 🔄 EXECUTING |
+| Phase           | 06-integration-testing |
+| Plan            | 06-04 ✅ COMPLETE |
+| Requirements    | In Progress |
+| Tests           | In Progress |
+| Previous        | v1.0 ✅ SHIPPED (2026-02-15) |
 
 ### Progress Bar
 
 ```
-[████████████████████] 100% complete — v1.0 SHIPPED
+[████████████░░░░░░░░] 40% complete — Phase 06 integration testing complete (06-01, 06-02, 06-03, 06-04 complete)
 ```
-
-### Milestone History
-
-| Milestone | Phases | Plans | Status   | Date       |
-| --------- | ------ | ----- | -------- | ---------- |
-| v1.0 MVP  | 1-5    | 18    | ✅ Shipped | 2026-02-15 |
-
-### Phase History
-
-| Phase                     | Status     | Date       |
-| ------------------------- | ---------- | ---------- |
-| Phase 1: Foundation       | Complete   | 2026-02-13 |
-| Phase 2: Single Artifacts | Complete   | 2026-02-13 |
-| Phase 3: Shared Artifacts | Complete   | 2026-02-14 |
-| Phase 4: Robustness       | Complete   | 2026-02-14 |
-| Phase 5: Validation       | Complete   | 2026-02-14 |
-
----
-
-## Completed Plans
-
-| Plan  | Description                     | Completed  |
-| ----- | ------------------------------- | ---------- |
-| 01-01 | Channel Message Types           | 2026-02-13 |
-| 01-02 | Background Task                 | 2026-02-13 |
-| 01-03 | Runtime Integration             | 2026-02-13 |
-| 02-01 | Real Backend Integration        | 2026-02-13 |
-| 02-02 | EffectHandler Bridge            | 2026-02-13 |
-| 02-03 | State Management and UI Updates | 2026-02-13 |
-| 03-01 | Shared Artifact Effects         | 2026-02-13 |
-| 03-02 | Tokio Runtime Fix               | 2026-02-14 |
-| 03-03 | Debug Logging                   | 2026-02-14 |
-| 03-04 | Timeout Handling                | 2026-02-14 |
-| 03-05 | TUI Freeze Fix                  | 2026-02-14 |
-| 04-01 | CancellationToken Shutdown      | 2026-02-14 |
-| 04-02 | Graceful Shutdown Sequence      | 2026-02-14 |
-| 04-03 | Error Display Integration       | 2026-02-14 |
-| 04-VERIFICATION | Phase 4 verification passed (7/7) | 2026-02-14 |
-| 05-01 | Async Unit Tests                | 2026-02-14 |
-| 05-02 | Select and Shutdown Tests       | 2026-02-14 |
-| 05-03 | Runtime and Update Tests        | 2026-02-14 |
-
-## Performance Metrics
-
-| Plan  | Duration | Tasks | Files |
-| ----- | -------- | ----- | ----- |
-| 01-01 | 6 min    | 6     | 4     |
-| 01-02 | 3 min    | 5     | 3     |
-| 01-03 | 7 min    | 8     | 8     |
-| 02-01 | 4 min    | 3     | 4     |
-| 02-02 | 0 min    | 3     | 3     |
-| 02-03 | 5 min    | 4     | 4     |
-| 03-01 | 6 min    | 3     | 1     |
-| 03-02 | 3 min    | 3     | 0     |
-| 03-03 | 19 min   | 5     | 4     |
-| 03-04 | 10 min   | 3     | 3     |
-| 03-05 | 4 min    | 1     | 2     |
-| 04-01 | 12 min   | 5     | 3     |
-| 04-02 | 8 min    | 3     | 2     |
-| 05-01 | 6 min    | 3     | 4     |
-| 05-02 | 8 min    | 3     | 4     |
-| 05-03 | 11 min   | 3     | 3     |
 
 ---
 
 ## Accumulated Context
 
-### Decisions Made
+### Decisions from v1.0
 
-1. **Async unit tests use tokio::time::timeout wrapper** — All async tests use `tokio::time::timeout(Duration::from_secs(...), ...)` to prevent hanging, rather than mock time which requires test-util feature.
+All v1.0 decisions preserved in PROJECT.md Validated section.
 
-2. **Channel tests use mock types** — tests/async_tests/channel_tests.rs uses inline MockEffectCommand/MockEffectResult types to avoid dependency on full BackendConfiguration setup.
+### New Decisions
 
-3. **Background tests use actual handler** — tests/async_tests/background_tests.rs uses actual BackgroundEffectHandler and spawn_background_task to verify real behavior.
+- **Test approach:** Programmatic headless tests that invoke CLI and verify backend storage
+- **Logging strategy:** Opt-in via `--log-output <file>` argument; no logging when not specified
+- **Refactoring goal:** Flatten call chains, eliminate abbreviations, improve readability
+- **State machine testing:** Dual assertion strategy - verify both command variants AND final model state
+- **Test isolation:** Use #[serial] for async tests to prevent shared state conflicts
+- **Async testing:** MockEventSource enables deterministic event-driven testing of async runtimes
+- **CLI testing:** insta-cmd snapshots for CLI output verification (help, version, flags, error handling)
+- **TUI integration tests:** Use sync run() intentionally when no real effects needed
+- **E2E test results:** Store file contents instead of paths to handle temp directory cleanup
+- **Headless API results:** Content-based storage (`generated_file_contents: BTreeMap<String, String>`) instead of path-based
+- **Backend storage paths:** Test backend uses `{storage}/machines/{machine}/{artifact}/` structure
+- **RAII cleanup:** Use CleanupGuard pattern for automatic environment variable cleanup in tests
+- **Shared artifact testing:** Use headless `generate_single_artifact` for shared artifacts; stored per-machine in tests
+- **Test documentation:** Document all test requirements in test file headers for CI visibility
+- **Edge case testing:** Use existing error scenarios for realistic failure mode testing
+- **Error message validation:** Focus on presence of key information, not exact wording
 
-4. **Tokio runtime already configured for multi-threaded execution** — Upon verification in 03-02, found that Cargo.toml already has `rt-multi-thread` feature and `artifacts.rs` uses default multi-threaded runtime. No changes needed.
+### Technical Debt to Address
 
-5. **Unbounded channels** — No backpressure, TUI never blocks on send
-6. **artifact_index in every message** — Enables dispatch back to correct model
-   entry
-7. **Errors in result messages** — bool+Option<String> pattern, not separate
-   error channel
-8. **Buffered output** — Complete output returned at end, not streamed
-9. **current_thread tokio runtime** — Sequential execution, no need for
-   multi-thread overhead
-10. **Handler owns config** — Configuration moved into background task, no shared
-    state
-11. **Graceful shutdown** — Background exits cleanly when TUI drops result
-    channel
-12. **Timeout-based event polling** — 50ms timeout allows checking channel
-    results without blocking on events
-13. **spawn_blocking for all blocking I/O** — Required for subprocess execution
-    (scripts) in async context
-14. **Temp directory ownership transfer** — Store TempDir in handler to preserve
-    across effect boundaries
-15. **Fail-open for check_serialization** — Assume generation needed on error
-16. **Status symbols** — Using intuitive symbols: ○ (pending), ! (needs
-    generation), ✓ (up-to-date), ⟳ (generating), ✗ (failed)
-17. **Status colors** — Gray for pending, yellow for needs generation, green for
-    up-to-date, cyan for generating, red for failed
-18. **Animation approach** — tick_count incremented on Msg::Tick, used to cycle
-    through braille spinner frames
-19. **EffectHandler temp directory management** — Store TempDir in handler after
-    GeneratorFinished, take it in Serialize effect
-20. **ShowGeneratorSelection synchronous** — Handled by update() directly, not
-    sent to background task
-21. **Shared artifacts are atomic** — All targets succeed or all fail together
-22. **spawn_blocking for shared effects** — Reuses same pattern as single
-    artifact effects
-23. **File-based debug logging** — Used std::time instead of chrono to avoid
-    external dependency; log to /tmp/artifacts_debug.log for visibility into
-    background task execution
-24. **Two-level timeout architecture** — Script-level (30s) kills hung scripts
-    via run_with_captured_output_and_timeout, task-level (35s) catches edge cases
-    in background.rs via tokio::time::timeout
-25. **Fail-open for check_serialization timeout** — Assume generation needed when
-    check script times out, matching existing error behavior
-26. **Fail-closed for serialize timeout** — Report failure to user when serialize
-    script times out, as we cannot assume success
-27. **Timeout error messages** — Clear "Timed out after X seconds" messages shown to user
-28. **spawn_blocking for event polling** — Terminal event reading moved to dedicated blocking thread that communicates via channel, allowing tokio::select! to concurrently receive background results
-29. **CancellationToken for shutdown signaling** — Using tokio_util::sync::CancellationToken for cooperative cancellation of background task. This integrates with select! and allows graceful shutdown that processes remaining queue commands before exit.
-30. **Graceful shutdown sequence** — On quit/Ctrl+C: signal background, drain results (5s timeout), drop channels, exit. Terminal restored via TerminalGuard::Drop, temp directories cleaned via BackgroundEffectHandler::Drop.
-32. **Made BACKGROUND_TASK_TIMEOUT public for testing** — Timeout constant made public in background.rs to enable test verification of timeout behavior
-33. **Combined shutdown and channel closed test** — test_select_channel_closed_branch exercises both paths since select! prioritizes shutdown branch
-34. **Channel disconnect tested via drop(rx_res)** — Simulates TUI closing result channel; background handles gracefully without panic
-35. **Runtime tests use async #[tokio::test]** — Tests spawn background tasks and verify channel communication
-36. **Update tests verify Effect variants** — Pure function testing: verify correct Effect returned for each async operation
-37. **Accept snapshot updates over assertion chains** — Prefer updating insta snapshots when view output changes
+**From v1.0:**
+- End-to-end tests don't verify actual artifact creation in backend storage (addressed - TEST-03 and TEST-04 now verified)
+- Some functions have deep call chains (f(g(h(k(...)))))
+- Abbreviated variable names reduce readability
+- Debug logging always writes to hardcoded path
 
-### Technical Debt
+### Completed
 
-**Pre-existing:**
+**06-01:**
+- E2E test verification helpers (4 functions)
+- Fixed temp directory cleanup in headless API
+- TEST-01 and TEST-02 requirements documented
+- All 5 e2e tests passing
 
-- ~~Current effect_handler.rs executes effects synchronously, blocking TUI~~ —
-  RESOLVED in 01-03
-- ~~Need to replace with channel-based async architecture~~ — COMPLETE
+**06-02:**
+- Backend storage verification tests (5 tests)
+- TEST-03: Verify artifact exists at backend location
+- TEST-04: Verify artifact content matches expected format
+- Edge case tests for multiple files, persistence, no-prompts scenarios
 
-**New:**
+**06-03:**
+- Shared artifact tests (5 tests in shared_artifact.rs)
+- TEST-05: Tests cover both single-machine and shared artifacts
+- TEST-06: Tests run in CI with meaningful failure messages
+- All 6 TEST requirements marked complete in REQUIREMENTS.md
+- 15 total e2e tests passing (6 mod.rs + 5 backend_verify.rs + 4 shared_artifact.rs)
 
-- None
+**06-04:**
+- Edge case tests (15 tests in edge_cases.rs)
+- Error scenario tests: missing config, invalid backend, generator failure
+- Serialization failure tests with proper error handling
+- Artifact name validation: empty names, special characters
+- Error message validation: context, actionability, no internal details
+- 30 total e2e tests passing (previous 15 + 15 new edge case tests)
 
-### TODOs
+**06-05:**
+- DiagnosticInfo struct with comprehensive diagnostic capture (headless.rs)
+- generate_single_artifact_with_diagnostics() function for test debugging
+- diagnostics.rs test module with 6 diagnostic tests
+- Auto-dump on failure to /tmp/artifacts_test_failures/ with timestamps
+- TESTING.md with comprehensive troubleshooting documentation
+- Updated e2e_single_artifact_is_created to use diagnostic capture
+- 36 total e2e tests passing (30 + 6 new diagnostic tests)
 
-- [x] Complete 01-01: Channel Message Types
-- [x] Complete 01-02: Background Task
-- [x] Complete 01-03: Runtime Integration
-- [x] Complete 02-01: Real Backend Integration
-- [x] Complete 02-02: EffectHandler Bridge
-- [x] Complete 02-03: State Management and UI Updates
-- [x] Complete 03-01: Shared Artifact Effects
-- [x] Complete 03-02: Tokio Runtime Fix
-- [x] Complete 03-03: Debug Logging
-- [x] Complete 03-04: Timeout Handling
-- [x] Complete 03-05: TUI Freeze Fix
-- [x] Complete 04-01: CancellationToken Shutdown
-- [x] Complete 04-02: Graceful Shutdown Sequence
-- [x] Complete 04-03: Error Display Integration
-- [x] Complete 05-01: Async Unit Tests
-- [x] Complete 05-02: Select and Shutdown Tests
-- [x] Complete 05-03: Runtime and Update Tests
+---
+
+## TODOs
+
+- [x] Define v2.0 requirements
+- [ ] Create v2.0 roadmap
+- [x] Phase 1: Integration tests for artifact creation (COMPLETE - all TEST requirements satisfied)
+- [ ] Phase 2: Code quality refactoring
+- [ ] Phase 3: Smart debug logging
+
+### New Decisions
+
+- **Diagnostic capture:** Always capture full context (config, env, temp files) on test failure
+- **Security:** Redact sensitive values (prompts, secrets) rather than capture and filter
+- **Human-readable:** Use section headers and visual separators, not debug formatting
+- **Test documentation:** Document diagnostic system in TESTING.md for developers
 
 ### Blockers
 
@@ -208,103 +134,15 @@ None.
 
 ### Last Session
 
-**Date:** 2026-02-14T13:12:43Z\
-**Activity:** Executed 03-05 plan\
-**Summary:** Fixed root cause of TUI freeze during serialization:
-1. runtime.rs - Moved blocking crossterm::event::poll() to dedicated thread via spawn_blocking
-2. runtime.rs - Event thread sends messages via tokio::sync::mpsc::unbounded_channel
-3. runtime.rs - Main select! loop now receives events from channel instead of polling
-4. cli/mod.rs - Updated to match new run_async signature (no EventSource parameter)
-
-All tests pass (92 tests, 2 pre-existing tempfile failures), cargo check and cargo clippy pass.
-
-### Current Session
-
-**Started:** 2026-02-14T22:25:28Z\
-**Goal:** Execute 05-03 plan - runtime and update tests for async architecture
-
-**Summary:** Updated runtime.rs and update.rs tests for async channel architecture:
-1. src/tui/runtime.rs - Added 4 async tests:
-   - test_runtime_channels_connected: verifies command/result channel communication
-   - test_runtime_tick_message: verifies tick counter increments on Msg::Tick
-   - test_runtime_key_message: verifies key events converted to Msg::Key
-   - test_runtime_spawns_background: verifies background task spawns and processes commands
-2. src/app/update.rs - Added 6 async effect tests:
-   - test_update_returns_run_generator_effect: verifies Enter returns RunGenerator
-   - test_update_returns_serialize_effect: verifies GeneratorFinished returns Serialize
-   - test_update_returns_check_serialization_effect: verifies init() returns CheckSerialization batch
-   - test_update_handles_async_result: verifies GeneratorFinished updates model state
-   - test_update_effect_batching: verifies effect batching for multiple artifacts
-3. Updated snapshot for artifact_list_with_failed_status view test
-4. All 64 integration tests passing
-
-Runtime tests: 14 total (10 existing + 4 new)
-Update tests: 19 total (13 existing + 6 new)
-Integration tests: 64 passing
-
----
-
-### Previous Session
-
-**Date:** 2026-02-14T13:12:43Z\
-**Activity:** Executed 03-05 plan
-
-**Summary:** Created comprehensive tokio::select! and shutdown tests:
-1. tests/async_tests/select_tests.rs - 4 select! branch coverage tests
-   - test_select_shutdown_branch: verifies shutdown.cancelled() branch
-   - test_select_command_branch: verifies cmd_rx.recv() branch
-   - test_select_channel_closed_branch: tests channel closed handling
-   - test_select_with_in_flight_command: verifies queued commands before shutdown
-2. tests/async_tests/shutdown_tests.rs - 6 graceful shutdown tests
-   - test_graceful_shutdown_completes_in_flight: command completes before shutdown
-   - test_shutdown_with_queued_commands: queued commands processed during shutdown
-   - test_background_cleanup_on_drop: temp directory cleanup verification
-   - test_result_channel_disconnect: graceful handling of closed result channel
-   - test_command_timeout: commands complete within timeout window
-   - test_error_handling_timeout_with_mock_time: timeout constant verification
-3. Made BACKGROUND_TASK_TIMEOUT public for test access
-4. All tests use #[serial] for isolation and timeout for safety
-
-All async tests pass (21/21). Total coverage: channels (4), background (7), select (4), shutdown (6).
-
----
-
-### Previous Session
-
-**Date:** 2026-02-14T18:02:27Z\
-**Activity:** Executed 04-01 plan - CancellationToken shutdown for background task
-
-**Summary:** Implemented CancellationToken shutdown mechanism:
-1. Cargo.toml - Added tokio-util dependency with full features for CancellationToken
-2. background.rs - Updated spawn_background_task to accept CancellationToken parameter
-3. background.rs - Converted while loop to tokio::select! with shutdown/cancellation/channel branches
-4. background.rs - On shutdown: processes queued commands, then exits cleanly
-5. runtime.rs - Creates CancellationToken and passes to spawn_background_task
-6. Tests - Updated all test calls to pass CancellationToken::new()
-
-Background task tests pass (3/3), cargo check passes. Ready for SHUT-01 (TUI exit can now signal shutdown).
+**Date:** 2026-02-16  
+**Activity:** Completed 06-04 integration testing - edge case and error scenario tests  
+**Summary:** Created edge_cases.rs with 15 comprehensive edge case tests. Tests cover missing config, invalid backend, generator failure, serialization failure, empty names, special characters. Error message validation tests verify context, actionability, and absence of internal details. All 30 e2e tests now passing. Duration: 15 min.
 
 ---
 
 ## Quick Links
 
-- [ROADMAP.md](./ROADMAP.md) — Phase structure and requirements
 - [PROJECT.md](./PROJECT.md) — Core value and constraints
-- [01-03-SUMMARY.md](./phases/01-foundation/01-03-SUMMARY.md) — Plan 01-03
-  completion
-- [02-01-SUMMARY.md](./phases/02-single-artifacts/02-01-SUMMARY.md) — Plan 02-01
-  completion
-- [02-02-SUMMARY.md](./phases/02-single-artifacts/02-02-SUMMARY.md) — Plan 02-02
-  completion
-- [02-03-SUMMARY.md](./phases/02-single-artifacts/02-03-SUMMARY.md) — Plan 02-03
-  completion
-- [03-01-SUMMARY.md](./phases/03-shared-artifacts/03-01-SUMMARY.md) — Plan 03-01
-  completion
-- [04-01-SUMMARY.md](./phases/04-robustness/04-01-SUMMARY.md) — Plan 04-01
-  completion (CancellationToken shutdown)
-- [04-02-SUMMARY.md](./phases/04-robustness/04-02-SUMMARY.md) — Plan 04-02
-  completion (Graceful shutdown sequence)
-- [05-01-SUMMARY.md](./phases/05-validation/05-01-SUMMARY.md) — Plan 05-01
-  completion (Async unit tests)
-- [05-03-SUMMARY.md](./phases/05-validation/05-03-SUMMARY.md) — Plan 05-03
-  completion (Runtime and update tests)
+- [REQUIREMENTS.md](./REQUIREMENTS.md) — v2.0 requirements (being defined)
+- [ROADMAP.md](./ROADMAP.md) — Phase structure
+

@@ -1,0 +1,27 @@
+---
+source: tests/cli/integration_tests.rs
+info:
+  program: artifacts
+  args:
+    - "--help"
+---
+success: true
+exit_code: 0
+----- stdout -----
+TUI for managing NixOS Artifacts
+
+Usage: artifacts [OPTIONS] [FLAKE]
+
+Arguments:
+  [FLAKE]  Path to flake directory (default: current directory)
+
+Options:
+      --machine <MACHINE>      Filter by machine name (repeatable)
+      --home <HOME>            Filter by home-manager user (repeatable)
+      --artifact <ARTIFACT>    Filter by artifact name (repeatable)
+      --log-level <LOG_LEVEL>  Set the logging level [default: info] [possible values: error, warning, info, debug, trace]
+      --no-emoji               Disable emoji output
+  -h, --help                   Print help
+  -V, --version                Print version
+
+----- stderr -----
