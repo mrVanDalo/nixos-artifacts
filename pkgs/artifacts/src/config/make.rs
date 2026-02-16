@@ -2,7 +2,7 @@ use anyhow::Context;
 use log::trace;
 use serde::de::{self, Deserializer};
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, from_str as json_from_str, to_string_pretty};
+use serde_json::{from_str as json_from_str, to_string_pretty, Value};
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -189,8 +189,8 @@ impl MakeConfiguration {
 
         for entry in root.nixos {
             let machine_map = nixos_map.entry(entry.machine.clone()).or_default();
-            for (art_name, art) in entry.artifacts {
-                machine_map.insert(art_name, art);
+            for (artifact_name, artifact) in entry.artifacts {
+                machine_map.insert(artifact_name, artifact);
             }
             if !entry.config.is_empty() {
                 nixos_config.insert(entry.machine, entry.config);
@@ -198,8 +198,8 @@ impl MakeConfiguration {
         }
         for entry in root.home {
             let user_map = home_map.entry(entry.user.clone()).or_default();
-            for (art_name, art) in entry.artifacts {
-                user_map.insert(art_name, art);
+            for (artifact_name, artifact) in entry.artifacts {
+                user_map.insert(artifact_name, artifact);
             }
             if !entry.config.is_empty() {
                 home_config.insert(entry.user, entry.config);

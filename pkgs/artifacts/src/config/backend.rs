@@ -334,12 +334,10 @@ shared_serialize = "./shared_serialize.sh"
         let backend = config.get_backend(&"test".to_string()).unwrap();
         assert!(backend.shared_serialize.is_some());
         assert!(backend.shared_check_serialization.is_some());
-        assert!(
-            backend
-                .shared_serialize
-                .unwrap()
-                .ends_with("shared_serialize.sh")
-        );
+        assert!(backend
+            .shared_serialize
+            .unwrap()
+            .ends_with("shared_serialize.sh"));
     }
 
     #[test]
@@ -354,11 +352,11 @@ home_serialize = "./home_serialize.sh"
         let (_temp_dir, toml_path) = create_temp_backend_toml(content);
         let config = BackendConfiguration::read_backend_config(&toml_path).unwrap();
 
-        let result = config.validate_shared_serialize("test");
-        assert!(result.is_err());
-        let err = result.unwrap_err().to_string();
-        assert!(err.contains("does not support shared artifacts"));
-        assert!(err.contains("missing 'shared_serialize'"));
+        let validation_result = config.validate_shared_serialize("test");
+        assert!(validation_result.is_err());
+        let error_message = validation_result.unwrap_err().to_string();
+        assert!(error_message.contains("does not support shared artifacts"));
+        assert!(error_message.contains("missing 'shared_serialize'"));
     }
 
     #[test]
@@ -375,8 +373,8 @@ shared_serialize = "./shared_serialize.sh"
         let (_temp_dir, toml_path) = create_temp_backend_toml(content);
         let config = BackendConfiguration::read_backend_config(&toml_path).unwrap();
 
-        let result = config.validate_shared_serialize("test");
-        assert!(result.is_ok());
+        let validation_result = config.validate_shared_serialize("test");
+        assert!(validation_result.is_ok());
     }
 
     #[test]
@@ -391,10 +389,10 @@ home_serialize = "./home_serialize.sh"
         let (_temp_dir, toml_path) = create_temp_backend_toml(content);
         let config = BackendConfiguration::read_backend_config(&toml_path).unwrap();
 
-        let result = config.validate_shared_serialize("nonexistent");
-        assert!(result.is_err());
-        let err = result.unwrap_err().to_string();
-        assert!(err.contains("not found"));
+        let validation_result = config.validate_shared_serialize("nonexistent");
+        assert!(validation_result.is_err());
+        let error_message = validation_result.unwrap_err().to_string();
+        assert!(error_message.contains("not found"));
     }
 
     #[test]
@@ -508,11 +506,11 @@ home_serialize = "./home_serialize.sh"
 shared = true
 "#;
         let (_temp_dir, toml_path) = create_temp_backend_toml(content);
-        let result = BackendConfiguration::read_backend_config(&toml_path);
+        let read_result = BackendConfiguration::read_backend_config(&toml_path);
 
-        assert!(result.is_err());
-        let err = result.unwrap_err().to_string();
-        assert!(err.contains("declares shared=true but missing"));
+        assert!(read_result.is_err());
+        let error_message = read_result.unwrap_err().to_string();
+        assert!(error_message.contains("declares shared=true but missing"));
     }
 
     #[test]
@@ -585,10 +583,10 @@ shared = true
 [test]
 "#;
         let (_temp_dir, toml_path) = create_temp_backend_toml(content);
-        let result = BackendConfiguration::read_backend_config(&toml_path);
+        let read_result = BackendConfiguration::read_backend_config(&toml_path);
 
-        assert!(result.is_err());
-        let err = result.unwrap_err().to_string();
-        assert!(err.contains("requires 'nixos_check_serialization' script"));
+        assert!(read_result.is_err());
+        let error_message = read_result.unwrap_err().to_string();
+        assert!(error_message.contains("requires 'nixos_check_serialization' script"));
     }
 }
