@@ -1,252 +1,198 @@
-# Roadmap: v2.0 Robustness
+# Roadmap: NixOS Artifacts Store
 
-**Current Version:** v2.0 ✅ COMPLETE\
-**Created:** 2026-02-16\
-**Previous:** v1.0 Background Job Refactor (5 phases, 18 plans, shipped
-2026-02-15)
+**Current Version:** v3.0 📋 PLANNING  
+**Last Updated:** 2026-02-18
 
 ---
 
 ## Milestones
 
-- ✅ **v1.0 Background Job Refactor** — Phases 1-4 (shipped 2026-02-15) —
-  [Archive](milestones/v1.0-ROADMAP.md)
-- 🔄 **v1.0 Phase 5: Validation — Testing** — Async test architecture (planning)
-- 📋 **v2.0 Robustness** — Phases 6-8 (pending) — End-to-end tests, code
-  quality, smart logging
+- ✅ **v1.0 Background Job Refactor** — Phases 1-4 (shipped 2026-02-15) — [Archive](milestones/v1.0-ROADMAP.md)
+- ✅ **v2.0 Robustness** — Phases 5-8 (shipped 2026-02-17) — [Archive](milestones/v2.0-ROADMAP.md)
+- 📋 **v3.0 TUI Polish** — Phases 9-13 (planning)
 
 ---
 
 ## Current Status
 
-v2.0 milestone initialized. 3 phases planned covering 18 requirements.
+v3.0 TUI Polish milestone in planning. 5 phases covering status fixes, smart generator selection, error handling, script output visibility, and enhanced dialogs.
+
+**v3.0 Goal:** Fix bugs and improve UX in the TUI for better visibility and smarter interactions.
 
 ---
 
 ## Phase Overview
 
-| # | Phase | Goal | Requirements | Success Criteria |
-|---|---|-------|------|--------------|------------------| | 5 | Validation —
-Testing | Update tests for async channel architecture | Channel tests, state
-machine tests, integration tests | 80% coverage, tests pass, insta snapshots | |
-6 | Integration Testing | Verify artifacts actually get created | TEST-01 to
-TEST-06 | 6 test programs that verify backend storage | | 7 | Code Quality |
-Refactor for readability and structure | QUAL-01 to QUAL-07 | Flat call chains,
-no abbreviations, <50 line functions | | 8 | Smart Logging ✅ COMPLETE | Opt-in debug
-logging via CLI argument | LOG-01 to LOG-06 | `--log-file` flag works, no
-logging when omitted |
+| #   | Phase                         | Milestone | Status      | Completed  |
+| --- | ----------------------------- | --------- | ----------- | ---------- |
+| 1   | Foundation                    | v1.0      | Complete    | 2026-02-15 |
+| 2   | Single Artifacts              | v1.0      | Complete    | 2026-02-15 |
+| 3   | Shared Artifacts              | v1.0      | Complete    | 2026-02-15 |
+| 4   | Robustness                    | v1.0      | Complete    | 2026-02-15 |
+| 5   | Validation — Testing          | v2.0      | Complete    | 2026-02-16 |
+| 6   | Integration Testing           | v2.0      | Complete    | 2026-02-16 |
+| 7   | Code Quality                  | v2.0      | Complete    | 2026-02-17 |
+| 8   | Smart Logging                 | v2.0      | Complete    | 2026-02-17 |
+| 9   | Shared Artifact Status Fixes  | v3.0      | Not Started | —          |
+| 10  | Smart Generator Selection     | v3.0      | Not Started | —          |
+| 11  | Error Handling Improvements   | v3.0      | Not Started | —          |
+| 12  | Script Output Visibility      | v3.0      | Not Started | —          |
+| 13  | Enhanced Generator Dialog     | v3.0      | Not Started | —          |
 
-**Total:** 3 phases | 18 requirements | Goal: Robustness & maintainability
-
----
-
-## Phase Details
-
-### Phase 5: Validation — Testing
-
-**Goal:** Update all tests to work with the new async channel-based architecture
-where the TUI runs as foreground, effects execute in a background task, and
-communication happens via `tokio::sync::mpsc` channels.
-
-**Requirements:**
-
-- Update async channel tests for tokio mpsc channel communication
-- Create state machine simulation tests with dual assertion strategy (commands +
-  final state)
-- Update runtime async tests covering tokio::select! branches
-- Maintain view tests unchanged (per user decision)
-- Update integration tests to work with async runtime
-- Add CLI-level integration tests with insta-cmd
-
-**Success Criteria:**
-
-1. State machine tests verify full lifecycle: Pending → Running → Success/Failed
-2. Dual assertion strategy: commands sent match expected variants AND final
-   state correct
-3. 80% coverage for async channel components (channels, select! branches, error
-   handling)
-4. All existing integration tests pass with async runtime
-5. View tests remain unchanged and passing
-6. New CLI integration tests with insta snapshots
-
-**Plans:** 3 plans in 1 wave
-
-Plans:
-
-- [ ] 05-01-PLAN.md — State machine simulation tests with dual assertion
-- [ ] 05-02-PLAN.md — Async runtime tests with select! branch coverage
-- [ ] 05-03-PLAN.md — Integration test updates for async architecture
+**Total:** 13 phases | Goal: TUI Polish
 
 ---
 
-### Phase 6: Integration Testing ✅ COMPLETE
+## v3.0 Phases Detail
 
-**Goal:** Create end-to-end tests that verify artifacts are actually created and
-stored correctly in the backend. ✅
+### Phase 9: Shared Artifact Status Fixes
 
-**Completed:** 2026-02-16 | **Score:** 6/6 requirements satisfied
+**Goal:** Shared artifacts display correct status icons and aggregation
+
+**Dependencies:** None (can start immediately)
 
 **Requirements:**
-
-- ✅ TEST-01: Test can programmatically invoke artifact generation without TUI
-- ✅ TEST-02: Test creates a single artifact with simple configuration
-- ✅ TEST-03: Test verifies generated artifact exists at expected backend
-  location
-- ✅ TEST-04: Test verifies artifact content matches expected format
-- ✅ TEST-05: Test covers both single-machine and shared artifacts
-- ✅ TEST-06: Test runs as part of CI/test suite and fails if artifacts not
-  created
+- UI-01: Shared artifacts show correct status icons (needs-generation/up-to-date instead of pending)
+- STAT-01: Status icons correctly reflect artifact state
+- STAT-02: Shared artifact aggregation properly calculates combined status across machines
 
 **Success Criteria:**
+1. Shared artifacts show "needs-generation" (red icon) when any machine needs regeneration
+2. Shared artifacts show "up-to-date" (green icon) when all machines are current
+3. Shared artifacts never show "pending" status once check_serialization completes
+4. Status aggregation correctly combines states from all machines using the shared artifact
+5. Visual status matches actual backend state after check_serialization runs
 
-1. ✅ Headless test harness can invoke artifact generation programmatically
-2. ✅ Test creates artifact and verifies existence in backend storage
-3. ✅ Test verifies artifact content is correct
-4. ✅ Tests for both single and shared artifacts
-5. ✅ All tests pass in CI
-6. ✅ Tests fail meaningfully when artifact creation breaks
+---
 
-**Plans:** 5 plans in 2 waves — COMPLETE
+### Phase 10: Smart Generator Selection
 
-Plans:
+**Goal:** Generator selection skips dialog when only one unique generator exists
 
-- [x] 06-01-PLAN.md — Headless test harness infrastructure
-- [x] 06-02-PLAN.md — Backend storage verification tests
-- [x] 06-03-PLAN.md — Shared artifact and CI tests
-- [x] 06-04-PLAN.md — Edge case and error scenario tests
-- [x] 06-05-PLAN.md — Diagnostic tooling and failure investigation
+**Dependencies:** Phase 9 (status fixes should be in place first)
 
-**Artifacts Created:**
+**Requirements:**
+- UI-02: Generator selection dialog skips when only one unique generator
+- GEN-01: Generators compared by Nix store path for uniqueness
+- GEN-02: Single unique generator automatically selected without dialog
+- GEN-03: Multiple unique generators show selection dialog with full context
+- GEN-04: Dialog shows generator context (machine name, user name, home-manager vs nixos)
 
+**Success Criteria:**
+1. When only one unique generator (by Nix store path) exists, selection happens without showing dialog
+2. When multiple unique generators exist, selection dialog appears with machine/user context
+3. Generator comparison uses Nix store path, not just artifact reference
+4. Dialog clearly indicates home-manager vs nixos configuration sources
+5. Machine names and user names are visible in the selection dialog when shown
+
+---
+
+### Phase 11: Error Handling Improvements
+
+**Goal:** TUI errors display properly to stderr without polluting normal output
+
+**Dependencies:** Phase 10 (builds on TUI flow improvements)
+
+**Requirements:**
+- UI-03: TUI crashes display errors to stderr; all other output goes only to log file when --log-file given
+- ERR-01: TUI initialization failures print clear error to stderr before exit
+- ERR-02: Terminal restoration failures print clear error to stderr
+- ERR-03: All runtime errors visible in TUI, not stdout/stderr
+- ERR-04: Panic handler prints to stderr and attempts terminal restoration
+
+**Success Criteria:**
+1. TUI initialization failures (e.g., bad flake.nix, missing backend.toml) print clear error to stderr and exit non-zero
+2. When --log-file is provided, all non-error output goes to log file only (no stdout/stderr pollution)
+3. Terminal restoration failures (raw mode, alternate screen) print error to stderr
+4. All runtime errors during TUI operation display within the TUI interface, not on terminal
+5. Panic handler catches unwinding panics, prints to stderr, and attempts terminal restoration before aborting
+
+---
+
+### Phase 12: Script Output Visibility
+
+**Goal:** Users can see stdout/stderr from check/generator/serialize scripts in the TUI
+
+**Dependencies:** Phase 11 (error handling foundation required)
+
+**Requirements:**
+- UI-04: Script output (stdout/stderr from check/generator/serialize) visible in TUI interface
+- OUT-01: Script stdout captured and stored for TUI display
+- OUT-02: Script stderr captured and stored for TUI display
+- OUT-03: Output display updates in real-time during script execution
+- OUT-04: Previous script output accessible in artifact detail view
+
+**Success Criteria:**
+1. Script stdout is captured and stored during check_serialization, generator, and serialize operations
+2. Script stderr is captured and stored alongside stdout
+3. Output is visible in real-time during script execution (streamed or updated periodically)
+4. After generation completes, previous script output is viewable in an artifact detail view
+5. Output capture works for both single artifacts and shared artifacts across machines
+
+---
+
+### Phase 13: Enhanced Generator Dialog
+
+**Goal:** Generator selection dialog displays rich context about artifacts
+
+**Dependencies:** Phase 12 (script output infrastructure, Phase 10 for selection dialog foundation)
+
+**Requirements:**
+- UI-05: Generator dialog shows machine/user/home-manager context, shared status, artifact name, prompt descriptions
+- DIALOG-01: Generator dialog displays artifact name
+- DIALOG-02: Generator dialog displays artifact description if available
+- DIALOG-03: Generator dialog shows all prompt descriptions for the artifact
+- DIALOG-04: Generator dialog indicates if artifact is shared across machines
+- DIALOG-05: Generator dialog shows which machines/users use this artifact
+
+**Success Criteria:**
+1. Generator dialog prominently displays the artifact name being generated
+2. If an artifact description is defined in Nix config, it appears in the dialog
+3. All prompt descriptions for the artifact are listed before the generator selection
+4. Dialog clearly indicates when an artifact is shared vs per-machine
+5. For shared artifacts, dialog lists all machines and users that reference the artifact
+
+---
+
+## Completed Milestones
+
+<details>
+<summary>✅ v2.0 Robustness (Phases 5-8) — SHIPPED 2026-02-17</summary>
+
+**Goal:** End-to-end tests, code quality, smart logging
+
+**Requirements:**
+- TEST-01 to TEST-06: End-to-end verification
+- QUAL-01 to QUAL-07: Code readability & structure
+- LOG-01 to LOG-06: Opt-in debug logging
+
+**Phases:**
+
+- [x] Phase 5: Validation — Testing (3/3 plans) — 2026-02-16
+- [x] Phase 6: Integration Testing (5/5 plans) — 2026-02-16
+- [x] Phase 7: Code Quality (3/3 plans) — 2026-02-17
+- [x] Phase 8: Smart Logging (3/3 plans) — 2026-02-17
+
+**Key Accomplishments:**
 - 33+ e2e tests across 5 test modules
 - Headless API for programmatic artifact generation
 - Diagnostic tooling with auto-dump on failure
-- TESTING.md documentation
-
-**Report:**
-[06-VERIFICATION.md](.planning/phases/06-integration-testing/06-VERIFICATION.md)
-
----
-
-### Phase 7: Code Quality
-
-**Goal:** Refactor code to improve readability with flattened call chains and
-clear naming.
-
-**Requirements:**
-
-- QUAL-01: No function chains deeper than 2 levels (f(g(x)) allowed, f(g(h(x)))
-  not allowed)
-- QUAL-02: Functions return results that are passed to next function, not nested
-  calls
-- QUAL-03: All function names are descriptive and unabbreviated
-- QUAL-04: All variable names are descriptive and unabbreviated
-- QUAL-05: Functions are under 50 lines
-- QUAL-06: Each function has single, clear responsibility
-- QUAL-07: Refactoring limited to `pkgs/artifacts/src/` directory
-
-**Success Criteria:**
-
-1. No nested function calls deeper than 2 levels in refactored code
-2. All functions have descriptive names (3+ words preferred)
-3. No abbreviated variable names (no `cfg`, `hdl`, `ctx`)
-4. All functions under 50 lines
-5. Each function has single responsibility
-6. Code review confirms improved readability
-
-**Plans:** 3 plans in 3 waves — COMPLETE
-
-Plans:
-
-- [x] 07-01-PLAN.md — Split handler functions in update.rs
-- [x] 07-02-PLAN.md — Extract JSON and command helpers in serialization.rs
-- [x] 07-03-PLAN.md — Rename abbreviated variables across all files
-
-**Artifacts Created:**
-
-- 12 refactored handler functions in update.rs (all under 50 lines)
+- 12 refactored handler functions (all under 50 lines)
 - 18 helper functions in serialization.rs
-- format_step_logs helper for log accumulation
-- build_* helpers for JSON creation and command building
-- Descriptive variable names in config modules
-
-**Report:** [07-VERIFICATION.md](.planning/phases/07-code-quality/07-VERIFICATION.md)
-
----
-
-### Phase 8: Smart Logging
-
-**Goal:** Replace hardcoded debug logging with opt-in CLI argument.
-
-**Completed:** 2026-02-17 | **Score:** 6/6 requirements satisfied
-
-**Requirements:**
-
-- ✅ LOG-01: CLI accepts `--log-file <path>` argument (revised from --log-output)
-- ✅ LOG-02: When `--log-file` is provided, comprehensive debug logs written to
-  specified file
-- ✅ LOG-03: When `--log-file` is not provided, no debug logging occurs
-- ✅ LOG-04: Debug logs include: timestamps, effect execution, channel messages,
-  backend calls
-- ✅ LOG-05: Log file path can be absolute or relative
-- ✅ LOG-06: Existing `/tmp/artifacts_debug.log` hardcoded path removed
-
-**Success Criteria:**
-
-1. ✅ CLI has `--log-file` flag with file path argument
-2. ✅ With flag: detailed debug logs written to specified file
-3. ✅ Without flag: zero debug logging (silent operation)
-4. ✅ Log format includes timestamps and context
-5. ✅ Old hardcoded log path removed
-6. ✅ Tests verify logging behavior
-
-**Plans:** 3 plans in 3 waves — COMPLETE
-
-Plans:
-
-- [x] 08-01-PLAN.md — Add --log-file CLI argument with feature flag
-- [x] 08-02-PLAN.md — Implement macro API and Logger infrastructure
-- [x] 08-03-PLAN.md — Replace hardcoded logging and add tests
-
-**Artifacts Created:**
-
 - Feature-gated logging with `--log-file` and `--log-level` CLI arguments
-- Zero-cost macro API (error!, warn!, info!, debug!)
-- Logger struct with fail-fast validation and real-time streaming
-- 11 comprehensive logging tests
-- Hardcoded `/tmp/artifacts_debug.log` completely removed
+- Zero-cost logging (no overhead when disabled)
 
-**Report:**
-[08-VERIFICATION.md](.planning/phases/08-smart-logging/08-VERIFICATION.md)
+**Audit Report:** [v2.0-MILESTONE-AUDIT.md](milestones/v2.0-MILESTONE-AUDIT.md)
 
----
+</details>
 
-## Requirement Traceability
+<details>
+<summary>✅ v1.0 Background Job Refactor (Phases 1-4) — SHIPPED 2026-02-15</summary>
 
-| Requirement | Phase | Plan  | Status      |
-| ----------- | ----- | ----- | ----------- |
-| TEST-01     | 6     | 06-01 | ✅ Complete |
-| TEST-02     | 6     | 06-02 | ✅ Complete |
-| TEST-03     | 6     | 06-02 | ✅ Complete |
-| TEST-04     | 6     | 06-02 | ✅ Complete |
-| TEST-05     | 6     | 06-03 | ✅ Complete |
-| TEST-06     | 6     | 06-03 | ✅ Complete |
-| QUAL-01     | 7     | 07-01 | Pending     |
-| QUAL-02     | 7     | 07-01 | Pending     |
-| QUAL-03     | 7     | 07-02 | Pending     |
-| QUAL-04     | 7     | 07-02 | Pending     |
-| QUAL-05     | 7     | 07-03 | Pending     |
-| QUAL-06     | 7     | 07-03 | Pending     |
-| QUAL-07     | 7     | All   | Pending     |
-| LOG-01      | 8     | 08-01 | ✅ Complete |
-| LOG-02      | 8     | 08-02 | ✅ Complete |
-| LOG-03      | 8     | 08-02 | ✅ Complete |
-| LOG-04      | 8     | 08-02 | ✅ Complete |
-| LOG-05      | 8     | 08-01 | ✅ Complete |
-| LOG-06      | 8     | 08-03 | ✅ Complete |
+See [v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 
-**Coverage:** 18/18 requirements satisfied ✓
+</details>
 
 ---
 
-_Updated: 2026-02-16 for v2.0 Robustness milestone_
+_Updated: 2026-02-18 for v3.0 TUI Polish planning_

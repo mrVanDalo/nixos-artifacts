@@ -83,29 +83,10 @@
                 ''
               )
               {
-                backends = {
-                  test.nixos_check_serialization = pkgs.writers.writeBash "test_check" "exit 1"; # always fail
-                  test.nixos_serialize = pkgs.writers.writeBash "test_serialize" ''
-                    for file in "$out"/*; do
-                        if [ -f "$file" ]; then
-                            echo "=== Content of $file ==="
-                            cat "$file"
-                            echo "========================="
-                        fi
-                    done
-                  '';
-                  test.home_check_serialization = pkgs.writers.writeBash "test_home_check" "exit 1";
-                  test.home_serialize = pkgs.writers.writeBash "test_home_serialize" ''
-                    for file in "$out"/*; do
-                        if [ -f "$file" ]; then
-                            echo "=== Home Content of $file ==="
-                            cat "$file"
-                            echo "========================="
-                        fi
-                    done
-                  '';
-                };
+                # No default backends - users must configure their own
               };
+
+          packages.artifacts-test = pkgs.callPackage ./backends/test { inherit self'; };
         };
       systems = [
         "x86_64-linux"

@@ -1,118 +1,126 @@
-# Requirements: NixOS Artifacts Store — v2.0 Robustness
+# Requirements: v3.0 TUI Polish
 
-**Defined:** 2026-02-16 **Core Value:** The TUI must never freeze during
-long-running operations — all effect execution runs in a background job while
-the TUI remains interactive.
+**Defined:** 2026-02-18  
+**Core Value:** The TUI must never freeze during long-running operations — all
+effect execution runs in a background job while the TUI remains interactive.
 
----
+## v1 Requirements (v3.0 TUI Polish)
 
-## v1 Requirements (v2.0 Scope)
+Requirements for v3.0 TUI Polish milestone. Each maps to roadmap phases.
 
-### Testing — End-to-End Verification
+### UI/UX Fixes
 
-- [x] **TEST-01**: Test can programmatically invoke artifact generation without
-      TUI
-- [x] **TEST-02**: Test creates a single artifact with simple configuration
-- [x] **TEST-03**: Test verifies generated artifact exists at expected backend
-      location
-- [x] **TEST-04**: Test verifies artifact content matches expected format
-- [x] **TEST-05**: Test covers both single-machine and shared artifacts
-- [x] **TEST-06**: Test runs as part of CI/test suite and fails if artifacts not
-      created
+- [ ] **UI-01**: Shared artifacts transition from pending to correct status after check completes (needs-generation/up-to-date)
+- [ ] **UI-02**: Generator selection dialog skips when only one unique generator (same Nix store path)
+- [ ] **UI-03**: TUI crashes display errors to stderr; all other output goes only to log file when --log-file given
+- [ ] **UI-04**: Script output (stdout/stderr from check/generator/serialize) visible in TUI interface
+- [ ] **UI-05**: Generator dialog shows machine/user/home-manager context, shared status, artifact name, prompt descriptions
 
-### Code Quality — Readability & Structure
+### Status Display
 
-- [ ] **QUAL-01**: No function chains deeper than 2 levels (f(g(x)) allowed,
-      f(g(h(x))) not allowed)
-- [ ] **QUAL-02**: Functions return results that are passed to next function,
-      not nested calls
-- [ ] **QUAL-03**: All function names are descriptive and unabbreviated (min 3
-      words preferred)
-- [ ] **QUAL-04**: All variable names are descriptive and unabbreviated (no
-      `cfg`, `hdl`, `ctx`)
-- [ ] **QUAL-05**: Functions are under 50 lines (except match-heavy update
-      functions)
-- [ ] **QUAL-06**: Each function has single, clear responsibility
-- [ ] **QUAL-07**: Refactoring limited to `pkgs/artifacts/src/` directory
+- [ ] **STAT-01**: Status icons correctly reflect artifact state (pending, needs-generation, up-to-date, generating, done, failed)
+- [ ] **STAT-02**: Shared artifact aggregation properly calculates combined status across machines
 
-### Logging — Opt-in Debug Output
+### Output Capture
 
-- [ ] **LOG-01**: CLI accepts `--log-output <file>` argument
-- [ ] **LOG-02**: When `--log-output` is provided, comprehensive debug logs
-      written to specified file
-- [ ] **LOG-03**: When `--log-output` is not provided, no debug logging occurs
-- [ ] **LOG-04**: Debug logs include: timestamps, effect execution, channel
-      messages, backend calls
-- [ ] **LOG-05**: Log file path can be absolute or relative
-- [ ] **LOG-06**: Existing `/tmp/artifacts_debug.log` hardcoded path removed
+- [ ] **OUT-01**: Script stdout captured and stored for TUI display
+- [ ] **OUT-02**: Script stderr captured and stored for TUI display
+- [ ] **OUT-03**: Output display updates in real-time during script execution
+- [ ] **OUT-04**: Previous script output accessible in artifact detail view
 
----
+### Error Handling
 
-## v2 Requirements (Deferred)
+- [ ] **ERR-01**: TUI initialization failures print clear error to stderr before exit
+- [ ] **ERR-02**: Terminal restoration failures print clear error to stderr
+- [ ] **ERR-03**: All runtime errors visible in TUI, not stdout/stderr
+- [ ] **ERR-04**: Panic handler prints to stderr and attempts terminal restoration
 
-### Future Code Quality
+### Generator Selection
 
-- **QUAL-08**: Apply naming conventions to Nix modules (not just Rust code)
-- **QUAL-09**: Add linting rules to enforce naming conventions
-- **QUAL-10**: Documentation for all public functions
+- [ ] **GEN-01**: Generators compared by Nix store path for uniqueness
+- [ ] **GEN-02**: Single unique generator automatically selected without dialog
+- [ ] **GEN-03**: Multiple unique generators show selection dialog with full context
+- [ ] **GEN-04**: Dialog shows generator context: machine name, user name, home-manager vs nixos
 
-### Future Testing
+### Enhanced Dialog
 
-- **TEST-07**: Fuzz testing for artifact name formats
-- **TEST-08**: Performance benchmarks for generation time
-- **TEST-09**: Stress tests with 100+ artifacts
+- [ ] **DIALOG-01**: Generator dialog displays artifact name
+- [ ] **DIALOG-02**: Generator dialog displays artifact description if available
+- [ ] **DIALOG-03**: Generator dialog shows all prompt descriptions for the artifact
+- [ ] **DIALOG-04**: Generator dialog indicates if artifact is shared across machines
+- [ ] **DIALOG-05**: Generator dialog shows which machines/users use this artifact
 
-### Future Logging
+## v2 Requirements
 
-- **LOG-07**: Structured logging (JSON format option)
-- **LOG-08**: Log level filtering (trace, debug, info)
-- **LOG-09**: Console output in addition to file logging
+Deferred to future release. Tracked but not in current roadmap.
 
----
+### Progress Reporting
+
+- **PROG-01**: Progress percentage shown during long-running effects
+- **PROG-02**: Spinner or progress bar for active operations
+- **PROG-03**: Estimated time remaining for known-duration operations
+
+### Cancellation
+
+- **CANC-01**: User can cancel in-flight effects via keybinding
+- **CANC-02**: Cancellation propagates to background job
+- **CANC-03**: Partial cleanup on cancellation
+
+### Concurrent Execution
+
+- **CONC-01**: Independent effects can execute concurrently
+- **CONC-02**: Artifact dependencies respected in concurrent execution
+- **CONC-03**: Resource limits for concurrent script execution
 
 ## Out of Scope
 
-| Feature              | Reason                                                 |
-| -------------------- | ------------------------------------------------------ |
-| Progress bars        | Not needed for v2.0; atomic operations are fast enough |
-| Effect cancellation  | Complex UX, defer to v3.0                              |
-| Concurrent execution | Sequential processing is correct and simple            |
-| Web-based UI         | CLI + TUI sufficient for v2.0                          |
-| Metrics/telemetry    | Out of scope for robustness milestone                  |
+Explicitly excluded. Documented to prevent scope creep.
 
----
+| Feature | Reason |
+|---------|--------|
+| Real-time log tailing | Complex terminal UI, defer to v3.1+ |
+| Interactive prompt editing | Not requested, current prompts sufficient |
+| Script input/interaction | Scripts must be fully automated |
+| Performance profiling | Not a user-facing TUI concern |
 
 ## Traceability
 
-| Requirement | Phase   | Status      |
-| ----------- | ------- | ----------- |
-| TEST-01     | Phase 6 | ✅ Complete |
-| TEST-02     | Phase 6 | ✅ Complete |
-| TEST-03     | Phase 6 | ✅ Complete |
-| TEST-04     | Phase 6 | ✅ Complete |
-| TEST-05     | Phase 6 | ✅ Complete |
-| TEST-06     | Phase 6 | ✅ Complete |
-| QUAL-01     | Phase 7 | Pending     |
-| QUAL-02     | Phase 7 | Pending     |
-| QUAL-03     | Phase 7 | Pending     |
-| QUAL-04     | Phase 7 | Pending     |
-| QUAL-05     | Phase 7 | Pending     |
-| QUAL-06     | Phase 7 | Pending     |
-| QUAL-07     | Phase 7 | Pending     |
-| LOG-01      | Phase 8 | Pending     |
-| LOG-02      | Phase 8 | Pending     |
-| LOG-03      | Phase 8 | Pending     |
-| LOG-04      | Phase 8 | Pending     |
-| LOG-05      | Phase 8 | Pending     |
-| LOG-06      | Phase 8 | Pending     |
+Which phases cover which requirements. Updated during roadmap creation.
+
+| Requirement | Phase   | Status  |
+|-------------|---------|---------|
+| UI-01       | Phase 9 | Pending |
+| UI-02       | Phase 10 | Pending |
+| UI-03       | Phase 11 | Pending |
+| UI-04       | Phase 12 | Pending |
+| UI-05       | Phase 13 | Pending |
+| STAT-01     | Phase 9 | Pending |
+| STAT-02     | Phase 9 | Pending |
+| OUT-01      | Phase 12 | Pending |
+| OUT-02      | Phase 12 | Pending |
+| OUT-03      | Phase 12 | Pending |
+| OUT-04      | Phase 12 | Pending |
+| ERR-01      | Phase 11 | Pending |
+| ERR-02      | Phase 11 | Pending |
+| ERR-03      | Phase 11 | Pending |
+| ERR-04      | Phase 11 | Pending |
+| GEN-01      | Phase 10 | Pending |
+| GEN-02      | Phase 10 | Pending |
+| GEN-03      | Phase 10 | Pending |
+| GEN-04      | Phase 10 | Pending |
+| DIALOG-01   | Phase 13 | Pending |
+| DIALOG-02   | Phase 13 | Pending |
+| DIALOG-03   | Phase 13 | Pending |
+| DIALOG-04   | Phase 13 | Pending |
+| DIALOG-05   | Phase 13 | Pending |
 
 **Coverage:**
 
-- v1 requirements: 18 total
-- Mapped to phases: 18
+- v1 requirements: 20 total
+- Mapped to phases: 20 ✓
 - Unmapped: 0 ✓
 
 ---
 
-_Requirements defined: 2026-02-16_ _Last updated: 2026-02-16 after 06-03 - all
-TEST requirements completed_
+_Requirements defined: 2026-02-18_  
+_Updated: 2026-02-18 (roadmap complete)_
