@@ -1,5 +1,6 @@
 use crate::backend::helpers::pretty_print_shell_escape;
-use log::{debug, trace};
+use crate::log_debug;
+use crate::log_trace;
 
 pub fn build_make_from_flake(flake_path: &std::path::Path) -> anyhow::Result<std::path::PathBuf> {
     // Ensure nix is available
@@ -30,8 +31,8 @@ pub fn build_make_from_flake(flake_path: &std::path::Path) -> anyhow::Result<std
         )
         .collect::<Vec<_>>()
         .join(" ");
-    debug!("Running nix build on {}", flake_path.display());
-    trace!("{}", pretty);
+    log_debug!("Running nix build on {}", flake_path.display());
+    log_trace!("{}", pretty);
 
     command.args(&arguments);
     let output = command

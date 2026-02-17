@@ -6,12 +6,12 @@ use crate::config::backend::BackendConfiguration;
 use crate::config::make::MakeConfiguration;
 use crate::logging::log_component;
 use crate::tui::channels::{EffectCommand, EffectResult};
-use tokio_util::sync::CancellationToken;
 use crate::tui::events::EventSource;
 use crate::tui::views::render;
 use anyhow::Result;
 use ratatui::{Terminal, backend::Backend};
 use std::time::{Duration, Instant};
+use tokio_util::sync::CancellationToken;
 
 /// The result of running the TUI application
 #[derive(Debug, Clone)]
@@ -137,10 +137,17 @@ where
     E: EventSource,
 {
     // Spawn background task with shutdown token
-    log_component("RUNTIME", &format!("Spawning background task with {} entries", model.entries.len()));
+    log_component(
+        "RUNTIME",
+        &format!(
+            "Spawning background task with {} entries",
+            model.entries.len()
+        ),
+    );
     let shutdown_token = CancellationToken::new();
     let child_token = shutdown_token.child_token();
-    let (cmd_tx, mut res_rx) = crate::tui::background::spawn_background_task(backend, make, child_token);
+    let (cmd_tx, mut res_rx) =
+        crate::tui::background::spawn_background_task(backend, make, child_token);
     log_component("RUNTIME", "Background task spawned");
 
     // Setup Ctrl+C signal handler for graceful shutdown
@@ -176,19 +183,30 @@ where
                     let msg = result_to_message(result);
                     log_component("RUNTIME", "Converted result to message");
                     let (new_model, effect) = update(model, msg);
-                    log_component("RUNTIME", &format!("Model updated, entries: {}, selected: {}", new_model.entries.len(), new_model.selected_index));
+                    log_component(
+                        "RUNTIME",
+                        &format!(
+                            "Model updated, entries: {}, selected: {}",
+                            new_model.entries.len(),
+                            new_model.selected_index
+                        ),
+                    );
                     model = new_model;
-                    
+
                     // CRITICAL: Execute any effects returned from processing results
                     // For example, GeneratorFinished returns Serialize effect
                     let cmds = effect_to_command(effect);
                     if !cmds.is_empty() {
-                        log_component("RUNTIME", &format!("Executing {} commands from result", cmds.len()));
+                        log_component(
+                            "RUNTIME",
+                            &format!("Executing {} commands from result", cmds.len()),
+                        );
                         for cmd in cmds {
                             log_component("RUNTIME", &format!("Sending command: {:?}", cmd));
                             if cmd_tx.send(cmd).is_err() {
                                 log_component("RUNTIME", "Background task closed, exiting");
-                                model.error = Some("Connection to background task lost".to_string());
+                                model.error =
+                                    Some("Connection to background task lost".to_string());
                                 return Ok(RunResult {
                                     final_model: model,
                                     frames_rendered,
@@ -217,26 +235,24 @@ where
                 // Check for quit - initiate graceful shutdown
                 if effect.is_quit() || shutdown_token.is_cancelled() {
                     log_component("RUNTIME", "Initiating graceful shutdown");
-                    
+
                     // 1. Signal background to shut down after current work
                     shutdown_token.cancel();
                     log_component("RUNTIME", "Shutdown signal sent to background");
-                    
+
                     // 2. Drain any pending results with timeout
                     const SHUTDOWN_DRAIN_TIMEOUT: Duration = Duration::from_secs(5);
                     let drain_start = Instant::now();
-                    
+
                     while drain_start.elapsed() < SHUTDOWN_DRAIN_TIMEOUT {
-                        match tokio::time::timeout(
-                            Duration::from_millis(100),
-                            res_rx.recv()
-                        ).await {
+                        match tokio::time::timeout(Duration::from_millis(100), res_rx.recv()).await
+                        {
                             Ok(Some(result)) => {
                                 log_component("RUNTIME", "Drained result during shutdown");
                                 let msg = result_to_message(result);
                                 let (new_model, _) = update(model, msg);
                                 model = new_model;
-                                
+
                                 // Re-render to show final state
                                 terminal.draw(|f| render(f, &model))?;
                                 frames_rendered += 1;
@@ -249,28 +265,34 @@ where
                             Err(_) => {
                                 // Timeout - check if background exited
                                 if cmd_tx.is_closed() {
-                                    log_component("RUNTIME", "Command channel closed, background exited");
+                                    log_component(
+                                        "RUNTIME",
+                                        "Command channel closed, background exited",
+                                    );
                                     break;
                                 }
                             }
                         }
                     }
-                    
+
                     if drain_start.elapsed() >= SHUTDOWN_DRAIN_TIMEOUT {
                         log_component("RUNTIME", "Drain timeout reached, proceeding with exit");
                     }
-                    
+
                     // 3. Drop command channel to signal no more commands
                     drop(cmd_tx);
                     log_component("RUNTIME", "Command channel dropped");
-                    
+
                     // Break out of main loop - cleanup will happen naturally
                     break;
                 }
 
                 // Send effects to background if they need execution
                 let cmds = effect_to_command(effect);
-                log_component("RUNTIME", &format!("Sending {} commands from event", cmds.len()));
+                log_component(
+                    "RUNTIME",
+                    &format!("Sending {} commands from event", cmds.len()),
+                );
                 for cmd in cmds {
                     log_component("RUNTIME", &format!("Sending command: {:?}", cmd));
                     if cmd_tx.send(cmd).is_err() {
@@ -285,20 +307,30 @@ where
                 loop {
                     match res_rx.try_recv() {
                         Ok(result) => {
-                            log_component("RUNTIME", &format!("Received result after command: {:?}", result));
+                            log_component(
+                                "RUNTIME",
+                                &format!("Received result after command: {:?}", result),
+                            );
                             let msg = result_to_message(result);
                             let (new_model, effect) = update(model, msg);
                             model = new_model;
-                            
+
                             // Execute any follow-up effects
                             let cmds = effect_to_command(effect);
                             if !cmds.is_empty() {
-                                log_component("RUNTIME", &format!("Executing {} follow-up commands", cmds.len()));
+                                log_component(
+                                    "RUNTIME",
+                                    &format!("Executing {} follow-up commands", cmds.len()),
+                                );
                                 for cmd in cmds {
-                                    log_component("RUNTIME", &format!("Sending command: {:?}", cmd));
+                                    log_component(
+                                        "RUNTIME",
+                                        &format!("Sending command: {:?}", cmd),
+                                    );
                                     if cmd_tx.send(cmd).is_err() {
                                         log_component("RUNTIME", "Background task closed, exiting");
-                                        model.error = Some("Connection to background task lost".to_string());
+                                        model.error =
+                                            Some("Connection to background task lost".to_string());
                                         return Ok(RunResult {
                                             final_model: model,
                                             frames_rendered,
@@ -329,7 +361,7 @@ where
                     let (new_model, effect) = update(model, msg);
                     log_component("RUNTIME", &format!("Model updated via select, entries: {}, selected: {}", new_model.entries.len(), new_model.selected_index));
                     model = new_model;
-                    
+
                     // Execute any effects returned from result processing
                     let cmds = effect_to_command(effect);
                     if !cmds.is_empty() {
@@ -357,7 +389,7 @@ where
                     log_component("RUNTIME", "Shutdown signal received while waiting, initiating exit");
                     // Trigger graceful shutdown - will be handled at start of next loop iteration
                 }
-                
+
                 // Wait for events
                 _ = tokio::time::sleep(std::time::Duration::from_millis(10)) => {
                     // Yield to async runtime - events will be checked on next iteration
@@ -372,8 +404,6 @@ where
     })
 }
 
-
-
 /// Execute the initial effect (if any) by sending to background.
 /// Returns the updated model after processing the result.
 async fn execute_initial_effect(
@@ -383,7 +413,10 @@ async fn execute_initial_effect(
 ) -> Result<Model> {
     // Send all initial effects to background
     let cmds = effect_to_command(effect);
-    log_component("RUNTIME", &format!("Sending {} initial commands", cmds.len()));
+    log_component(
+        "RUNTIME",
+        &format!("Sending {} initial commands", cmds.len()),
+    );
     for cmd in &cmds {
         log_component("RUNTIME", &format!("Sending command: {:?}", cmd));
     }
@@ -395,8 +428,6 @@ async fn execute_initial_effect(
 
     Ok(model)
 }
-
-
 
 /// Convert an Effect into EffectCommands for channel transmission.
 /// Returns a vector of commands (may be empty for None/Quit).
@@ -969,9 +1000,9 @@ mod tests {
         use crate::config::backend::BackendConfiguration;
         use crate::config::make::MakeConfiguration;
         use crate::tui::background::spawn_background_task;
-        use tokio_util::sync::CancellationToken;
-        use tokio::time::timeout;
         use std::time::Duration;
+        use tokio::time::timeout;
+        use tokio_util::sync::CancellationToken;
 
         // Create minimal configurations
         let backend_config = BackendConfiguration {
@@ -990,7 +1021,8 @@ mod tests {
         };
 
         let shutdown_token = CancellationToken::new();
-        let (cmd_tx, mut res_rx) = spawn_background_task(backend_config, make_config, shutdown_token);
+        let (cmd_tx, mut res_rx) =
+            spawn_background_task(backend_config, make_config, shutdown_token);
 
         // Send a command through the channel
         let cmd = EffectCommand::CheckSerialization {
@@ -1026,7 +1058,11 @@ mod tests {
         // Tick message should increment counter
         let (new_model, effect) = update(model, Msg::Tick);
 
-        assert_eq!(new_model.tick_count, initial_tick + 1, "Tick should increment counter");
+        assert_eq!(
+            new_model.tick_count,
+            initial_tick + 1,
+            "Tick should increment counter"
+        );
         assert!(effect.is_none(), "Tick should not produce effects");
     }
 
@@ -1048,7 +1084,10 @@ mod tests {
         let (new_model, effect) = update(model, Msg::Key(key_event));
 
         // 'j' should navigate down
-        assert_eq!(new_model.selected_index, 1, "j key should move selection down");
+        assert_eq!(
+            new_model.selected_index, 1,
+            "j key should move selection down"
+        );
         assert!(effect.is_none(), "Navigation should not produce effects");
     }
 
@@ -1058,9 +1097,9 @@ mod tests {
         use crate::config::backend::BackendConfiguration;
         use crate::config::make::MakeConfiguration;
         use crate::tui::background::spawn_background_task;
-        use tokio_util::sync::CancellationToken;
-        use tokio::time::timeout;
         use std::time::Duration;
+        use tokio::time::timeout;
+        use tokio_util::sync::CancellationToken;
 
         // Create configurations
         let backend_config = BackendConfiguration {
@@ -1079,7 +1118,8 @@ mod tests {
         };
 
         let shutdown_token = CancellationToken::new();
-        let (cmd_tx, mut res_rx) = spawn_background_task(backend_config, make_config, shutdown_token.clone());
+        let (cmd_tx, mut res_rx) =
+            spawn_background_task(backend_config, make_config, shutdown_token.clone());
 
         // Send multiple commands
         for i in 0..3 {
@@ -1119,7 +1159,9 @@ mod tests {
         // Background should exit cleanly
         let final_result = timeout(Duration::from_millis(100), res_rx.recv()).await;
         // Channel may return None or timeout, both are acceptable
-        assert!(final_result.is_ok() || final_result.is_err(),
-                "Shutdown should complete without panic");
+        assert!(
+            final_result.is_ok() || final_result.is_err(),
+            "Shutdown should complete without panic"
+        );
     }
 }

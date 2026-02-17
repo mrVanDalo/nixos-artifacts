@@ -10,16 +10,17 @@ Architecture pattern.
 
 ## Current State
 
-**Shipped:** v1.0 Background Job Refactor — 2026-02-15  
-**Status:** Production-ready TUI with async effect handling  
-**Tests:** 64 passing (21 new async tests)  
+**Shipped:** v1.0 Background Job Refactor — 2026-02-15\
+**Status:** Production-ready TUI with async effect handling\
+**Tests:** 64 passing (21 new async tests)\
 **Coverage:** 35/35 v1 requirements complete
 
-**Key Achievement:** TUI never freezes during long-running operations. All effect
-execution runs in a background job while the TUI remains interactive and
+**Key Achievement:** TUI never freezes during long-running operations. All
+effect execution runs in a background job while the TUI remains interactive and
 responsive.
 
 **Performance:**
+
 - Sub-50ms event polling during effect execution
 - Zero blocking calls in TUI runtime loop
 - Graceful shutdown with in-flight command completion
@@ -46,6 +47,7 @@ while the TUI remains interactive.
 ### Original Requirements (Pre-v1.0)
 
 **Validated:**
+
 - ✓ Artifact definitions via NixOS modules (artifacts.store.*)
 - ✓ Backend plugin system via backend.toml
 - ✓ TUI with Elm Architecture (Model-Update-View-Effect)
@@ -55,6 +57,7 @@ while the TUI remains interactive.
 - ✓ Temporary file handling with tempfile crate
 
 **Active (moved to Validated in v1.0):**
+
 - Background job architecture with tokio channels
 - TUI remains responsive during all effect operations
 - Sequential processing of effects in background (FIFO queue)
@@ -110,6 +113,7 @@ effect execution runs in a background job while the TUI remains interactive.
 ## Context
 
 **Current Stack:**
+
 - Rust CLI with tokio async runtime
 - ratatui for TUI with Elm Architecture
 - tokio mpsc unbounded channels for foreground/background
@@ -119,6 +123,7 @@ effect execution runs in a background job while the TUI remains interactive.
 - 21 async tests + 43 existing tests = 64 total
 
 **v1.0 Achievements:**
+
 - Complete async channel architecture
 - All effect types (single + shared) working via background job
 - Graceful shutdown with CancellationToken
@@ -136,27 +141,32 @@ effect execution runs in a background job while the TUI remains interactive.
 
 ## Key Decisions
 
-| Decision | Rationale | Outcome |
-|----------|-----------|---------|
-| **Unbounded channels** | TUI must never block on send | ✓ Good — no backpressure issues |
-| **Sequential processing** | Avoid race conditions | ✓ Good — FIFO order correct |
-| **spawn_blocking for I/O** | Required for subprocess in async | ✓ Good — scripts don't block runtime |
-| **CancellationToken** | Clean shutdown integration | ✓ Good — graceful exit works |
-| **Two-level timeout** | Script-level 30s + task-level 35s | ✓ Good — comprehensive coverage |
-| **File-based logging** | Prevent console corruption | ✓ Good — debug output visible |
-| **Fail-open check_serialization** | Assume generation on error | ✓ Good — safe default |
+| Decision                          | Rationale                         | Outcome                              |
+| --------------------------------- | --------------------------------- | ------------------------------------ |
+| **Unbounded channels**            | TUI must never block on send      | ✓ Good — no backpressure issues      |
+| **Sequential processing**         | Avoid race conditions             | ✓ Good — FIFO order correct          |
+| **spawn_blocking for I/O**        | Required for subprocess in async  | ✓ Good — scripts don't block runtime |
+| **CancellationToken**             | Clean shutdown integration        | ✓ Good — graceful exit works         |
+| **Two-level timeout**             | Script-level 30s + task-level 35s | ✓ Good — comprehensive coverage      |
+| **File-based logging**            | Prevent console corruption        | ✓ Good — debug output visible        |
+| **Fail-open check_serialization** | Assume generation on error        | ✓ Good — safe default                |
 
 ## Current Milestone: v2.0 Robustness
 
-**Goal:** Fix critical gaps from v1.0 — ensure artifacts actually get created and improve code quality for long-term maintainability.
+**Goal:** Fix critical gaps from v1.0 — ensure artifacts actually get created
+and improve code quality for long-term maintainability.
 
 **Target features:**
 
-1. **End-to-End Integration Tests** — Verify artifacts are actually created and stored correctly
-2. **Code Quality Refactoring** — Shorter functions, flattened call chains, no abbreviations
-3. **Smart Debug Logging** — Optional `--log-output <file>` argument for comprehensive debug logging
+1. **End-to-End Integration Tests** — Verify artifacts are actually created and
+   stored correctly
+2. **Code Quality Refactoring** — Shorter functions, flattened call chains, no
+   abbreviations
+3. **Smart Debug Logging** — Optional `--log-output <file>` argument for
+   comprehensive debug logging
 
 **Success Criteria:**
+
 - Tests verify secrets exist at expected backend locations after generation
 - Functions terminate and return results rather than deep call chains
 - All variables and functions have clear, non-abbreviated names

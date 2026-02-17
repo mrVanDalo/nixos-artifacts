@@ -27,7 +27,7 @@ use tokio_util::sync::CancellationToken;
 use crate::backend;
 use crate::config::backend::BackendConfiguration;
 use crate::config::make::{ArtifactDef, MakeConfiguration};
-use crate::logging::{log_component, log};
+use crate::logging::{log, log_component};
 use crate::tui::channels::{EffectCommand, EffectResult};
 
 /// Timeout duration for background task operations (35 seconds)
@@ -114,7 +114,7 @@ impl BackgroundEffectHandler {
                         backend::serialization::run_check_serialization(
                             &artifact, &target, &backend, &make, context,
                         )
-                    })
+                    }),
                 )
                 .await;
 
@@ -272,7 +272,7 @@ impl BackgroundEffectHandler {
                             &output_path,
                             context,
                         )
-                    })
+                    }),
                 )
                 .await;
 
@@ -431,7 +431,7 @@ impl BackgroundEffectHandler {
                             &make,
                             &context,
                         )
-                    })
+                    }),
                 )
                 .await;
 
@@ -538,7 +538,7 @@ impl BackgroundEffectHandler {
                             &nixos_targets,
                             &home_targets,
                         )
-                    })
+                    }),
                 )
                 .await;
 
@@ -594,10 +594,13 @@ impl BackgroundEffectHandler {
                             BACKGROUND_TASK_TIMEOUT.as_secs()
                         ));
                         let needs_generation = vec![true; targets.len()];
-                        let outputs: Vec<Option<String>> = vec![Some(format!(
-                            "Timed out after {} seconds",
-                            BACKGROUND_TASK_TIMEOUT.as_secs()
-                        )); targets.len()];
+                        let outputs: Vec<Option<String>> = vec![
+                            Some(format!(
+                                "Timed out after {} seconds",
+                                BACKGROUND_TASK_TIMEOUT.as_secs()
+                            ));
+                            targets.len()
+                        ];
                         EffectResult::SharedCheckSerialization {
                             artifact_index,
                             needs_generation,
@@ -715,7 +718,7 @@ impl BackgroundEffectHandler {
                             &prompts_path,
                             &out_path_clone,
                         )
-                    })
+                    }),
                 )
                 .await;
 
@@ -894,7 +897,7 @@ impl BackgroundEffectHandler {
                             &nixos_targets,
                             &home_targets,
                         )
-                    })
+                    }),
                 )
                 .await;
 
@@ -956,10 +959,24 @@ impl BackgroundEffectHandler {
                         ));
                         let mut results = Vec::new();
                         for target in machine_targets {
-                            results.push((target, false, Some(format!("Timed out after {} seconds", BACKGROUND_TASK_TIMEOUT.as_secs()))));
+                            results.push((
+                                target,
+                                false,
+                                Some(format!(
+                                    "Timed out after {} seconds",
+                                    BACKGROUND_TASK_TIMEOUT.as_secs()
+                                )),
+                            ));
                         }
                         for target in user_targets {
-                            results.push((target, false, Some(format!("Timed out after {} seconds", BACKGROUND_TASK_TIMEOUT.as_secs()))));
+                            results.push((
+                                target,
+                                false,
+                                Some(format!(
+                                    "Timed out after {} seconds",
+                                    BACKGROUND_TASK_TIMEOUT.as_secs()
+                                )),
+                            ));
                         }
                         EffectResult::SharedSerializeFinished {
                             artifact_index,

@@ -7,9 +7,9 @@ use std::collections::{BTreeMap, HashMap};
 
 use artifacts::config::backend::BackendConfiguration;
 use artifacts::config::make::MakeConfiguration;
-use artifacts::tui::background::{spawn_background_task, BackgroundEffectHandler};
+use artifacts::tui::background::{BackgroundEffectHandler, spawn_background_task};
 use artifacts::tui::channels::{EffectCommand, EffectResult};
-use tokio::time::{timeout, Duration};
+use tokio::time::{Duration, timeout};
 use tokio_util::sync::CancellationToken;
 
 /// Create minimal backend config for testing
@@ -65,10 +65,7 @@ async fn test_background_processes_check_command() {
             needs_generation,
             output,
         } => {
-            assert_eq!(
-                artifact_index, 42,
-                "artifact_index should match command"
-            );
+            assert_eq!(artifact_index, 42, "artifact_index should match command");
             // For empty config, artifact not found -> fail-open -> needs_generation
             // The actual behavior depends on the backend implementation
             assert!(
@@ -115,19 +112,13 @@ async fn test_background_processes_generator_command() {
             output: _,
             error,
         } => {
-            assert_eq!(
-                artifact_index, 7,
-                "artifact_index should match command"
-            );
+            assert_eq!(artifact_index, 7, "artifact_index should match command");
             // With empty config, generator lookup will fail
             assert!(
                 !success,
                 "Generator should fail with empty config (artifact not found)"
             );
-            assert!(
-                error.is_some(),
-                "Error should be present on failure"
-            );
+            assert!(error.is_some(), "Error should be present on failure");
         }
         _ => panic!("Expected GeneratorFinished result, got {:?}", result),
     }
@@ -305,8 +296,7 @@ async fn test_cancellation_token_shutdown() {
     // Should be able to receive any pending results
     // Background will process remaining queue before exiting
     let mut received = 0;
-    while let Ok(result) = timeout(Duration::from_millis(500), rx_res.recv()).await
-    {
+    while let Ok(result) = timeout(Duration::from_millis(500), rx_res.recv()).await {
         if result.is_none() {
             break;
         }

@@ -1,13 +1,14 @@
 # Debug Session: TUI Freeze During Serialization
 
-**Date:** 2026-02-14T13:50:00Z  
-**Issue:** TUI becomes completely unresponsive during artifact serialization  
-**Severity:** Blocker  
+**Date:** 2026-02-14T13:50:00Z\
+**Issue:** TUI becomes completely unresponsive during artifact serialization\
+**Severity:** Blocker\
 **Reporter:** User UAT retest
 
 ## Problem Description
 
 When generating an artifact:
+
 1. Generator step completes quickly (1-2 seconds)
 2. Serialization step starts and shows ⟳ spinner
 3. TUI **completely freezes** - cannot navigate with j/k
@@ -16,9 +17,11 @@ When generating an artifact:
 
 ## Initial Diagnosis (Wrong)
 
-Original hypothesis: Serialization script hangs indefinitely, needs timeout handling.
+Original hypothesis: Serialization script hangs indefinitely, needs timeout
+handling.
 
 **Plan 03-04 implemented:**
+
 - Added ScriptError::Timeout variant
 - Added run_with_captured_output_and_timeout() with 30s timeout
 - Added BACKGROUND_TASK_TIMEOUT (35s) wrapping all spawn_blocking calls
@@ -76,25 +79,32 @@ impl EventSource for TerminalEventSource {
 **The async block doesn't make the call non-blocking!**
 
 When `poll_next_event()` is called:
+
 1. It creates an async block containing `events.next_event()`
 2. `events.next_event()` is a **synchronous** call to `crossterm::event::poll()`
 3. `event::poll(Duration::from_millis(50))` **blocks the thread** for up to 50ms
-4. During this time, the tokio thread cannot process other tasks (like channel results)
-5. The `select!` can only check `res_rx.recv()` AFTER `poll_next_event()` completes
-6. If the user isn't pressing keys, `poll()` waits the full 50ms before returning
+4. During this time, the tokio thread cannot process other tasks (like channel
+   results)
+5. The `select!` can only check `res_rx.recv()` AFTER `poll_next_event()`
+   completes
+6. If the user isn't pressing keys, `poll()` waits the full 50ms before
+   returning
 
-**Result:** Even though serialization completes, the result sits in the channel until the event poll times out, creating the appearance of a freeze.
+**Result:** Even though serialization completes, the result sits in the channel
+until the event poll times out, creating the appearance of a freeze.
 
 ## Why Generator Works But Serialization Doesn't
 
-**Generator:** Runs quickly (1-2s), returns before user notices  
+**Generator:** Runs quickly (1-2s), returns before user notices\
 **Serialization:** User expects immediate feedback, but blocked on event poll
 
-The timeout in `poll_next_event()` (50ms) creates a **50ms latency** between serialization completing and the UI updating. This compounds with other delays.
+The timeout in `poll_next_event()` (50ms) creates a **50ms latency** between
+serialization completing and the UI updating. This compounds with other delays.
 
 ## The Real Fix
 
-The event polling needs to run on a **blocking thread pool** or use async-native input handling.
+The event polling needs to run on a **blocking thread pool** or use async-native
+input handling.
 
 ### Option 1: spawn_blocking (Recommended)
 
@@ -117,8 +127,10 @@ Use tokio's async stdin handling or crossterm's async support (if available).
 
 ## Files to Modify
 
-1. `pkgs/artifacts/src/tui/runtime.rs` - Change `poll_next_event()` to use spawn_blocking
-2. `pkgs/artifacts/src/tui/events.rs` - May need to make EventSource methods async-compatible
+1. `pkgs/artifacts/src/tui/runtime.rs` - Change `poll_next_event()` to use
+   spawn_blocking
+2. `pkgs/artifacts/src/tui/events.rs` - May need to make EventSource methods
+   async-compatible
 
 ## Verification Steps
 

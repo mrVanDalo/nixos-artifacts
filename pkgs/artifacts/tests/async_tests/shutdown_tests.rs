@@ -144,10 +144,17 @@ async fn test_shutdown_with_queued_commands() {
 
     // Verify FIFO order
     for (i, &idx) in received.iter().enumerate() {
-        assert_eq!(idx, i, "FIFO order violated at position {}: expected {}, got {}", i, i, idx);
+        assert_eq!(
+            idx, i,
+            "FIFO order violated at position {}: expected {}, got {}",
+            i, i, idx
+        );
     }
 
-    println!("All {} queued commands processed before shutdown", received.len());
+    println!(
+        "All {} queued commands processed before shutdown",
+        received.len()
+    );
 }
 
 #[tokio::test]
@@ -167,7 +174,10 @@ async fn test_background_cleanup_on_drop() {
     drop(temp_dir);
 
     // Verify temp directory was cleaned up
-    assert!(!temp_path.exists(), "Temp directory should be cleaned up on drop");
+    assert!(
+        !temp_path.exists(),
+        "Temp directory should be cleaned up on drop"
+    );
 
     println!("Temporary directory cleanup verified");
 }

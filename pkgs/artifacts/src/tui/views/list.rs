@@ -131,19 +131,31 @@ fn render_log_panel(frame: &mut Frame, model: &Model, area: Rect) {
         if let ArtifactStatus::Failed { error, output, .. } = entry.status() {
             // Error header
             lines.push(Line::from(vec![
-                Span::styled("✗ ", Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)),
-                Span::styled("FAILED", Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "✗ ",
+                    Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    "FAILED",
+                    Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+                ),
             ]));
             lines.push(Line::from(vec![
-                Span::styled("Error: ", Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "Error: ",
+                    Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+                ),
                 Span::styled(error, Style::default().fg(Color::Red)),
             ]));
 
             // Show output if available
             if !output.is_empty() {
-                lines.push(Line::from(vec![
-                    Span::styled("Output:", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
-                ]));
+                lines.push(Line::from(vec![Span::styled(
+                    "Output:",
+                    Style::default()
+                        .fg(Color::Yellow)
+                        .add_modifier(Modifier::BOLD),
+                )]));
                 for line in output.lines() {
                     if !line.is_empty() {
                         lines.push(Line::from(vec![

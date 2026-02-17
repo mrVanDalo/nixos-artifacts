@@ -1,9 +1,9 @@
 # State: v2.0 Robustness
 
-**Project:** NixOS Artifacts Store — v2.0 Robustness\\ **Current Milestone:**
-v2.0 🔄 EXECUTING\
-**Status:** Phase 7 In Progress — Code quality refactoring (07-01 complete)
-**Last Updated:** 2026-02-16 (completed 07-01)
+**Project:** NixOS Artifacts Store — v2.0 Robustness  
+**Current Milestone:** v2.0 🔄 EXECUTING  
+**Status:** Phase 8 In Progress — Smart logging implementation (08-01 complete)  
+**Last Updated:** 2026-02-17 (completed 08-01)
 
 ---
 
@@ -14,8 +14,7 @@ See: [.planning/PROJECT.md](./PROJECT.md) (updated 2026-02-16)
 **Core Value:** The TUI must never freeze during long-running operations — all
 effect execution runs in a background job while the TUI remains interactive.
 
-**Current Focus:** Defining v2.0 requirements for end-to-end tests, code
-quality, and logging improvements
+**Current Focus:** Implementing smart logging with feature-gated CLI arguments
 
 ---
 
@@ -24,16 +23,16 @@ quality, and logging improvements
 | Aspect       | Status                       |
 | ------------ | ---------------------------- |
 | Milestone    | v2.0 🔄 EXECUTING            |
-| Phase        | 07-code-quality              |
-| Plan         | 07-03 ✅ COMPLETE            |
-| Requirements | In Progress                  |
-| Tests        | In Progress                  |
+| Phase        | 08-smart-logging             |
+| Plan         | 08-03 ✅ COMPLETE            |
+| Requirements | Complete                     |
+| Tests        | Complete                     |
 | Previous     | v1.0 ✅ SHIPPED (2026-02-15) |
 
 ### Progress Bar
 
 ```
-[████████████████████████] 60% complete — Phase 07 code quality complete (07-03 complete)
+[████████████████████████████████] 80% complete — Phase 08 smart logging (08-01 complete)
 ```
 
 ---
@@ -99,7 +98,7 @@ All v1.0 decisions preserved in PROJECT.md Validated section.
   07-02 refactored all handler and serialization functions)
 - Abbreviated variable names reduce readability (addressed - 07-03 renamed all
   abbreviated variables to descriptive names)
-- Debug logging always writes to hardcoded path (todo)
+- Debug logging always writes to hardcoded path (addressed - 08-03 removed /tmp/artifacts_debug.log references)
 
 ### Completed
 
@@ -180,7 +179,7 @@ All v1.0 decisions preserved in PROJECT.md Validated section.
 - [x] Phase 1: Integration tests for artifact creation (COMPLETE - all TEST
       requirements satisfied)
 - [x] Phase 2: Code quality refactoring (COMPLETE - 07-01, 07-02, and 07-03 complete)
-- [ ] Phase 3: Smart debug logging
+- [x] Phase 3: Smart debug logging (COMPLETE - 08-01, 08-02, 08-03 complete)
 
 ### New Decisions
 
@@ -196,6 +195,9 @@ All v1.0 decisions preserved in PROJECT.md Validated section.
   separation of concerns
 - **Helper extraction:** Common formatting patterns should be extracted to
   reusable helpers
+- **Feature-gated logging:** Use Cargo features to enable zero-cost logging
+- **Macro-based logging:** Create log_debug!, log_trace!, log_error! macros for conditional compilation
+- **Nix default features:** Nix packages enable all useful features; cargo builds are minimal
 
 ### Blockers
 
@@ -208,8 +210,8 @@ None.
 ### Last Session
 
 **Date:** 2026-02-17
-**Activity:** Completed 07-03 code quality - renamed abbreviated variables to descriptive names
-**Summary:** Renamed abbreviated variables in config modules: 'result' → 'validation_result'/'read_result', 'err' → 'error_message', 'art_name' → 'artifact_name', 'art' → 'artifact'. All QUAL-03 and QUAL-04 naming requirements satisfied. Duration: 8 min.
+**Activity:** Completed 08-03 smart logging - replaced hardcoded logging with macro system
+**Summary:** Removed /tmp/artifacts_debug.log hardcoded path, initialized Logger at startup, added strategic logging to effect execution. Deleted old logging module. All 11 logging tests passing. Duration: 17 min.
 
 ---
 

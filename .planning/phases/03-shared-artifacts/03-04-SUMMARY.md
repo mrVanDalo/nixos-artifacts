@@ -13,9 +13,12 @@ commits:
 
 ## What Was Accomplished
 
-Fixed TUI freeze during artifact generation by adding comprehensive timeout handling to prevent hanging scripts from blocking the UI. The implementation spans three layers:
+Fixed TUI freeze during artifact generation by adding comprehensive timeout
+handling to prevent hanging scripts from blocking the UI. The implementation
+spans three layers:
 
 ### 1. output_capture.rs - Low-level Timeout (Task 1)
+
 - Added `ScriptError` enum with `Timeout`, `Failed`, and `Io` variants
 - Created `run_with_captured_output_and_timeout` function
 - Implemented timeout-based process termination with SIGKILL
@@ -23,6 +26,7 @@ Fixed TUI freeze during artifact generation by adding comprehensive timeout hand
 - Stream output collection with `recv_timeout` for responsive termination
 
 ### 2. serialization.rs - Script-level Timeout (Task 2)
+
 - Added `SERIALIZATION_TIMEOUT` constant (30 seconds)
 - Updated `run_check_serialization` and `run_shared_check_serialization`
   - Timeout errors fail open (assume generation needed)
@@ -32,6 +36,7 @@ Fixed TUI freeze during artifact generation by adding comprehensive timeout hand
   - Clear error messages distinguish timeout from other failures
 
 ### 3. background.rs - Task-level Timeout (Task 3)
+
 - Added `BACKGROUND_TASK_TIMEOUT` constant (35 seconds: 30s script + 5s buffer)
 - Wrapped all 6 spawn_blocking operations with tokio::time::timeout:
   - CheckSerialization
@@ -46,15 +51,19 @@ Fixed TUI freeze during artifact generation by adding comprehensive timeout hand
 
 ## Key Design Decisions
 
-1. **Two-level timeout architecture**: Script-level (30s) kills hung scripts, task-level (35s) catches edge cases
-2. **Fail-open for check operations**: Timeout during check assumes generation needed
-3. **Fail-closed for serialize**: Timeout during serialize reports failure to user
+1. **Two-level timeout architecture**: Script-level (30s) kills hung scripts,
+   task-level (35s) catches edge cases
+2. **Fail-open for check operations**: Timeout during check assumes generation
+   needed
+3. **Fail-closed for serialize**: Timeout during serialize reports failure to
+   user
 4. **Process cleanup**: SIGKILL followed by wait() ensures no zombies
 5. **Error propagation**: ScriptError::Timeout mapped to user-friendly messages
 
 ## Files Modified
 
-1. `pkgs/artifacts/src/backend/output_capture.rs` - Timeout-aware process execution
+1. `pkgs/artifacts/src/backend/output_capture.rs` - Timeout-aware process
+   execution
 2. `pkgs/artifacts/src/backend/serialization.rs` - Timeout-wrapped serialization
 3. `pkgs/artifacts/src/tui/background.rs` - Timeout handling in background tasks
 
@@ -72,6 +81,7 @@ Fixed TUI freeze during artifact generation by adding comprehensive timeout hand
 ## Integration Notes
 
 The timeout implementation integrates seamlessly with existing error handling:
+
 - TUI displays timeout errors as artifact failure
 - Animation stops on timeout
 - User can navigate and quit after timeout
@@ -79,6 +89,7 @@ The timeout implementation integrates seamlessly with existing error handling:
 
 ## Performance Impact
 
-- **Positive**: Scripts that previously hung indefinitely now terminate after 30-35 seconds
+- **Positive**: Scripts that previously hung indefinitely now terminate after
+  30-35 seconds
 - **Negative**: None (timeout only affects hanging scripts)
 - **Neutral**: Normal scripts complete unchanged within timeout window

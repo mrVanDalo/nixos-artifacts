@@ -49,7 +49,8 @@ completed: 2026-02-14
 
 # Phase 04 Plan 02: Graceful Shutdown Sequence Summary
 
-**Implemented graceful shutdown in TUI runtime with Ctrl+C handling, result draining, and RAII cleanup**
+**Implemented graceful shutdown in TUI runtime with Ctrl+C handling, result
+draining, and RAII cleanup**
 
 ## Performance
 
@@ -78,13 +79,17 @@ completed: 2026-02-14
 ## Files Created/Modified
 
 - `pkgs/artifacts/Cargo.toml` - Added "signal" feature to tokio dependency
-- `pkgs/artifacts/src/tui/runtime.rs` - Shutdown sequence, Ctrl+C handler, graceful exit
+- `pkgs/artifacts/src/tui/runtime.rs` - Shutdown sequence, Ctrl+C handler,
+  graceful exit
 
 ## Decisions Made
 
-1. **5-second drain timeout** - Chosen to balance user responsiveness with allowing in-flight operations to complete
-2. **Child token pattern** - Background task receives child token so it can check cancellation independently
-3. **RAII cleanup** - TerminalGuard and BackgroundEffectHandler Drop impls ensure cleanup even on panic
+1. **5-second drain timeout** - Chosen to balance user responsiveness with
+   allowing in-flight operations to complete
+2. **Child token pattern** - Background task receives child token so it can
+   check cancellation independently
+3. **RAII cleanup** - TerminalGuard and BackgroundEffectHandler Drop impls
+   ensure cleanup even on panic
 
 ## Deviations from Plan
 
@@ -92,10 +97,11 @@ None - plan executed exactly as written.
 
 ## Issues Encountered
 
-1. **Pre-existing test failures** - 2 tempfile tests failing (unrelated to this plan):
+1. **Pre-existing test failures** - 2 tempfile tests failing (unrelated to this
+   plan):
    - `backend::tempfile::tests::test_temp_file_with_content`
-   - `backend::tempfile::tests::test_as_ref`
-   These are known issues with temporary file cleanup in test environment.
+   - `backend::tempfile::tests::test_as_ref` These are known issues with
+     temporary file cleanup in test environment.
 
 ## Verification Results
 

@@ -5,7 +5,10 @@
 <domain>
 ## Phase Boundary
 
-Create end-to-end tests that verify artifacts are actually created and stored correctly in the backend. Tests run programmatically without TUI, using a headless API. Coverage includes single-machine and shared artifacts, with full validation of existence, content, and metadata.
+Create end-to-end tests that verify artifacts are actually created and stored
+correctly in the backend. Tests run programmatically without TUI, using a
+headless API. Coverage includes single-machine and shared artifacts, with full
+validation of existence, content, and metadata.
 
 </domain>
 
@@ -65,10 +68,13 @@ Create end-to-end tests that verify artifacts are actually created and stored co
 <specifics>
 ## Specific Ideas
 
-- Artifact storage should use relative paths from flake root: `./artifacts/machines/<machine>/artifact/<filename>`
+- Artifact storage should use relative paths from flake root:
+  `./artifacts/machines/<machine>/artifact/<filename>`
 - Generator should write deterministic content without requiring prompts
-- New scenario should be in `examples/scenarios/test-e2e-simple/` with minimal flake.nix
-- Git repo initialization is required because flake evaluation requires a git repository
+- New scenario should be in `examples/scenarios/test-e2e-simple/` with minimal
+  flake.nix
+- Git repo initialization is required because flake evaluation requires a git
+  repository
 - Each test starts fresh: new temp dir, new git repo, copied flake files
 
 </specifics>

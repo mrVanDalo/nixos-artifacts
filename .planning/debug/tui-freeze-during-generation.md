@@ -2,14 +2,17 @@
 
 ## Problem
 
-**Test:** 3. Animated Spinner During Generation  
-**Reported:** "TUI shows 'running generator' dialog with check symbol, serialization shows wait symbol, but then TUI stops responding entirely. Cannot navigate with j/k, Ctrl-C doesn't work, must close terminal window"
+**Test:** 3. Animated Spinner During Generation\
+**Reported:** "TUI shows 'running generator' dialog with check symbol,
+serialization shows wait symbol, but then TUI stops responding entirely. Cannot
+navigate with j/k, Ctrl-C doesn't work, must close terminal window"
 
 **Severity:** Blocker
 
 ## Root Cause Analysis
 
 ### Symptoms
+
 - TUI freezes completely during artifact generation
 - Cannot navigate with j/k
 - Ctrl-C doesn't work
@@ -37,17 +40,20 @@ Looking at the runtime loop in `src/tui/runtime.rs`:
 ### Potential Causes
 
 **Cause 1: Serialize Script Hanging**
+
 - The serialize script might be waiting for input or stuck
 - `run_with_captured_output` waits for child process completion
 - If script never exits, the spawn_blocking task never completes
 - This would block the background task queue
 
 **Cause 2: Blocking I/O in Async Context**
+
 - Even with `spawn_blocking`, if the script waits indefinitely,
 - the background task is occupied and can't process new commands
 - But TUI foreground should still process events...
 
 **Cause 3: Event Loop Blocked**
+
 - Something in the foreground is blocking
 - Perhaps waiting for a result that never comes?
 - But `tokio::select!` should handle this...
@@ -65,14 +71,15 @@ the spawn_blocking call never returns, blocking the background task.
 
 ### Evidence Needed
 
-Check `/tmp/artifacts_debug.log` if it exists to see what commands were sent
-and what results were received.
+Check `/tmp/artifacts_debug.log` if it exists to see what commands were sent and
+what results were received.
 
 ## Fix Required
 
 Need to add timeout handling to serialize operations in the background task.
-Scripts should not be allowed to run indefinitely - they should have a reasonable
-timeout (e.g., 30 seconds) after which they're terminated and an error is reported.
+Scripts should not be allowed to run indefinitely - they should have a
+reasonable timeout (e.g., 30 seconds) after which they're terminated and an
+error is reported.
 
 ## Artifacts
 

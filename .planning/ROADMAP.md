@@ -1,6 +1,6 @@
 # Roadmap: v2.0 Robustness
 
-**Current Version:** v2.0 🔄 IN PROGRESS\
+**Current Version:** v2.0 ✅ COMPLETE\
 **Created:** 2026-02-16\
 **Previous:** v1.0 Background Job Refactor (5 phases, 18 plans, shipped
 2026-02-15)
@@ -32,8 +32,8 @@ machine tests, integration tests | 80% coverage, tests pass, insta snapshots | |
 6 | Integration Testing | Verify artifacts actually get created | TEST-01 to
 TEST-06 | 6 test programs that verify backend storage | | 7 | Code Quality |
 Refactor for readability and structure | QUAL-01 to QUAL-07 | Flat call chains,
-no abbreviations, <50 line functions | | 8 | Smart Logging | Opt-in debug
-logging via CLI argument | LOG-01 to LOG-06 | `--log-output` flag works, no
+no abbreviations, <50 line functions | | 8 | Smart Logging ✅ COMPLETE | Opt-in debug
+logging via CLI argument | LOG-01 to LOG-06 | `--log-file` flag works, no
 logging when omitted |
 
 **Total:** 3 phases | 18 requirements | Goal: Robustness & maintainability
@@ -178,31 +178,46 @@ Plans:
 
 **Goal:** Replace hardcoded debug logging with opt-in CLI argument.
 
+**Completed:** 2026-02-17 | **Score:** 6/6 requirements satisfied
+
 **Requirements:**
 
-- LOG-01: CLI accepts `--log-output <file>` argument
-- LOG-02: When `--log-output` is provided, comprehensive debug logs written to
+- ✅ LOG-01: CLI accepts `--log-file <path>` argument (revised from --log-output)
+- ✅ LOG-02: When `--log-file` is provided, comprehensive debug logs written to
   specified file
-- LOG-03: When `--log-output` is not provided, no debug logging occurs
-- LOG-04: Debug logs include: timestamps, effect execution, channel messages,
+- ✅ LOG-03: When `--log-file` is not provided, no debug logging occurs
+- ✅ LOG-04: Debug logs include: timestamps, effect execution, channel messages,
   backend calls
-- LOG-05: Log file path can be absolute or relative
-- LOG-06: Existing `/tmp/artifacts_debug.log` hardcoded path removed
+- ✅ LOG-05: Log file path can be absolute or relative
+- ✅ LOG-06: Existing `/tmp/artifacts_debug.log` hardcoded path removed
 
 **Success Criteria:**
 
-1. CLI has `--log-output` flag with file path argument
-2. With flag: detailed debug logs written to specified file
-3. Without flag: zero debug logging (silent operation)
-4. Log format includes timestamps and context
-5. Old hardcoded log path removed
-6. Tests verify logging behavior
+1. ✅ CLI has `--log-file` flag with file path argument
+2. ✅ With flag: detailed debug logs written to specified file
+3. ✅ Without flag: zero debug logging (silent operation)
+4. ✅ Log format includes timestamps and context
+5. ✅ Old hardcoded log path removed
+6. ✅ Tests verify logging behavior
 
-**Plans:**
+**Plans:** 3 plans in 3 waves — COMPLETE
 
-- 08-01: Add --log-output CLI argument
-- 08-02: Implement conditional logging infrastructure
-- 08-03: Replace hardcoded logging with new system
+Plans:
+
+- [x] 08-01-PLAN.md — Add --log-file CLI argument with feature flag
+- [x] 08-02-PLAN.md — Implement macro API and Logger infrastructure
+- [x] 08-03-PLAN.md — Replace hardcoded logging and add tests
+
+**Artifacts Created:**
+
+- Feature-gated logging with `--log-file` and `--log-level` CLI arguments
+- Zero-cost macro API (error!, warn!, info!, debug!)
+- Logger struct with fail-fast validation and real-time streaming
+- 11 comprehensive logging tests
+- Hardcoded `/tmp/artifacts_debug.log` completely removed
+
+**Report:**
+[08-VERIFICATION.md](.planning/phases/08-smart-logging/08-VERIFICATION.md)
 
 ---
 
@@ -223,14 +238,14 @@ Plans:
 | QUAL-05     | 7     | 07-03 | Pending     |
 | QUAL-06     | 7     | 07-03 | Pending     |
 | QUAL-07     | 7     | All   | Pending     |
-| LOG-01      | 8     | 08-01 | Pending     |
-| LOG-02      | 8     | 08-02 | Pending     |
-| LOG-03      | 8     | 08-02 | Pending     |
-| LOG-04      | 8     | 08-02 | Pending     |
-| LOG-05      | 8     | 08-01 | Pending     |
-| LOG-06      | 8     | 08-03 | Pending     |
+| LOG-01      | 8     | 08-01 | ✅ Complete |
+| LOG-02      | 8     | 08-02 | ✅ Complete |
+| LOG-03      | 8     | 08-02 | ✅ Complete |
+| LOG-04      | 8     | 08-02 | ✅ Complete |
+| LOG-05      | 8     | 08-01 | ✅ Complete |
+| LOG-06      | 8     | 08-03 | ✅ Complete |
 
-**Coverage:** 18/18 requirements mapped ✓
+**Coverage:** 18/18 requirements satisfied ✓
 
 ---
 

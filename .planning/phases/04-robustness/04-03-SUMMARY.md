@@ -46,7 +46,9 @@ completed: 2026-02-14T18:28:16Z
 
 # Phase 04 Plan 03: Error Display Integration Summary
 
-**TUI error display integration: Failed artifacts show red ✗ with full error details, channel disconnects display graceful "Connection lost" messages, and log panel shows accumulated step output for debugging.**
+**TUI error display integration: Failed artifacts show red ✗ with full error
+details, channel disconnects display graceful "Connection lost" messages, and
+log panel shows accumulated step output for debugging.**
 
 ## Performance
 
@@ -58,7 +60,8 @@ completed: 2026-02-14T18:28:16Z
 
 ## Accomplishments
 
-- Enhanced error handling in update.rs with full context (artifact name, step, accumulated logs)
+- Enhanced error handling in update.rs with full context (artifact name, step,
+  accumulated logs)
 - Added error detail display in log panel for failed artifacts
 - Implemented graceful channel disconnect messages in runtime.rs
 - Verified consistent error styling (red for failed status)
@@ -68,22 +71,30 @@ completed: 2026-02-14T18:28:16Z
 Each task was committed atomically:
 
 1. **Task 1: Enhance error result handling in update.rs** - `bb7eece` (feat)
-2. **Task 2: Update list view to render Failed status** - `174c48d` (feat - empty, already done)
+2. **Task 2: Update list view to render Failed status** - `174c48d` (feat -
+   empty, already done)
 3. **Task 3: Add error detail view or expanded display** - `ad114fb` (feat)
 4. **Task 4: Handle channel disconnect gracefully in UI** - `86fd84a` (feat)
-5. **Task 5: Add error styling and colors** - `6e308f9` (feat - empty, already done)
+5. **Task 5: Add error styling and colors** - `6e308f9` (feat - empty, already
+   done)
 
 ## Files Created/Modified
 
-- `pkgs/artifacts/src/app/update.rs` - Enhanced all error handlers to include artifact name, step context, and accumulated logs in Failed status
-- `pkgs/artifacts/src/tui/views/list.rs` - Added error detail display in log panel when artifact has Failed status
-- `pkgs/artifacts/src/tui/runtime.rs` - Added model.error setting on channel disconnects
+- `pkgs/artifacts/src/app/update.rs` - Enhanced all error handlers to include
+  artifact name, step context, and accumulated logs in Failed status
+- `pkgs/artifacts/src/tui/views/list.rs` - Added error detail display in log
+  panel when artifact has Failed status
+- `pkgs/artifacts/src/tui/runtime.rs` - Added model.error setting on channel
+  disconnects
 
 ## Decisions Made
 
-- Include accumulated step logs (check, generate, serialize) in Failed status output field to aid debugging
-- Set model.error before returning from runtime on channel disconnect to preserve error state
-- Show error details in log panel with FAILED header in red, error message, and accumulated output
+- Include accumulated step logs (check, generate, serialize) in Failed status
+  output field to aid debugging
+- Set model.error before returning from runtime on channel disconnect to
+  preserve error state
+- Show error details in log panel with FAILED header in red, error message, and
+  accumulated output
 
 ## Deviations from Plan
 

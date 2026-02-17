@@ -1,17 +1,15 @@
 pub mod args;
 pub mod headless;
-mod logging;
 
 use crate::config::backend::BackendConfiguration;
 use crate::config::make::MakeConfiguration;
 use crate::config::nix::build_make_from_flake;
 use crate::tui::{
-    TerminalGuard, build_filtered_model, install_panic_hook, run_async,
-    validate_model_capabilities, TerminalEventSource,
+    TerminalEventSource, TerminalGuard, build_filtered_model, install_panic_hook, run_async,
+    validate_model_capabilities,
 };
 use anyhow::{Context, Result};
 use clap::Parser;
-use log::LevelFilter;
 use std::path::{Path, PathBuf};
 
 fn resolve_flake_path(p: &Option<PathBuf>) -> PathBuf {
@@ -49,17 +47,15 @@ fn resolve_backend_toml(flake_path: &Path) -> Result<PathBuf> {
 pub async fn run() -> Result<()> {
     let cli = args::Cli::parse();
 
-    // Initialize logger
-    logging::init_logger(!cli.no_emoji);
-
-    let level_filter = match cli.log_level {
-        args::LogLevel::Error => LevelFilter::Error,
-        args::LogLevel::Warning => LevelFilter::Warn,
-        args::LogLevel::Info => LevelFilter::Info,
-        args::LogLevel::Debug => LevelFilter::Debug,
-        args::LogLevel::Trace => LevelFilter::Trace,
-    };
-    log::set_max_level(level_filter);
+    // Initialize logger first using new macro-based system
+    #[cfg(feature = "logging")]
+    {
+        use crate::logging;
+        if let Err(error) = logging::init_from_args(&cli) {
+            eprintln!("Failed to initialize logging: {}", error);
+            // Continue anyway - logging is optional
+        }
+    }
 
     // Resolve paths
     let flake_path = resolve_flake_path(&cli.flake);
@@ -99,22 +95,9 @@ async fn run_tui(
         return Ok(());
     }
 
-    // Debug logging - use OpenOptions to append
-    {
-        use std::fs::OpenOptions;
-        use std::io::Write;
-        let mut file = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open("/tmp/artifacts_debug.log")
-            .expect("Failed to open log file");
-        writeln!(
-            file,
-            "[DEBUG] Starting run_tui with {} entries",
-            model.entries.len()
-        )
-        .expect("Failed to write");
-    }
+    // Log TUI startup
+    #[cfg(feature = "logging")]
+    crate::info!("Starting run_tui with {} entries", model.entries.len());
 
     // Install panic hook to restore terminal on crash
     install_panic_hook();
@@ -122,11 +105,9 @@ async fn run_tui(
     // Initialize terminal
     let mut terminal_guard = TerminalGuard::new().context("Failed to initialize terminal")?;
 
-    std::fs::write(
-        "/tmp/artifacts_debug.log",
-        "[DEBUG] About to call run_async\n",
-    )
-    .ok();
+    // Log before running async TUI
+    #[cfg(feature = "logging")]
+    crate::info!("About to call run_async");
 
     // Run the TUI asynchronously with terminal event source
     let mut events = TerminalEventSource::default();

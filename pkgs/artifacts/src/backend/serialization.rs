@@ -1,13 +1,13 @@
 use crate::backend::helpers::{resolve_path, validate_backend_script};
 use crate::backend::output_capture::{
-    CapturedOutput, ScriptError, run_with_captured_output_and_timeout,
+    run_with_captured_output_and_timeout, CapturedOutput, ScriptError,
 };
 use crate::backend::tempfile::TempFile;
 use crate::config::backend::{BackendConfiguration, BackendEntry};
 use crate::config::make::{ArtifactDef, MakeConfiguration};
-use anyhow::{Context, Result, bail};
-use log::debug;
-use serde_json::{Map, Value, json, to_string_pretty};
+use crate::log_debug;
+use anyhow::{bail, Context, Result};
+use serde_json::{json, to_string_pretty, Map, Value};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
@@ -39,9 +39,9 @@ fn handle_check_output(
         Ok(out) => {
             let needs_generation = !out.exit_success;
             if out.exit_success {
-                debug!("OK -> skipping generation");
+                log_debug!("OK -> skipping generation");
             } else {
-                debug!("needs generation");
+                log_debug!("needs generation");
             }
             Ok(CheckResult {
                 needs_generation,
@@ -52,9 +52,11 @@ fn handle_check_output(
             script_name: name,
             timeout_secs,
         }) => {
-            debug!(
+            log_debug!(
                 "{} timed out after {}s for {}",
-                name, timeout_secs, artifact_name
+                name,
+                timeout_secs,
+                artifact_name
             );
             Ok(make_timeout_result(&name, timeout_secs))
         }
@@ -338,6 +340,14 @@ fn make_failed_result(stderr: String) -> CheckResult {
     }
 }
 
+/// Verify output succeeded, bail on failure
+fn verify_output_succeeded(output: &CapturedOutput, script_name: &str) -> Result<()> {
+    if !output.exit_success {
+        bail!("{} script failed with non-zero exit status", script_name);
+    }
+    Ok(())
+}
+
 /// Write input files for check_serialization
 fn write_check_input_files(
     artifact: &ArtifactDef,
@@ -449,7 +459,7 @@ pub fn run_shared_serialize(
     let (_, machines_file) = build_machines_json(make, nixos_targets, backend_name)?;
     let (_, users_file) = build_users_json(make, home_targets, backend_name)?;
 
-    debug!(
+    log_debug!(
         "running shared_serialize: artifact=\"{}\" out=\"{}\" machines=\"{}\" users=\"{}\"",
         artifact_name,
         out.display(),
@@ -506,7 +516,7 @@ pub fn run_check_serialization(
     )?;
 
     let target_label = get_target_label(context);
-    debug!(
+    log_debug!(
         "running {}: env inputs=\"{}\" {}=\"{}\" artifact=\"{}\" {}",
         script_info.script_name,
         inputs.display(),
@@ -565,7 +575,7 @@ pub fn run_shared_check_serialization(
     let (_, machines_file) = build_machines_json(make, nixos_targets, backend_name)?;
     let (_, users_file) = build_users_json(make, home_targets, backend_name)?;
 
-    debug!(
+    log_debug!(
         "running shared_check_serialization: artifact=\"{}\" machines=\"{}\" users=\"{}\"",
         artifact_name,
         machines_file.display(),

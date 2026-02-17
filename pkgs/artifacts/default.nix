@@ -13,6 +13,9 @@ pkgs.rustPlatform.buildRustPackage rec {
 
   doCheck = false;
 
+  # Enable logging feature by default in Nix builds
+  buildFeatures = [ "logging" ];
+
   # Set to lib.fakeSha256 initially. Build once to get the real cargoHash from the error message,
   # then replace this value for reproducible builds.
   cargoHash = pkgs.lib.fakeSha256;

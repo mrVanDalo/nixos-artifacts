@@ -4,10 +4,9 @@ use std::path::PathBuf;
 #[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
 pub enum LogLevel {
     Error,
-    Warning,
+    Warn,
     Info,
     Debug,
-    Trace,
 }
 
 #[derive(Debug, Parser)]
@@ -28,11 +27,31 @@ pub struct Cli {
     #[arg(long = "artifact")]
     pub artifact: Vec<String>,
 
-    /// Set the logging level
-    #[arg(long = "log-level", value_enum, default_value_t = LogLevel::Info)]
-    pub log_level: LogLevel,
-
     /// Disable emoji output
     #[arg(long = "no-emoji")]
     pub no_emoji: bool,
+
+    /// Path to log file for debug output
+    #[cfg(feature = "logging")]
+    #[arg(long = "log-file", value_name = "PATH")]
+    pub log_file: Option<PathBuf>,
+
+    /// Set the logging level (requires --log-file)
+    #[cfg(feature = "logging")]
+    #[arg(long = "log-level", value_enum, default_value_t = LogLevel::Debug)]
+    pub log_level: LogLevel,
+}
+
+impl Cli {
+    /// Returns true if logging is enabled (log_file is Some)
+    #[cfg(feature = "logging")]
+    pub fn is_logging_enabled(&self) -> bool {
+        self.log_file.is_some()
+    }
+
+    /// Returns false when logging feature is disabled
+    #[cfg(not(feature = "logging"))]
+    pub fn is_logging_enabled(&self) -> bool {
+        false
+    }
 }

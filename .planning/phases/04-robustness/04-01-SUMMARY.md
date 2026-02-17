@@ -44,7 +44,9 @@ completed: 2026-02-14
 
 # Phase 04: Plan 01 - CancellationToken Shutdown Summary
 
-**Implemented graceful shutdown of background task using tokio-util::CancellationToken, converting the while loop to a tokio::select! that listens for shutdown signals while maintaining FIFO command ordering.**
+**Implemented graceful shutdown of background task using
+tokio-util::CancellationToken, converting the while loop to a tokio::select!
+that listens for shutdown signals while maintaining FIFO command ordering.**
 
 ## Performance
 
@@ -58,7 +60,8 @@ completed: 2026-02-14
 
 1. Added tokio-util dependency with full feature set to Cargo.toml
 2. Updated spawn_background_task signature to accept CancellationToken parameter
-3. Converted background loop from while to tokio::select! with cancellation branch
+3. Converted background loop from while to tokio::select! with cancellation
+   branch
 4. Implemented graceful shutdown: process queued commands, then exit cleanly
 5. Updated runtime.rs to create shutdown_token and pass to spawn function
 6. Fixed all test cases to use new 3-parameter signature
@@ -66,15 +69,20 @@ completed: 2026-02-14
 ## Task Commits
 
 1. **Task 1: Add tokio-util dependency** - `805a38a` (chore)
-2. **Task 2: Update spawn_background_task with CancellationToken** - `ab88240` (feat)
+2. **Task 2: Update spawn_background_task with CancellationToken** - `ab88240`
+   (feat)
 
 **Plan metadata:** (to be committed)
 
 ## Files Created/Modified
 
-- `pkgs/artifacts/Cargo.toml` - Added tokio-util = { version = "0.7", features = ["full"] }
-- `pkgs/artifacts/src/tui/background.rs` - Added CancellationToken import, updated function signature, implemented tokio::select! loop with shutdown/cancellation/channel branches
-- `pkgs/artifacts/src/tui/runtime.rs` - Added CancellationToken import, create shutdown_token when spawning background task
+- `pkgs/artifacts/Cargo.toml` - Added tokio-util = { version = "0.7", features =
+  ["full"] }
+- `pkgs/artifacts/src/tui/background.rs` - Added CancellationToken import,
+  updated function signature, implemented tokio::select! loop with
+  shutdown/cancellation/channel branches
+- `pkgs/artifacts/src/tui/runtime.rs` - Added CancellationToken import, create
+  shutdown_token when spawning background task
 
 ## Decisions Made
 
@@ -84,9 +92,12 @@ None - followed plan as specified.
 
 None - plan executed exactly as written.
 
-Task 4 (mod.rs exports) was not needed since CancellationToken is used internally and doesn't need to be exported through the module interface.
+Task 4 (mod.rs exports) was not needed since CancellationToken is used
+internally and doesn't need to be exported through the module interface.
 
-Task 5 (child token helper) was skipped as unnecessary - the current design processes effects sequentially without spawning sub-tasks, so child tokens aren't required.
+Task 5 (child token helper) was skipped as unnecessary - the current design
+processes effects sequentially without spawning sub-tasks, so child tokens
+aren't required.
 
 ## Issues Encountered
 
@@ -105,8 +116,10 @@ None
 
 The shutdown mechanism works as follows:
 
-1. **Foreground creates token:** `let shutdown_token = CancellationToken::new();`
-2. **Passes to background:** `spawn_background_task(backend, make, shutdown_token)`
+1. **Foreground creates token:**
+   `let shutdown_token = CancellationToken::new();`
+2. **Passes to background:**
+   `spawn_background_task(backend, make, shutdown_token)`
 3. **Background listens:** `tokio::select!` with three branches:
    - `shutdown_token.cancelled()` - triggers graceful shutdown
    - `Some(cmd) = rx_cmd.recv()` - process next command
@@ -114,9 +127,11 @@ The shutdown mechanism works as follows:
 4. **On shutdown:** Process remaining queue commands via `try_recv()`, then exit
 
 This ensures:
+
 - **Cooperative cancellation:** Background task only exits when it chooses
 - **FIFO preservation:** Commands are processed in order
-- **Clean shutdown:** Temp directories are dropped properly (handler dropped at end)
+- **Clean shutdown:** Temp directories are dropped properly (handler dropped at
+  end)
 - **No blocking:** select! allows immediate response to cancellation
 
 ## Next Phase Readiness

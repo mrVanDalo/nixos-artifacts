@@ -1,19 +1,22 @@
 # Phase 07: Code Quality - Research
 
-**Researched:** 2026-02-16  
-**Domain:** Rust code quality refactoring patterns  
+**Researched:** 2026-02-16\
+**Domain:** Rust code quality refactoring patterns\
 **Confidence:** HIGH
 
 ## Summary
 
-Phase 7 requires refactoring the Rust codebase in `pkgs/artifacts/src/` to improve readability. The main issues identified are:
+Phase 7 requires refactoring the Rust codebase in `pkgs/artifacts/src/` to
+improve readability. The main issues identified are:
 
 1. **Long functions**: Multiple functions exceed 50 lines (QUAL-05 violation)
 2. **Deep call chains**: Some functions have 3+ levels of nesting
-3. **Repetitive patterns**: Shared and non-shared artifact handlers have significant code duplication
+3. **Repetitive patterns**: Shared and non-shared artifact handlers have
+   significant code duplication
 4. **Large files**: `update.rs` is 1219 lines
 
 **Primary recommendation:** Incremental refactoring approach:
+
 1. First, split long functions by extracting cohesive sub-functions
 2. Flatten deep nesting by using early returns and helper functions
 3. Extract common patterns between shared/non-shared handlers
@@ -24,12 +27,14 @@ Phase 7 requires refactoring the Rust codebase in `pkgs/artifacts/src/` to impro
 ### File: `src/backend/serialization.rs` (592 lines)
 
 **Long Functions (>50 lines):**
+
 - `run_serialize()` - ~98 lines (lines 35-134)
 - `run_shared_serialize()` - ~125 lines (lines 143-261)
 - `run_check_serialization()` - ~160 lines (lines 268-434)
 - `run_shared_check_serialization()` - ~150 lines (lines 441-591)
 
 **Issues:**
+
 - Repetitive JSON file creation logic (machines.json, users.json)
 - Similar error handling patterns across all functions
 - Command building and execution is verbose
@@ -37,6 +42,7 @@ Phase 7 requires refactoring the Rust codebase in `pkgs/artifacts/src/` to impro
 ### File: `src/tui/effect_handler.rs` (226 lines)
 
 **Long Functions:**
+
 - `run_generator_and_store_output()` - ~44 lines (lines 54-98)
 - `serialize_generated_output_to_backend()` - ~30 lines
 - `execute()` - ~62 lines (lines 164-225) with deep match nesting
@@ -44,6 +50,7 @@ Phase 7 requires refactoring the Rust codebase in `pkgs/artifacts/src/` to impro
 ### File: `src/app/update.rs` (1219 lines)
 
 **Long Functions:**
+
 - `update()` - ~62 lines with deep pattern matching (lines 35-97)
 - `update_artifact_list()` - ~26 lines (acceptable)
 - `start_generation_for_selected()` - ~49 lines (lines 128-179)
@@ -59,14 +66,18 @@ Phase 7 requires refactoring the Rust codebase in `pkgs/artifacts/src/` to impro
 - `update_generator_selection()` - ~84 lines (lines 550-641) ⚠️
 
 **Duplicate Code Patterns:**
-- `handle_generator_finished` and `handle_shared_generator_finished` share ~40 lines of nearly identical log handling
-- `handle_serialize_finished` and `handle_shared_serialize_finished` share ~50 lines of identical log accumulation and error formatting
+
+- `handle_generator_finished` and `handle_shared_generator_finished` share ~40
+  lines of nearly identical log handling
+- `handle_serialize_finished` and `handle_shared_serialize_finished` share ~50
+  lines of identical log accumulation and error formatting
 
 ## Refactoring Patterns
 
 ### Pattern 1: Extract Helper Functions
 
 **Before:**
+
 ```rust
 fn handle_generator_finished(model, artifact_index, result) -> (Model, Effect) {
     match result {
@@ -83,6 +94,7 @@ fn handle_generator_finished(model, artifact_index, result) -> (Model, Effect) {
 ```
 
 **After:**
+
 ```rust
 fn handle_generator_finished(model, artifact_index, result) -> (Model, Effect) {
     match result {
@@ -106,6 +118,7 @@ fn handle_generator_failure(model, artifact_index, error) -> (Model, Effect) {
 ### Pattern 2: Flatten Match Nesting
 
 **Before:**
+
 ```rust
 fn long_function() -> Result<()> {
     let x = get_value()?;
@@ -127,6 +140,7 @@ fn long_function() -> Result<()> {
 ```
 
 **After:**
+
 ```rust
 fn long_function() -> Result<()> {
     let x = get_value()?;
@@ -140,6 +154,7 @@ fn long_function() -> Result<()> {
 ### Pattern 3: Extract Common Error Handling
 
 Both serialize handlers share this pattern:
+
 ```rust
 let mut output = String::new();
 for log in &entry.step_logs().check {
@@ -151,6 +166,7 @@ for log in &entry.step_logs().generate {
 ```
 
 **Extract to helper:**
+
 ```rust
 fn format_step_logs(entry: &ArtifactEntry) -> String {
     let mut output = String::new();
@@ -167,6 +183,7 @@ fn format_step_logs(entry: &ArtifactEntry) -> String {
 ### Pattern 4: Use Iterator Methods
 
 **Before:**
+
 ```rust
 let mut stdout_lines = Vec::new();
 let mut stderr_lines = Vec::new();
@@ -180,6 +197,7 @@ for line in &captured.lines {
 ```
 
 **After:**
+
 ```rust
 let stdout_lines: Vec<String> = captured
     .lines
@@ -200,7 +218,8 @@ let stderr_lines: Vec<String> = captured
 
 ### Clippy (Already in use)
 
-The project already uses clippy. Add these additional lints to enforce code quality:
+The project already uses clippy. Add these additional lints to enforce code
+quality:
 
 ```toml
 # In Cargo.toml [lints.clippy] section
@@ -232,21 +251,25 @@ Before committing refactored code:
 ## Refactoring Order
 
 **Wave 1: Split Long Functions** (Highest impact)
+
 1. `update.rs`: Split handler functions into success/failure helpers
 2. `serialization.rs`: Extract JSON file creation and command building
 3. `effect_handler.rs`: Extract output splitting and temp directory management
 
 **Wave 2: Deduplicate Patterns**
+
 1. Extract shared error formatting in update.rs
 2. Extract shared log accumulation patterns
 3. Create common serialization helpers
 
 **Wave 3: Flatten Call Chains**
+
 1. Replace nested match with Result combinators where appropriate
 2. Extract early return patterns
 3. Use `?` operator more consistently
 
 **Wave 4: Rename Abbreviations**
+
 1. Find and rename abbreviated variables (cfg, ctx, hdl)
 2. Update function names to be descriptive
 3. Ensure all names are 3+ words where possible
@@ -255,9 +278,11 @@ Before committing refactored code:
 
 ### Pitfall 1: Breaking Tests During Refactor
 
-**What goes wrong:** Extracting functions changes call sites and breaks existing tests.
+**What goes wrong:** Extracting functions changes call sites and breaks existing
+tests.
 
 **How to avoid:**
+
 - Keep function signatures stable during Wave 1
 - Only split internal implementation
 - Run `cargo test` after each function extraction
@@ -265,18 +290,22 @@ Before committing refactored code:
 
 ### Pitfall 2: Over-Extraction
 
-**What goes wrong:** Extracting too many tiny functions makes code harder to follow.
+**What goes wrong:** Extracting too many tiny functions makes code harder to
+follow.
 
 **How to avoid:**
+
 - Each extracted function should have a single, clear responsibility
 - If the function name is longer than the code, don't extract
 - Group related operations in cohesive helpers
 
 ### Pitfall 3: Deep Borrow Issues
 
-**What goes wrong:** After splitting functions, borrow checker complains about mutable borrows.
+**What goes wrong:** After splitting functions, borrow checker complains about
+mutable borrows.
 
 **Example:**
+
 ```rust
 // After split, this pattern breaks:
 fn update(model: Model) {
@@ -286,29 +315,32 @@ fn update(model: Model) {
 ```
 
 **How to avoid:**
+
 - Pass individual fields instead of whole model when possible
 - Use `take()` patterns: `let entries = std::mem::take(&mut model.entries)`
 - Refactor data flow before splitting functions
 
 ### Pitfall 4: Losing Comments
 
-**What goes wrong:** Important comments explaining "why" get lost during extraction.
+**What goes wrong:** Important comments explaining "why" get lost during
+extraction.
 
 **How to avoid:**
+
 - Move comments with the code they describe
 - Add doc comments to extracted functions explaining context
 - Keep architectural comments at the top level
 
 ## Files to Refactor
 
-| File | Priority | Main Issues |
-|------|----------|-------------|
-| `src/app/update.rs` | P0 | Multiple 60+ line functions, duplicate patterns |
-| `src/backend/serialization.rs` | P0 | Long functions, repetitive JSON creation |
-| `src/tui/effect_handler.rs` | P1 | execute() has deep nesting |
-| `src/backend/generator.rs` | P2 | To be analyzed |
-| `src/config/make.rs` | P2 | To be analyzed |
-| `src/config/backend.rs` | P2 | To be analyzed |
+| File                           | Priority | Main Issues                                     |
+| ------------------------------ | -------- | ----------------------------------------------- |
+| `src/app/update.rs`            | P0       | Multiple 60+ line functions, duplicate patterns |
+| `src/backend/serialization.rs` | P0       | Long functions, repetitive JSON creation        |
+| `src/tui/effect_handler.rs`    | P1       | execute() has deep nesting                      |
+| `src/backend/generator.rs`     | P2       | To be analyzed                                  |
+| `src/config/make.rs`           | P2       | To be analyzed                                  |
+| `src/config/backend.rs`        | P2       | To be analyzed                                  |
 
 ## Specific Function Targets
 
@@ -347,5 +379,4 @@ For each function being refactored:
 - Refactoring patterns: HIGH - Standard Rust idioms
 - Tool recommendations: MEDIUM-HIGH - Based on current Cargo.toml
 
-**Research date:** 2026-02-16
-**Valid until:** 2026-03-16
+**Research date:** 2026-02-16 **Valid until:** 2026-03-16

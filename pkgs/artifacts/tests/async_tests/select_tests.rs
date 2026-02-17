@@ -13,7 +13,7 @@ use artifacts::config::backend::BackendConfiguration;
 use artifacts::config::make::MakeConfiguration;
 use artifacts::tui::background::spawn_background_task;
 use artifacts::tui::channels::{EffectCommand, EffectResult};
-use tokio::time::{timeout, Duration as TokioDuration};
+use tokio::time::{Duration as TokioDuration, timeout};
 use tokio_util::sync::CancellationToken;
 
 /// Create minimal backend config for testing
@@ -137,7 +137,10 @@ async fn test_select_command_branch() {
         }
     }
 
-    println!("Command branch executed correctly for all {} commands", num_commands);
+    println!(
+        "Command branch executed correctly for all {} commands",
+        num_commands
+    );
 }
 
 #[tokio::test]

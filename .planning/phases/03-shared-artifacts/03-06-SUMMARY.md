@@ -44,6 +44,7 @@ Implemented a **unified event queue** using `Arc<Mutex<VecDeque<Msg>>>`:
    - A 50ms timeout (continue draining)
 
 This ensures:
+
 - Background results are checked immediately (timeout=0)
 - Events are never dropped
 - No source can starve the other
@@ -78,6 +79,6 @@ while had_events {
 ## Verification
 
 - cargo check: Pass
-- cargo clippy: Pass  
+- cargo clippy: Pass
 - cargo test --lib: 93/94 pass
 - Manual test: TUI remains responsive during generation

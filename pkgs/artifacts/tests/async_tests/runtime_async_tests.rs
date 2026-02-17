@@ -13,15 +13,17 @@ use std::time::Duration;
 
 use artifacts::app::effect::Effect;
 use artifacts::app::message::Msg;
-use artifacts::app::model::{ArtifactEntry, ArtifactStatus, ListEntry, Model, Screen, StepLogs, TargetType};
+use artifacts::app::model::{
+    ArtifactEntry, ArtifactStatus, ListEntry, Model, Screen, StepLogs, TargetType,
+};
 use artifacts::config::backend::BackendConfiguration;
 use artifacts::config::make::{ArtifactDef, FileDef, MakeConfiguration, PromptDef};
 use artifacts::tui::background::spawn_background_task;
 use artifacts::tui::channels::{EffectCommand, EffectResult};
 use artifacts::tui::events::EventSource;
 use artifacts::tui::runtime::{effect_to_command, result_to_message, run_async};
-use ratatui::backend::TestBackend;
 use ratatui::Terminal;
+use ratatui::backend::TestBackend;
 use tokio::time::timeout;
 use tokio_util::sync::CancellationToken;
 
@@ -176,7 +178,9 @@ impl CommandTracker {
     }
 
     fn contains_check_serialization(&self) -> bool {
-        self.commands.iter().any(|c| matches!(c, EffectCommand::CheckSerialization { .. }))
+        self.commands
+            .iter()
+            .any(|c| matches!(c, EffectCommand::CheckSerialization { .. }))
     }
 }
 
@@ -267,7 +271,11 @@ async fn test_run_async_sends_effects_to_background() {
 
     // Spawn background task to receive commands
     let shutdown_token = CancellationToken::new();
-    let (cmd_tx, mut res_rx) = spawn_background_task(backend_config.clone(), make_config.clone(), shutdown_token.child_token());
+    let (cmd_tx, mut res_rx) = spawn_background_task(
+        backend_config.clone(),
+        make_config.clone(),
+        shutdown_token.child_token(),
+    );
 
     // Send a command and verify it processes
     let cmd = EffectCommand::CheckSerialization {
@@ -328,7 +336,11 @@ async fn test_run_async_handles_results() {
 
     // Verify message type
     match msg {
-        Msg::CheckSerializationResult { artifact_index, result, .. } => {
+        Msg::CheckSerializationResult {
+            artifact_index,
+            result,
+            ..
+        } => {
             assert_eq!(artifact_index, 0);
             // Result should indicate whether generation is needed
             // (since there's no actual artifact, it will need generation)
@@ -445,7 +457,7 @@ async fn test_select_result_branch() {
             .await
             .expect("Should not timeout")
             .expect("Should receive result");
-        
+
         if let EffectResult::CheckSerialization { artifact_index, .. } = result {
             received.push(artifact_index);
         }
@@ -578,12 +590,12 @@ async fn test_channel_disconnect_graceful() {
 
     // Eventually channel will close
     let timeout_result = timeout(Duration::from_secs(2), res_rx.recv()).await;
-    
+
     // Result could be Some (remaining result) or None (channel closed)
     // Either is acceptable - the key is it doesn't panic
     match timeout_result {
         Ok(Some(_)) | Ok(None) => (), // Both acceptable
-        Err(_) => (),               // Timeout also acceptable
+        Err(_) => (),                 // Timeout also acceptable
     }
 }
 
@@ -678,13 +690,17 @@ async fn test_graceful_shutdown_with_in_flight_commands() {
 async fn test_timeout_handling() {
     // Verify timeout works correctly
     let start = tokio::time::Instant::now();
-    
+
     // Create a timeout future
-    let result = timeout(Duration::from_millis(50), tokio::time::sleep(Duration::from_millis(100))).await;
-    
+    let result = timeout(
+        Duration::from_millis(50),
+        tokio::time::sleep(Duration::from_millis(100)),
+    )
+    .await;
+
     // Should have timed out
     assert!(result.is_err());
-    
+
     // Should have taken at least 50ms
     let elapsed = start.elapsed();
     assert!(elapsed >= Duration::from_millis(50));

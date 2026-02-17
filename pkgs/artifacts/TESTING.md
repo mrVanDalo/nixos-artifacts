@@ -141,8 +141,8 @@ fn my_test() -> Result<()> {
 
 ### Automatic Diagnostic Dump
 
-The `e2e_single_artifact_is_created` test now automatically dumps diagnostics
-on failure to `/tmp/artifacts_test_failures/` with a timestamp in the filename.
+The `e2e_single_artifact_is_created` test now automatically dumps diagnostics on
+failure to `/tmp/artifacts_test_failures/` with a timestamp in the filename.
 
 ## Troubleshooting Failed Tests
 

@@ -140,7 +140,11 @@ fn render_warning_banner(frame: &mut Frame, warnings: &[Warning]) {
     render_warning_banner_to_area(frame, warnings, chunks[1]);
 }
 
-fn render_warning_banner_to_area(frame: &mut Frame, warnings: &[Warning], area: ratatui::layout::Rect) {
+fn render_warning_banner_to_area(
+    frame: &mut Frame,
+    warnings: &[Warning],
+    area: ratatui::layout::Rect,
+) {
     use ratatui::{
         style::{Color, Style},
         text::Line,

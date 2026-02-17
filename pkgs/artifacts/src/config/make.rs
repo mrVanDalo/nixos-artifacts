@@ -1,5 +1,5 @@
+use crate::log_trace;
 use anyhow::Context;
-use log::trace;
 use serde::de::{self, Deserializer};
 use serde::{Deserialize, Serialize};
 use serde_json::{from_str as json_from_str, to_string_pretty, Value};
@@ -175,7 +175,7 @@ impl MakeConfiguration {
             Ok(v) => to_string_pretty(&v).unwrap_or_else(|_| make_text.clone()),
             Err(_) => make_text.clone(),
         };
-        trace!("make config (pretty):\n{}", pretty);
+        log_trace!("make config (pretty):\n{}", pretty);
 
         let root: MakeRoot = json_from_str(&make_text)
             .with_context(|| format!("parsing make config {}", make_json.display()))?;

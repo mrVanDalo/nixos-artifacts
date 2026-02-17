@@ -4,7 +4,7 @@
 //! for async communication between foreground and background tasks.
 
 use tokio::sync::mpsc::unbounded_channel;
-use tokio::time::{timeout, Duration};
+use tokio::time::{Duration, timeout};
 
 /// Mock EffectCommand for testing channel communication
 #[derive(Debug, Clone, PartialEq)]
@@ -16,8 +16,14 @@ pub enum MockEffectCommand {
 /// Mock EffectResult for testing channel communication
 #[derive(Debug, Clone, PartialEq)]
 pub enum MockEffectResult {
-    CheckFinished { artifact_index: usize, needs_generation: bool },
-    GeneratorFinished { artifact_index: usize, success: bool },
+    CheckFinished {
+        artifact_index: usize,
+        needs_generation: bool,
+    },
+    GeneratorFinished {
+        artifact_index: usize,
+        success: bool,
+    },
 }
 
 #[tokio::test]
@@ -80,11 +86,12 @@ async fn test_channel_disconnect_graceful() {
     // Verify dropping sender causes recv() to return None, handled gracefully
     let (tx_cmd, mut rx_cmd) = unbounded_channel::<MockEffectCommand>();
 
-    tx_cmd.send(MockEffectCommand::CheckSerialization {
-        artifact_index: 0,
-        name: "first".to_string(),
-    })
-    .unwrap();
+    tx_cmd
+        .send(MockEffectCommand::CheckSerialization {
+            artifact_index: 0,
+            name: "first".to_string(),
+        })
+        .unwrap();
 
     // Drop the sender (simulates TUI closing or background exiting)
     drop(tx_cmd);

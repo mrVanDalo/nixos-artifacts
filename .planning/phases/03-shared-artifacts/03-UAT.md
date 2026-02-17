@@ -15,49 +15,43 @@ gap_closure_plan: "03-05 TUI Freeze Fix and Effect Execution"
 
 <!-- RETEST SESSION -->
 
-number: 1
-name: TUI Responsiveness During Generation (Timeout Fix)
-expected: |
-  When you press Enter to generate an artifact:
-  1. TUI shows "Running generator..." with ⟳ spinner animation
-  2. You can STILL navigate with j/k while generation runs
-  3. If script hangs, it times out after ~30-35 seconds
-  4. TUI shows error "Timed out after 35 seconds" and returns to list
-  5. You can navigate and quit normally after timeout
-awaiting: diagnosis complete
+number: 1 name: TUI Responsiveness During Generation (Timeout Fix) expected: |
+When you press Enter to generate an artifact:
+
+1. TUI shows "Running generator..." with ⟳ spinner animation
+2. You can STILL navigate with j/k while generation runs
+3. If script hangs, it times out after ~30-35 seconds
+4. TUI shows error "Timed out after 35 seconds" and returns to list
+5. You can navigate and quit normally after timeout awaiting: diagnosis complete
 
 ## Tests
 
 ### 1. TUI Responsiveness During Generation (Timeout Fix)
 
-expected: |
-  Press Enter on an artifact needing generation:
-  - Shows "Running generator..." with ⟳ animation
-  - j/k navigation STILL WORKS during generation
-  - If script hangs: times out after ~30-35 seconds
-  - Displays "Timed out after 35 seconds" error
-  - Returns to navigable list after timeout
+expected: | Press Enter on an artifact needing generation:
+
+- Shows "Running generator..." with ⟳ animation
+- j/k navigation STILL WORKS during generation
+- If script hangs: times out after ~30-35 seconds
+- Displays "Timed out after 35 seconds" error
+- Returns to navigable list after timeout
 
 result: pass
 
 ### 2. Serialization Completes Without Hanging
 
-expected: |
-  After generator completes:
-  - Serialization automatically starts
-  - No TUI freeze or hang
-  - Serialization completes
-  - Status changes to ✓ (up-to-date)
+expected: | After generator completes:
+
+- Serialization automatically starts
+- No TUI freeze or hang
+- Serialization completes
+- Status changes to ✓ (up-to-date)
 
 result: pass
 
 ## Summary
 
-total: 2
-passed: 2
-issues: 0
-pending: 0
-skipped: 0
+total: 2 passed: 2 issues: 0 pending: 0 skipped: 0
 
 ## Gaps
 

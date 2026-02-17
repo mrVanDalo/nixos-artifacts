@@ -56,7 +56,8 @@ completed: 2026-02-16
 
 # Phase 6 Plan 5: Diagnostic Tooling for Test Failure Investigation
 
-**Diagnostic capture infrastructure with human-readable output format and auto-dump on test failure**
+**Diagnostic capture infrastructure with human-readable output format and
+auto-dump on test failure**
 
 ## Performance
 
@@ -68,7 +69,8 @@ completed: 2026-02-16
 
 ## Accomplishments
 
-- Created DiagnosticInfo struct capturing config, environment, and temp file contents
+- Created DiagnosticInfo struct capturing config, environment, and temp file
+  contents
 - Implemented generate_single_artifact_with_diagnostics() for test debugging
 - Added 6 diagnostic tests covering capture, formatting, and redaction
 - Created TESTING.md with comprehensive troubleshooting documentation
@@ -87,17 +89,24 @@ Each task was committed atomically:
 
 ## Files Created/Modified
 
-- `pkgs/artifacts/src/cli/headless.rs` - Added DiagnosticInfo struct and generate_single_artifact_with_diagnostics()
-- `pkgs/artifacts/tests/e2e/diagnostics.rs` - New test module with 6 diagnostic tests
-- `pkgs/artifacts/tests/e2e/mod.rs` - Updated to use diagnostic capture and re-export utilities
-- `pkgs/artifacts/TESTING.md` - Comprehensive testing guide and troubleshooting documentation
+- `pkgs/artifacts/src/cli/headless.rs` - Added DiagnosticInfo struct and
+  generate_single_artifact_with_diagnostics()
+- `pkgs/artifacts/tests/e2e/diagnostics.rs` - New test module with 6 diagnostic
+  tests
+- `pkgs/artifacts/tests/e2e/mod.rs` - Updated to use diagnostic capture and
+  re-export utilities
+- `pkgs/artifacts/TESTING.md` - Comprehensive testing guide and troubleshooting
+  documentation
 
 ## Decisions Made
 
-- Sensitive values (prompts, secrets) are redacted in diagnostics rather than captured and filtered later
-- Diagnostic dump directory is /tmp/artifacts_test_failures/ with timestamp-based filenames
+- Sensitive values (prompts, secrets) are redacted in diagnostics rather than
+  captured and filtered later
+- Diagnostic dump directory is /tmp/artifacts_test_failures/ with
+  timestamp-based filenames
 - Output format uses visual separators (═══, ───) for human readability
-- Both successful and failed generations capture full diagnostic info (success enables verification of capture)
+- Both successful and failed generations capture full diagnostic info (success
+  enables verification of capture)
 
 ## Deviations from Plan
 

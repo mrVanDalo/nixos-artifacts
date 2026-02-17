@@ -49,7 +49,8 @@ completed: 2026-02-16
 
 # Phase 05-01: State Machine Simulation Tests Summary
 
-**Comprehensive state machine tests with dual assertion strategy for async effect handling, covering 15 test scenarios across full lifecycle transitions.**
+**Comprehensive state machine tests with dual assertion strategy for async
+effect handling, covering 15 test scenarios across full lifecycle transitions.**
 
 ## Performance
 
@@ -61,11 +62,15 @@ completed: 2026-02-16
 
 ## Accomplishments
 
-- Created `state_machine_tests.rs` with 1030 lines and 15 comprehensive test functions
-- Implemented dual assertion strategy: verify both command variants and final state
+- Created `state_machine_tests.rs` with 1030 lines and 15 comprehensive test
+  functions
+- Implemented dual assertion strategy: verify both command variants and final
+  state
 - Achieved 100% test pass rate (15/15 tests passing)
-- Covered all major state machine transitions: Pending → Check → Generate → Serialize → Done/Failed
-- Added support for batch effect processing and artifact index preservation testing
+- Covered all major state machine transitions: Pending → Check → Generate →
+  Serialize → Done/Failed
+- Added support for batch effect processing and artifact index preservation
+  testing
 
 ## Task Commits
 
@@ -75,7 +80,8 @@ completed: 2026-02-16
    - Test helpers for building configurations and models
    - Comprehensive coverage of lifecycle transitions
 
-2. **Task 2: Add state_machine_tests to async_tests module** - included in f1b8666
+2. **Task 2: Add state_machine_tests to async_tests module** - included in
+   f1b8666
    - Updated mod.rs to include new module
    - Verified compilation with `cargo check --tests`
 
@@ -83,7 +89,8 @@ completed: 2026-02-16
 
 ## Files Created/Modified
 
-- `pkgs/artifacts/tests/async_tests/state_machine_tests.rs` - 1030 lines of comprehensive state machine tests
+- `pkgs/artifacts/tests/async_tests/state_machine_tests.rs` - 1030 lines of
+  comprehensive state machine tests
   - test_check_serialization_flow_needs_generation
   - test_check_serialization_flow_up_to_date
   - test_generator_flow_success
@@ -106,13 +113,17 @@ completed: 2026-02-16
 
 1. **Dual Assertion Strategy:** Each test verifies BOTH:
    - Commands sent match expected EffectCommand variants (via CommandTracker)
-   - Final Model state reflects expected terminal state (via update() application)
+   - Final Model state reflects expected terminal state (via update()
+     application)
 
-2. **Serial Test Execution:** Used #[serial] attribute to prevent shared state conflicts across async tests
+2. **Serial Test Execution:** Used #[serial] attribute to prevent shared state
+   conflicts across async tests
 
-3. **Mock Command Tracking:** Created CommandTracker struct to record commands without requiring actual async execution
+3. **Mock Command Tracking:** Created CommandTracker struct to record commands
+   without requiring actual async execution
 
-4. **Effect-to-Command Mapping:** Implemented effect_to_command() function to map Effect variants to EffectCommand for testability
+4. **Effect-to-Command Mapping:** Implemented effect_to_command() function to
+   map Effect variants to EffectCommand for testability
 
 ## Deviations from Plan
 
@@ -120,12 +131,16 @@ None - plan executed exactly as written.
 
 ## Issues Encountered
 
-- **Test Setup Complexity:** Some tests required setting Screen to Generating before sending results (update() handlers require specific screen states)
-  - Resolution: Added GeneratingState setup in affected tests to ensure proper handler routing
+- **Test Setup Complexity:** Some tests required setting Screen to Generating
+  before sending results (update() handlers require specific screen states)
+  - Resolution: Added GeneratingState setup in affected tests to ensure proper
+    handler routing
   - Required importing GeneratingState in test file
 
-- **Clone Warning:** Some tests triggered "unused_mut" warnings due to cloning pattern
-  - Resolution: Warnings are acceptable for test code patterns that use clone-and-modify approach
+- **Clone Warning:** Some tests triggered "unused_mut" warnings due to cloning
+  pattern
+  - Resolution: Warnings are acceptable for test code patterns that use
+    clone-and-modify approach
 
 ## Verification
 
@@ -148,9 +163,11 @@ cd pkgs/artifacts && cargo test --test tests async
 ## Coverage Assessment
 
 All critical paths covered:
+
 - CheckSerialization, RunGenerator, Serialize commands covered
 - Success and failure result paths covered
-- Channel lifecycle (spawn, send, receive, shutdown, disconnect) covered in existing tests
+- Channel lifecycle (spawn, send, receive, shutdown, disconnect) covered in
+  existing tests
 - Batch effect processing covered
 - Artifact index preservation verified
 
