@@ -53,6 +53,13 @@ pub enum Msg {
         result: Result<SerializeOutput, String>,
     },
 
+    /// Streaming output line received during script execution
+    OutputLine {
+        artifact_index: usize,
+        stream: crate::app::model::OutputStream,
+        content: String,
+    },
+
     /// Request to quit the application
     Quit,
 

@@ -147,6 +147,22 @@ pub enum LogLevel {
     Success, // Completion messages
 }
 
+/// Identifies which stream a line came from for streaming output
+#[derive(Debug, Clone, Copy)]
+pub enum OutputStream {
+    Stdout,
+    Stderr,
+}
+
+impl From<crate::tui::channels::OutputStream> for OutputStream {
+    fn from(stream: crate::tui::channels::OutputStream) -> Self {
+        match stream {
+            crate::tui::channels::OutputStream::Stdout => OutputStream::Stdout,
+            crate::tui::channels::OutputStream::Stderr => OutputStream::Stderr,
+        }
+    }
+}
+
 /// A warning about backend capability issues (non-blocking)
 #[derive(Debug, Clone)]
 pub struct Warning {
@@ -204,6 +220,24 @@ impl StepLogs {
             LogStep::Generate => &mut self.generate,
             LogStep::Serialize => &mut self.serialize,
         }
+    }
+
+    /// Append stdout lines as Output-level entries
+    pub fn append_stdout(&mut self, step: LogStep, lines: &[String]) {
+        let entries = lines.iter().map(|line| LogEntry {
+            level: LogLevel::Output,
+            message: line.clone(),
+        });
+        self.get_mut(step).extend(entries);
+    }
+
+    /// Append stderr lines as Error-level entries
+    pub fn append_stderr(&mut self, step: LogStep, lines: &[String]) {
+        let entries = lines.iter().map(|line| LogEntry {
+            level: LogLevel::Error,
+            message: line.clone(),
+        });
+        self.get_mut(step).extend(entries);
     }
 }
 

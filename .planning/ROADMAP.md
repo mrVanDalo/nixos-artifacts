@@ -35,8 +35,8 @@ v3.0 TUI Polish milestone in planning. 5 phases covering status fixes, smart gen
 | 8   | Smart Logging                 | v2.0      | Complete    | 2026-02-17 |
 | 9   | Shared Artifact Status Fixes  | v3.0      | Complete    | 2026-02-18 |
 | 10  | Smart Generator Selection     | v3.0      | Complete    | 2026-02-18 |
-| 11  | Error Handling Improvements   | v3.0      | Planned     | —          |
-| 12  | Script Output Visibility      | v3.0      | Not Started | —          |
+| 11  | Error Handling Improvements   | v3.0      | Complete    | 2026-02-18 |
+| 12  | Script Output Visibility      | v3.0      | Complete    | 2026-02-18 |
 | 13  | Enhanced Generator Dialog     | v3.0      | Not Started | —          |
 
 **Total:** 13 phases | Goal: TUI Polish
@@ -123,9 +123,9 @@ v3.0 TUI Polish milestone in planning. 5 phases covering status fixes, smart gen
 - ERR-04: Panic handler prints to stderr and attempts terminal restoration
 
 **Plan List:**
-- [ ] 11-01-PLAN.md — Pre-terminal error handling: move config loading before terminal setup, suppress output with --log-file
-- [ ] 11-02-PLAN.md — Panic handler enhancement: print to stderr, ensure terminal restoration
-- [ ] 11-03-PLAN.md — Output suppression audit: verify no println!/eprintln! in TUI, runtime errors via model.error
+- [x] 11-01-PLAN.md — Pre-terminal error handling: move config loading before terminal setup, suppress output with --log-file
+- [x] 11-02-PLAN.md — Panic handler enhancement: print to stderr, ensure terminal restoration
+- [x] 11-03-PLAN.md — Output suppression audit: verify no println!/eprintln! in TUI, runtime errors via model.error
 
 **Success Criteria:**
 1. TUI initialization failures (e.g., bad flake.nix, missing backend.toml) print clear error to stderr and exit non-zero
@@ -140,21 +140,33 @@ v3.0 TUI Polish milestone in planning. 5 phases covering status fixes, smart gen
 
 **Goal:** Users can see stdout/stderr from check/generator/serialize scripts in the TUI
 
-**Dependencies:** Phase 11 (error handling foundation required)
+**Status:** ✅ Complete (4 plans executed)
+
+**Plans:** 4 plans
+
+**Dependencies:** Phase 11 (error handling foundation required) ✓
 
 **Requirements:**
-- UI-04: Script output (stdout/stderr from check/generator/serialize) visible in TUI interface
-- OUT-01: Script stdout captured and stored for TUI display
-- OUT-02: Script stderr captured and stored for TUI display
-- OUT-03: Output display updates in real-time during script execution
-- OUT-04: Previous script output accessible in artifact detail view
+- UI-04: Script output (stdout/stderr from check/generator/serialize) visible in TUI interface ✓
+- OUT-01: Script stdout captured and stored for TUI display ✓
+- OUT-02: Script stderr captured and stored for TUI display ✓
+- OUT-03: Output display updates in real-time during script execution ✓
+- OUT-04: Previous script output accessible in artifact detail view ✓
+
+**Plan List:**
+- [x] 12-01-PLAN.md — Channel type enhancements: ScriptOutput struct, EffectResult variants, result_to_message conversion
+- [x] 12-02-PLAN.md — Output storage and display: StepLogs helpers, update.rs handlers
+- [x] 12-03-PLAN.md — Script output display in TUI views: Generator/Serialize handlers, list.rs display
+- [x] 12-04-PLAN.md — Real-time streaming output: Async infrastructure, OutputLine messages
 
 **Success Criteria:**
-1. Script stdout is captured and stored during check_serialization, generator, and serialize operations
-2. Script stderr is captured and stored alongside stdout
-3. Output is visible in real-time during script execution (streamed or updated periodically)
-4. After generation completes, previous script output is viewable in an artifact detail view
-5. Output capture works for both single artifacts and shared artifacts across machines
+1. ✓ Script stdout is captured and stored during check_serialization, generator, and serialize operations
+2. ✓ Script stderr is captured and stored alongside stdout
+3. ✓ Output is visible in real-time during script execution (streamed or updated periodically)
+4. ✓ After generation completes, previous script output is viewable in an artifact detail view
+5. ✓ Output capture works for both single artifacts and shared artifacts across machines
+
+**Completed:** 2026-02-18
 
 ---
 

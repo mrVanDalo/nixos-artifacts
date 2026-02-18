@@ -548,9 +548,10 @@ pub fn result_to_message(result: EffectResult) -> Msg {
         EffectResult::CheckSerialization {
             artifact_index,
             needs_generation,
-            output: _,
+            output,
         } => {
-            // Convert bool+Option<String> to Result<bool, String>
+            use crate::app::message::CheckOutput;
+            // Convert bool+ScriptOutput to Result<bool, String>
             let result = if needs_generation {
                 Ok(true)
             } else {
@@ -559,7 +560,10 @@ pub fn result_to_message(result: EffectResult) -> Msg {
             Msg::CheckSerializationResult {
                 artifact_index,
                 result,
-                output: None, // TODO: Convert output if needed
+                output: Some(CheckOutput {
+                    stdout_lines: output.stdout_lines,
+                    stderr_lines: output.stderr_lines,
+                }),
             }
         }
 
@@ -572,12 +576,8 @@ pub fn result_to_message(result: EffectResult) -> Msg {
             use crate::app::message::GeneratorOutput;
             let result = if success {
                 Ok(GeneratorOutput {
-                    stdout_lines: output
-                        .unwrap_or_default()
-                        .lines()
-                        .map(|s| s.to_string())
-                        .collect(),
-                    stderr_lines: vec![],
+                    stdout_lines: output.stdout_lines,
+                    stderr_lines: output.stderr_lines,
                     files_generated: 0, // TODO: Get actual count
                 })
             } else {
@@ -592,13 +592,14 @@ pub fn result_to_message(result: EffectResult) -> Msg {
         EffectResult::SerializeFinished {
             artifact_index,
             success,
+            output,
             error,
         } => {
             use crate::app::message::SerializeOutput;
             let result = if success {
                 Ok(SerializeOutput {
-                    stdout_lines: vec![],
-                    stderr_lines: vec![],
+                    stdout_lines: output.stdout_lines,
+                    stderr_lines: output.stderr_lines,
                 })
             } else {
                 Err(error.unwrap_or_else(|| "Serialize failed".to_string()))
@@ -612,15 +613,26 @@ pub fn result_to_message(result: EffectResult) -> Msg {
         EffectResult::SharedCheckSerialization {
             artifact_index,
             needs_generation,
-            outputs: _,
+            outputs,
         } => {
+            use crate::app::message::CheckOutput;
             // For simplicity, check if any target needs generation
             let any_needs_gen = needs_generation.iter().any(|&b| b);
             let result = Ok(any_needs_gen);
+            // Aggregate outputs - take first if any
+            let aggregated_output = if outputs.is_empty() {
+                None
+            } else {
+                let first = &outputs[0];
+                Some(CheckOutput {
+                    stdout_lines: first.stdout_lines.clone(),
+                    stderr_lines: first.stderr_lines.clone(),
+                })
+            };
             Msg::SharedCheckSerializationResult {
                 artifact_index,
                 result,
-                output: None, // TODO: Aggregate outputs
+                output: aggregated_output,
             }
         }
 
@@ -633,12 +645,8 @@ pub fn result_to_message(result: EffectResult) -> Msg {
             use crate::app::message::GeneratorOutput;
             let result = if success {
                 Ok(GeneratorOutput {
-                    stdout_lines: output
-                        .unwrap_or_default()
-                        .lines()
-                        .map(|s| s.to_string())
-                        .collect(),
-                    stderr_lines: vec![],
+                    stdout_lines: output.stdout_lines,
+                    stderr_lines: output.stderr_lines,
                     files_generated: 0,
                 })
             } else {
@@ -664,6 +672,16 @@ pub fn result_to_message(result: EffectResult) -> Msg {
                 }),
             }
         }
+
+        EffectResult::OutputLine {
+            artifact_index,
+            stream,
+            content,
+        } => Msg::OutputLine {
+            artifact_index,
+            stream: crate::app::model::OutputStream::from(stream),
+            content,
+        },
     }
 }
 
@@ -966,11 +984,13 @@ mod tests {
 
     #[test]
     fn test_result_to_message_handles_all_variants() {
+        use crate::tui::channels::ScriptOutput;
+
         // Test CheckSerialization result
         let msg = result_to_message(EffectResult::CheckSerialization {
             artifact_index: 0,
             needs_generation: true,
-            output: None,
+            output: ScriptOutput::default(),
         });
         assert!(matches!(msg, Msg::CheckSerializationResult { .. }));
 
@@ -978,7 +998,7 @@ mod tests {
         let msg = result_to_message(EffectResult::GeneratorFinished {
             artifact_index: 0,
             success: true,
-            output: None,
+            output: ScriptOutput::default(),
             error: None,
         });
         assert!(matches!(msg, Msg::GeneratorFinished { .. }));
@@ -987,6 +1007,7 @@ mod tests {
         let msg = result_to_message(EffectResult::SerializeFinished {
             artifact_index: 0,
             success: true,
+            output: ScriptOutput::default(),
             error: None,
         });
         assert!(matches!(msg, Msg::SerializeFinished { .. }));

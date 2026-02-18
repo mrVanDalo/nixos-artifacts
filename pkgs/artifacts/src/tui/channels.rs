@@ -36,7 +36,43 @@
 //! let result = rx_res.recv().await;
 //! ```
 
+use crate::backend::output_capture::{CapturedOutput, OutputStream as BackendOutputStream};
 use std::collections::HashMap;
+
+/// Structured script output preserving stdout/stderr separation
+#[derive(Debug, Clone, Default)]
+pub struct ScriptOutput {
+    pub stdout_lines: Vec<String>,
+    pub stderr_lines: Vec<String>,
+}
+
+impl ScriptOutput {
+    /// Convert from CapturedOutput to ScriptOutput, splitting stdout and stderr
+    pub fn from_captured(captured: &CapturedOutput) -> Self {
+        let mut stdout_lines = Vec::new();
+        let mut stderr_lines = Vec::new();
+
+        for line in &captured.lines {
+            match line.stream {
+                BackendOutputStream::Stdout => stdout_lines.push(line.content.clone()),
+                BackendOutputStream::Stderr => stderr_lines.push(line.content.clone()),
+            }
+        }
+
+        Self {
+            stdout_lines,
+            stderr_lines,
+        }
+    }
+
+    /// Create a ScriptOutput from a single message (for errors/warnings)
+    pub fn from_message(message: &str) -> Self {
+        Self {
+            stdout_lines: vec![message.to_string()],
+            stderr_lines: Vec::new(),
+        }
+    }
+}
 
 /// Commands sent from foreground to background task.
 ///
@@ -96,6 +132,13 @@ pub enum EffectCommand {
     },
 }
 
+/// Identifies which stream a line came from
+#[derive(Debug, Clone, Copy)]
+pub enum OutputStream {
+    Stdout,
+    Stderr,
+}
+
 /// Results sent from background task back to foreground.
 ///
 /// Each variant corresponds to an `EffectCommand` and includes `artifact_index`
@@ -107,14 +150,14 @@ pub enum EffectResult {
     CheckSerialization {
         artifact_index: usize,
         needs_generation: bool,
-        output: Option<String>,
+        output: ScriptOutput,
     },
 
     /// Result of generator script execution
     GeneratorFinished {
         artifact_index: usize,
         success: bool,
-        output: Option<String>,
+        output: ScriptOutput,
         error: Option<String>,
     },
 
@@ -122,6 +165,7 @@ pub enum EffectResult {
     SerializeFinished {
         artifact_index: usize,
         success: bool,
+        output: ScriptOutput,
         error: Option<String>,
     },
 
@@ -129,21 +173,28 @@ pub enum EffectResult {
     SharedCheckSerialization {
         artifact_index: usize,
         needs_generation: Vec<bool>, // One per target
-        outputs: Vec<Option<String>>,
+        outputs: Vec<ScriptOutput>,
     },
 
     /// Result of shared generator script execution
     SharedGeneratorFinished {
         artifact_index: usize,
         success: bool,
-        output: Option<String>,
+        output: ScriptOutput,
         error: Option<String>,
     },
 
     /// Result of shared serialize script execution
     SharedSerializeFinished {
         artifact_index: usize,
-        results: Vec<(String, bool, Option<String>)>, // (target, success, error)
+        results: Vec<(String, bool, ScriptOutput)>, // (target, success, output)
+    },
+
+    /// Streaming output line received during script execution
+    OutputLine {
+        artifact_index: usize,
+        stream: OutputStream,
+        content: String,
     },
 }
 
@@ -198,7 +249,7 @@ async fn execute_effect(cmd: EffectCommand) -> EffectResult {
             EffectResult::CheckSerialization {
                 artifact_index,
                 needs_generation: true,
-                output: None,
+                output: ScriptOutput::default(),
             }
         }
 
@@ -207,7 +258,7 @@ async fn execute_effect(cmd: EffectCommand) -> EffectResult {
             EffectResult::GeneratorFinished {
                 artifact_index,
                 success: true,
-                output: None,
+                output: ScriptOutput::default(),
                 error: None,
             }
         }
@@ -217,6 +268,7 @@ async fn execute_effect(cmd: EffectCommand) -> EffectResult {
             EffectResult::SerializeFinished {
                 artifact_index,
                 success: true,
+                output: ScriptOutput::default(),
                 error: None,
             }
         }
@@ -228,7 +280,7 @@ async fn execute_effect(cmd: EffectCommand) -> EffectResult {
         } => {
             // TODO: Implement actual shared check_serialization logic
             let needs_generation = vec![true; targets.len()];
-            let outputs = vec![None; targets.len()];
+            let outputs = vec![ScriptOutput::default(); targets.len()];
             EffectResult::SharedCheckSerialization {
                 artifact_index,
                 needs_generation,
@@ -241,7 +293,7 @@ async fn execute_effect(cmd: EffectCommand) -> EffectResult {
             EffectResult::SharedGeneratorFinished {
                 artifact_index,
                 success: true,
-                output: None,
+                output: ScriptOutput::default(),
                 error: None,
             }
         }
@@ -256,7 +308,7 @@ async fn execute_effect(cmd: EffectCommand) -> EffectResult {
             let results: Vec<_> = machine_targets
                 .into_iter()
                 .chain(user_targets.into_iter())
-                .map(|t| (t, true, None))
+                .map(|t| (t, true, ScriptOutput::default()))
                 .collect();
             EffectResult::SharedSerializeFinished {
                 artifact_index,
@@ -293,7 +345,7 @@ mod tests {
         let res = EffectResult::CheckSerialization {
             artifact_index: 3,
             needs_generation: true,
-            output: None,
+            output: ScriptOutput::default(),
         };
         match res {
             EffectResult::CheckSerialization { artifact_index, .. } => {
@@ -367,33 +419,34 @@ mod tests {
             EffectResult::CheckSerialization {
                 artifact_index: 0,
                 needs_generation: true,
-                output: None,
+                output: ScriptOutput::default(),
             },
             EffectResult::GeneratorFinished {
                 artifact_index: 1,
                 success: true,
-                output: None,
+                output: ScriptOutput::default(),
                 error: None,
             },
             EffectResult::SerializeFinished {
                 artifact_index: 2,
                 success: true,
+                output: ScriptOutput::default(),
                 error: None,
             },
             EffectResult::SharedCheckSerialization {
                 artifact_index: 3,
                 needs_generation: vec![true],
-                outputs: vec![None],
+                outputs: vec![ScriptOutput::default()],
             },
             EffectResult::SharedGeneratorFinished {
                 artifact_index: 4,
                 success: true,
-                output: None,
+                output: ScriptOutput::default(),
                 error: None,
             },
             EffectResult::SharedSerializeFinished {
                 artifact_index: 5,
-                results: vec![("target".to_string(), true, None)],
+                results: vec![("target".to_string(), true, ScriptOutput::default())],
             },
         ];
 
@@ -405,6 +458,7 @@ mod tests {
                 EffectResult::SharedCheckSerialization { artifact_index, .. } => *artifact_index,
                 EffectResult::SharedGeneratorFinished { artifact_index, .. } => *artifact_index,
                 EffectResult::SharedSerializeFinished { artifact_index, .. } => *artifact_index,
+                EffectResult::OutputLine { artifact_index, .. } => *artifact_index,
             };
             assert_eq!(idx, i, "artifact_index should match position");
         }

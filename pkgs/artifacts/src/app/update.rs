@@ -93,6 +93,16 @@ pub fn update(model: Model, msg: Msg) -> (Model, Effect) {
             },
         ) => handle_check_result(model, artifact_index, result, output),
 
+        // === Streaming output (any screen) ===
+        (
+            _,
+            Msg::OutputLine {
+                artifact_index,
+                stream,
+                content,
+            },
+        ) => handle_output_line(model, artifact_index, stream, content),
+
         // === Global ===
         (_, Msg::Quit) => (model, Effect::Quit),
         (_, Msg::Tick) => {
@@ -423,21 +433,14 @@ fn handle_check_result(
     output: Option<CheckOutput>,
 ) -> (Model, Effect) {
     if let Some(entry) = model.entries.get_mut(artifact_index) {
-        // Add captured script output to logs
+        // Add captured script output to logs using helper methods
         if let Some(check_output) = output {
-            let step_logs = entry.step_logs_mut();
-            for line in &check_output.stdout_lines {
-                step_logs.check.push(LogEntry {
-                    level: LogLevel::Output,
-                    message: line.clone(),
-                });
-            }
-            for line in &check_output.stderr_lines {
-                step_logs.check.push(LogEntry {
-                    level: LogLevel::Error,
-                    message: line.clone(),
-                });
-            }
+            entry
+                .step_logs_mut()
+                .append_stdout(LogStep::Check, &check_output.stdout_lines);
+            entry
+                .step_logs_mut()
+                .append_stderr(LogStep::Check, &check_output.stderr_lines);
         }
 
         // Add status summary
@@ -880,6 +883,34 @@ fn handle_shared_serialize_failure(
         };
     }
     model.screen = Screen::ArtifactList;
+    (model, Effect::None)
+}
+
+/// Handles streaming output line received during script execution.
+fn handle_output_line(
+    mut model: Model,
+    artifact_index: usize,
+    stream: crate::app::model::OutputStream,
+    content: String,
+) -> (Model, Effect) {
+    if let Some(entry) = model.entries.get_mut(artifact_index) {
+        // Determine log level from stream type
+        let level = match stream {
+            crate::app::model::OutputStream::Stdout => LogLevel::Output,
+            crate::app::model::OutputStream::Stderr => LogLevel::Error,
+        };
+
+        // Determine current step based on status
+        // Use the model's selected_log_step to determine where to append
+        // This ensures streaming output goes to the correct step being viewed
+        let step = model.selected_log_step;
+
+        // Append to appropriate step logs
+        entry.step_logs_mut().get_mut(step).push(LogEntry {
+            level,
+            message: content,
+        });
+    }
     (model, Effect::None)
 }
 

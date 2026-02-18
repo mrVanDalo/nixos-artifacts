@@ -27,7 +27,8 @@ use tokio::sync::mpsc::UnboundedSender;
 
 use crate::app::effect::Effect;
 use crate::app::message::Msg;
-use crate::tui::channels::{EffectCommand, EffectResult};
+use crate::app::model::OutputStream;
+use crate::tui::channels::{EffectCommand, EffectResult, ScriptOutput};
 
 /// Handler that routes effects to the background task.
 ///
@@ -288,12 +289,8 @@ impl EffectHandler {
                 use crate::app::message::GeneratorOutput;
                 let result = if success {
                     Ok(GeneratorOutput {
-                        stdout_lines: output
-                            .unwrap_or_default()
-                            .lines()
-                            .map(|s| s.to_string())
-                            .collect(),
-                        stderr_lines: vec![],
+                        stdout_lines: output.stdout_lines,
+                        stderr_lines: output.stderr_lines,
                         files_generated: 0, // TODO: Get actual count
                     })
                 } else {
@@ -308,13 +305,14 @@ impl EffectHandler {
             EffectResult::SerializeFinished {
                 artifact_index,
                 success,
+                output,
                 error,
             } => {
                 use crate::app::message::SerializeOutput;
                 let result = if success {
                     Ok(SerializeOutput {
-                        stdout_lines: vec![],
-                        stderr_lines: vec![],
+                        stdout_lines: output.stdout_lines,
+                        stderr_lines: output.stderr_lines,
                     })
                 } else {
                     Err(error.unwrap_or_else(|| "Serialize failed".to_string()))
@@ -349,12 +347,8 @@ impl EffectHandler {
                 use crate::app::message::GeneratorOutput;
                 let result = if success {
                     Ok(GeneratorOutput {
-                        stdout_lines: output
-                            .unwrap_or_default()
-                            .lines()
-                            .map(|s| s.to_string())
-                            .collect(),
-                        stderr_lines: vec![],
+                        stdout_lines: output.stdout_lines,
+                        stderr_lines: output.stderr_lines,
                         files_generated: 0,
                     })
                 } else {
@@ -378,6 +372,19 @@ impl EffectHandler {
                         stdout_lines: vec![],
                         stderr_lines: vec![],
                     }),
+                }
+            }
+
+            EffectResult::OutputLine {
+                artifact_index,
+                stream,
+                content,
+            } => {
+                // Streaming output line received during script execution
+                Msg::OutputLine {
+                    artifact_index,
+                    stream: crate::app::model::OutputStream::from(stream),
+                    content,
                 }
             }
         }
@@ -500,7 +507,7 @@ mod tests {
         let msg = handler.result_to_message(EffectResult::CheckSerialization {
             artifact_index: 0,
             needs_generation: true,
-            output: None,
+            output: ScriptOutput::default(),
         });
         assert!(matches!(msg, Msg::CheckSerializationResult { .. }));
 
@@ -508,7 +515,7 @@ mod tests {
         let msg = handler.result_to_message(EffectResult::GeneratorFinished {
             artifact_index: 1,
             success: true,
-            output: Some("output".to_string()),
+            output: ScriptOutput::from_message("output"),
             error: None,
         });
         assert!(matches!(msg, Msg::GeneratorFinished { .. }));
@@ -517,6 +524,7 @@ mod tests {
         let msg = handler.result_to_message(EffectResult::SerializeFinished {
             artifact_index: 2,
             success: true,
+            output: ScriptOutput::default(),
             error: None,
         });
         assert!(matches!(msg, Msg::SerializeFinished { .. }));
@@ -525,7 +533,7 @@ mod tests {
         let msg = handler.result_to_message(EffectResult::SharedCheckSerialization {
             artifact_index: 3,
             needs_generation: vec![true, false],
-            outputs: vec![None, None],
+            outputs: vec![ScriptOutput::default(), ScriptOutput::default()],
         });
         assert!(matches!(msg, Msg::SharedCheckSerializationResult { .. }));
 
@@ -533,7 +541,7 @@ mod tests {
         let msg = handler.result_to_message(EffectResult::SharedGeneratorFinished {
             artifact_index: 4,
             success: true,
-            output: None,
+            output: ScriptOutput::default(),
             error: None,
         });
         assert!(matches!(msg, Msg::SharedGeneratorFinished { .. }));
@@ -541,7 +549,7 @@ mod tests {
         // Test SharedSerializeFinished result
         let msg = handler.result_to_message(EffectResult::SharedSerializeFinished {
             artifact_index: 5,
-            results: vec![("target".to_string(), true, None)],
+            results: vec![("target".to_string(), true, ScriptOutput::default())],
         });
         assert!(matches!(msg, Msg::SharedSerializeFinished { .. }));
     }
@@ -554,7 +562,7 @@ mod tests {
         let msg = handler.result_to_message(EffectResult::GeneratorFinished {
             artifact_index: 0,
             success: false,
-            output: None,
+            output: ScriptOutput::default(),
             error: Some("Script failed".to_string()),
         });
 

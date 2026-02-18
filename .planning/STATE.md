@@ -2,7 +2,7 @@
 
 **Project:** NixOS Artifacts Store — v3.0 TUI Polish
 **Current Milestone:** v3.0 ○ ROADMAP READY
-**Status:** Roadmap created, awaiting approval
+**Status:** Phase 12 complete
 **Last Updated:** 2026-02-18
 
 ---
@@ -14,7 +14,7 @@ See: [.planning/PROJECT.md](./PROJECT.md) (updated 2026-02-18)
 **Core Value:** The TUI must never freeze during long-running operations — all
 effect execution runs in a background job while the TUI remains interactive.
 
-**Current Focus:** v3.0 Roadmap — 5 phases, 20 requirements mapped
+**Current Focus:** Phase 12 - Script output visibility (4 plans)
 
 ---
 
@@ -23,16 +23,16 @@ effect execution runs in a background job while the TUI remains interactive.
 | Aspect       | Status                       |
 | ------------ | ---------------------------- |
 | Milestone    | v3.0 ○ ROADMAP READY         |
-| Phase        | 11-error-handling            |
-| Plan         | 03-complete                  |
+| Phase        | 12-script-output-visibility  |
+| Plan         | 04-complete                  |
 | Requirements | 20 v1 requirements mapped    |
-| Tests        | 113 passing                |
-| Previous     | Plan 10-02 complete          |
+| Tests        | 118 passing                  |
+| Previous     | Plan 12-04 complete          |
 
 ### Progress Bar
 
 ```
-[██████░░░░░░░░░░░░░░░░░░░░░░░░░░] 20% complete — Phase 11 complete (3 of 3 plans complete)
+[████████████████████████░░░░░░░░] 92% complete — Phase 12 complete (4 of 4 plans complete)
 ```
 
 ---
@@ -45,13 +45,10 @@ All decisions preserved in PROJECT.md Validated section.
 
 ### Key Decisions from v2.0
 
-- **Test approach:** Programmatic headless tests that invoke CLI and verify
-  backend storage
+- **Test approach:** Programmatic headless tests that invoke CLI and verify backend storage
 - **Logging strategy:** Opt-in via `--log-file <path>` argument with feature flags
-- **Refactoring goal:** Flatten call chains, eliminate abbreviations, improve
-  readability
-- **State machine testing:** Dual assertion strategy - verify both command
-  variants AND final model state
+- **Refactoring goal:** Flatten call chains, eliminate abbreviations, improve readability
+- **State machine testing:** Dual assertion strategy - verify both command variants AND final model state
 - **Feature-gated logging:** Zero-cost when disabled via Cargo features
 
 ### Technical Debt
@@ -112,11 +109,16 @@ All decisions preserved in PROJECT.md Validated section.
 - [x] Phase 10: Smart generator selection (UI-02, GEN-01-04)
   - [x] Plan 10-01: Smart generator selection logic
   - [x] Plan 10-02: Enhanced dialog context
- - [x] Phase 11: TUI error display (UI-03, ERR-01-04)
-    - [x] Plan 11-01: Pre-terminal error handling
-    - [x] Plan 11-02: Enhanced panic handler and terminal restoration
-    - [x] Plan 11-03: TUI error display audit
-- [ ] Phase 12: Script output visibility (UI-04, OUT-01-04)
+- [x] Phase 11: TUI error display (UI-03, ERR-01-04)
+  - [x] Plan 11-01: Pre-terminal error handling
+  - [x] Plan 11-02: Enhanced panic handler and terminal restoration
+  - [x] Plan 11-03: TUI error display audit
+  - [x] Phase 12: Script output visibility (UI-04, OUT-01-04) ✓
+    - [x] Plan 12-01: Data flow pipeline for script output ✓
+    - [x] Plan 12-02: StepLogs helper methods ✓
+    - [x] Plan 12-03: Script output display in TUI views ✓
+    - [x] Plan 12-04: Real-time streaming output ✓
+  - [ ] Phase 13: Enhanced generator dialog (UI-05, DIALOG-01-05)
 - [ ] Phase 13: Enhanced generator dialog (UI-05, DIALOG-01-05)
 
 ---
@@ -125,112 +127,38 @@ All decisions preserved in PROJECT.md Validated section.
 
 ### Last Session
 
-**Date:** 2026-02-17
-**Activity:** Completed v2.0 milestone
-**Summary:** Archived v2.0 Robustness milestone with 4 phases (5-8), 28 plans, 18 requirements. Created milestone archives, updated PROJECT.md and ROADMAP.md, created git tag v2.0.
-
-### Last Session
-
-**Date:** 2026-02-17
-**Activity:** Completed v2.0 milestone
-**Summary:** Archived v2.0 Robustness milestone with 4 phases (5-8), 28 plans, 18 requirements. Created milestone archives, updated PROJECT.md and ROADMAP.md, created git tag v2.0.
-
-### Previous Session
-
 **Date:** 2026-02-18
-**Activity:** Completed Plan 09-01: Shared Artifact Status Fixes
-**Summary:** 
-- Fixed missing SharedCheckSerializationResult handler in update.rs
-- Shared artifacts now transition from Pending → (NeedsGeneration | UpToDate | Failed)
-- Added 3 tests verifying all status transition paths
-- Discovered that run_shared_check_serialization() already existed - only update handler was missing
-
-**Decisions Made:**
-- Route SharedCheckSerializationResult to handle_check_result() for DRY code
-- Reuse existing status transition logic for both single and shared artifacts
-
-### Previous Session
-
-**Date:** 2026-02-18
-**Activity:** Completed Plan 09-04: Gap Closure — Shared Artifact Status Fixes
+**Activity:** Completed Plan 12-01: Script Output Visibility Data Flow Pipeline
 **Summary:**
-- Verified SharedCheckSerializationResult handler exists at lines 86-94 in update.rs
-- Confirmed message routing end-to-end: effect_handler.rs → message.rs → update.rs
-- Validated 3 unit tests for shared check result transitions all pass
-- Gap closure complete — work was already done in Plan 09-01, this plan served as verification
+- Added ScriptOutput struct with stdout_lines and stderr_lines fields
+- Updated all EffectResult variants to use ScriptOutput instead of Option<String>
+- Implemented complete result_to_message conversion in runtime.rs
+- Added helper methods: from_captured(), from_message(), default()
+- Updated background.rs to convert CapturedOutput to ScriptOutput
+- All 118 tests pass
 
 **Decisions Made:**
-- Gap closure: Work was already completed in Plan 09-01 - handler exists and works correctly
-- Verified end-to-end message routing across all three files
-- Confirmed 3 tests exist and pass for all status transitions
-
-### Previous Session
-
-**Date:** 2026-02-18
-**Activity:** Completed Plan 09-02: File Definition Validation for Shared Artifacts
-**Summary:**
-- File validation for shared artifacts already implemented in make.rs (validate_shared_files function, lines 338-390)
-- Error state handling already in model_builder.rs (lines 57-66) - sets Failed status with retry_available: false
-- Generation blocking already in update.rs (lines 169-174) - prevents generation for artifacts with validation errors
-- Added 3 comprehensive tests in model_builder.rs for validation status scenarios
-- All 113 tests pass
-
-**Decisions Made:**
-- Tests added to model_builder.rs to verify status setting behavior
-- Tasks 1-3 were already complete from previous work - only tests were needed
+- ScriptOutput::from_captured() converts from CapturedOutput (lines with stream markers)
+- ScriptOutput::from_message() creates ScriptOutput with message for error cases
+- EffectResult variants now carry ScriptOutput preserving stdout/stderr separation
 
 ### Current Session
 
 **Date:** 2026-02-18
-**Activity:** Completed Plan 10-01: Smart Generator Selection
+**Activity:** Completed Plan 12-04: Real-time streaming output infrastructure
 **Summary:**
-- Modified `handle_shared_artifact_enter` in update.rs to check generator count before showing dialog
-- Single generator flows directly to Prompt screen (or Generating if no prompts)
-- Multiple generators still show SelectGenerator screen as before
-- Added 4 comprehensive unit tests verifying all code paths
-- Borrow checker issue resolved by cloning needed data before mutable borrow
+- Added OutputStream enum and EffectResult::OutputLine variant to channels.rs
+- Added Msg::OutputLine variant to message.rs with OutputStream from model
+- Implemented handle_output_line() in update.rs that appends to current step logs
+- Added streaming infrastructure in background.rs with result_tx channel
+- Mapped stdout to LogLevel::Output ("|") and stderr to LogLevel::Error ("!")
+- All 35 TUI tests pass
+- Requirement OUT-03 (real-time output updates) satisfied
 
 **Decisions Made:**
-- Used `shared.info.generators.len() == 1` as the check condition
-- Clone files, targets, and prompts before mutable borrow to avoid borrow checker issues
-- Store the selected generator path in `shared.selected_generator` for consistency
-
----
-
-### Current Session
-
-**Date:** 2026-02-18
-**Activity:** Completed Plan 11-01: Pre-terminal Error Handling
-**Summary:**
-- Moved config loading (`BackendConfiguration::read_backend_config()` and `MakeConfiguration::read_make_config()`) before terminal initialization
-- Added `with_context()` error messages for clear failure reporting (ERR-01)
-- Implemented conditional output: "No artifacts found" message goes to log file when `--log-file` provided, stdout otherwise (UI-03)
-- Panic hook now installed before terminal setup (ERR-04)
-- All 113 tests pass
-
-**Decisions Made:**
-- Config loading before `TerminalGuard::new()` ensures errors print to stderr in plain text
-- `with_context()` provides clear error context for config loading failures
-- Conditional output based on `cli.is_logging_enabled()` check
-
----
-
-### Current Session
-
-**Date:** 2026-02-18
-**Activity:** Completed Plan 11-03: TUI Error Display Audit
-**Summary:**
-- Audited all TUI source files for println!/eprintln! usage
-- Verified only 4 eprintln! calls in terminal.rs (intentional ERR-02/ERR-04 error reporting)
-- Confirmed background tasks capture output via channels (no stdout/stderr leakage)
-- Verified runtime errors use model.error pattern (ERR-03 compliant)
-- Documented headless mode stdout usage in prompt.rs as acceptable
-- All 85 TUI tests pass (49 integration + 36 unit)
-
-**Decisions Made:**
-- terminal.rs eprintln! are intentional for terminal operation and panic error reporting
-- prompt.rs println! are acceptable for headless mode user interaction
-- No code changes needed - TUI code already compliant with ERR-03 requirements
+- Used separate OutputStream enums in channels and model with From conversion
+- Streaming output appends to currently selected_log_step
+- result_tx channel enables background task to send incremental updates
 
 ---
 
@@ -240,39 +168,4 @@ All decisions preserved in PROJECT.md Validated section.
 - [REQUIREMENTS.md](./REQUIREMENTS.md) — v3.0 requirements (creating)
 - [ROADMAP.md](./ROADMAP.md) — Phase structure (creating)
 - [Milestones](./milestones/) — Archived milestones
-
-### Current Session
-
-**Date:** 2026-02-18
-**Activity:** Completed Plan 10-02: Enhanced Generator Dialog Context
-**Summary:**
-- Enhanced generator selection view with tree characters (├─ / └─) for visual hierarchy
-- Added color-coded target type labels: NixOS (blue), home-manager (magenta)
-- Implemented count summaries showing usage across target types
-- Added pluralization support for proper singular/plural labels
-- Created 4 comprehensive snapshot tests for enhanced dialog
-- All 25 TUI view tests pass
-
-**Decisions Made:**
-- Tree characters provide better visual hierarchy than simple indentation
-- Color coding enables quick visual scanning of target types
-- Count summaries give immediate context about generator usage
-
----
-
-### Current Session
-
-**Date:** 2026-02-18
-**Activity:** Completed Plan 11-02: Enhanced Panic Handler and Terminal Restoration
-**Summary:**
-- Enhanced panic hook to print formatted error messages to stderr before calling original hook
-- Panic hook now restores terminal FIRST (raw mode disabled, alternate screen exited) before any output
-- TerminalGuard::restore() now prints specific error messages for each failing restoration step
-- All three restoration steps are tried even if some fail (ERR-02 pattern)
-- Documented restore_terminal() as infallible and safe for panic hook use
-- All TUI tests pass (35 unit + 49 integration)
-
-**Decisions Made:**
-- Panic hook restoration order: terminal first, then stderr output, then original hook
-- restore_terminal() is infallible by design - ignores all errors for panic safety
-- TerminalGuard::restore() accumulates errors and reports each step that fails
+- [12-01-SUMMARY.md](./phases/12-script-output-visibility/12-01-SUMMARY.md) — Plan 12-01 completion

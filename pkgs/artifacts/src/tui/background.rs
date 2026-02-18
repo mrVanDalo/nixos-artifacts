@@ -20,6 +20,7 @@
 use std::collections::HashMap;
 use std::time::Duration;
 
+use tokio::io::AsyncBufReadExt;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel};
 use tokio::time::timeout;
 use tokio_util::sync::CancellationToken;
@@ -28,7 +29,7 @@ use crate::backend;
 use crate::config::backend::BackendConfiguration;
 use crate::config::make::{ArtifactDef, MakeConfiguration};
 use crate::logging::{log, log_component};
-use crate::tui::channels::{EffectCommand, EffectResult};
+use crate::tui::channels::{EffectCommand, EffectResult, OutputStream, ScriptOutput};
 
 /// Timeout duration for background task operations (35 seconds)
 /// Allows 30s for script execution + 5s buffer for cleanup
@@ -45,6 +46,8 @@ pub struct BackgroundEffectHandler {
     current_output_dir: Option<tempfile::TempDir>,
     /// Collected prompts for generator execution
     current_prompts: Option<HashMap<String, String>>,
+    /// Channel sender for streaming output during script execution
+    result_tx: Option<UnboundedSender<EffectResult>>,
 }
 
 impl BackgroundEffectHandler {
@@ -57,6 +60,27 @@ impl BackgroundEffectHandler {
             make,
             current_output_dir: None,
             current_prompts: None,
+            result_tx: None,
+        }
+    }
+
+    /// Set the result channel sender for streaming output.
+    /// This allows the handler to send OutputLine messages during script execution.
+    pub fn set_result_sender(&mut self, sender: UnboundedSender<EffectResult>) {
+        self.result_tx = Some(sender);
+    }
+
+    /// Send a streaming output line to the foreground.
+    /// Returns true if the line was sent successfully.
+    fn send_output_line(&self, artifact_index: usize, stream: OutputStream, content: String) -> bool {
+        if let Some(ref tx) = self.result_tx {
+            tx.send(EffectResult::OutputLine {
+                artifact_index,
+                stream,
+                content,
+            }).is_ok()
+        } else {
+            false
         }
     }
 
@@ -122,7 +146,7 @@ impl BackgroundEffectHandler {
                     Ok(Ok(Ok(check_result))) => EffectResult::CheckSerialization {
                         artifact_index,
                         needs_generation: check_result.needs_generation,
-                        output: Some(check_result.output.to_string()),
+                        output: ScriptOutput::from_captured(&check_result.output),
                     },
                     Ok(Ok(Err(e))) => {
                         // Fail open - assume generation needed on error
@@ -133,7 +157,7 @@ impl BackgroundEffectHandler {
                         EffectResult::CheckSerialization {
                             artifact_index,
                             needs_generation: true,
-                            output: Some(format!("Check failed: {}", e)),
+                            output: ScriptOutput::from_message(&format!("Check failed: {}", e)),
                         }
                     }
                     Ok(Err(e)) => {
@@ -145,7 +169,7 @@ impl BackgroundEffectHandler {
                         EffectResult::CheckSerialization {
                             artifact_index,
                             needs_generation: true,
-                            output: Some(format!("Task panicked: {}", e)),
+                            output: ScriptOutput::from_message(&format!("Task panicked: {}", e)),
                         }
                     }
                     Err(_) => {
@@ -158,7 +182,7 @@ impl BackgroundEffectHandler {
                         EffectResult::CheckSerialization {
                             artifact_index,
                             needs_generation: true,
-                            output: Some(format!(
+                            output: ScriptOutput::from_message(&format!(
                                 "Timed out after {} seconds",
                                 BACKGROUND_TASK_TIMEOUT.as_secs()
                             )),
@@ -186,7 +210,7 @@ impl BackgroundEffectHandler {
                         return EffectResult::GeneratorFinished {
                             artifact_index,
                             success: false,
-                            output: None,
+                            output: ScriptOutput::default(),
                             error: Some(format!("Failed to create temp directory: {}", e)),
                         };
                     }
@@ -210,7 +234,7 @@ impl BackgroundEffectHandler {
                         return EffectResult::GeneratorFinished {
                             artifact_index,
                             success: false,
-                            output: None,
+                            output: ScriptOutput::default(),
                             error: Some(format!(
                                 "Artifact '{}' not found for target '{}'",
                                 artifact_name, target
@@ -226,7 +250,7 @@ impl BackgroundEffectHandler {
                         return EffectResult::GeneratorFinished {
                             artifact_index,
                             success: false,
-                            output: None,
+                            output: ScriptOutput::default(),
                             error: Some(format!("Failed to create prompts directory: {}", e)),
                         };
                     }
@@ -239,7 +263,7 @@ impl BackgroundEffectHandler {
                         return EffectResult::GeneratorFinished {
                             artifact_index,
                             success: false,
-                            output: None,
+                            output: ScriptOutput::default(),
                             error: Some(format!("Failed to write prompt file: {}", e)),
                         };
                     }
@@ -291,7 +315,7 @@ impl BackgroundEffectHandler {
                                 EffectResult::GeneratorFinished {
                                     artifact_index,
                                     success: true,
-                                    output: Some(output.to_string()),
+                                    output: ScriptOutput::from_captured(&output),
                                     error: None,
                                 }
                             }
@@ -303,7 +327,7 @@ impl BackgroundEffectHandler {
                                 EffectResult::GeneratorFinished {
                                     artifact_index,
                                     success: false,
-                                    output: Some(output.to_string()),
+                                    output: ScriptOutput::from_captured(&output),
                                     error: Some(format!("Verification failed: {}", e)),
                                 }
                             }
@@ -317,7 +341,7 @@ impl BackgroundEffectHandler {
                         EffectResult::GeneratorFinished {
                             artifact_index,
                             success: false,
-                            output: None,
+                            output: ScriptOutput::default(),
                             error: Some(format!("Generator failed: {}", e)),
                         }
                     }
@@ -329,7 +353,7 @@ impl BackgroundEffectHandler {
                         EffectResult::GeneratorFinished {
                             artifact_index,
                             success: false,
-                            output: None,
+                            output: ScriptOutput::default(),
                             error: Some(format!("Task panicked: {}", e)),
                         }
                     }
@@ -343,7 +367,7 @@ impl BackgroundEffectHandler {
                         EffectResult::GeneratorFinished {
                             artifact_index,
                             success: false,
-                            output: None,
+                            output: ScriptOutput::default(),
                             error: Some(format!(
                                 "Timed out after {} seconds",
                                 BACKGROUND_TASK_TIMEOUT.as_secs()
@@ -366,6 +390,9 @@ impl BackgroundEffectHandler {
                         return EffectResult::SerializeFinished {
                             artifact_index,
                             success: false,
+                            output: ScriptOutput::from_message(
+                                "No output directory from generator - RunGenerator must be called before Serialize"
+                            ),
                             error: Some("No output directory from generator - RunGenerator must be called before Serialize".to_string()),
                         };
                     }
@@ -390,6 +417,10 @@ impl BackgroundEffectHandler {
                         return EffectResult::SerializeFinished {
                             artifact_index,
                             success: false,
+                            output: ScriptOutput::from_message(&format!(
+                                "Artifact '{}' not found for target '{}'",
+                                artifact_name, target
+                            )),
                             error: Some(format!(
                                 "Artifact '{}' not found for target '{}'",
                                 artifact_name, target
@@ -436,11 +467,12 @@ impl BackgroundEffectHandler {
                 .await;
 
                 match result {
-                    Ok(Ok(Ok(_output))) => {
+                    Ok(Ok(Ok(output))) => {
                         // Temp directory will be automatically cleaned up when dropped
                         EffectResult::SerializeFinished {
                             artifact_index,
                             success: true,
+                            output: ScriptOutput::from_captured(&output),
                             error: None,
                         }
                     }
@@ -452,6 +484,7 @@ impl BackgroundEffectHandler {
                         EffectResult::SerializeFinished {
                             artifact_index,
                             success: false,
+                            output: ScriptOutput::from_message(&format!("Serialize failed: {}", e)),
                             error: Some(format!("Serialize failed: {}", e)),
                         }
                     }
@@ -463,6 +496,7 @@ impl BackgroundEffectHandler {
                         EffectResult::SerializeFinished {
                             artifact_index,
                             success: false,
+                            output: ScriptOutput::from_message(&format!("Task panicked: {}", e)),
                             error: Some(format!("Task panicked: {}", e)),
                         }
                     }
@@ -476,6 +510,10 @@ impl BackgroundEffectHandler {
                         EffectResult::SerializeFinished {
                             artifact_index,
                             success: false,
+                            output: ScriptOutput::from_message(&format!(
+                                "Timed out after {} seconds",
+                                BACKGROUND_TASK_TIMEOUT.as_secs()
+                            )),
                             error: Some(format!(
                                 "Timed out after {} seconds",
                                 BACKGROUND_TASK_TIMEOUT.as_secs()
@@ -515,10 +553,9 @@ impl BackgroundEffectHandler {
                         return EffectResult::SharedCheckSerialization {
                             artifact_index,
                             needs_generation: vec![true; targets.len()],
-                            outputs: vec![Some(format!(
-                                "Shared artifact '{}' not found",
-                                artifact_name
-                            ))],
+                            outputs: vec![ScriptOutput::from_message(
+                                &format!("Shared artifact '{}' not found", artifact_name)
+                            )],
                         };
                     }
                 };
@@ -546,11 +583,10 @@ impl BackgroundEffectHandler {
                     Ok(Ok(Ok(check_result))) => {
                         // Shared artifacts are all-or-nothing - if any target needs generation, all do
                         let needs_gen = check_result.needs_generation;
-                        let output = check_result.output.to_string();
                         // All targets get the same result (shared artifacts are atomic)
                         let needs_generation = vec![needs_gen; targets.len()];
-                        let outputs: Vec<Option<String>> =
-                            vec![Some(output.clone()); targets.len()];
+                        let outputs: Vec<ScriptOutput> =
+                            vec![ScriptOutput::from_captured(&check_result.output); targets.len()];
                         EffectResult::SharedCheckSerialization {
                             artifact_index,
                             needs_generation,
@@ -564,8 +600,8 @@ impl BackgroundEffectHandler {
                             artifact_name_for_error, e
                         ));
                         let needs_generation = vec![true; targets.len()];
-                        let outputs: Vec<Option<String>> =
-                            vec![Some(format!("Check failed: {}", e)); targets.len()];
+                        let outputs: Vec<ScriptOutput> =
+                            vec![ScriptOutput::from_message(&format!("Check failed: {}", e)); targets.len()];
                         EffectResult::SharedCheckSerialization {
                             artifact_index,
                             needs_generation,
@@ -578,8 +614,8 @@ impl BackgroundEffectHandler {
                             artifact_name_for_error, e
                         ));
                         let needs_generation = vec![true; targets.len()];
-                        let outputs: Vec<Option<String>> =
-                            vec![Some(format!("Task panicked: {}", e)); targets.len()];
+                        let outputs: Vec<ScriptOutput> =
+                            vec![ScriptOutput::from_message(&format!("Task panicked: {}", e)); targets.len()];
                         EffectResult::SharedCheckSerialization {
                             artifact_index,
                             needs_generation,
@@ -594,8 +630,8 @@ impl BackgroundEffectHandler {
                             BACKGROUND_TASK_TIMEOUT.as_secs()
                         ));
                         let needs_generation = vec![true; targets.len()];
-                        let outputs: Vec<Option<String>> = vec![
-                            Some(format!(
+                        let outputs: Vec<ScriptOutput> = vec![
+                            ScriptOutput::from_message(&format!(
                                 "Timed out after {} seconds",
                                 BACKGROUND_TASK_TIMEOUT.as_secs()
                             ));
@@ -633,7 +669,7 @@ impl BackgroundEffectHandler {
                         return EffectResult::SharedGeneratorFinished {
                             artifact_index,
                             success: false,
-                            output: None,
+                            output: ScriptOutput::default(),
                             error: Some(format!("Shared artifact '{}' not found", artifact_name)),
                         };
                     }
@@ -646,7 +682,7 @@ impl BackgroundEffectHandler {
                         return EffectResult::SharedGeneratorFinished {
                             artifact_index,
                             success: false,
-                            output: None,
+                            output: ScriptOutput::default(),
                             error: Some(format!(
                                 "No generators defined for shared artifact '{}'",
                                 artifact_name
@@ -667,7 +703,7 @@ impl BackgroundEffectHandler {
                         return EffectResult::SharedGeneratorFinished {
                             artifact_index,
                             success: false,
-                            output: None,
+                            output: ScriptOutput::default(),
                             error: Some(format!("Failed to create prompts directory: {}", e)),
                         };
                     }
@@ -680,7 +716,7 @@ impl BackgroundEffectHandler {
                         return EffectResult::SharedGeneratorFinished {
                             artifact_index,
                             success: false,
-                            output: None,
+                            output: ScriptOutput::default(),
                             error: Some(format!("Failed to write prompt file: {}", e)),
                         };
                     }
@@ -693,7 +729,7 @@ impl BackgroundEffectHandler {
                         return EffectResult::SharedGeneratorFinished {
                             artifact_index,
                             success: false,
-                            output: None,
+                            output: ScriptOutput::default(),
                             error: Some(format!("Failed to create output directory: {}", e)),
                         };
                     }
@@ -746,7 +782,7 @@ impl BackgroundEffectHandler {
                                 EffectResult::SharedGeneratorFinished {
                                     artifact_index,
                                     success: true,
-                                    output: Some(output.to_string()),
+                                    output: ScriptOutput::from_captured(&output),
                                     error: None,
                                 }
                             }
@@ -758,7 +794,7 @@ impl BackgroundEffectHandler {
                                 EffectResult::SharedGeneratorFinished {
                                     artifact_index,
                                     success: false,
-                                    output: Some(output.to_string()),
+                                    output: ScriptOutput::from_captured(&output),
                                     error: Some(format!("Verification failed: {}", e)),
                                 }
                             }
@@ -772,7 +808,7 @@ impl BackgroundEffectHandler {
                         EffectResult::SharedGeneratorFinished {
                             artifact_index,
                             success: false,
-                            output: None,
+                            output: ScriptOutput::default(),
                             error: Some(format!("Generator failed: {}", e)),
                         }
                     }
@@ -784,7 +820,7 @@ impl BackgroundEffectHandler {
                         EffectResult::SharedGeneratorFinished {
                             artifact_index,
                             success: false,
-                            output: None,
+                            output: ScriptOutput::default(),
                             error: Some(format!("Task panicked: {}", e)),
                         }
                     }
@@ -798,7 +834,7 @@ impl BackgroundEffectHandler {
                         EffectResult::SharedGeneratorFinished {
                             artifact_index,
                             success: false,
-                            output: None,
+                            output: ScriptOutput::default(),
                             error: Some(format!(
                                 "Timed out after {} seconds",
                                 BACKGROUND_TASK_TIMEOUT.as_secs()
@@ -824,14 +860,14 @@ impl BackgroundEffectHandler {
                             results.push((
                                 target.clone(),
                                 false,
-                                Some("No output directory from generator".to_string()),
+                                ScriptOutput::from_message("No output directory from generator"),
                             ));
                         }
                         for target in &user_targets {
                             results.push((
                                 target.clone(),
                                 false,
-                                Some("No output directory from generator".to_string()),
+                                ScriptOutput::from_message("No output directory from generator"),
                             ));
                         }
                         return EffectResult::SharedSerializeFinished {
@@ -856,14 +892,14 @@ impl BackgroundEffectHandler {
                             results.push((
                                 target.clone(),
                                 false,
-                                Some(format!("Shared artifact '{}' not found", artifact_name)),
+                                ScriptOutput::from_message(&format!("Shared artifact '{}' not found", artifact_name)),
                             ));
                         }
                         for target in &user_targets {
                             results.push((
                                 target.clone(),
                                 false,
-                                Some(format!("Shared artifact '{}' not found", artifact_name)),
+                                ScriptOutput::from_message(&format!("Shared artifact '{}' not found", artifact_name)),
                             ));
                         }
                         return EffectResult::SharedSerializeFinished {
@@ -906,10 +942,10 @@ impl BackgroundEffectHandler {
                         // Shared serialization is atomic - all succeed or all fail
                         let mut results = Vec::new();
                         for target in machine_targets {
-                            results.push((target, true, Some(output.to_string())));
+                            results.push((target, true, ScriptOutput::from_captured(&output)));
                         }
                         for target in user_targets {
-                            results.push((target, true, Some(output.to_string())));
+                            results.push((target, true, ScriptOutput::from_captured(&output)));
                         }
                         EffectResult::SharedSerializeFinished {
                             artifact_index,
@@ -923,10 +959,10 @@ impl BackgroundEffectHandler {
                         ));
                         let mut results = Vec::new();
                         for target in machine_targets {
-                            results.push((target, false, Some(format!("Serialize failed: {}", e))));
+                            results.push((target, false, ScriptOutput::from_message(&format!("Serialize failed: {}", e))));
                         }
                         for target in user_targets {
-                            results.push((target, false, Some(format!("Serialize failed: {}", e))));
+                            results.push((target, false, ScriptOutput::from_message(&format!("Serialize failed: {}", e))));
                         }
                         EffectResult::SharedSerializeFinished {
                             artifact_index,
@@ -940,10 +976,10 @@ impl BackgroundEffectHandler {
                         ));
                         let mut results = Vec::new();
                         for target in machine_targets {
-                            results.push((target, false, Some(format!("Task panicked: {}", e))));
+                            results.push((target, false, ScriptOutput::from_message(&format!("Task panicked: {}", e))));
                         }
                         for target in user_targets {
-                            results.push((target, false, Some(format!("Task panicked: {}", e))));
+                            results.push((target, false, ScriptOutput::from_message(&format!("Task panicked: {}", e))));
                         }
                         EffectResult::SharedSerializeFinished {
                             artifact_index,
@@ -962,20 +998,24 @@ impl BackgroundEffectHandler {
                             results.push((
                                 target,
                                 false,
-                                Some(format!(
-                                    "Timed out after {} seconds",
-                                    BACKGROUND_TASK_TIMEOUT.as_secs()
-                                )),
+                                ScriptOutput::from_message(
+                                    &format!(
+                                        "Timed out after {} seconds",
+                                        BACKGROUND_TASK_TIMEOUT.as_secs()
+                                    )
+                                ),
                             ));
                         }
                         for target in user_targets {
                             results.push((
                                 target,
                                 false,
-                                Some(format!(
-                                    "Timed out after {} seconds",
-                                    BACKGROUND_TASK_TIMEOUT.as_secs()
-                                )),
+                                ScriptOutput::from_message(
+                                    &format!(
+                                        "Timed out after {} seconds",
+                                        BACKGROUND_TASK_TIMEOUT.as_secs()
+                                    )
+                                ),
                             ));
                         }
                         EffectResult::SharedSerializeFinished {
@@ -1040,6 +1080,7 @@ pub fn spawn_background_task(
     tokio::spawn(async move {
         log_component("BACKGROUND", "Task started");
         let mut handler = BackgroundEffectHandler::new(backend, make);
+        handler.set_result_sender(tx_res.clone());
         log_component("BACKGROUND", "Handler initialized");
 
         // Process effects sequentially with graceful shutdown support
