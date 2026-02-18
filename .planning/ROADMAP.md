@@ -1,6 +1,6 @@
 # Roadmap: NixOS Artifacts Store
 
-**Current Version:** v3.0 📋 PLANNING  
+**Current Version:** v3.0 ✅ SHIPPED  
 **Last Updated:** 2026-02-18
 
 ---
@@ -9,15 +9,23 @@
 
 - ✅ **v1.0 Background Job Refactor** — Phases 1-4 (shipped 2026-02-15) — [Archive](milestones/v1.0-ROADMAP.md)
 - ✅ **v2.0 Robustness** — Phases 5-8 (shipped 2026-02-17) — [Archive](milestones/v2.0-ROADMAP.md)
-- 📋 **v3.0 TUI Polish** — Phases 9-13 (planning)
+- ✅ **v3.0 TUI Polish** — Phases 9-13 (shipped 2026-02-18) — [Archive](milestones/v3.0-ROADMAP.md)
+- 🚧 **v4.0 Regeneration Safety** — Phase 14 (in progress)
 
 ---
 
 ## Current Status
 
-v3.0 TUI Polish milestone in planning. 5 phases covering status fixes, smart generator selection, error handling, script output visibility, and enhanced dialogs.
+**v3.0 TUI Polish complete.** All UX improvements shipped:
+- Shared artifact status fixes
+- Smart generator selection
+- TUI error handling
+- Script output visibility
+- Enhanced generator dialog
 
-**v3.0 Goal:** Fix bugs and improve UX in the TUI for better visibility and smarter interactions.
+**v4.0 Regeneration Safety** — Now in progress:
+- Phase 14: Regeneration Confirmation Dialog (4 plans planned)
+- All 7 v4.0 requirements mapped to Phase 14
 
 ---
 
@@ -37,169 +45,46 @@ v3.0 TUI Polish milestone in planning. 5 phases covering status fixes, smart gen
 | 10  | Smart Generator Selection     | v3.0      | Complete    | 2026-02-18 |
 | 11  | Error Handling Improvements   | v3.0      | Complete    | 2026-02-18 |
 | 12  | Script Output Visibility      | v3.0      | Complete    | 2026-02-18 |
-| 13  | Enhanced Generator Dialog     | v3.0      | 📋 Planned  | —          |
+| 13  | Enhanced Generator Dialog     | v3.0      | Complete    | 2026-02-18 |
+| 14  | Regeneration Confirmation     | v4.0      | Not started | -          |
 
-**Total:** 13 phases | Goal: TUI Polish
-
----
-
-## v3.0 Phases Detail
-
-### Phase 9: Shared Artifact Status Fixes
-
-**Goal:** Shared artifacts display correct status icons and aggregation
-
-**Status:** 🔄 In Progress (4 plans: 3 executed + 1 gap closure)
-
-**Dependencies:** None (can start immediately)
-
-**Requirements:**
-- UI-01: Shared artifacts show correct status icons (needs-generation/up-to-date instead of pending)
-- STAT-01: Status icons correctly reflect artifact state
-- STAT-02: Shared artifact aggregation properly calculates combined status across machines
-
-**Plans:**
-1. [x] 09-01: Status tracking infrastructure — Effect handler and backend function
-2. [x] 09-02: Error state handling — File validation for shared artifacts
-3. [x] 09-03: Status display polish — Detail pane and visual presentation
-4. [ ] 09-04: **GAP CLOSURE** — Missing SharedCheckSerializationResult handler in update.rs
-
-**Gap Found:** VERIFICATION.md identified that `Msg::SharedCheckSerializationResult` is sent by effect_handler.rs but never handled in update.rs, causing shared artifacts to remain stuck at "Pending" status. Plan 09-04 closes this gap.
-
-**Success Criteria:**
-1. Shared artifacts show "needs-generation" (red icon) when any machine needs regeneration
-2. Shared artifacts show "up-to-date" (green icon) when all machines are current
-3. Shared artifacts never show "pending" status once check_serialization completes
-4. Status aggregation correctly combines states from all machines using the shared artifact
-5. Visual status matches actual backend state after check_serialization runs
-
----
-
-### Phase 10: Smart Generator Selection
-
-**Goal:** Generator selection skips dialog when only one unique generator exists
-
-**Status:** ○ Not Started
-
-**Plans:** 2 plans
-
-**Dependencies:** Phase 9 (status fixes should be in place first)
-
-**Requirements:**
-- UI-02: Generator selection dialog skips when only one unique generator
-- GEN-01: Generators compared by Nix store path for uniqueness
-- GEN-02: Single unique generator automatically selected without dialog
-- GEN-03: Multiple unique generators show selection dialog with full context
-- GEN-04: Dialog shows generator context (machine name, user name, home-manager vs nixos)
-
-**Plan List:**
-- [ ] 10-01-PLAN.md — Smart generator selection logic: skip dialog when only one unique generator
-- [ ] 10-02-PLAN.md — Enhanced dialog context: machine/user names and source type display
-
-**Success Criteria:**
-1. When only one unique generator (by Nix store path) exists, selection happens without showing dialog
-2. When multiple unique generators exist, selection dialog appears with machine/user context
-3. Generator comparison uses Nix store path, not just artifact reference
-4. Dialog clearly indicates home-manager vs nixos configuration sources
-5. Machine names and user names are visible in the selection dialog when shown
-
----
-
-### Phase 11: Error Handling Improvements
-
-**Goal:** TUI errors display properly to stderr without polluting normal output
-
-**Status:** 📋 Planned (3 plans ready for execution)
-
-**Plans:** 3 plans
-
-**Dependencies:** Phase 10 (builds on TUI flow improvements)
-
-**Requirements:**
-- UI-03: TUI crashes display errors to stderr; all other output goes only to log file when --log-file given
-- ERR-01: TUI initialization failures print clear error to stderr before exit
-- ERR-02: Terminal restoration failures print clear error to stderr
-- ERR-03: All runtime errors visible in TUI, not stdout/stderr
-- ERR-04: Panic handler prints to stderr and attempts terminal restoration
-
-**Plan List:**
-- [x] 11-01-PLAN.md — Pre-terminal error handling: move config loading before terminal setup, suppress output with --log-file
-- [x] 11-02-PLAN.md — Panic handler enhancement: print to stderr, ensure terminal restoration
-- [x] 11-03-PLAN.md — Output suppression audit: verify no println!/eprintln! in TUI, runtime errors via model.error
-
-**Success Criteria:**
-1. TUI initialization failures (e.g., bad flake.nix, missing backend.toml) print clear error to stderr and exit non-zero
-2. When --log-file is provided, all non-error output goes to log file only (no stdout/stderr pollution)
-3. Terminal restoration failures (raw mode, alternate screen) print error to stderr
-4. All runtime errors during TUI operation display within the TUI interface, not on terminal
-5. Panic handler catches unwinding panics, prints to stderr, and attempts terminal restoration before aborting
-
----
-
-### Phase 12: Script Output Visibility
-
-**Goal:** Users can see stdout/stderr from check/generator/serialize scripts in the TUI
-
-**Status:** ✅ Complete (4 plans executed)
-
-**Plans:** 4 plans
-
-**Dependencies:** Phase 11 (error handling foundation required) ✓
-
-**Requirements:**
-- UI-04: Script output (stdout/stderr from check/generator/serialize) visible in TUI interface ✓
-- OUT-01: Script stdout captured and stored for TUI display ✓
-- OUT-02: Script stderr captured and stored for TUI display ✓
-- OUT-03: Output display updates in real-time during script execution ✓
-- OUT-04: Previous script output accessible in artifact detail view ✓
-
-**Plan List:**
-- [x] 12-01-PLAN.md — Channel type enhancements: ScriptOutput struct, EffectResult variants, result_to_message conversion
-- [x] 12-02-PLAN.md — Output storage and display: StepLogs helpers, update.rs handlers
-- [x] 12-03-PLAN.md — Script output display in TUI views: Generator/Serialize handlers, list.rs display
-- [x] 12-04-PLAN.md — Real-time streaming output: Async infrastructure, OutputLine messages
-
-**Success Criteria:**
-1. ✓ Script stdout is captured and stored during check_serialization, generator, and serialize operations
-2. ✓ Script stderr is captured and stored alongside stdout
-3. ✓ Output is visible in real-time during script execution (streamed or updated periodically)
-4. ✓ After generation completes, previous script output is viewable in an artifact detail view
-5. ✓ Output capture works for both single artifacts and shared artifacts across machines
-
-**Completed:** 2026-02-18
-
----
-
-### Phase 13: Enhanced Generator Dialog
-
-**Goal:** Generator selection dialog displays rich context about artifacts
-
-**Status:** 📋 Planned (2 plans ready for execution)
-
-**Dependencies:** Phase 12 (script output infrastructure, Phase 10 for selection dialog foundation)
-
-**Requirements:**
-- UI-05: Generator dialog shows machine/user/home-manager context, shared status, artifact name, prompt descriptions
-- DIALOG-01: Generator dialog displays artifact name
-- DIALOG-02: Generator dialog displays artifact description if available
-- DIALOG-03: Generator dialog shows all prompt descriptions for the artifact
-- DIALOG-04: Generator dialog indicates if artifact is shared across machines
-- DIALOG-05: Generator dialog shows which machines/users use this artifact
-
-**Plan List:**
-- [ ] 13-01-PLAN.md — Data model updates: add description field to ArtifactDef, SharedArtifactInfo, SelectGeneratorState
-- [ ] 13-02-PLAN.md — Enhanced dialog view: layout with all context sections, prompt descriptions, target lists, formatting helpers
-
-**Success Criteria:**
-1. Generator dialog prominently displays the artifact name being generated
-2. If an artifact description is defined in Nix config, it appears in the dialog
-3. All prompt descriptions for the artifact are listed before the generator selection
-4. Dialog clearly indicates when an artifact is shared vs per-machine
-5. For shared artifacts, dialog lists all machines and users that reference the artifact
+**Total:** 13 phases complete, 1 phase planned
 
 ---
 
 ## Completed Milestones
+
+<details>
+<summary>✅ v3.0 TUI Polish (Phases 9-13) — SHIPPED 2026-02-18</summary>
+
+**Goal:** Fix bugs and improve UX in the TUI
+
+**Requirements:**
+- UI-01 to UI-05: UI/UX fixes
+- STAT-01, STAT-02: Status display
+- OUT-01 to OUT-04: Output capture
+- ERR-01 to ERR-04: Error handling
+- GEN-01 to GEN-04: Generator selection
+- DIALOG-01 to DIALOG-05: Enhanced dialog
+
+**Phases:**
+
+- [x] Phase 9: Shared Artifact Status Fixes (4/4 plans) — 2026-02-18
+- [x] Phase 10: Smart Generator Selection (2/2 plans) — 2026-02-18
+- [x] Phase 11: Error Handling Improvements (3/3 plans) — 2026-02-18
+- [x] Phase 12: Script Output Visibility (4/4 plans) — 2026-02-18
+- [x] Phase 13: Enhanced Generator Dialog (2/2 plans) — 2026-02-18
+
+**Key Accomplishments:**
+- Shared artifacts show correct status icons
+- Smart generator selection (skips dialog when one unique generator)
+- TUI errors display to stderr without polluting stdout
+- Script output visible in real-time during execution
+- Enhanced generator dialog with rich context
+
+**Archive:** [v3.0-ROADMAP.md](milestones/v3.0-ROADMAP.md)
+
+</details>
 
 <details>
 <summary>✅ v2.0 Robustness (Phases 5-8) — SHIPPED 2026-02-17</summary>
@@ -238,6 +123,59 @@ See [v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 
 </details>
 
+### 🚧 v4.0 Regeneration Safety (In Progress)
+
+**Milestone Goal:** Add a confirmation dialog before regenerating existing artifacts to prevent accidental overwrites.
+
+**Requirements:**
+- REGEN-01 to REGEN-07: Regeneration confirmation and safety
+
+#### Phase 14: Regeneration Confirmation Dialog
+
+**Goal:** Users must explicitly confirm before overwriting existing artifacts, with clear warnings and safe defaults
+
+**Depends on:** Phase 13
+
+**Requirements:** REGEN-01, REGEN-02, REGEN-03, REGEN-04, REGEN-05, REGEN-06, REGEN-07
+
+**Success Criteria** (what must be TRUE):
+
+1. User sees confirmation dialog when attempting to regenerate an artifact that already exists (REGEN-01)
+2. Dialog default selection is "Leave" (safe choice, prevents accidental overwrite) (REGEN-02)
+3. User can explicitly choose "Regenerate" to proceed with overwrite (REGEN-03)
+4. Dialog clearly warns that the old artifact will be overwritten (REGEN-04)
+5. Status text shows "Regenerating" instead of "Generating" during overwrite operations (REGEN-05)
+6. Confirmation dialog appears for both single artifacts and shared artifacts (REGEN-06)
+7. Dialog supports keyboard navigation (arrow keys to select, Enter to confirm, Esc to cancel) (REGEN-07)
+
+**Plans:** 4 plans
+
+Plans:
+
+- [ ] 14-01: Detect existing artifact state and trigger confirmation dialog
+- [ ] 14-02: Implement dialog UI with Leave/Regenerate options and warning text
+- [ ] 14-03: Update status text to show "Regenerating" for existing artifacts
+- [ ] 14-04: Add comprehensive tests for confirmation dialog behavior
+
+### Phase 15: Chronological Log View with Expandable Sections
+
+**Goal:** [To be planned]
+**Depends on:** Phase 14
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 15 to break down)
+
+### Phase 16: Backend Developer Documentation for Custom Serializations
+
+**Goal:** Create comprehensive backend developer documentation in Antora format PLUS a standalone BACKEND_GUIDE.md file that can be copied to other repositories so AI assistants have enough context to write backends
+
+**Depends on:** Phase 15
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 16 to break down)
+
 ---
 
-_Updated: 2026-02-18 for v3.0 TUI Polish planning_
+_Updated: 2026-02-18 — v3.0 TUI Polish complete_

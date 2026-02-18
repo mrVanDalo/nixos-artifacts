@@ -40,3 +40,35 @@ See [v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 ---
 
 _Updated: 2026-02-17_
+
+## v3.0 TUI Polish (Shipped: 2026-02-18)
+
+**Phases completed:** 5 phases (9-13), 15 plans, 5 requirements  
+**Git tag:** v3.0
+
+**Key accomplishments:**
+
+1. **Shared Artifact Status Fixes** — Shared artifacts now display correct status
+icons (needs-generation/up-to-date) instead of stuck "pending". Fixed missing
+`SharedCheckSerializationResult` handler in update.rs.
+
+2. **Smart Generator Selection** — Generator selection dialog automatically skips
+when only one unique generator exists (compared by Nix store path). Shows rich
+context including machine names, user names, and home-manager vs nixos sources.
+
+3. **TUI Error Handling** — TUI initialization failures print clear errors to
+stderr before exit. All runtime errors visible in TUI interface, not stdout/stderr.
+Panic handler catches unwinding panics and attempts terminal restoration.
+
+4. **Script Output Visibility** — Script stdout/stderr from check/generator/serialize
+operations captured and displayed in TUI. Real-time streaming output during script
+execution. Previous output accessible in artifact detail view.
+
+5. **Enhanced Generator Dialog** — Rich dialog displays artifact name, optional
+description, all prompt descriptions, shared status, and target machines/users.
+Full context before generator selection.
+
+**Archive:** [v3.0-ROADMAP.md](milestones/v3.0-ROADMAP.md)
+
+---
+

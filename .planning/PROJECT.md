@@ -10,18 +10,18 @@ Architecture pattern.
 
 ## Current State
 
-**Shipped:** v2.0 Robustness — 2026-02-17\
-**Status:** Production-ready with comprehensive test coverage and smart logging\
-**Tests:** 97 passing (33 e2e tests + 64 existing)\
-**Coverage:** 18/18 v2 requirements complete (29/32 must-haves)
+**Shipped:** v3.0 TUI Polish — 2026-02-18  
+**Status:** Production-ready with polished TUI UX and comprehensive test coverage  
+**Tests:** 122 passing (up from 97 at v2.0)  
+**Requirements:** 20/20 v3 requirements complete
 
 **Key Achievements:**
 
-- **TUI never freezes** during long-running operations
-- **End-to-end tests** verify artifacts actually get created in backend storage
-- **Smart logging** with `--log-file` CLI argument (opt-in, zero-cost)
-- **Code quality** improvements: 30+ helper functions, flattened call chains, no abbreviations
-- **Headless API** for programmatic artifact generation without TUI
+- **Shared artifact status** — Correct icons (needs-generation/up-to-date) instead of stuck "pending"
+- **Smart generator selection** — Auto-skips dialog when only one unique generator
+- **TUI error handling** — Clear stderr messages on failures, zero stdout/stderr pollution during normal operation
+- **Script output visibility** — Real-time stdout/stderr display in TUI detail view
+- **Enhanced generator dialog** — Rich context: artifact name, description, prompts, machines, users
 
 **Performance:**
 
@@ -33,24 +33,63 @@ Architecture pattern.
 
 ---
 
-## Current Milestone: v3.0 TUI Polish
+## Current Milestone: v4.0 Regeneration Safety
 
-**Goal:** Fix bugs and improve UX in the TUI for better visibility and smarter interactions
+**Goal:** Add a confirmation dialog before regenerating existing artifacts to prevent accidental overwrites.
 
-**Target Features:**
+**Target features:**
 
-1. **Fix shared artifact status icons** — Correct status display (needs-generation/up-to-date instead of pending)
-2. **Smart generator selection** — Skip dialog when only one unique generator exists (same Nix store path)
-3. **TUI error display** — Show errors when TUI fails, without polluting stdout/stderr otherwise
-4. **Script output visibility** — Display stdout/stderr from check/generator/serialize scripts in TUI
-5. **Enhanced generator dialog** — Show machine/user/home-manager context, shared status, artifact name, prompt descriptions
+- Confirmation dialog when user attempts to regenerate an existing artifact
+- "Leave" as default option (safe choice)
+- "Regenerate" as explicit opt-in action
+- Clear warning that the old artifact will be overwritten
+- Status text shows "Regenerating" instead of "Generating" for existing artifacts
 
 ---
 
 <details>
-<summary>📦 v3.0 Delivered Features</summary>
+<summary>📦 v3.0 Project Evolution (click to expand)</summary>
 
-*Not yet started — placeholder for completed work*
+### v3.0 Delivered Features
+
+**Shared Artifact Status Fixes:**
+
+- Fixed missing `SharedCheckSerializationResult` handler in update.rs
+- Shared artifacts transition from "pending" to correct final status
+- Status aggregation properly calculates combined status across machines
+- Visual status matches actual backend state after check_serialization
+
+**Smart Generator Selection:**
+
+- Skips dialog when only one unique generator (compared by Nix store path)
+- Shows selection dialog with full context when multiple generators exist
+- Displays machine name, user name, and home-manager vs nixos source type
+- Nix store path comparison for true uniqueness
+
+**TUI Error Handling:**
+
+- TUI initialization failures print clear error to stderr before exit
+- Terminal restoration failures print error to stderr
+- All runtime errors visible in TUI interface, not stdout/stderr
+- Panic handler prints to stderr and attempts terminal restoration
+- When `--log-file` provided, all non-error output goes to log file only
+
+**Script Output Visibility:**
+
+- Script stdout captured and stored for TUI display
+- Script stderr captured and stored alongside stdout
+- Real-time output display during script execution (streamed)
+- Previous script output accessible in artifact detail view
+- Output capture works for both single and shared artifacts
+
+**Enhanced Generator Dialog:**
+
+- Displays artifact name prominently
+- Shows optional artifact description from Nix config
+- Lists all prompt descriptions before generator selection
+- Indicates when artifact is shared vs per-machine
+- Lists all machines and users that reference the artifact
+- Clean section-based layout with line separators
 
 </details>
 
@@ -91,8 +130,6 @@ Architecture pattern.
 - Considered acceptable technical debt (cosmetic, not functional)
 
 </details>
-
----
 
 <details>
 <summary>📦 v1.0 Project Evolution (click to expand)</summary>
@@ -144,6 +181,14 @@ effect execution runs in a background job while the TUI remains interactive.
 
 ## Requirements
 
+### Validated (Shipped in v3.0)
+
+- ✓ **Fix shared artifact status icons** — Show correct status (needs-generation/up-to-date) instead of pending — v3.0
+- ✓ **Smart generator selection** — Skip dialog when only one unique generator (same Nix store path) — v3.0
+- ✓ **TUI error display** — Show errors when TUI fails, without stdout/stderr pollution — v3.0
+- ✓ **Script output visibility** — Display stdout/stderr from scripts in TUI — v3.0
+- ✓ **Enhanced generator dialog** — Show machine/user/home-manager context, shared status, artifact name, prompt descriptions — v3.0
+
 ### Validated (Shipped in v2.0)
 
 - ✓ **End-to-end integration tests** — 33+ tests verifying artifact creation — v2.0 (Phases 5-8)
@@ -169,14 +214,6 @@ effect execution runs in a background job while the TUI remains interactive.
 - ✓ **Backend plugin system** via backend.toml — pre-existing
 - ✓ **Elm Architecture** (Model-Update-View-Effect) — pre-existing
 - ✓ **Bubblewrap isolation** for scripts — pre-existing
-
-### Active (v3.0 TUI Polish)
-
-- [ ] **Fix shared artifact status icons** — Show correct status (needs-generation/up-to-date) instead of pending — v3.0
-- [ ] **Smart generator selection** — Skip dialog when only one unique generator (same Nix store path) — v3.0
-- [ ] **TUI error display** — Show errors when TUI fails, without stdout/stderr pollution — v3.0
-- [ ] **Script output visibility** — Display stdout/stderr from scripts in TUI — v3.0
-- [ ] **Enhanced generator dialog** — Show machine/user/home-manager context, shared status, artifact name, prompt descriptions — v3.0
 
 ### Future Ideas
 
@@ -206,17 +243,17 @@ effect execution runs in a background job while the TUI remains interactive.
 - tempfile crate for temp directory management
 - insta + insta_cmd for snapshot testing
 - serial_test for test isolation
-- 97 total tests (33 e2e + 64 unit/integration)
+- 122 total tests (comprehensive coverage)
 
 **v3.0 Technical Context:**
 
-The TUI has several UX issues that need addressing:
+All v3.0 UX issues addressed:
 
-1. **Status display bug:** Shared artifacts show "pending" status instead of calculated status
-2. **Generator selection:** Always prompts even when only one unique generator exists
-3. **Error handling:** TUI failures don't show user-friendly errors
-4. **Script output:** Users can't see script output during generation
-5. **Context display:** Generator dialog lacks important context information
+1. ✓ **Status display bug:** Shared artifacts now show correct calculated status
+2. ✓ **Generator selection:** Auto-skips when only one unique generator
+3. ✓ **Error handling:** TUI failures show user-friendly errors to stderr
+4. ✓ **Script output:** Real-time stdout/stderr display in TUI detail view
+5. ✓ **Context display:** Rich generator dialog with full context information
 
 **v2.0 Achievements:**
 
@@ -224,7 +261,7 @@ The TUI has several UX issues that need addressing:
 - Headless API for CI/integration use cases
 - Code quality: 30+ refactored functions under 50 lines
 - Smart logging with feature flags (zero-cost when disabled)
-- 18/18 v2 requirements delivered (29/32 must-haves)
+- 18/18 v2 requirements delivered
 
 **v1.0 Achievements:**
 
@@ -255,7 +292,9 @@ The TUI has several UX issues that need addressing:
 | **Two-level timeout**               | Script-level 30s + task-level 35s | ✓ Good — comprehensive coverage      |
 | **Feature-gated logging**         | Zero cost when disabled           | ✓ Good — no runtime overhead         |
 | **Fail-open check_serialization** | Assume generation on error        | ✓ Good — safe default                |
+| **Option<String> for description**| Backward compatibility            | ✓ Good — optional field pattern      |
+| **Description from first artifact**| Consistent with prompts/files    | ✓ Good — shared aggregation works    |
 
 ---
 
-_Last updated: 2026-02-17 after v3.0 milestone started_
+_Last updated: 2026-02-18 after v3.0 milestone complete_
