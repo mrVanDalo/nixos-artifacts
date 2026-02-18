@@ -109,7 +109,9 @@ All decisions preserved in PROJECT.md Validated section.
   - [x] Plan 09-02: Error state handling
   - [x] Plan 09-03: Status display polish
   - [x] Plan 09-04: Gap closure verification ✓
-- [ ] Phase 10: Smart generator selection (UI-02, GEN-01-04)
+- [x] Phase 10: Smart generator selection (UI-02, GEN-01-04)
+  - [x] Plan 10-01: Smart generator selection logic
+  - [x] Plan 10-02: Enhanced dialog context
 - [ ] Phase 11: TUI error display (UI-03, ERR-01-04)
 - [ ] Phase 12: Script output visibility (UI-04, OUT-01-04)
 - [ ] Phase 13: Enhanced generator dialog (UI-05, DIALOG-01-05)
@@ -159,7 +161,7 @@ All decisions preserved in PROJECT.md Validated section.
 - Verified end-to-end message routing across all three files
 - Confirmed 3 tests exist and pass for all status transitions
 
-### Current Session
+### Previous Session
 
 **Date:** 2026-02-18
 **Activity:** Completed Plan 09-02: File Definition Validation for Shared Artifacts
@@ -174,6 +176,22 @@ All decisions preserved in PROJECT.md Validated section.
 - Tests added to model_builder.rs to verify status setting behavior
 - Tasks 1-3 were already complete from previous work - only tests were needed
 
+### Current Session
+
+**Date:** 2026-02-18
+**Activity:** Completed Plan 10-01: Smart Generator Selection
+**Summary:**
+- Modified `handle_shared_artifact_enter` in update.rs to check generator count before showing dialog
+- Single generator flows directly to Prompt screen (or Generating if no prompts)
+- Multiple generators still show SelectGenerator screen as before
+- Added 4 comprehensive unit tests verifying all code paths
+- Borrow checker issue resolved by cloning needed data before mutable borrow
+
+**Decisions Made:**
+- Used `shared.info.generators.len() == 1` as the check condition
+- Clone files, targets, and prompts before mutable borrow to avoid borrow checker issues
+- Store the selected generator path in `shared.selected_generator` for consistency
+
 ---
 
 ## Quick Links
@@ -182,3 +200,20 @@ All decisions preserved in PROJECT.md Validated section.
 - [REQUIREMENTS.md](./REQUIREMENTS.md) — v3.0 requirements (creating)
 - [ROADMAP.md](./ROADMAP.md) — Phase structure (creating)
 - [Milestones](./milestones/) — Archived milestones
+
+### Current Session
+
+**Date:** 2026-02-18
+**Activity:** Completed Plan 10-02: Enhanced Generator Dialog Context
+**Summary:**
+- Enhanced generator selection view with tree characters (├─ / └─) for visual hierarchy
+- Added color-coded target type labels: NixOS (blue), home-manager (magenta)
+- Implemented count summaries showing usage across target types
+- Added pluralization support for proper singular/plural labels
+- Created 4 comprehensive snapshot tests for enhanced dialog
+- All 25 TUI view tests pass
+
+**Decisions Made:**
+- Tree characters provide better visual hierarchy than simple indentation
+- Color coding enables quick visual scanning of target types
+- Count summaries give immediate context about generator usage

@@ -1,0 +1,46 @@
+---
+source: tests/tui/view_tests.rs
+expression: result.to_string()
+---
+State:
+GeneratorSelectionSnapshot {
+    artifact_name: "single-source-test",
+    selected_index: 0,
+    generators: [
+        GeneratorSnapshot {
+            path: "/nix/store/single-nixos",
+            sources: [
+                SourceSnapshot {
+                    target: "server-1",
+                    target_type: "nixos",
+                },
+            ],
+        },
+        GeneratorSnapshot {
+            path: "/nix/store/single-home",
+            sources: [
+                SourceSnapshot {
+                    target: "alice@laptop",
+                    target_type: "homemanager",
+                },
+            ],
+        },
+    ],
+}
+
+Rendered:
+"┌Select generator for shared artifact "single-source-test"─────────────────────┐"
+"│> /nix/store/single-nixos (1 NixOS machine)                                   │"
+"│      └─NixOS: server-1                                                       │"
+"│                                                                              │"
+"│  /nix/store/single-home (1 home-manager user)                                │"
+"│      └─home-manager: alice@laptop                                            │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"└ 2 generators found, 2 total targets. Selected generator will be used for all ┘"

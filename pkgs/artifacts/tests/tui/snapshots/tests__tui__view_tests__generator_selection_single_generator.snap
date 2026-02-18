@@ -1,6 +1,5 @@
 ---
 source: tests/tui/view_tests.rs
-assertion_line: 746
 expression: result.to_string()
 ---
 State:
@@ -26,9 +25,9 @@ GeneratorSelectionSnapshot {
 
 Rendered:
 "┌Select generator for shared artifact "shared-ssh-key"───────────────┐"
-"│> /nix/store/xxx-gen-ssh                                            │"
-"│      - machine-one (nixos)                                         │"
-"│      - machine-two (nixos)                                         │"
+"│> /nix/store/xxx-gen-ssh (2 NixOS machines)                         │"
+"│      ├─NixOS: machine-one                                          │"
+"│      └─NixOS: machine-two                                          │"
 "│                                                                    │"
 "│                                                                    │"
 "│                                                                    │"
@@ -39,4 +38,4 @@ Rendered:
 "│                                                                    │"
 "│                                                                    │"
 "│                                                                    │"
-"└ j/k: move, Enter: select, Esc: cancel ─────────────────────────────┘"
+"└ 1 generators found, 2 total targets. Selected generator will be use┘"

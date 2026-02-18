@@ -1150,3 +1150,196 @@ fn test_generator_selection_second_selected() {
     };
     assert_snapshot!(result.to_string());
 }
+
+#[test]
+fn test_generator_selection_mixed_source_types() {
+    // Test: One generator with both NixOS and home-manager sources
+    let state = SelectGeneratorState {
+        artifact_index: 0,
+        artifact_name: "shared-cert".to_string(),
+        generators: vec![GeneratorInfo {
+            path: "/nix/store/mixed-gen".to_string(),
+            sources: vec![
+                GeneratorSource {
+                    target: "server-1".to_string(),
+                    target_type: ConfigTargetType::Nixos,
+                },
+                GeneratorSource {
+                    target: "server-2".to_string(),
+                    target_type: ConfigTargetType::Nixos,
+                },
+                GeneratorSource {
+                    target: "alice@laptop".to_string(),
+                    target_type: ConfigTargetType::HomeManager,
+                },
+                GeneratorSource {
+                    target: "bob@desktop".to_string(),
+                    target_type: ConfigTargetType::HomeManager,
+                },
+            ],
+        }],
+        selected_index: 0,
+    };
+
+    let backend = TestBackend::new(80, 20);
+    let mut terminal = Terminal::new(backend).unwrap();
+
+    terminal
+        .draw(|f| render_generator_selection(f, &state, f.area()))
+        .unwrap();
+
+    let result = ViewTestResult {
+        state: GeneratorSelectionSnapshot::from_state(&state),
+        rendered: terminal.backend().to_string(),
+    };
+    assert_snapshot!(result.to_string());
+}
+
+#[test]
+fn test_generator_selection_singular_vs_plural() {
+    // Test: Single NixOS machine and single home-manager user (singular labels)
+    let state = SelectGeneratorState {
+        artifact_index: 0,
+        artifact_name: "single-source-test".to_string(),
+        generators: vec![
+            GeneratorInfo {
+                path: "/nix/store/single-nixos".to_string(),
+                sources: vec![GeneratorSource {
+                    target: "server-1".to_string(),
+                    target_type: ConfigTargetType::Nixos,
+                }],
+            },
+            GeneratorInfo {
+                path: "/nix/store/single-home".to_string(),
+                sources: vec![GeneratorSource {
+                    target: "alice@laptop".to_string(),
+                    target_type: ConfigTargetType::HomeManager,
+                }],
+            },
+        ],
+        selected_index: 0,
+    };
+
+    let backend = TestBackend::new(80, 15);
+    let mut terminal = Terminal::new(backend).unwrap();
+
+    terminal
+        .draw(|f| render_generator_selection(f, &state, f.area()))
+        .unwrap();
+
+    let result = ViewTestResult {
+        state: GeneratorSelectionSnapshot::from_state(&state),
+        rendered: terminal.backend().to_string(),
+    };
+    assert_snapshot!(result.to_string());
+}
+
+#[test]
+fn test_generator_selection_many_sources() {
+    // Test: Generator with many sources to verify layout
+    let state = SelectGeneratorState {
+        artifact_index: 0,
+        artifact_name: "widely-used".to_string(),
+        generators: vec![GeneratorInfo {
+            path: "/nix/store/shared-gen".to_string(),
+            sources: vec![
+                GeneratorSource {
+                    target: "server-1".to_string(),
+                    target_type: ConfigTargetType::Nixos,
+                },
+                GeneratorSource {
+                    target: "server-2".to_string(),
+                    target_type: ConfigTargetType::Nixos,
+                },
+                GeneratorSource {
+                    target: "server-3".to_string(),
+                    target_type: ConfigTargetType::Nixos,
+                },
+                GeneratorSource {
+                    target: "server-4".to_string(),
+                    target_type: ConfigTargetType::Nixos,
+                },
+                GeneratorSource {
+                    target: "server-5".to_string(),
+                    target_type: ConfigTargetType::Nixos,
+                },
+            ],
+        }],
+        selected_index: 0,
+    };
+
+    let backend = TestBackend::new(80, 20);
+    let mut terminal = Terminal::new(backend).unwrap();
+
+    terminal
+        .draw(|f| render_generator_selection(f, &state, f.area()))
+        .unwrap();
+
+    let result = ViewTestResult {
+        state: GeneratorSelectionSnapshot::from_state(&state),
+        rendered: terminal.backend().to_string(),
+    };
+    assert_snapshot!(result.to_string());
+}
+
+#[test]
+fn test_generator_selection_multiple_with_mixed_sources() {
+    // Test: Multiple generators, each with different source type mixes
+    let state = SelectGeneratorState {
+        artifact_index: 0,
+        artifact_name: "complex-shared".to_string(),
+        generators: vec![
+            GeneratorInfo {
+                path: "/nix/store/gen-prod".to_string(),
+                sources: vec![
+                    GeneratorSource {
+                        target: "prod-1".to_string(),
+                        target_type: ConfigTargetType::Nixos,
+                    },
+                    GeneratorSource {
+                        target: "prod-2".to_string(),
+                        target_type: ConfigTargetType::Nixos,
+                    },
+                ],
+            },
+            GeneratorInfo {
+                path: "/nix/store/gen-dev".to_string(),
+                sources: vec![
+                    GeneratorSource {
+                        target: "dev-1".to_string(),
+                        target_type: ConfigTargetType::Nixos,
+                    },
+                    GeneratorSource {
+                        target: "alice@dev".to_string(),
+                        target_type: ConfigTargetType::HomeManager,
+                    },
+                    GeneratorSource {
+                        target: "bob@dev".to_string(),
+                        target_type: ConfigTargetType::HomeManager,
+                    },
+                ],
+            },
+            GeneratorInfo {
+                path: "/nix/store/gen-personal".to_string(),
+                sources: vec![GeneratorSource {
+                    target: "charlie@home".to_string(),
+                    target_type: ConfigTargetType::HomeManager,
+                }],
+            },
+        ],
+        selected_index: 1,
+    };
+
+    let backend = TestBackend::new(80, 25);
+    let mut terminal = Terminal::new(backend).unwrap();
+
+    terminal
+        .draw(|f| render_generator_selection(f, &state, f.area()))
+        .unwrap();
+
+    let result = ViewTestResult {
+        state: GeneratorSelectionSnapshot::from_state(&state),
+        rendered: terminal.backend().to_string(),
+    };
+    assert_snapshot!(result.to_string());
+}

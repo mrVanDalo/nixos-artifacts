@@ -1,11 +1,11 @@
 use crate::app::model::SelectGeneratorState;
 use crate::config::make::TargetType;
 use ratatui::{
-    Frame,
     layout::Rect,
     style::{Color, Modifier, Style, Stylize},
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
+    widgets::{Block, Borders, List, ListItem, ListState},
+    Frame,
 };
 
 /// Render the generator selection screen for shared artifacts
@@ -15,7 +15,7 @@ pub fn render_generator_selection(frame: &mut Frame, state: &SelectGeneratorStat
     for (idx, gen_info) in state.generators.iter().enumerate() {
         let is_selected = idx == state.selected_index;
 
-        // Generator path line
+        // Generator path line with count summary
         let path_style = if is_selected {
             Style::default()
                 .fg(Color::Cyan)
@@ -24,24 +24,52 @@ pub fn render_generator_selection(frame: &mut Frame, state: &SelectGeneratorStat
             Style::default().fg(Color::White)
         };
 
-        items.push(ListItem::new(Line::from(vec![Span::styled(
-            &gen_info.path,
-            path_style,
-        )])));
+        // Calculate source counts
+        let nixos_count = gen_info
+            .sources
+            .iter()
+            .filter(|s| matches!(s.target_type, TargetType::Nixos))
+            .count();
+        let home_count = gen_info
+            .sources
+            .iter()
+            .filter(|s| matches!(s.target_type, TargetType::HomeManager))
+            .count();
+        let count_summary = format_source_counts(nixos_count, home_count);
 
-        // Show which targets use this generator (indented)
-        for source in &gen_info.sources {
-            let target_type_label = match source.target_type {
-                TargetType::Nixos => "nixos",
-                TargetType::HomeManager => "homemanager",
+        // Generator path with usage count
+        items.push(ListItem::new(Line::from(vec![
+            Span::styled(&gen_info.path, path_style),
+            Span::styled(" ", Style::default()),
+            Span::styled(
+                count_summary,
+                Style::default()
+                    .fg(Color::DarkGray)
+                    .add_modifier(Modifier::ITALIC),
+            ),
+        ])));
+
+        // Show which targets use this generator with tree characters and better labels
+        let source_count = gen_info.sources.len();
+        for (source_idx, source) in gen_info.sources.iter().enumerate() {
+            let is_last = source_idx == source_count - 1;
+            let tree_char = if is_last { "└─" } else { "├─" };
+
+            let (type_label, type_color) = match source.target_type {
+                TargetType::Nixos => ("NixOS", Color::Blue),
+                TargetType::HomeManager => ("home-manager", Color::Magenta),
             };
+
             let indent_style = Style::default().fg(Color::DarkGray);
             items.push(ListItem::new(Line::from(vec![
-                Span::styled("    - ", indent_style),
-                Span::styled(&source.target, Style::default().fg(Color::Gray)),
-                Span::styled(" (", indent_style),
-                Span::styled(target_type_label, indent_style),
-                Span::styled(")", indent_style),
+                Span::styled("    ", indent_style),
+                Span::styled(tree_char, indent_style),
+                Span::styled(
+                    type_label,
+                    Style::default().fg(type_color).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(": ", indent_style),
+                Span::styled(&source.target, Style::default().fg(Color::White)),
             ])));
         }
 
@@ -56,10 +84,18 @@ pub fn render_generator_selection(frame: &mut Frame, state: &SelectGeneratorStat
         state.artifact_name
     );
 
+    // Build help text showing impact
+    let total_sources: usize = state.generators.iter().map(|g| g.sources.len()).sum();
+    let help_text = format!(
+        " {} generators found, {} total targets. Selected generator will be used for all listed targets. j/k: move, Enter: select, Esc: cancel ",
+        state.generators.len(),
+        total_sources
+    );
+
     let block = Block::default()
         .borders(Borders::ALL)
         .title(title)
-        .title_bottom(Line::from(" j/k: move, Enter: select, Esc: cancel ").fg(Color::DarkGray));
+        .title_bottom(Line::from(help_text).fg(Color::DarkGray));
 
     let list = List::new(items)
         .block(block)
@@ -77,15 +113,35 @@ pub fn render_generator_selection(frame: &mut Frame, state: &SelectGeneratorStat
     list_state.select(Some(visual_index));
 
     frame.render_stateful_widget(list, area, &mut list_state);
+}
 
-    // Help text at bottom
-    let help = Paragraph::new(Line::from(vec![Span::styled(
-        "Multiple generators found. Select one to use for generation.",
-        Style::default().fg(Color::Yellow),
-    )]));
+/// Format source counts into a human-readable summary
+fn format_source_counts(nixos_count: usize, home_count: usize) -> String {
+    let mut parts = Vec::new();
 
-    // This would go below the list but for simplicity we're including hints in the block title
-    let _ = help;
+    if nixos_count > 0 {
+        let label = if nixos_count == 1 {
+            "NixOS machine"
+        } else {
+            "NixOS machines"
+        };
+        parts.push(format!("{} {}", nixos_count, label));
+    }
+
+    if home_count > 0 {
+        let label = if home_count == 1 {
+            "home-manager user"
+        } else {
+            "home-manager users"
+        };
+        parts.push(format!("{} {}", home_count, label));
+    }
+
+    if parts.is_empty() {
+        String::new()
+    } else {
+        format!("({})", parts.join(", "))
+    }
 }
 
 /// Calculate the visual list index from the logical generator index.

@@ -1,6 +1,5 @@
 ---
 source: tests/tui/view_tests.rs
-assertion_line: 828
 expression: result.to_string()
 ---
 State:
@@ -31,17 +30,17 @@ GeneratorSelectionSnapshot {
 
 Rendered:
 "┌Select generator for shared artifact "shared-api-key"───────────────┐"
-"│  /nix/store/xxx-gen-prod                                           │"
-"│      - prod-server (nixos)                                         │"
+"│  /nix/store/xxx-gen-prod (1 NixOS machine)                         │"
+"│      └─NixOS: prod-server                                          │"
 "│                                                                    │"
-"│> /nix/store/yyy-gen-dev                                            │"
-"│      - dev-machine (nixos)                                         │"
-"│                                                                    │"
-"│                                                                    │"
+"│> /nix/store/yyy-gen-dev (1 NixOS machine)                          │"
+"│      └─NixOS: dev-machine                                          │"
 "│                                                                    │"
 "│                                                                    │"
 "│                                                                    │"
 "│                                                                    │"
 "│                                                                    │"
 "│                                                                    │"
-"└ j/k: move, Enter: select, Esc: cancel ─────────────────────────────┘"
+"│                                                                    │"
+"│                                                                    │"
+"└ 2 generators found, 2 total targets. Selected generator will be use┘"

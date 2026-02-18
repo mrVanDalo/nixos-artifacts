@@ -631,4 +631,258 @@ mod tests {
         assert_eq!(nixos_sources.len(), 1);
         assert_eq!(home_sources.len(), 1);
     }
+
+    // === File Validation Tests ===
+
+    #[test]
+    fn test_shared_artifacts_with_matching_files_no_error() {
+        let content = r#"{
+            "nixos": [
+                {
+                    "machine": "machine-one",
+                    "artifacts": {
+                        "shared-secret": {
+                            "name": "shared-secret",
+                            "shared": true,
+                            "files": {
+                                "id_ed25519": {
+                                    "name": "id_ed25519",
+                                    "path": "/run/secrets/id_ed25519",
+                                    "owner": "root",
+                                    "group": "root"
+                                }
+                            },
+                            "prompts": {},
+                            "generator": "/nix/store/gen.sh",
+                            "serialization": "test"
+                        }
+                    },
+                    "config": {}
+                },
+                {
+                    "machine": "machine-two",
+                    "artifacts": {
+                        "shared-secret": {
+                            "name": "shared-secret",
+                            "shared": true,
+                            "files": {
+                                "id_ed25519": {
+                                    "name": "id_ed25519",
+                                    "path": "/run/secrets/id_ed25519",
+                                    "owner": "root",
+                                    "group": "root"
+                                }
+                            },
+                            "prompts": {},
+                            "generator": "/nix/store/gen.sh",
+                            "serialization": "test"
+                        }
+                    },
+                    "config": {}
+                }
+            ],
+            "home": []
+        }"#;
+        let (_temp_dir, json_path) = create_temp_make_json(content);
+        let config = MakeConfiguration::read_make_config(&json_path).unwrap();
+
+        let shared = config.get_shared_artifacts();
+        assert_eq!(shared.len(), 1);
+
+        let info = shared.get("shared-secret").unwrap();
+        assert!(
+            info.error.is_none(),
+            "Matching files should not produce error"
+        );
+    }
+
+    #[test]
+    fn test_shared_artifacts_with_mismatched_files_has_error() {
+        let content = r#"{
+            "nixos": [
+                {
+                    "machine": "machine-one",
+                    "artifacts": {
+                        "shared-secret": {
+                            "name": "shared-secret",
+                            "shared": true,
+                            "files": {
+                                "id_ed25519": {
+                                    "name": "id_ed25519",
+                                    "path": "/run/secrets/id_ed25519",
+                                    "owner": "root",
+                                    "group": "root"
+                                }
+                            },
+                            "prompts": {},
+                            "generator": "/nix/store/gen.sh",
+                            "serialization": "test"
+                        }
+                    },
+                    "config": {}
+                },
+                {
+                    "machine": "machine-two",
+                    "artifacts": {
+                        "shared-secret": {
+                            "name": "shared-secret",
+                            "shared": true,
+                            "files": {
+                                "id_ed25519": {
+                                    "name": "id_ed25519",
+                                    "path": "/run/secrets/id_ed25519",
+                                    "owner": "root",
+                                    "group": "root"
+                                },
+                                "id_ed25519.pub": {
+                                    "name": "id_ed25519.pub",
+                                    "path": "/run/secrets/id_ed25519.pub",
+                                    "owner": "root",
+                                    "group": "root"
+                                }
+                            },
+                            "prompts": {},
+                            "generator": "/nix/store/gen.sh",
+                            "serialization": "test"
+                        }
+                    },
+                    "config": {}
+                }
+            ],
+            "home": []
+        }"#;
+        let (_temp_dir, json_path) = create_temp_make_json(content);
+        let config = MakeConfiguration::read_make_config(&json_path).unwrap();
+
+        let shared = config.get_shared_artifacts();
+        assert_eq!(shared.len(), 1);
+
+        let info = shared.get("shared-secret").unwrap();
+        assert!(
+            info.error.is_some(),
+            "Mismatched files should produce error"
+        );
+        let error_msg = info.error.as_ref().unwrap();
+        assert!(
+            error_msg.contains("File definition mismatch"),
+            "Error should mention file definition mismatch"
+        );
+        assert!(
+            error_msg.contains("machine-one"),
+            "Error should mention machine-one"
+        );
+        assert!(
+            error_msg.contains("machine-two"),
+            "Error should mention machine-two"
+        );
+    }
+
+    #[test]
+    fn test_shared_artifacts_with_different_file_names_has_error() {
+        let content = r#"{
+            "nixos": [
+                {
+                    "machine": "machine-one",
+                    "artifacts": {
+                        "shared-secret": {
+                            "name": "shared-secret",
+                            "shared": true,
+                            "files": {
+                                "secret-a": {
+                                    "name": "secret-a",
+                                    "path": "/run/secrets/secret-a",
+                                    "owner": "root",
+                                    "group": "root"
+                                }
+                            },
+                            "prompts": {},
+                            "generator": "/nix/store/gen.sh",
+                            "serialization": "test"
+                        }
+                    },
+                    "config": {}
+                },
+                {
+                    "machine": "machine-two",
+                    "artifacts": {
+                        "shared-secret": {
+                            "name": "shared-secret",
+                            "shared": true,
+                            "files": {
+                                "secret-b": {
+                                    "name": "secret-b",
+                                    "path": "/run/secrets/secret-b",
+                                    "owner": "root",
+                                    "group": "root"
+                                }
+                            },
+                            "prompts": {},
+                            "generator": "/nix/store/gen.sh",
+                            "serialization": "test"
+                        }
+                    },
+                    "config": {}
+                }
+            ],
+            "home": []
+        }"#;
+        let (_temp_dir, json_path) = create_temp_make_json(content);
+        let config = MakeConfiguration::read_make_config(&json_path).unwrap();
+
+        let shared = config.get_shared_artifacts();
+        let info = shared.get("shared-secret").unwrap();
+        assert!(
+            info.error.is_some(),
+            "Different file names should produce error"
+        );
+        let error_msg = info.error.as_ref().unwrap();
+        assert!(
+            error_msg.contains("secret-a"),
+            "Error should mention secret-a"
+        );
+        assert!(
+            error_msg.contains("secret-b"),
+            "Error should mention secret-b"
+        );
+    }
+
+    #[test]
+    fn test_shared_artifacts_single_target_no_validation() {
+        // Single target shared artifacts don't need file validation
+        let content = r#"{
+            "nixos": [
+                {
+                    "machine": "machine-one",
+                    "artifacts": {
+                        "shared-secret": {
+                            "name": "shared-secret",
+                            "shared": true,
+                            "files": {
+                                "id_ed25519": {
+                                    "name": "id_ed25519",
+                                    "path": "/run/secrets/id_ed25519",
+                                    "owner": "root",
+                                    "group": "root"
+                                }
+                            },
+                            "prompts": {},
+                            "generator": "/nix/store/gen.sh",
+                            "serialization": "test"
+                        }
+                    },
+                    "config": {}
+                }
+            ],
+            "home": []
+        }"#;
+        let (_temp_dir, json_path) = create_temp_make_json(content);
+        let config = MakeConfiguration::read_make_config(&json_path).unwrap();
+
+        let shared = config.get_shared_artifacts();
+        let info = shared.get("shared-secret").unwrap();
+        assert!(
+            info.error.is_none(),
+            "Single target should not produce error"
+        );
+    }
 }

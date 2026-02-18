@@ -173,24 +173,78 @@ fn start_generation_for_selected(mut model: Model) -> (Model, Effect) {
                 return (model, Effect::None);
             }
 
-            // Route to generator selection screen for shared artifacts
             let artifact_index = model.selected_index;
             let artifact_name = shared.info.artifact_name.clone();
 
-            // Set the screen to SelectGenerator
-            model.screen = Screen::SelectGenerator(SelectGeneratorState {
-                artifact_index,
-                artifact_name: artifact_name.clone(),
-                generators: shared.info.generators.clone(),
-                selected_index: 0,
-            });
+            // Check if there's only one unique generator
+            if shared.info.generators.len() == 1 {
+                // Smart selection: skip dialog, use the only generator
+                let generator_path = shared.info.generators[0].path.clone();
+                let files: Vec<_> = shared.info.files.keys().cloned().collect();
+                let nixos_targets = shared.info.nixos_targets.clone();
+                let home_targets = shared.info.home_targets.clone();
+                let prompts: Vec<PromptEntry> = shared
+                    .info
+                    .prompts
+                    .values()
+                    .map(|p| PromptEntry {
+                        name: p.name.clone(),
+                        description: p.description.clone(),
+                    })
+                    .collect();
 
-            // The effect is mostly informational now (screen is already set)
-            let effect = Effect::ShowGeneratorSelection {
-                artifact_index,
-                artifact_name,
-            };
-            (model, effect)
+                // Store the selected generator in the shared entry
+                if let Some(ListEntry::Shared(shared)) = model.entries.get_mut(artifact_index) {
+                    shared.selected_generator = Some(generator_path.clone());
+                }
+
+                if prompts.is_empty() {
+                    // No prompts needed, go straight to generating
+                    let effect = Effect::RunSharedGenerator {
+                        artifact_index,
+                        artifact_name: artifact_name.clone(),
+                        generator_path,
+                        prompts: Default::default(),
+                        nixos_targets,
+                        home_targets,
+                        files,
+                    };
+                    model.screen = Screen::Generating(GeneratingState {
+                        artifact_index,
+                        artifact_name: artifact_name.clone(),
+                        step: GenerationStep::RunningGenerator,
+                        log_lines: vec![],
+                    });
+                    (model, effect)
+                } else {
+                    // Need to collect prompts first
+                    model.screen = Screen::Prompt(PromptState {
+                        artifact_index,
+                        artifact_name: artifact_name.clone(),
+                        prompts,
+                        current_prompt_index: 0,
+                        input_mode: InputMode::Line,
+                        buffer: String::new(),
+                        collected: Default::default(),
+                    });
+                    (model, Effect::None)
+                }
+            } else {
+                // Multiple generators: show selection dialog
+                model.screen = Screen::SelectGenerator(SelectGeneratorState {
+                    artifact_index,
+                    artifact_name: artifact_name.clone(),
+                    generators: shared.info.generators.clone(),
+                    selected_index: 0,
+                });
+
+                // The effect is mostly informational now (screen is already set)
+                let effect = Effect::ShowGeneratorSelection {
+                    artifact_index,
+                    artifact_name,
+                };
+                (model, effect)
+            }
         }
     }
 }
@@ -1364,6 +1418,313 @@ mod tests {
             other => panic!("Expected Failed status, got {:?}", other),
         }
         assert!(effect.is_none());
+    }
+
+    /// Test that single generator skips selection dialog and goes to prompts
+    #[test]
+    fn test_single_generator_skips_dialog() {
+        use crate::app::model::SharedEntry;
+        use crate::config::make::{
+            GeneratorInfo, GeneratorSource, PromptDef, SharedArtifactInfo, TargetType,
+        };
+        use std::collections::BTreeMap;
+
+        // Create shared artifact with only one generator
+        let mut prompts_map: BTreeMap<String, PromptDef> = BTreeMap::new();
+        prompts_map.insert(
+            "passphrase".to_string(),
+            PromptDef {
+                name: "passphrase".to_string(),
+                description: Some("Enter passphrase".to_string()),
+            },
+        );
+
+        let shared_info = SharedArtifactInfo {
+            artifact_name: "shared-ssh-key".to_string(),
+            backend_name: "test-backend".to_string(),
+            nixos_targets: vec!["machine-one".to_string()],
+            home_targets: vec![],
+            generators: vec![GeneratorInfo {
+                path: "/nix/store/abc123/generator.sh".to_string(),
+                sources: vec![GeneratorSource {
+                    target: "machine-one".to_string(),
+                    target_type: TargetType::Nixos,
+                }],
+            }],
+            prompts: prompts_map,
+            files: BTreeMap::new(),
+            error: None,
+        };
+
+        let shared_entry = SharedEntry {
+            info: shared_info,
+            status: ArtifactStatus::Pending,
+            step_logs: StepLogs::default(),
+            selected_generator: None,
+        };
+
+        let model = Model {
+            screen: Screen::ArtifactList,
+            artifacts: vec![],
+            entries: vec![ListEntry::Shared(shared_entry)],
+            selected_index: 0,
+            selected_log_step: LogStep::default(),
+            error: None,
+            warnings: Vec::new(),
+            tick_count: 0,
+        };
+
+        // Press Enter on shared artifact
+        let (new_model, effect) = update(model, Msg::Key(KeyEvent::enter()));
+
+        // Should go directly to Prompt screen, not SelectGenerator
+        assert!(
+            matches!(new_model.screen, Screen::Prompt(_)),
+            "Single generator should skip to Prompt screen, got {:?}",
+            new_model.screen
+        );
+
+        // Effect should be None (prompts needed)
+        assert!(
+            effect.is_none(),
+            "Expected no effect when prompts are needed"
+        );
+    }
+
+    /// Test that single generator without prompts goes directly to generating
+    #[test]
+    fn test_single_generator_no_prompts_goes_to_generating() {
+        use crate::app::model::SharedEntry;
+        use crate::config::make::{
+            FileDef, GeneratorInfo, GeneratorSource, SharedArtifactInfo, TargetType,
+        };
+        use std::collections::BTreeMap;
+
+        // Create shared artifact with only one generator and no prompts
+        let mut files_map: BTreeMap<String, FileDef> = BTreeMap::new();
+        files_map.insert(
+            "key".to_string(),
+            FileDef {
+                name: "key".to_string(),
+                path: Some("/etc/ssh/ssh_key".to_string()),
+                owner: None,
+                group: None,
+            },
+        );
+
+        let shared_info = SharedArtifactInfo {
+            artifact_name: "shared-ssh-key".to_string(),
+            backend_name: "test-backend".to_string(),
+            nixos_targets: vec!["machine-one".to_string()],
+            home_targets: vec![],
+            generators: vec![GeneratorInfo {
+                path: "/nix/store/abc123/generator.sh".to_string(),
+                sources: vec![GeneratorSource {
+                    target: "machine-one".to_string(),
+                    target_type: TargetType::Nixos,
+                }],
+            }],
+            prompts: BTreeMap::new(), // No prompts
+            files: files_map,
+            error: None,
+        };
+
+        let shared_entry = SharedEntry {
+            info: shared_info,
+            status: ArtifactStatus::Pending,
+            step_logs: StepLogs::default(),
+            selected_generator: None,
+        };
+
+        let model = Model {
+            screen: Screen::ArtifactList,
+            artifacts: vec![],
+            entries: vec![ListEntry::Shared(shared_entry)],
+            selected_index: 0,
+            selected_log_step: LogStep::default(),
+            error: None,
+            warnings: Vec::new(),
+            tick_count: 0,
+        };
+
+        // Press Enter on shared artifact
+        let (new_model, effect) = update(model, Msg::Key(KeyEvent::enter()));
+
+        // Should go directly to Generating screen
+        assert!(
+            matches!(new_model.screen, Screen::Generating(_)),
+            "Single generator without prompts should go to Generating screen, got {:?}",
+            new_model.screen
+        );
+
+        // Effect should be RunSharedGenerator
+        assert!(
+            matches!(effect, Effect::RunSharedGenerator { .. }),
+            "Expected RunSharedGenerator effect, got {:?}",
+            effect
+        );
+
+        // Verify the effect contains the correct generator path and targets
+        if let Effect::RunSharedGenerator {
+            generator_path,
+            nixos_targets,
+            home_targets,
+            ..
+        } = effect
+        {
+            assert_eq!(
+                generator_path, "/nix/store/abc123/generator.sh",
+                "Generator path should be preserved"
+            );
+            assert_eq!(
+                nixos_targets,
+                vec!["machine-one".to_string()],
+                "NixOS targets should be preserved"
+            );
+            assert!(
+                home_targets.is_empty(),
+                "Home targets should be preserved as empty"
+            );
+        }
+    }
+
+    /// Test that multiple generators shows selection dialog
+    #[test]
+    fn test_multiple_generators_shows_dialog() {
+        use crate::app::model::SharedEntry;
+        use crate::config::make::{GeneratorInfo, GeneratorSource, SharedArtifactInfo, TargetType};
+        use std::collections::BTreeMap;
+
+        // Create shared artifact with multiple generators
+        let shared_info = SharedArtifactInfo {
+            artifact_name: "shared-ssh-key".to_string(),
+            backend_name: "test-backend".to_string(),
+            nixos_targets: vec!["machine-one".to_string(), "machine-two".to_string()],
+            home_targets: vec![],
+            generators: vec![
+                GeneratorInfo {
+                    path: "/nix/store/abc123/gen1.sh".to_string(),
+                    sources: vec![GeneratorSource {
+                        target: "machine-one".to_string(),
+                        target_type: TargetType::Nixos,
+                    }],
+                },
+                GeneratorInfo {
+                    path: "/nix/store/def456/gen2.sh".to_string(),
+                    sources: vec![GeneratorSource {
+                        target: "machine-two".to_string(),
+                        target_type: TargetType::Nixos,
+                    }],
+                },
+            ],
+            prompts: BTreeMap::new(),
+            files: BTreeMap::new(),
+            error: None,
+        };
+
+        let shared_entry = SharedEntry {
+            info: shared_info,
+            status: ArtifactStatus::Pending,
+            step_logs: StepLogs::default(),
+            selected_generator: None,
+        };
+
+        let model = Model {
+            screen: Screen::ArtifactList,
+            artifacts: vec![],
+            entries: vec![ListEntry::Shared(shared_entry)],
+            selected_index: 0,
+            selected_log_step: LogStep::default(),
+            error: None,
+            warnings: Vec::new(),
+            tick_count: 0,
+        };
+
+        // Press Enter on shared artifact
+        let (new_model, effect) = update(model, Msg::Key(KeyEvent::enter()));
+
+        // Should show SelectGenerator screen
+        assert!(
+            matches!(new_model.screen, Screen::SelectGenerator(_)),
+            "Multiple generators should show SelectGenerator screen, got {:?}",
+            new_model.screen
+        );
+
+        // Effect should be ShowGeneratorSelection
+        assert!(
+            matches!(effect, Effect::ShowGeneratorSelection { .. }),
+            "Expected ShowGeneratorSelection effect, got {:?}",
+            effect
+        );
+
+        // Verify generators are in the screen state
+        if let Screen::SelectGenerator(state) = new_model.screen {
+            assert_eq!(
+                state.generators.len(),
+                2,
+                "SelectGenerator should have both generators"
+            );
+            assert_eq!(state.generators[0].path, "/nix/store/abc123/gen1.sh");
+            assert_eq!(state.generators[1].path, "/nix/store/def456/gen2.sh");
+        }
+    }
+
+    /// Test that selected generator is stored when single generator auto-selected
+    #[test]
+    fn test_single_generator_stores_selected_path() {
+        use crate::app::model::SharedEntry;
+        use crate::config::make::{GeneratorInfo, GeneratorSource, SharedArtifactInfo, TargetType};
+        use std::collections::BTreeMap;
+
+        // Create shared artifact with one generator
+        let shared_info = SharedArtifactInfo {
+            artifact_name: "shared-ssh-key".to_string(),
+            backend_name: "test-backend".to_string(),
+            nixos_targets: vec!["machine-one".to_string()],
+            home_targets: vec![],
+            generators: vec![GeneratorInfo {
+                path: "/nix/store/abc123/generator.sh".to_string(),
+                sources: vec![GeneratorSource {
+                    target: "machine-one".to_string(),
+                    target_type: TargetType::Nixos,
+                }],
+            }],
+            prompts: BTreeMap::new(), // No prompts
+            files: BTreeMap::new(),
+            error: None,
+        };
+
+        let shared_entry = SharedEntry {
+            info: shared_info,
+            status: ArtifactStatus::Pending,
+            step_logs: StepLogs::default(),
+            selected_generator: None,
+        };
+
+        let model = Model {
+            screen: Screen::ArtifactList,
+            artifacts: vec![],
+            entries: vec![ListEntry::Shared(shared_entry)],
+            selected_index: 0,
+            selected_log_step: LogStep::default(),
+            error: None,
+            warnings: Vec::new(),
+            tick_count: 0,
+        };
+
+        // Press Enter on shared artifact
+        let (new_model, _) = update(model, Msg::Key(KeyEvent::enter()));
+
+        // Verify the selected_generator was stored in the entry
+        if let ListEntry::Shared(shared) = &new_model.entries[0] {
+            assert_eq!(
+                shared.selected_generator,
+                Some("/nix/store/abc123/generator.sh".to_string()),
+                "Generator path should be stored in selected_generator"
+            );
+        } else {
+            panic!("Expected ListEntry::Shared");
+        }
     }
 
     fn make_test_model_with_shared() -> Model {

@@ -1,0 +1,77 @@
+---
+source: tests/tui/view_tests.rs
+expression: result.to_string()
+---
+State:
+GeneratorSelectionSnapshot {
+    artifact_name: "complex-shared",
+    selected_index: 1,
+    generators: [
+        GeneratorSnapshot {
+            path: "/nix/store/gen-prod",
+            sources: [
+                SourceSnapshot {
+                    target: "prod-1",
+                    target_type: "nixos",
+                },
+                SourceSnapshot {
+                    target: "prod-2",
+                    target_type: "nixos",
+                },
+            ],
+        },
+        GeneratorSnapshot {
+            path: "/nix/store/gen-dev",
+            sources: [
+                SourceSnapshot {
+                    target: "dev-1",
+                    target_type: "nixos",
+                },
+                SourceSnapshot {
+                    target: "alice@dev",
+                    target_type: "homemanager",
+                },
+                SourceSnapshot {
+                    target: "bob@dev",
+                    target_type: "homemanager",
+                },
+            ],
+        },
+        GeneratorSnapshot {
+            path: "/nix/store/gen-personal",
+            sources: [
+                SourceSnapshot {
+                    target: "charlie@home",
+                    target_type: "homemanager",
+                },
+            ],
+        },
+    ],
+}
+
+Rendered:
+"┌Select generator for shared artifact "complex-shared"─────────────────────────┐"
+"│  /nix/store/gen-prod (2 NixOS machines)                                      │"
+"│      ├─NixOS: prod-1                                                         │"
+"│      └─NixOS: prod-2                                                         │"
+"│                                                                              │"
+"│> /nix/store/gen-dev (1 NixOS machine, 2 home-manager users)                  │"
+"│      ├─NixOS: dev-1                                                          │"
+"│      ├─home-manager: alice@dev                                               │"
+"│      └─home-manager: bob@dev                                                 │"
+"│                                                                              │"
+"│  /nix/store/gen-personal (1 home-manager user)                               │"
+"│      └─home-manager: charlie@home                                            │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"└ 3 generators found, 6 total targets. Selected generator will be used for all ┘"

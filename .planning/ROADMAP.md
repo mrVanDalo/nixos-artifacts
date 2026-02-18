@@ -79,6 +79,10 @@ v3.0 TUI Polish milestone in planning. 5 phases covering status fixes, smart gen
 
 **Goal:** Generator selection skips dialog when only one unique generator exists
 
+**Status:** ○ Not Started
+
+**Plans:** 2 plans
+
 **Dependencies:** Phase 9 (status fixes should be in place first)
 
 **Requirements:**
@@ -87,6 +91,10 @@ v3.0 TUI Polish milestone in planning. 5 phases covering status fixes, smart gen
 - GEN-02: Single unique generator automatically selected without dialog
 - GEN-03: Multiple unique generators show selection dialog with full context
 - GEN-04: Dialog shows generator context (machine name, user name, home-manager vs nixos)
+
+**Plan List:**
+- [ ] 10-01-PLAN.md — Smart generator selection logic: skip dialog when only one unique generator
+- [ ] 10-02-PLAN.md — Enhanced dialog context: machine/user names and source type display
 
 **Success Criteria:**
 1. When only one unique generator (by Nix store path) exists, selection happens without showing dialog

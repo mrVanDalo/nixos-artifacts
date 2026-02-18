@@ -1,0 +1,54 @@
+---
+source: tests/tui/view_tests.rs
+expression: result.to_string()
+---
+State:
+GeneratorSelectionSnapshot {
+    artifact_name: "shared-cert",
+    selected_index: 0,
+    generators: [
+        GeneratorSnapshot {
+            path: "/nix/store/mixed-gen",
+            sources: [
+                SourceSnapshot {
+                    target: "server-1",
+                    target_type: "nixos",
+                },
+                SourceSnapshot {
+                    target: "server-2",
+                    target_type: "nixos",
+                },
+                SourceSnapshot {
+                    target: "alice@laptop",
+                    target_type: "homemanager",
+                },
+                SourceSnapshot {
+                    target: "bob@desktop",
+                    target_type: "homemanager",
+                },
+            ],
+        },
+    ],
+}
+
+Rendered:
+"┌Select generator for shared artifact "shared-cert"────────────────────────────┐"
+"│> /nix/store/mixed-gen (2 NixOS machines, 2 home-manager users)               │"
+"│      ├─NixOS: server-1                                                       │"
+"│      ├─NixOS: server-2                                                       │"
+"│      ├─home-manager: alice@laptop                                            │"
+"│      └─home-manager: bob@desktop                                             │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"│                                                                              │"
+"└ 1 generators found, 4 total targets. Selected generator will be used for all ┘"
