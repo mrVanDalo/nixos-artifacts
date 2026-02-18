@@ -33,9 +33,9 @@ v3.0 TUI Polish milestone in planning. 5 phases covering status fixes, smart gen
 | 6   | Integration Testing           | v2.0      | Complete    | 2026-02-16 |
 | 7   | Code Quality                  | v2.0      | Complete    | 2026-02-17 |
 | 8   | Smart Logging                 | v2.0      | Complete    | 2026-02-17 |
-| 9   | Shared Artifact Status Fixes  | v3.0      | Planned     | —          |
-| 10  | Smart Generator Selection     | v3.0      | Not Started | —          |
-| 11  | Error Handling Improvements   | v3.0      | Not Started | —          |
+| 9   | Shared Artifact Status Fixes  | v3.0      | Complete    | 2026-02-18 |
+| 10  | Smart Generator Selection     | v3.0      | Complete    | 2026-02-18 |
+| 11  | Error Handling Improvements   | v3.0      | Planned     | —          |
 | 12  | Script Output Visibility      | v3.0      | Not Started | —          |
 | 13  | Enhanced Generator Dialog     | v3.0      | Not Started | —          |
 
@@ -109,6 +109,10 @@ v3.0 TUI Polish milestone in planning. 5 phases covering status fixes, smart gen
 
 **Goal:** TUI errors display properly to stderr without polluting normal output
 
+**Status:** 📋 Planned (3 plans ready for execution)
+
+**Plans:** 3 plans
+
 **Dependencies:** Phase 10 (builds on TUI flow improvements)
 
 **Requirements:**
@@ -117,6 +121,11 @@ v3.0 TUI Polish milestone in planning. 5 phases covering status fixes, smart gen
 - ERR-02: Terminal restoration failures print clear error to stderr
 - ERR-03: All runtime errors visible in TUI, not stdout/stderr
 - ERR-04: Panic handler prints to stderr and attempts terminal restoration
+
+**Plan List:**
+- [ ] 11-01-PLAN.md — Pre-terminal error handling: move config loading before terminal setup, suppress output with --log-file
+- [ ] 11-02-PLAN.md — Panic handler enhancement: print to stderr, ensure terminal restoration
+- [ ] 11-03-PLAN.md — Output suppression audit: verify no println!/eprintln! in TUI, runtime errors via model.error
 
 **Success Criteria:**
 1. TUI initialization failures (e.g., bad flake.nix, missing backend.toml) print clear error to stderr and exit non-zero

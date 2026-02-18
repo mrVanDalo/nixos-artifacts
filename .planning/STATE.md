@@ -23,16 +23,16 @@ effect execution runs in a background job while the TUI remains interactive.
 | Aspect       | Status                       |
 | ------------ | ---------------------------- |
 | Milestone    | v3.0 ○ ROADMAP READY         |
-| Phase        | — (awaiting approval)        |
-| Plan         | — (start with Phase 9)       |
+| Phase        | 11-error-handling            |
+| Plan         | 03-complete                  |
 | Requirements | 20 v1 requirements mapped    |
 | Tests        | 113 passing                |
-| Previous     | v2.0 ✅ SHIPPED (2026-02-17) |
+| Previous     | Plan 10-02 complete          |
 
 ### Progress Bar
 
 ```
-[████░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 12% complete — Phase 9 in progress (2 of 4 plans complete)
+[██████░░░░░░░░░░░░░░░░░░░░░░░░░░] 20% complete — Phase 11 complete (3 of 3 plans complete)
 ```
 
 ---
@@ -112,7 +112,10 @@ All decisions preserved in PROJECT.md Validated section.
 - [x] Phase 10: Smart generator selection (UI-02, GEN-01-04)
   - [x] Plan 10-01: Smart generator selection logic
   - [x] Plan 10-02: Enhanced dialog context
-- [ ] Phase 11: TUI error display (UI-03, ERR-01-04)
+ - [x] Phase 11: TUI error display (UI-03, ERR-01-04)
+    - [x] Plan 11-01: Pre-terminal error handling
+    - [x] Plan 11-02: Enhanced panic handler and terminal restoration
+    - [x] Plan 11-03: TUI error display audit
 - [ ] Phase 12: Script output visibility (UI-04, OUT-01-04)
 - [ ] Phase 13: Enhanced generator dialog (UI-05, DIALOG-01-05)
 
@@ -194,6 +197,43 @@ All decisions preserved in PROJECT.md Validated section.
 
 ---
 
+### Current Session
+
+**Date:** 2026-02-18
+**Activity:** Completed Plan 11-01: Pre-terminal Error Handling
+**Summary:**
+- Moved config loading (`BackendConfiguration::read_backend_config()` and `MakeConfiguration::read_make_config()`) before terminal initialization
+- Added `with_context()` error messages for clear failure reporting (ERR-01)
+- Implemented conditional output: "No artifacts found" message goes to log file when `--log-file` provided, stdout otherwise (UI-03)
+- Panic hook now installed before terminal setup (ERR-04)
+- All 113 tests pass
+
+**Decisions Made:**
+- Config loading before `TerminalGuard::new()` ensures errors print to stderr in plain text
+- `with_context()` provides clear error context for config loading failures
+- Conditional output based on `cli.is_logging_enabled()` check
+
+---
+
+### Current Session
+
+**Date:** 2026-02-18
+**Activity:** Completed Plan 11-03: TUI Error Display Audit
+**Summary:**
+- Audited all TUI source files for println!/eprintln! usage
+- Verified only 4 eprintln! calls in terminal.rs (intentional ERR-02/ERR-04 error reporting)
+- Confirmed background tasks capture output via channels (no stdout/stderr leakage)
+- Verified runtime errors use model.error pattern (ERR-03 compliant)
+- Documented headless mode stdout usage in prompt.rs as acceptable
+- All 85 TUI tests pass (49 integration + 36 unit)
+
+**Decisions Made:**
+- terminal.rs eprintln! are intentional for terminal operation and panic error reporting
+- prompt.rs println! are acceptable for headless mode user interaction
+- No code changes needed - TUI code already compliant with ERR-03 requirements
+
+---
+
 ## Quick Links
 
 - [PROJECT.md](./PROJECT.md) — Core value and requirements
@@ -217,3 +257,22 @@ All decisions preserved in PROJECT.md Validated section.
 - Tree characters provide better visual hierarchy than simple indentation
 - Color coding enables quick visual scanning of target types
 - Count summaries give immediate context about generator usage
+
+---
+
+### Current Session
+
+**Date:** 2026-02-18
+**Activity:** Completed Plan 11-02: Enhanced Panic Handler and Terminal Restoration
+**Summary:**
+- Enhanced panic hook to print formatted error messages to stderr before calling original hook
+- Panic hook now restores terminal FIRST (raw mode disabled, alternate screen exited) before any output
+- TerminalGuard::restore() now prints specific error messages for each failing restoration step
+- All three restoration steps are tried even if some fail (ERR-02 pattern)
+- Documented restore_terminal() as infallible and safe for panic hook use
+- All TUI tests pass (35 unit + 49 integration)
+
+**Decisions Made:**
+- Panic hook restoration order: terminal first, then stderr output, then original hook
+- restore_terminal() is infallible by design - ignores all errors for panic safety
+- TerminalGuard::restore() accumulates errors and reports each step that fails

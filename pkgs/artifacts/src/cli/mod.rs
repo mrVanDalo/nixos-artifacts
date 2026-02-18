@@ -64,6 +64,7 @@ pub async fn run() -> Result<()> {
 
     // Run TUI
     run_tui(
+        &cli,
         &backend_path,
         &make_path,
         &cli.machine,
@@ -74,15 +75,27 @@ pub async fn run() -> Result<()> {
 }
 
 async fn run_tui(
+    cli: &args::Cli,
     backend_path: &Path,
     make_path: &Path,
     machines: &[String],
     home_users: &[String],
     artifacts: &[String],
 ) -> Result<()> {
-    // Load configurations
-    let backend = BackendConfiguration::read_backend_config(backend_path)?;
-    let make = MakeConfiguration::read_make_config(make_path)?;
+    // STEP 1: Load all configurations BEFORE terminal setup (ERR-01)
+    // Errors here print to stderr and exit non-zero
+    let backend = BackendConfiguration::read_backend_config(backend_path)
+        .with_context(|| {
+            format!(
+                "Failed to load backend configuration from '{}'",
+                backend_path.display()
+            )
+        })?;
+
+    let make = MakeConfiguration::read_make_config(make_path)
+        .with_context(|| {
+            "Failed to load artifact definitions from nix evaluation".to_string()
+        })?;
 
     // Build the initial model
     let mut model = build_filtered_model(&make, machines, home_users, artifacts);
@@ -90,20 +103,32 @@ async fn run_tui(
     // Validate backend capabilities and add warnings
     validate_model_capabilities(&mut model, &backend);
 
+    // STEP 4: Check for empty entries BEFORE terminal setup (UI-03)
     if model.entries.is_empty() {
-        println!("No artifacts found matching the specified filters.");
+        // Check if logging is enabled via --log-file
+        let log_file_enabled = cli.is_logging_enabled();
+
+        if log_file_enabled {
+            // When --log-file provided, message goes to log file only via info! macro
+            #[cfg(feature = "logging")]
+            crate::info!("No artifacts found matching the specified filters");
+            // No stdout output when logging to file
+        } else {
+            // No log file, print to stdout
+            println!("No artifacts found matching the specified filters.");
+        }
         return Ok(());
     }
 
-    // Log TUI startup
-    #[cfg(feature = "logging")]
-    crate::info!("Starting run_tui with {} entries", model.entries.len());
-
-    // Install panic hook to restore terminal on crash
+    // STEP 5: Install panic hook BEFORE terminal (ERR-04)
     install_panic_hook();
 
-    // Initialize terminal
+    // STEP 6: Initialize terminal
     let mut terminal_guard = TerminalGuard::new().context("Failed to initialize terminal")?;
+
+    // Log TUI startup with entry count
+    #[cfg(feature = "logging")]
+    crate::info!("Starting run_tui with {} entries", model.entries.len());
 
     // Log before running async TUI
     #[cfg(feature = "logging")]
