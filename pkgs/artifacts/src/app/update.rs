@@ -83,6 +83,16 @@ pub fn update(model: Model, msg: Msg) -> (Model, Effect) {
             },
         ) => handle_check_result(model, artifact_index, result, output),
 
+        // === Shared check serialization results (any screen) ===
+        (
+            _,
+            Msg::SharedCheckSerializationResult {
+                artifact_index,
+                result,
+                output,
+            },
+        ) => handle_check_result(model, artifact_index, result, output),
+
         // === Global ===
         (_, Msg::Quit) => (model, Effect::Quit),
         (_, Msg::Tick) => {
@@ -156,6 +166,13 @@ fn start_generation_for_selected(mut model: Model) -> (Model, Effect) {
             }
         }
         ListEntry::Shared(shared) => {
+            // Block generation for validation errors
+            if shared.info.error.is_some() {
+                // Error already displayed in log panel via status
+                // Return to list without starting generation
+                return (model, Effect::None);
+            }
+
             // Route to generator selection screen for shared artifacts
             let artifact_index = model.selected_index;
             let artifact_name = shared.info.artifact_name.clone();
@@ -1252,6 +1269,147 @@ mod tests {
                 );
             }
             _ => panic!("Expected Effect::Batch from init()"),
+        }
+    }
+
+    /// Test that SharedCheckSerializationResult updates shared artifact status correctly
+    #[test]
+    fn test_shared_check_serialization_result_updates_status() {
+        use crate::app::model::SharedEntry;
+        use crate::config::make::SharedArtifactInfo;
+
+        // Create a model with a shared artifact
+        let mut model = make_test_model_with_shared();
+
+        // Initial status should be Pending
+        assert_eq!(model.entries[0].status(), &ArtifactStatus::Pending);
+
+        // Simulate successful shared check result indicating generation needed
+        let (new_model, effect) = update(
+            model,
+            Msg::SharedCheckSerializationResult {
+                artifact_index: 0,
+                result: Ok(true), // true = needs generation
+                output: Some(CheckOutput {
+                    stdout_lines: vec!["Checking shared artifact...".to_string()],
+                    stderr_lines: vec![],
+                }),
+            },
+        );
+
+        // Status should transition to NeedsGeneration
+        assert_eq!(
+            new_model.entries[0].status(),
+            &ArtifactStatus::NeedsGeneration,
+            "Shared artifact should transition from Pending to NeedsGeneration"
+        );
+
+        // Effect should be None
+        assert!(effect.is_none());
+    }
+
+    /// Test that SharedCheckSerializationResult handles up-to-date status
+    #[test]
+    fn test_shared_check_serialization_result_up_to_date() {
+        use crate::app::model::SharedEntry;
+        use crate::config::make::SharedArtifactInfo;
+
+        let model = make_test_model_with_shared();
+
+        // Simulate successful shared check result indicating up-to-date
+        let (new_model, effect) = update(
+            model,
+            Msg::SharedCheckSerializationResult {
+                artifact_index: 0,
+                result: Ok(false), // false = up to date
+                output: None,
+            },
+        );
+
+        // Status should transition to UpToDate
+        assert_eq!(
+            new_model.entries[0].status(),
+            &ArtifactStatus::UpToDate,
+            "Shared artifact should transition from Pending to UpToDate"
+        );
+        assert!(effect.is_none());
+    }
+
+    /// Test that SharedCheckSerializationResult handles error status
+    #[test]
+    fn test_shared_check_serialization_result_error() {
+        use crate::app::model::SharedEntry;
+        use crate::config::make::SharedArtifactInfo;
+
+        let model = make_test_model_with_shared();
+
+        // Simulate failed shared check
+        let (new_model, effect) = update(
+            model,
+            Msg::SharedCheckSerializationResult {
+                artifact_index: 0,
+                result: Err("Check script failed".to_string()),
+                output: Some(CheckOutput {
+                    stdout_lines: vec![],
+                    stderr_lines: vec!["Error: Backend not found".to_string()],
+                }),
+            },
+        );
+
+        // Status should transition to Failed
+        match new_model.entries[0].status() {
+            ArtifactStatus::Failed { error, .. } => {
+                assert!(error.contains("Check script failed"));
+            }
+            other => panic!("Expected Failed status, got {:?}", other),
+        }
+        assert!(effect.is_none());
+    }
+
+    fn make_test_model_with_shared() -> Model {
+        use crate::app::model::SharedEntry;
+        use crate::config::make::{GeneratorInfo, GeneratorSource, SharedArtifactInfo, TargetType};
+        use std::collections::BTreeMap;
+
+        let shared_info = SharedArtifactInfo {
+            artifact_name: "shared-ssh-key".to_string(),
+            backend_name: "test-backend".to_string(),
+            nixos_targets: vec!["machine-one".to_string(), "machine-two".to_string()],
+            home_targets: vec!["alice@host".to_string()],
+            generators: vec![GeneratorInfo {
+                path: "/test/generator.sh".to_string(),
+                sources: vec![
+                    GeneratorSource {
+                        target: "machine-one".to_string(),
+                        target_type: TargetType::Nixos,
+                    },
+                    GeneratorSource {
+                        target: "machine-two".to_string(),
+                        target_type: TargetType::Nixos,
+                    },
+                ],
+            }],
+            prompts: BTreeMap::new(),
+            files: BTreeMap::new(),
+            error: None,
+        };
+
+        let shared_entry = SharedEntry {
+            info: shared_info,
+            status: ArtifactStatus::Pending,
+            step_logs: StepLogs::default(),
+            selected_generator: None,
+        };
+
+        Model {
+            screen: Screen::ArtifactList,
+            artifacts: vec![],
+            entries: vec![ListEntry::Shared(shared_entry)],
+            selected_index: 0,
+            selected_log_step: LogStep::default(),
+            error: None,
+            warnings: Vec::new(),
+            tick_count: 0,
         }
     }
 }

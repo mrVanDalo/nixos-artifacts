@@ -3,7 +3,9 @@ use crate::app::model::{ArtifactEntry, Model, TargetType};
 use crate::app::{Effect, Msg};
 use crate::backend::generator::{run_generator_script, verify_generated_files};
 use crate::backend::output_capture::{CapturedOutput, OutputStream};
-use crate::backend::serialization::{run_check_serialization, run_serialize};
+use crate::backend::serialization::{
+    run_check_serialization, run_serialize, run_shared_check_serialization,
+};
 use crate::backend::temp_dir::create_temp_dir;
 use crate::config::backend::BackendConfiguration;
 use crate::config::make::MakeConfiguration;
@@ -219,6 +221,44 @@ impl EffectHandler for BackendEffectHandler {
                     artifact_index,
                     result,
                 }])
+            }
+
+            Effect::SharedCheckSerialization {
+                artifact_index,
+                artifact_name,
+                backend_name,
+                nixos_targets,
+                home_targets,
+            } => {
+                let result = run_shared_check_serialization(
+                    &artifact_name,
+                    &backend_name,
+                    &self.backend,
+                    &self.make,
+                    &nixos_targets,
+                    &home_targets,
+                );
+
+                match result {
+                    Ok(check_result) => {
+                        let (stdout_lines, stderr_lines) =
+                            split_captured_output(&check_result.output);
+                        let output = CheckOutput {
+                            stdout_lines,
+                            stderr_lines,
+                        };
+                        Ok(vec![Msg::SharedCheckSerializationResult {
+                            artifact_index,
+                            result: Ok(check_result.needs_generation),
+                            output: Some(output),
+                        }])
+                    }
+                    Err(e) => Ok(vec![Msg::SharedCheckSerializationResult {
+                        artifact_index,
+                        result: Err(e.to_string()),
+                        output: None,
+                    }]),
+                }
             }
         }
     }

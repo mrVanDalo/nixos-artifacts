@@ -490,6 +490,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "logging")]
     fn test_log_level_from_cli() {
         use crate::cli::args::LogLevel as CliLevel;
 
@@ -500,6 +501,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "logging")]
     fn test_logger_creation_without_log_file() {
         use crate::cli::args::Cli;
 
@@ -507,14 +509,12 @@ mod tests {
         let args = Cli::parse_from(["artifacts"]);
 
         // Should return None
-        #[cfg(feature = "logging")]
-        {
-            let result = Logger::new_from_args(&args).unwrap();
-            assert!(result.is_none());
-        }
+        let result = Logger::new_from_args(&args).unwrap();
+        assert!(result.is_none());
     }
 
     #[test]
+    #[cfg(feature = "logging")]
     fn test_logger_validates_writability() {
         use crate::cli::args::Cli;
 
@@ -531,28 +531,26 @@ mod tests {
             "debug",
         ]);
 
-        #[cfg(feature = "logging")]
-        {
-            // Create logger
-            let logger = Logger::new_from_args(&args)
-                .unwrap()
-                .expect("Logger should be created");
-            assert_eq!(logger.path(), log_path);
-            assert_eq!(logger.min_level(), LogLevel::Debug);
+        // Create logger
+        let logger = Logger::new_from_args(&args)
+            .unwrap()
+            .expect("Logger should be created");
+        assert_eq!(logger.path(), log_path);
+        assert_eq!(logger.min_level(), LogLevel::Debug);
 
-            // Check file was created with correct permissions
-            let metadata = std::fs::metadata(&log_path).unwrap();
-            #[cfg(unix)]
-            {
-                use std::os::unix::fs::PermissionsExt;
-                let perms = metadata.permissions().mode();
-                // Should be 0o640 (owner rw, group r)
-                assert_eq!(perms & 0o777, 0o640);
-            }
+        // Check file was created with correct permissions
+        let metadata = std::fs::metadata(&log_path).unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let perms = metadata.permissions().mode();
+            // Should be 0o640 (owner rw, group r)
+            assert_eq!(perms & 0o777, 0o640);
         }
     }
 
     #[test]
+    #[cfg(feature = "logging")]
     fn test_logger_rejects_directory() {
         use crate::cli::args::Cli;
 
@@ -562,21 +560,19 @@ mod tests {
         // Try to use directory as log file
         let args = Cli::parse_from(["artifacts", "--log-file", temp_dir.path().to_str().unwrap()]);
 
-        #[cfg(feature = "logging")]
-        {
-            let result = Logger::new_from_args(&args);
-            assert!(result.is_err());
-            match result {
-                Err(e) => {
-                    let err = e.to_string();
-                    assert!(err.contains("cannot be a directory"));
-                }
-                Ok(_) => panic!("Expected error"),
+        let result = Logger::new_from_args(&args);
+        assert!(result.is_err());
+        match result {
+            Err(e) => {
+                let err = e.to_string();
+                assert!(err.contains("cannot be a directory"));
             }
+            Ok(_) => panic!("Expected error"),
         }
     }
 
     #[test]
+    #[cfg(feature = "logging")]
     fn test_logger_writes_to_file() {
         use crate::cli::args::Cli;
 
@@ -591,31 +587,29 @@ mod tests {
             "debug",
         ]);
 
-        #[cfg(feature = "logging")]
-        {
-            let logger = Logger::new_from_args(&args).unwrap().unwrap();
+        let logger = Logger::new_from_args(&args).unwrap().unwrap();
 
-            // Write a log entry
-            logger.log(
-                super::LogLevel::Info,
-                "test_module",
-                42,
-                "Test message".to_string(),
-            );
+        // Write a log entry
+        logger.log(
+            super::LogLevel::Info,
+            "test_module",
+            42,
+            "Test message".to_string(),
+        );
 
-            // Read file and verify content
-            let mut content = String::new();
-            let mut file = File::open(&log_path).unwrap();
-            file.read_to_string(&mut content).unwrap();
+        // Read file and verify content
+        let mut content = String::new();
+        let mut file = File::open(&log_path).unwrap();
+        file.read_to_string(&mut content).unwrap();
 
-            assert!(content.contains("[INFO]"));
-            assert!(content.contains("test_module"));
-            assert!(content.contains("Test message"));
-            assert!(!content.contains(":42:")); // INFO doesn't include line number
-        }
+        assert!(content.contains("[INFO]"));
+        assert!(content.contains("test_module"));
+        assert!(content.contains("Test message"));
+        assert!(!content.contains(":42:")); // INFO doesn't include line number
     }
 
     #[test]
+    #[cfg(feature = "logging")]
     fn test_logger_debug_includes_line_number() {
         use crate::cli::args::Cli;
 
@@ -630,30 +624,28 @@ mod tests {
             "debug",
         ]);
 
-        #[cfg(feature = "logging")]
-        {
-            let logger = Logger::new_from_args(&args).unwrap().unwrap();
+        let logger = Logger::new_from_args(&args).unwrap().unwrap();
 
-            // Write debug log at specific line
-            logger.log(
-                super::LogLevel::Debug,
-                "test_module",
-                999,
-                "Debug message".to_string(),
-            );
+        // Write debug log at specific line
+        logger.log(
+            super::LogLevel::Debug,
+            "test_module",
+            999,
+            "Debug message".to_string(),
+        );
 
-            // Read file
-            let mut content = String::new();
-            let mut file = File::open(&log_path).unwrap();
-            file.read_to_string(&mut content).unwrap();
+        // Read file
+        let mut content = String::new();
+        let mut file = File::open(&log_path).unwrap();
+        file.read_to_string(&mut content).unwrap();
 
-            // DEBUG should include line number
-            assert!(content.contains("[DEBUG]"));
-            assert!(content.contains("test_module:999:"));
-        }
+        // DEBUG should include line number
+        assert!(content.contains("[DEBUG]"));
+        assert!(content.contains("test_module:999:"));
     }
 
     #[test]
+    #[cfg(feature = "logging")]
     fn test_level_filtering() {
         use crate::cli::args::Cli;
 
@@ -669,27 +661,24 @@ mod tests {
             "warn",
         ]);
 
-        #[cfg(feature = "logging")]
-        {
-            let logger = Logger::new_from_args(&args).unwrap().unwrap();
+        let logger = Logger::new_from_args(&args).unwrap().unwrap();
 
-            // Write at different levels
-            logger.log(super::LogLevel::Debug, "test", 1, "debug".to_string());
-            logger.log(super::LogLevel::Info, "test", 2, "info".to_string());
-            logger.log(super::LogLevel::Warn, "test", 3, "warn".to_string());
-            logger.log(super::LogLevel::Error, "test", 4, "error".to_string());
+        // Write at different levels
+        logger.log(super::LogLevel::Debug, "test", 1, "debug".to_string());
+        logger.log(super::LogLevel::Info, "test", 2, "info".to_string());
+        logger.log(super::LogLevel::Warn, "test", 3, "warn".to_string());
+        logger.log(super::LogLevel::Error, "test", 4, "error".to_string());
 
-            // Read file
-            let mut content = String::new();
-            let mut file = File::open(&log_path).unwrap();
-            file.read_to_string(&mut content).unwrap();
+        // Read file
+        let mut content = String::new();
+        let mut file = File::open(&log_path).unwrap();
+        file.read_to_string(&mut content).unwrap();
 
-            // Should only see WARN and ERROR
-            assert!(!content.contains("debug"));
-            assert!(!content.contains("info"));
-            assert!(content.contains("warn"));
-            assert!(content.contains("error"));
-        }
+        // Should only see WARN and ERROR
+        assert!(!content.contains("debug"));
+        assert!(!content.contains("info"));
+        assert!(content.contains("warn"));
+        assert!(content.contains("error"));
     }
 
     #[test]

@@ -10,7 +10,7 @@ use artifacts::tui::views::{
     render_artifact_list, render_generator_selection, render_progress, render_prompt,
 };
 use insta::assert_snapshot;
-use ratatui::{Terminal, backend::TestBackend};
+use ratatui::{backend::TestBackend, Terminal};
 use std::collections::BTreeMap;
 use std::fmt;
 
@@ -804,6 +804,7 @@ fn test_artifact_list_with_shared_artifacts() {
             backend_name: "test".to_string(),
             prompts: std::collections::BTreeMap::new(),
             files: std::collections::BTreeMap::new(),
+            error: None,
         },
         status: ArtifactStatus::NeedsGeneration,
         step_logs: StepLogs::default(),
@@ -825,6 +826,197 @@ fn test_artifact_list_with_shared_artifacts() {
     };
 
     let backend = TestBackend::new(70, 10);
+    let mut terminal = Terminal::new(backend).unwrap();
+
+    terminal
+        .draw(|f| render_artifact_list(f, &model, f.area()))
+        .unwrap();
+
+    let result = ViewTestResult {
+        state: ArtifactListState::from_model(&model),
+        rendered: terminal.backend().to_string(),
+    };
+    assert_snapshot!(result.to_string());
+}
+
+// Helper function to create a shared entry with specific status
+fn make_shared_entry_with_status(status: ArtifactStatus) -> SharedEntry {
+    use artifacts::config::make::SharedArtifactInfo;
+
+    SharedEntry {
+        info: SharedArtifactInfo {
+            artifact_name: "shared-secret".to_string(),
+            generators: vec![],
+            nixos_targets: vec!["machine-one".to_string(), "machine-two".to_string()],
+            home_targets: vec![],
+            backend_name: "test".to_string(),
+            prompts: std::collections::BTreeMap::new(),
+            files: std::collections::BTreeMap::new(),
+            error: None,
+        },
+        status,
+        step_logs: StepLogs::default(),
+        selected_generator: None,
+    }
+}
+
+#[test]
+fn test_shared_artifact_pending_status() {
+    let shared_entry = make_shared_entry_with_status(ArtifactStatus::Pending);
+
+    let model = Model {
+        screen: Screen::ArtifactList,
+        artifacts: vec![],
+        entries: vec![ListEntry::Shared(shared_entry)],
+        selected_index: 0,
+        selected_log_step: LogStep::default(),
+        error: None,
+        warnings: Vec::new(),
+        tick_count: 0,
+    };
+
+    let backend = TestBackend::new(70, 10);
+    let mut terminal = Terminal::new(backend).unwrap();
+
+    terminal
+        .draw(|f| render_artifact_list(f, &model, f.area()))
+        .unwrap();
+
+    let result = ViewTestResult {
+        state: ArtifactListState::from_model(&model),
+        rendered: terminal.backend().to_string(),
+    };
+    assert_snapshot!(result.to_string());
+}
+
+#[test]
+fn test_shared_artifact_needs_generation_status() {
+    let shared_entry = make_shared_entry_with_status(ArtifactStatus::NeedsGeneration);
+
+    let model = Model {
+        screen: Screen::ArtifactList,
+        artifacts: vec![],
+        entries: vec![ListEntry::Shared(shared_entry)],
+        selected_index: 0,
+        selected_log_step: LogStep::default(),
+        error: None,
+        warnings: Vec::new(),
+        tick_count: 0,
+    };
+
+    let backend = TestBackend::new(70, 10);
+    let mut terminal = Terminal::new(backend).unwrap();
+
+    terminal
+        .draw(|f| render_artifact_list(f, &model, f.area()))
+        .unwrap();
+
+    let result = ViewTestResult {
+        state: ArtifactListState::from_model(&model),
+        rendered: terminal.backend().to_string(),
+    };
+    assert_snapshot!(result.to_string());
+}
+
+#[test]
+fn test_shared_artifact_up_to_date_status() {
+    let shared_entry = make_shared_entry_with_status(ArtifactStatus::UpToDate);
+
+    let model = Model {
+        screen: Screen::ArtifactList,
+        artifacts: vec![],
+        entries: vec![ListEntry::Shared(shared_entry)],
+        selected_index: 0,
+        selected_log_step: LogStep::default(),
+        error: None,
+        warnings: Vec::new(),
+        tick_count: 0,
+    };
+
+    let backend = TestBackend::new(70, 10);
+    let mut terminal = Terminal::new(backend).unwrap();
+
+    terminal
+        .draw(|f| render_artifact_list(f, &model, f.area()))
+        .unwrap();
+
+    let result = ViewTestResult {
+        state: ArtifactListState::from_model(&model),
+        rendered: terminal.backend().to_string(),
+    };
+    assert_snapshot!(result.to_string());
+}
+
+#[test]
+fn test_shared_artifact_failed_runtime_error() {
+    let mut shared_entry = make_shared_entry_with_status(ArtifactStatus::Failed {
+        error: "Generator script exited with code 1".to_string(),
+        output: "Error: permission denied".to_string(),
+        retry_available: true,
+    });
+    // Add some check logs
+    shared_entry.step_logs.check = vec![
+        LogEntry {
+            level: LogLevel::Info,
+            message: "Checking if generation is needed...".to_string(),
+        },
+        LogEntry {
+            level: LogLevel::Success,
+            message: "Artifact needs regeneration".to_string(),
+        },
+    ];
+
+    let model = Model {
+        screen: Screen::ArtifactList,
+        artifacts: vec![],
+        entries: vec![ListEntry::Shared(shared_entry)],
+        selected_index: 0,
+        selected_log_step: LogStep::Check,
+        error: None,
+        warnings: Vec::new(),
+        tick_count: 0,
+    };
+
+    let backend = TestBackend::new(70, 15);
+    let mut terminal = Terminal::new(backend).unwrap();
+
+    terminal
+        .draw(|f| render_artifact_list(f, &model, f.area()))
+        .unwrap();
+
+    let result = ViewTestResult {
+        state: ArtifactListState::from_model(&model),
+        rendered: terminal.backend().to_string(),
+    };
+    assert_snapshot!(result.to_string());
+}
+
+#[test]
+fn test_shared_artifact_failed_config_error() {
+    let mut shared_entry = make_shared_entry_with_status(ArtifactStatus::Failed {
+        error: "File definition mismatch: 'id_rsa' in machine-one but 'id_ed25519' in machine-two"
+            .to_string(),
+        output: String::new(),
+        retry_available: false,
+    });
+    // Add check logs
+    shared_entry.step_logs.check = vec![LogEntry {
+        level: LogLevel::Error,
+        message: "Validation failed: File definition mismatch".to_string(),
+    }];
+
+    let model = Model {
+        screen: Screen::ArtifactList,
+        artifacts: vec![],
+        entries: vec![ListEntry::Shared(shared_entry)],
+        selected_index: 0,
+        selected_log_step: LogStep::Check,
+        error: None,
+        warnings: Vec::new(),
+        tick_count: 0,
+    };
+
+    let backend = TestBackend::new(70, 15);
     let mut terminal = Terminal::new(backend).unwrap();
 
     terminal

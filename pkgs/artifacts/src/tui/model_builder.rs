@@ -54,9 +54,20 @@ pub fn build_model(make: &MakeConfiguration) -> Model {
 
     // Add shared artifacts as SharedEntry
     for (_name, shared_info) in shared_artifacts {
+        // Check if artifact has validation error
+        let status = if let Some(ref error) = shared_info.error {
+            ArtifactStatus::Failed {
+                error: error.clone(),
+                output: String::new(),
+                retry_available: false, // Validation errors don't benefit from retry
+            }
+        } else {
+            ArtifactStatus::Pending
+        };
+
         entries.push(ListEntry::Shared(SharedEntry {
             info: shared_info,
-            status: ArtifactStatus::Pending,
+            status,
             step_logs: StepLogs::default(),
             selected_generator: None,
         }));
@@ -518,6 +529,186 @@ mod tests {
                     .contains(&"machine-two".to_string())
             );
             assert_eq!(entry.info.nixos_targets.len(), 2);
+        } else {
+            panic!("Expected SharedEntry");
+        }
+    }
+
+    // === File Validation Tests ===
+
+    fn make_test_config_with_mismatched_files() -> MakeConfiguration {
+        let mut nixos_map = BTreeMap::new();
+        let home_map = BTreeMap::new();
+
+        // Machine one with shared artifact
+        let mut machine_one_artifacts = BTreeMap::new();
+        machine_one_artifacts.insert(
+            "shared-secret".to_string(),
+            ArtifactDef {
+                name: "shared-secret".to_string(),
+                shared: true,
+                files: BTreeMap::from([(
+                    "id_ed25519".to_string(),
+                    FileDef {
+                        name: "id_ed25519".to_string(),
+                        path: Some("/run/secrets/id_ed25519".to_string()),
+                        owner: None,
+                        group: None,
+                    },
+                )]),
+                prompts: BTreeMap::new(),
+                generator: "/gen/shared".to_string(),
+                serialization: "test".to_string(),
+            },
+        );
+        nixos_map.insert("machine-one".to_string(), machine_one_artifacts);
+
+        // Machine two with different file count
+        let mut machine_two_artifacts = BTreeMap::new();
+        machine_two_artifacts.insert(
+            "shared-secret".to_string(),
+            ArtifactDef {
+                name: "shared-secret".to_string(),
+                shared: true,
+                files: BTreeMap::from([
+                    (
+                        "id_ed25519".to_string(),
+                        FileDef {
+                            name: "id_ed25519".to_string(),
+                            path: Some("/run/secrets/id_ed25519".to_string()),
+                            owner: None,
+                            group: None,
+                        },
+                    ),
+                    (
+                        "id_ed25519.pub".to_string(),
+                        FileDef {
+                            name: "id_ed25519.pub".to_string(),
+                            path: Some("/run/secrets/id_ed25519.pub".to_string()),
+                            owner: None,
+                            group: None,
+                        },
+                    ),
+                ]),
+                prompts: BTreeMap::new(),
+                generator: "/gen/shared".to_string(),
+                serialization: "test".to_string(),
+            },
+        );
+        nixos_map.insert("machine-two".to_string(), machine_two_artifacts);
+
+        MakeConfiguration {
+            nixos_map,
+            home_map,
+            nixos_config: BTreeMap::new(),
+            home_config: BTreeMap::new(),
+            make_base: PathBuf::from("/test"),
+            make_json: PathBuf::from("/test/make.json"),
+        }
+    }
+
+    #[test]
+    fn test_shared_artifact_with_validation_error_has_failed_status() {
+        let config = make_test_config_with_mismatched_files();
+        let model = build_model(&config);
+
+        // Find the shared entry
+        let shared = model
+            .entries
+            .iter()
+            .find(|e| e.is_shared())
+            .expect("Expected shared entry");
+
+        if let ListEntry::Shared(entry) = shared {
+            // Should have error in info
+            assert!(
+                entry.info.error.is_some(),
+                "Shared artifact with mismatched files should have error"
+            );
+
+            // Status should be Failed
+            match &entry.status {
+                ArtifactStatus::Failed {
+                    error,
+                    retry_available,
+                    ..
+                } => {
+                    assert!(
+                        error.contains("File definition mismatch"),
+                        "Error should mention file definition mismatch"
+                    );
+                    assert!(
+                        !retry_available,
+                        "Validation errors should have retry_available: false"
+                    );
+                }
+                other => panic!(
+                    "Expected Failed status, got {:?}",
+                    other
+                ),
+            }
+        } else {
+            panic!("Expected SharedEntry");
+        }
+    }
+
+    #[test]
+    fn test_shared_artifact_with_matching_files_has_pending_status() {
+        let config = make_test_config_with_shared();
+        let model = build_model(&config);
+
+        // Find the shared entry
+        let shared = model
+            .entries
+            .iter()
+            .find(|e| e.is_shared())
+            .expect("Expected shared entry");
+
+        if let ListEntry::Shared(entry) = shared {
+            // Should have no error
+            assert!(
+                entry.info.error.is_none(),
+                "Shared artifact with matching files should have no error"
+            );
+
+            // Status should be Pending (ready for normal processing)
+            assert!(
+                matches!(entry.status, ArtifactStatus::Pending),
+                "Expected Pending status for valid shared artifact, got {:?}",
+                entry.status
+            );
+        } else {
+            panic!("Expected SharedEntry");
+        }
+    }
+
+    #[test]
+    fn test_shared_artifact_single_target_has_pending_status() {
+        let mut config = make_test_config_with_shared();
+        // Remove machine-two, leaving only one target
+        config.nixos_map.remove(&"machine-two".to_string());
+
+        let model = build_model(&config);
+
+        // Find the shared entry
+        let shared = model
+            .entries
+            .iter()
+            .find(|e| e.is_shared())
+            .expect("Expected shared entry");
+
+        if let ListEntry::Shared(entry) = shared {
+            // Single target shared artifacts don't need validation
+            assert!(
+                entry.info.error.is_none(),
+                "Single target shared artifact should have no error"
+            );
+
+            // Status should be Pending
+            assert!(
+                matches!(entry.status, ArtifactStatus::Pending),
+                "Expected Pending status for single-target shared artifact"
+            );
         } else {
             panic!("Expected SharedEntry");
         }

@@ -26,13 +26,13 @@ effect execution runs in a background job while the TUI remains interactive.
 | Phase        | — (awaiting approval)        |
 | Plan         | — (start with Phase 9)       |
 | Requirements | 20 v1 requirements mapped    |
-| Tests        | 97 passing (baseline)        |
+| Tests        | 113 passing                |
 | Previous     | v2.0 ✅ SHIPPED (2026-02-17) |
 
 ### Progress Bar
 
 ```
-[░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 0% complete — Ready to start Phase 9
+[████░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 12% complete — Phase 9 in progress (2 of 4 plans complete)
 ```
 
 ---
@@ -104,7 +104,11 @@ All decisions preserved in PROJECT.md Validated section.
 - [x] Git tag v2.0 created
 - [x] Define v3.0 goals
 - [x] Complete v3.0 planning (requirements, roadmap) — 20 requirements → 5 phases
-- [ ] Phase 9: Shared artifact status fix (UI-01, STAT-01, STAT-02)
+- [x] Phase 9: Shared artifact status fix (UI-01, STAT-01, STAT-02)
+  - [x] Plan 09-01: Status tracking infrastructure
+  - [x] Plan 09-02: Error state handling
+  - [x] Plan 09-03: Status display polish
+  - [x] Plan 09-04: Gap closure verification ✓
 - [ ] Phase 10: Smart generator selection (UI-02, GEN-01-04)
 - [ ] Phase 11: TUI error display (UI-03, ERR-01-04)
 - [ ] Phase 12: Script output visibility (UI-04, OUT-01-04)
@@ -120,11 +124,55 @@ All decisions preserved in PROJECT.md Validated section.
 **Activity:** Completed v2.0 milestone
 **Summary:** Archived v2.0 Robustness milestone with 4 phases (5-8), 28 plans, 18 requirements. Created milestone archives, updated PROJECT.md and ROADMAP.md, created git tag v2.0.
 
+### Last Session
+
+**Date:** 2026-02-17
+**Activity:** Completed v2.0 milestone
+**Summary:** Archived v2.0 Robustness milestone with 4 phases (5-8), 28 plans, 18 requirements. Created milestone archives, updated PROJECT.md and ROADMAP.md, created git tag v2.0.
+
+### Previous Session
+
+**Date:** 2026-02-18
+**Activity:** Completed Plan 09-01: Shared Artifact Status Fixes
+**Summary:** 
+- Fixed missing SharedCheckSerializationResult handler in update.rs
+- Shared artifacts now transition from Pending → (NeedsGeneration | UpToDate | Failed)
+- Added 3 tests verifying all status transition paths
+- Discovered that run_shared_check_serialization() already existed - only update handler was missing
+
+**Decisions Made:**
+- Route SharedCheckSerializationResult to handle_check_result() for DRY code
+- Reuse existing status transition logic for both single and shared artifacts
+
+### Previous Session
+
+**Date:** 2026-02-18
+**Activity:** Completed Plan 09-04: Gap Closure — Shared Artifact Status Fixes
+**Summary:**
+- Verified SharedCheckSerializationResult handler exists at lines 86-94 in update.rs
+- Confirmed message routing end-to-end: effect_handler.rs → message.rs → update.rs
+- Validated 3 unit tests for shared check result transitions all pass
+- Gap closure complete — work was already done in Plan 09-01, this plan served as verification
+
+**Decisions Made:**
+- Gap closure: Work was already completed in Plan 09-01 - handler exists and works correctly
+- Verified end-to-end message routing across all three files
+- Confirmed 3 tests exist and pass for all status transitions
+
 ### Current Session
 
 **Date:** 2026-02-18
-**Activity:** Starting v3.0 TUI Polish milestone
-**Summary:** Defined 5 TUI polish improvements: shared status icons, smart generator selection, error display, script output visibility, enhanced generator dialog.
+**Activity:** Completed Plan 09-02: File Definition Validation for Shared Artifacts
+**Summary:**
+- File validation for shared artifacts already implemented in make.rs (validate_shared_files function, lines 338-390)
+- Error state handling already in model_builder.rs (lines 57-66) - sets Failed status with retry_available: false
+- Generation blocking already in update.rs (lines 169-174) - prevents generation for artifacts with validation errors
+- Added 3 comprehensive tests in model_builder.rs for validation status scenarios
+- All 113 tests pass
+
+**Decisions Made:**
+- Tests added to model_builder.rs to verify status setting behavior
+- Tasks 1-3 were already complete from previous work - only tests were needed
 
 ---
 

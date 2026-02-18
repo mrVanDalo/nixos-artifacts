@@ -1,0 +1,28 @@
+---
+source: tests/tui/view_tests.rs
+expression: result.to_string()
+---
+State:
+ArtifactListState {
+    selected_index: 0,
+    selected_log_step: "Check",
+    artifacts: [],
+    error: None,
+}
+
+Rendered:
+"┌Artifacts (1) - j/k: move, Tab: l┐┌Logs: shared-secret──────────────┐"
+"│> ✗ [S] shared-secret (2 targets)││✗ FAILED                         │"
+"│                                 ││Error: Generator script exited   │"
+"│                                 ││with code 1                      │"
+"│                                 ││Output:                          │"
+"│                                 ││  Error: permission denied       │"
+"│                                 ││─────────────────────────────────│"
+"│                                 ││──                               │"
+"│                                 ││▼ Check                          │"
+"│                                 ││  i Checking if generation is    │"
+"│                                 ││needed...                        │"
+"│                                 ││  ✓ Artifact needs regeneration  │"
+"│                                 ││                                 │"
+"└─────────────────────────────────┘│                                 │"
+"○ Pend ◐ Need ✓ OK ✗ Fail          └─────────────────────────────────┘"

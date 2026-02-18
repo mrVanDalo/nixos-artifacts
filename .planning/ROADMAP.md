@@ -33,7 +33,7 @@ v3.0 TUI Polish milestone in planning. 5 phases covering status fixes, smart gen
 | 6   | Integration Testing           | v2.0      | Complete    | 2026-02-16 |
 | 7   | Code Quality                  | v2.0      | Complete    | 2026-02-17 |
 | 8   | Smart Logging                 | v2.0      | Complete    | 2026-02-17 |
-| 9   | Shared Artifact Status Fixes  | v3.0      | Not Started | —          |
+| 9   | Shared Artifact Status Fixes  | v3.0      | Planned     | —          |
 | 10  | Smart Generator Selection     | v3.0      | Not Started | —          |
 | 11  | Error Handling Improvements   | v3.0      | Not Started | —          |
 | 12  | Script Output Visibility      | v3.0      | Not Started | —          |
@@ -49,12 +49,22 @@ v3.0 TUI Polish milestone in planning. 5 phases covering status fixes, smart gen
 
 **Goal:** Shared artifacts display correct status icons and aggregation
 
+**Status:** 🔄 In Progress (4 plans: 3 executed + 1 gap closure)
+
 **Dependencies:** None (can start immediately)
 
 **Requirements:**
 - UI-01: Shared artifacts show correct status icons (needs-generation/up-to-date instead of pending)
 - STAT-01: Status icons correctly reflect artifact state
 - STAT-02: Shared artifact aggregation properly calculates combined status across machines
+
+**Plans:**
+1. [x] 09-01: Status tracking infrastructure — Effect handler and backend function
+2. [x] 09-02: Error state handling — File validation for shared artifacts
+3. [x] 09-03: Status display polish — Detail pane and visual presentation
+4. [ ] 09-04: **GAP CLOSURE** — Missing SharedCheckSerializationResult handler in update.rs
+
+**Gap Found:** VERIFICATION.md identified that `Msg::SharedCheckSerializationResult` is sent by effect_handler.rs but never handled in update.rs, causing shared artifacts to remain stuck at "Pending" status. Plan 09-04 closes this gap.
 
 **Success Criteria:**
 1. Shared artifacts show "needs-generation" (red icon) when any machine needs regeneration

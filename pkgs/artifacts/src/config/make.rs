@@ -122,6 +122,8 @@ pub struct SharedArtifactInfo {
     pub prompts: BTreeMap<String, PromptDef>,
     /// files collected from first definition (shared artifacts should have identical files)
     pub files: BTreeMap<String, FileDef>,
+    /// validation error if file definitions mismatch across targets
+    pub error: Option<String>,
 }
 
 #[derive(Clone)]
@@ -286,7 +288,7 @@ impl MakeConfiguration {
             let prompts = first_artifact.prompts.clone();
             let files = first_artifact.files.clone();
 
-            for (target, target_type, artifact) in entries {
+            for (target, target_type, artifact) in &entries {
                 // Add to generator map
                 generator_map
                     .entry(artifact.generator.clone())
@@ -298,8 +300,8 @@ impl MakeConfiguration {
 
                 // Add to target lists
                 match target_type {
-                    TargetType::Nixos => nixos_targets.push(target),
-                    TargetType::HomeManager => home_targets.push(target),
+                    TargetType::Nixos => nixos_targets.push(target.clone()),
+                    TargetType::HomeManager => home_targets.push(target.clone()),
                 }
             }
 
@@ -308,6 +310,9 @@ impl MakeConfiguration {
                 .into_iter()
                 .map(|(path, sources)| GeneratorInfo { path, sources })
                 .collect();
+
+            // Validate file definitions match across all targets
+            let error = validate_shared_files(&entries);
 
             result.insert(
                 artifact_name.clone(),
@@ -319,11 +324,68 @@ impl MakeConfiguration {
                     backend_name,
                     prompts,
                     files,
+                    error,
                 },
             );
         }
 
         result
+    }
+}
+
+/// Validates that file definitions are identical across all targets for a shared artifact.
+/// Returns Some(error_message) if files don't match, None otherwise.
+fn validate_shared_files(entries: &[(String, TargetType, &ArtifactDef)]) -> Option<String> {
+    if entries.len() < 2 {
+        return None; // Single target, no comparison needed
+    }
+
+    // Get file names from first entry
+    let first_artifact = entries.first().map(|(_, _, a)| *a).unwrap();
+    let first_files: std::collections::BTreeSet<String> =
+        first_artifact.files.keys().cloned().collect();
+
+    // Compare with all other entries
+    let mut mismatches: Vec<String> = Vec::new();
+
+    for (target, _, artifact) in entries.iter().skip(1) {
+        let other_files: std::collections::BTreeSet<String> =
+            artifact.files.keys().cloned().collect();
+
+        if first_files != other_files {
+            let missing_in_other: Vec<_> = first_files
+                .difference(&other_files)
+                .map(|s| s.as_str())
+                .collect();
+            let extra_in_other: Vec<_> = other_files
+                .difference(&first_files)
+                .map(|s| s.as_str())
+                .collect();
+
+            let mut details = String::new();
+            if !missing_in_other.is_empty() {
+                details.push_str(&format!("missing: [{}]", missing_in_other.join(", ")));
+            }
+            if !extra_in_other.is_empty() {
+                if !details.is_empty() {
+                    details.push_str(", ");
+                }
+                details.push_str(&format!("extra: [{}]", extra_in_other.join(", ")));
+            }
+
+            mismatches.push(format!("{}: {}", target, details));
+        }
+    }
+
+    if mismatches.is_empty() {
+        None
+    } else {
+        Some(format!(
+            "File definition mismatch: {} defines [{}], {}. Shared artifacts must have identical file definitions.",
+            entries.first().map(|(t, _, _)| t.as_str()).unwrap(),
+            first_files.into_iter().collect::<Vec<_>>().join(", "),
+            mismatches.join("; ")
+        ))
     }
 }
 

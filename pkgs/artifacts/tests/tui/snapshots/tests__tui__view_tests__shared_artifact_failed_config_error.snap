@@ -1,0 +1,28 @@
+---
+source: tests/tui/view_tests.rs
+expression: result.to_string()
+---
+State:
+ArtifactListState {
+    selected_index: 0,
+    selected_log_step: "Check",
+    artifacts: [],
+    error: None,
+}
+
+Rendered:
+"┌Artifacts (1) - j/k: move, Tab: l┐┌Logs: shared-secret──────────────┐"
+"│> ✗ [S] shared-secret (2 targets)││⚠ CONFIGURATION ERROR            │"
+"│                                 ││Error: File definition mismatch: │"
+"│                                 ││'id_rsa' in machine-one but      │"
+"│                                 ││'id_ed25519' in machine-two      │"
+"│                                 ││─────────────────────────────────│"
+"│                                 ││──                               │"
+"│                                 ││▼ Check                          │"
+"│                                 ││  ! Validation failed: File      │"
+"│                                 ││definition mismatch              │"
+"│                                 ││                                 │"
+"│                                 ││                                 │"
+"│                                 ││                                 │"
+"└─────────────────────────────────┘│                                 │"
+"○ Pend ◐ Need ✓ OK ✗ Fail          └─────────────────────────────────┘"

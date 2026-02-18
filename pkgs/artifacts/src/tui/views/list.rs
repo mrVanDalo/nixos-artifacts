@@ -128,18 +128,33 @@ fn render_log_panel(frame: &mut Frame, model: &Model, area: Rect) {
 
     // Show error details if the artifact has failed status
     if let Some(entry) = selected_entry {
-        if let ArtifactStatus::Failed { error, output, .. } = entry.status() {
-            // Error header
-            lines.push(Line::from(vec![
-                Span::styled(
-                    "✗ ",
-                    Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
-                ),
-                Span::styled(
-                    "FAILED",
-                    Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
-                ),
-            ]));
+        if let ArtifactStatus::Failed { error, output, retry_available } = entry.status() {
+            // Error header - distinguish between config errors and runtime failures
+            if *retry_available {
+                // Runtime failure - can retry
+                lines.push(Line::from(vec![
+                    Span::styled(
+                        "✗ ",
+                        Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+                    ),
+                    Span::styled(
+                        "FAILED",
+                        Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+                    ),
+                ]));
+            } else {
+                // Configuration error - cannot retry
+                lines.push(Line::from(vec![
+                    Span::styled(
+                        "⚠ ",
+                        Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+                    ),
+                    Span::styled(
+                        "CONFIGURATION ERROR",
+                        Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+                    ),
+                ]));
+            }
             lines.push(Line::from(vec![
                 Span::styled(
                     "Error: ",
