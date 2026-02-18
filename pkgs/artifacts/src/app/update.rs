@@ -231,6 +231,7 @@ fn start_generation_for_selected(mut model: Model) -> (Model, Effect) {
                     model.screen = Screen::Prompt(PromptState {
                         artifact_index,
                         artifact_name: artifact_name.clone(),
+                        description: None,
                         prompts,
                         current_prompt_index: 0,
                         input_mode: InputMode::Line,
@@ -241,11 +242,17 @@ fn start_generation_for_selected(mut model: Model) -> (Model, Effect) {
                 }
             } else {
                 // Multiple generators: show selection dialog
+                let prompts: Vec<_> = shared.info.prompts.values().cloned().collect();
+
                 model.screen = Screen::SelectGenerator(SelectGeneratorState {
                     artifact_index,
                     artifact_name: artifact_name.clone(),
+                    description: shared.info.description.clone(),
                     generators: shared.info.generators.clone(),
                     selected_index: 0,
+                    prompts,
+                    nixos_targets: shared.info.nixos_targets.clone(),
+                    home_targets: shared.info.home_targets.clone(),
                 });
 
                 // The effect is mostly informational now (screen is already set)
@@ -410,6 +417,7 @@ fn create_prompt_state(artifact_index: usize, entry: &ArtifactEntry) -> PromptSt
     PromptState {
         artifact_index,
         artifact_name: entry.artifact.name.clone(),
+        description: entry.artifact.description.clone(),
         prompts: entry
             .artifact
             .prompts
@@ -710,6 +718,7 @@ fn update_generator_selection(mut model: Model, key: KeyEvent) -> (Model, Effect
                     model.screen = Screen::Prompt(PromptState {
                         artifact_index,
                         artifact_name: shared.info.artifact_name.clone(),
+                        description: shared.info.description.clone(),
                         prompts,
                         current_prompt_index: 0,
                         input_mode: InputMode::Line,
@@ -945,6 +954,7 @@ mod tests {
         }
         ArtifactDef {
             name: name.to_string(),
+            description: None,
             shared: false,
             files: BTreeMap::from([(
                 "test".to_string(),
@@ -1065,6 +1075,7 @@ mod tests {
         model.screen = Screen::Prompt(PromptState {
             artifact_index: 0,
             artifact_name: "test".to_string(),
+            description: None,
             prompts: vec![PromptEntry {
                 name: "pass".to_string(),
                 description: None,
@@ -1091,6 +1102,7 @@ mod tests {
         model.screen = Screen::Prompt(PromptState {
             artifact_index: 0,
             artifact_name: "test".to_string(),
+            description: None,
             prompts: vec![PromptEntry {
                 name: "pass".to_string(),
                 description: None,
@@ -1116,6 +1128,7 @@ mod tests {
         model.screen = Screen::Prompt(PromptState {
             artifact_index: 0,
             artifact_name: "test".to_string(),
+            description: None,
             prompts: vec![PromptEntry {
                 name: "pass".to_string(),
                 description: None,
@@ -1141,6 +1154,7 @@ mod tests {
         model.screen = Screen::Prompt(PromptState {
             artifact_index: 0,
             artifact_name: "test".to_string(),
+            description: None,
             prompts: vec![PromptEntry {
                 name: "pass".to_string(),
                 description: None,
@@ -1166,6 +1180,7 @@ mod tests {
         model.screen = Screen::Prompt(PromptState {
             artifact_index: 0,
             artifact_name: "test".to_string(),
+            description: None,
             prompts: vec![],
             current_prompt_index: 0,
             input_mode: InputMode::Line,
@@ -1471,6 +1486,7 @@ mod tests {
         );
 
         let shared_info = SharedArtifactInfo {
+            description: None,
             artifact_name: "shared-ssh-key".to_string(),
             backend_name: "test-backend".to_string(),
             nixos_targets: vec!["machine-one".to_string()],
@@ -1544,6 +1560,7 @@ mod tests {
         );
 
         let shared_info = SharedArtifactInfo {
+            description: None,
             artifact_name: "shared-ssh-key".to_string(),
             backend_name: "test-backend".to_string(),
             nixos_targets: vec!["machine-one".to_string()],
@@ -1628,6 +1645,7 @@ mod tests {
 
         // Create shared artifact with multiple generators
         let shared_info = SharedArtifactInfo {
+            description: None,
             artifact_name: "shared-ssh-key".to_string(),
             backend_name: "test-backend".to_string(),
             nixos_targets: vec!["machine-one".to_string(), "machine-two".to_string()],
@@ -1709,6 +1727,7 @@ mod tests {
 
         // Create shared artifact with one generator
         let shared_info = SharedArtifactInfo {
+            description: None,
             artifact_name: "shared-ssh-key".to_string(),
             backend_name: "test-backend".to_string(),
             nixos_targets: vec!["machine-one".to_string()],
@@ -1764,6 +1783,7 @@ mod tests {
         use std::collections::BTreeMap;
 
         let shared_info = SharedArtifactInfo {
+            description: None,
             artifact_name: "shared-ssh-key".to_string(),
             backend_name: "test-backend".to_string(),
             nixos_targets: vec!["machine-one".to_string(), "machine-two".to_string()],

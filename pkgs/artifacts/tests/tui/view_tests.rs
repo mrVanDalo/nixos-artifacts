@@ -146,8 +146,19 @@ impl GeneratingSnapshot {
 #[derive(Debug)]
 struct GeneratorSelectionSnapshot {
     artifact_name: String,
+    description: Option<String>,
     selected_index: usize,
     generators: Vec<GeneratorSnapshot>,
+    prompts: Vec<PromptDefSnapshot>,
+    nixos_targets: Vec<String>,
+    home_targets: Vec<String>,
+}
+
+#[allow(dead_code)]
+#[derive(Debug)]
+struct PromptDefSnapshot {
+    name: String,
+    description: Option<String>,
 }
 
 #[allow(dead_code)]
@@ -168,6 +179,7 @@ impl GeneratorSelectionSnapshot {
     fn from_state(state: &SelectGeneratorState) -> Self {
         Self {
             artifact_name: state.artifact_name.clone(),
+            description: state.description.clone(),
             selected_index: state.selected_index,
             generators: state
                 .generators
@@ -187,6 +199,16 @@ impl GeneratorSelectionSnapshot {
                         .collect(),
                 })
                 .collect(),
+            prompts: state
+                .prompts
+                .iter()
+                .map(|p| PromptDefSnapshot {
+                    name: p.name.clone(),
+                    description: p.description.clone(),
+                })
+                .collect(),
+            nixos_targets: state.nixos_targets.clone(),
+            home_targets: state.home_targets.clone(),
         }
     }
 }
@@ -208,6 +230,7 @@ fn make_test_artifact(name: &str, prompts: Vec<&str>) -> ArtifactDef {
     }
     ArtifactDef {
         name: name.to_string(),
+        description: None,
         shared: false,
         files: BTreeMap::from([(
             "test".to_string(),
@@ -422,6 +445,7 @@ fn test_prompt_initial_line_mode() {
     let state = PromptState {
         artifact_index: 0,
         artifact_name: "ssh-key".to_string(),
+        description: None,
         prompts: vec![PromptEntry {
             name: "passphrase".to_string(),
             description: Some("Enter the SSH key passphrase".to_string()),
@@ -451,6 +475,7 @@ fn test_prompt_with_input() {
     let state = PromptState {
         artifact_index: 0,
         artifact_name: "ssh-key".to_string(),
+        description: None,
         prompts: vec![PromptEntry {
             name: "passphrase".to_string(),
             description: Some("Enter the SSH key passphrase".to_string()),
@@ -480,6 +505,7 @@ fn test_prompt_hidden_mode() {
     let state = PromptState {
         artifact_index: 0,
         artifact_name: "ssh-key".to_string(),
+        description: None,
         prompts: vec![PromptEntry {
             name: "passphrase".to_string(),
             description: Some("Enter the SSH key passphrase".to_string()),
@@ -509,6 +535,7 @@ fn test_prompt_multiline_mode() {
     let state = PromptState {
         artifact_index: 0,
         artifact_name: "certificate".to_string(),
+        description: None,
         prompts: vec![PromptEntry {
             name: "pem".to_string(),
             description: Some("Paste the certificate PEM content".to_string()),
@@ -541,6 +568,7 @@ fn test_prompt_second_of_three() {
     let state = PromptState {
         artifact_index: 0,
         artifact_name: "gpg-key".to_string(),
+        description: None,
         prompts: vec![
             PromptEntry {
                 name: "email".to_string(),
@@ -635,6 +663,7 @@ fn test_progress_serializing() {
 fn make_multiple_machines_artifact(name: &str) -> ArtifactDef {
     ArtifactDef {
         name: name.to_string(),
+        description: None,
         shared: false,
         files: BTreeMap::from([(
             "test".to_string(),
@@ -798,6 +827,7 @@ fn test_artifact_list_with_shared_artifacts() {
     let shared_entry = SharedEntry {
         info: SharedArtifactInfo {
             artifact_name: "shared-secret".to_string(),
+            description: None,
             generators: vec![],
             nixos_targets: vec!["machine-one".to_string(), "machine-two".to_string()],
             home_targets: vec![],
@@ -846,6 +876,7 @@ fn make_shared_entry_with_status(status: ArtifactStatus) -> SharedEntry {
     SharedEntry {
         info: SharedArtifactInfo {
             artifact_name: "shared-secret".to_string(),
+            description: None,
             generators: vec![],
             nixos_targets: vec!["machine-one".to_string(), "machine-two".to_string()],
             home_targets: vec![],
@@ -1039,6 +1070,7 @@ fn test_generator_selection_single_generator() {
     let state = SelectGeneratorState {
         artifact_index: 0,
         artifact_name: "shared-ssh-key".to_string(),
+        description: None,
         generators: vec![GeneratorInfo {
             path: "/nix/store/xxx-gen-ssh".to_string(),
             sources: vec![
@@ -1053,6 +1085,9 @@ fn test_generator_selection_single_generator() {
             ],
         }],
         selected_index: 0,
+        prompts: vec![],
+        nixos_targets: vec!["machine-one".to_string(), "machine-two".to_string()],
+        home_targets: vec![],
     };
 
     let backend = TestBackend::new(70, 15);
@@ -1074,6 +1109,7 @@ fn test_generator_selection_multiple_generators() {
     let state = SelectGeneratorState {
         artifact_index: 0,
         artifact_name: "shared-api-key".to_string(),
+        description: None,
         generators: vec![
             GeneratorInfo {
                 path: "/nix/store/xxx-gen-prod".to_string(),
@@ -1097,6 +1133,9 @@ fn test_generator_selection_multiple_generators() {
             },
         ],
         selected_index: 0,
+        prompts: vec![],
+        nixos_targets: vec!["prod-server".to_string(), "dev-machine".to_string()],
+        home_targets: vec!["alice@workstation".to_string()],
     };
 
     let backend = TestBackend::new(70, 20);
@@ -1118,6 +1157,7 @@ fn test_generator_selection_second_selected() {
     let state = SelectGeneratorState {
         artifact_index: 0,
         artifact_name: "shared-api-key".to_string(),
+        description: None,
         generators: vec![
             GeneratorInfo {
                 path: "/nix/store/xxx-gen-prod".to_string(),
@@ -1135,6 +1175,9 @@ fn test_generator_selection_second_selected() {
             },
         ],
         selected_index: 1,
+        prompts: vec![],
+        nixos_targets: vec!["prod-server".to_string(), "dev-machine".to_string()],
+        home_targets: vec![],
     };
 
     let backend = TestBackend::new(70, 15);
@@ -1157,6 +1200,7 @@ fn test_generator_selection_mixed_source_types() {
     let state = SelectGeneratorState {
         artifact_index: 0,
         artifact_name: "shared-cert".to_string(),
+        description: None,
         generators: vec![GeneratorInfo {
             path: "/nix/store/mixed-gen".to_string(),
             sources: vec![
@@ -1179,6 +1223,9 @@ fn test_generator_selection_mixed_source_types() {
             ],
         }],
         selected_index: 0,
+        prompts: vec![],
+        nixos_targets: vec!["server-1".to_string(), "server-2".to_string()],
+        home_targets: vec!["alice@laptop".to_string(), "bob@desktop".to_string()],
     };
 
     let backend = TestBackend::new(80, 20);
@@ -1201,6 +1248,7 @@ fn test_generator_selection_singular_vs_plural() {
     let state = SelectGeneratorState {
         artifact_index: 0,
         artifact_name: "single-source-test".to_string(),
+        description: None,
         generators: vec![
             GeneratorInfo {
                 path: "/nix/store/single-nixos".to_string(),
@@ -1218,6 +1266,9 @@ fn test_generator_selection_singular_vs_plural() {
             },
         ],
         selected_index: 0,
+        prompts: vec![],
+        nixos_targets: vec!["server-1".to_string()],
+        home_targets: vec!["alice@laptop".to_string()],
     };
 
     let backend = TestBackend::new(80, 15);
@@ -1240,6 +1291,7 @@ fn test_generator_selection_many_sources() {
     let state = SelectGeneratorState {
         artifact_index: 0,
         artifact_name: "widely-used".to_string(),
+        description: None,
         generators: vec![GeneratorInfo {
             path: "/nix/store/shared-gen".to_string(),
             sources: vec![
@@ -1266,6 +1318,15 @@ fn test_generator_selection_many_sources() {
             ],
         }],
         selected_index: 0,
+        prompts: vec![],
+        nixos_targets: vec![
+            "server-1".to_string(),
+            "server-2".to_string(),
+            "server-3".to_string(),
+            "server-4".to_string(),
+            "server-5".to_string(),
+        ],
+        home_targets: vec![],
     };
 
     let backend = TestBackend::new(80, 20);
@@ -1288,6 +1349,7 @@ fn test_generator_selection_multiple_with_mixed_sources() {
     let state = SelectGeneratorState {
         artifact_index: 0,
         artifact_name: "complex-shared".to_string(),
+        description: None,
         generators: vec![
             GeneratorInfo {
                 path: "/nix/store/gen-prod".to_string(),
@@ -1328,6 +1390,17 @@ fn test_generator_selection_multiple_with_mixed_sources() {
             },
         ],
         selected_index: 1,
+        prompts: vec![],
+        nixos_targets: vec![
+            "prod-1".to_string(),
+            "prod-2".to_string(),
+            "dev-1".to_string(),
+        ],
+        home_targets: vec![
+            "alice@dev".to_string(),
+            "bob@dev".to_string(),
+            "charlie@home".to_string(),
+        ],
     };
 
     let backend = TestBackend::new(80, 25);

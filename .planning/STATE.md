@@ -2,7 +2,7 @@
 
 **Project:** NixOS Artifacts Store — v3.0 TUI Polish
 **Current Milestone:** v3.0 ○ ROADMAP READY
-**Status:** Phase 12 complete
+**Status:** Phase 13 in progress
 **Last Updated:** 2026-02-18
 
 ---
@@ -14,7 +14,7 @@ See: [.planning/PROJECT.md](./PROJECT.md) (updated 2026-02-18)
 **Core Value:** The TUI must never freeze during long-running operations — all
 effect execution runs in a background job while the TUI remains interactive.
 
-**Current Focus:** Phase 12 - Script output visibility (4 plans)
+**Current Focus:** Phase 13 - Enhanced generator dialog (4 plans)
 
 ---
 
@@ -23,16 +23,17 @@ effect execution runs in a background job while the TUI remains interactive.
 | Aspect       | Status                       |
 | ------------ | ---------------------------- |
 | Milestone    | v3.0 ○ ROADMAP READY         |
-| Phase        | 12-script-output-visibility  |
-| Plan         | 04-complete                  |
+| Phase        | 13-enhanced-generator-dialog |
+| Plan         | 02-complete                  |
 | Requirements | 20 v1 requirements mapped    |
-| Tests        | 118 passing                  |
-| Previous     | Plan 12-04 complete          |
+| Tests        | 122 passing (+4 new)         |
+| Last Activity | Completed Plan 13-02 (enhanced generator dialog view)
+| Previous     | Plan 13-01 complete          |
 
 ### Progress Bar
 
 ```
-[████████████████████████░░░░░░░░] 92% complete — Phase 12 complete (4 of 4 plans complete)
+[████████████████████████░░░░░░░░] 75% complete — Phase 13 in progress (2 of 4 plans complete)
 ```
 
 ---
@@ -50,6 +51,12 @@ All decisions preserved in PROJECT.md Validated section.
 - **Refactoring goal:** Flatten call chains, eliminate abbreviations, improve readability
 - **State machine testing:** Dual assertion strategy - verify both command variants AND final model state
 - **Feature-gated logging:** Zero-cost when disabled via Cargo features
+
+### Phase 13 Decisions
+
+- **Description field pattern:** Option<String> with serde(default) for backward compatibility
+- **Shared artifact aggregation:** Description from first artifact (consistent with prompts/files)
+- **Nix export pattern:** Use builtins.mapAttrs to wrap artifacts with optional field handling
 
 ### Technical Debt
 
@@ -114,11 +121,16 @@ All decisions preserved in PROJECT.md Validated section.
   - [x] Plan 11-02: Enhanced panic handler and terminal restoration
   - [x] Plan 11-03: TUI error display audit
   - [x] Phase 12: Script output visibility (UI-04, OUT-01-04) ✓
-    - [x] Plan 12-01: Data flow pipeline for script output ✓
+    - [x] Plan 12-01: Script Output Visibility Data Flow Pipeline ✓
     - [x] Plan 12-02: StepLogs helper methods ✓
     - [x] Plan 12-03: Script output display in TUI views ✓
     - [x] Plan 12-04: Real-time streaming output ✓
   - [ ] Phase 13: Enhanced generator dialog (UI-05, DIALOG-01-05)
+    - [x] Plan 13-01: Artifact description support ✓
+    - [x] Plan 13-02: Generator dialog view rendering ✓
+    - [ ] Plan 13-03: Nix module description option
+    - [ ] Plan 13-04: Description in shared artifact info
+    - [ ] Plan 13-05: Dialog styling and UX polish
 - [ ] Phase 13: Enhanced generator dialog (UI-05, DIALOG-01-05)
 
 ---
@@ -126,23 +138,6 @@ All decisions preserved in PROJECT.md Validated section.
 ## Session Continuity
 
 ### Last Session
-
-**Date:** 2026-02-18
-**Activity:** Completed Plan 12-01: Script Output Visibility Data Flow Pipeline
-**Summary:**
-- Added ScriptOutput struct with stdout_lines and stderr_lines fields
-- Updated all EffectResult variants to use ScriptOutput instead of Option<String>
-- Implemented complete result_to_message conversion in runtime.rs
-- Added helper methods: from_captured(), from_message(), default()
-- Updated background.rs to convert CapturedOutput to ScriptOutput
-- All 118 tests pass
-
-**Decisions Made:**
-- ScriptOutput::from_captured() converts from CapturedOutput (lines with stream markers)
-- ScriptOutput::from_message() creates ScriptOutput with message for error cases
-- EffectResult variants now carry ScriptOutput preserving stdout/stderr separation
-
-### Current Session
 
 **Date:** 2026-02-18
 **Activity:** Completed Plan 12-04: Real-time streaming output infrastructure
@@ -160,6 +155,43 @@ All decisions preserved in PROJECT.md Validated section.
 - Streaming output appends to currently selected_log_step
 - result_tx channel enables background task to send incremental updates
 
+### Current Session
+
+**Date:** 2026-02-18
+**Activity:** Completed Plan 13-01: Artifact description support to data model
+**Summary:**
+- Added description: Option<String> to ArtifactDef with serde support
+- Updated make_expr.nix to export description field
+- Added description to SharedArtifactInfo and SelectGeneratorState
+- Updated all test helpers to include description field
+- Added 3 unit tests for description parsing
+- All 13 config tests passing
+
+**Decisions Made:**
+- Used Option<String> pattern with serde(default) for backward compatibility
+- Description propagated from first artifact in shared aggregation
+- All test helpers updated to include description field
+
+---
+
+### Current Session
+
+**Date:** 2026-02-18
+**Activity:** Completed Plan 13-02: Enhanced generator dialog view rendering
+**Summary:**
+- Added prompts, nixos_targets, home_targets to SelectGeneratorState
+- Rewrote generator selection view with section-based layout
+- Added helper functions: truncate_path, format_targets_with_prefix, format_all_targets
+- Implemented exact user-specified layout (type indicator, title, description, prompts, generators, targets, help)
+- Updated GeneratorSelectionSnapshot and all test constructions
+- All 122 unit tests passing
+
+**Decisions Made:**
+- Used PromptDef directly from config::make (no conversion needed)
+- Implemented section-based layout with line separators
+- Removed color-coding for type labels (text only per design)
+- Added description field to PromptState for consistency
+
 ---
 
 ## Quick Links
@@ -169,3 +201,5 @@ All decisions preserved in PROJECT.md Validated section.
 - [ROADMAP.md](./ROADMAP.md) — Phase structure (creating)
 - [Milestones](./milestones/) — Archived milestones
 - [12-01-SUMMARY.md](./phases/12-script-output-visibility/12-01-SUMMARY.md) — Plan 12-01 completion
+- [13-01-SUMMARY.md](./phases/13-enhanced-generator-dialog/13-01-SUMMARY.md) — Plan 13-01 completion
+- [13-02-SUMMARY.md](./phases/13-enhanced-generator-dialog/13-02-SUMMARY.md) — Plan 13-02 completion

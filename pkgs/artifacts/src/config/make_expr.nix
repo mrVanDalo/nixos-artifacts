@@ -19,7 +19,11 @@ let
     );
   nixos = map (name: {
     machine = name;
-    artifacts = flake.nixosConfigurations.${name}.config.artifacts.store;
+    artifacts = builtins.mapAttrs (artifactName: artifact:
+      artifact // {
+        description = if builtins.hasAttr "description" artifact then artifact.description else null;
+      }
+    ) flake.nixosConfigurations.${name}.config.artifacts.store;
     config =
       if (builtins.hasAttr "config" flake.nixosConfigurations.${name}.config.artifacts) then
         flake.nixosConfigurations.${name}.config.artifacts.config
@@ -28,7 +32,11 @@ let
   }) nixosConfigurations;
   home = map (name: {
     user = name;
-    artifacts = flake.homeConfigurations.${name}.config.artifacts.store;
+    artifacts = builtins.mapAttrs (artifactName: artifact:
+      artifact // {
+        description = if builtins.hasAttr "description" artifact then artifact.description else null;
+      }
+    ) flake.homeConfigurations.${name}.config.artifacts.store;
     config =
       if (builtins.hasAttr "config" flake.homeConfigurations.${name}.config.artifacts) then
         flake.homeConfigurations.${name}.config.artifacts.config

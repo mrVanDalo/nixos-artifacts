@@ -37,7 +37,7 @@ v3.0 TUI Polish milestone in planning. 5 phases covering status fixes, smart gen
 | 10  | Smart Generator Selection     | v3.0      | Complete    | 2026-02-18 |
 | 11  | Error Handling Improvements   | v3.0      | Complete    | 2026-02-18 |
 | 12  | Script Output Visibility      | v3.0      | Complete    | 2026-02-18 |
-| 13  | Enhanced Generator Dialog     | v3.0      | Not Started | —          |
+| 13  | Enhanced Generator Dialog     | v3.0      | 📋 Planned  | —          |
 
 **Total:** 13 phases | Goal: TUI Polish
 
@@ -174,6 +174,8 @@ v3.0 TUI Polish milestone in planning. 5 phases covering status fixes, smart gen
 
 **Goal:** Generator selection dialog displays rich context about artifacts
 
+**Status:** 📋 Planned (2 plans ready for execution)
+
 **Dependencies:** Phase 12 (script output infrastructure, Phase 10 for selection dialog foundation)
 
 **Requirements:**
@@ -183,6 +185,10 @@ v3.0 TUI Polish milestone in planning. 5 phases covering status fixes, smart gen
 - DIALOG-03: Generator dialog shows all prompt descriptions for the artifact
 - DIALOG-04: Generator dialog indicates if artifact is shared across machines
 - DIALOG-05: Generator dialog shows which machines/users use this artifact
+
+**Plan List:**
+- [ ] 13-01-PLAN.md — Data model updates: add description field to ArtifactDef, SharedArtifactInfo, SelectGeneratorState
+- [ ] 13-02-PLAN.md — Enhanced dialog view: layout with all context sections, prompt descriptions, target lists, formatting helpers
 
 **Success Criteria:**
 1. Generator dialog prominently displays the artifact name being generated

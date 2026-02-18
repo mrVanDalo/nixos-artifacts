@@ -764,6 +764,7 @@ impl BackgroundEffectHandler {
                         let verify_result = backend::generator::verify_generated_files(
                             &ArtifactDef {
                                 name: artifact_name_clone.clone(),
+                                description: None, // Shared artifact description not needed for verification
                                 files: files_for_verify,
                                 prompts: prompts_for_verify,
                                 shared: true,

@@ -25,6 +25,8 @@ pub struct PromptDef {
 pub struct ArtifactDef {
     /// artifact name
     pub name: String,
+    /// artifact description (optional)
+    pub description: Option<String>,
     /// is artifact shared across machines
     /// (not implemented yet)
     pub shared: bool,
@@ -46,6 +48,7 @@ impl<'de> Deserialize<'de> for ArtifactDef {
         #[derive(Deserialize)]
         struct ArtifactDefHelper {
             name: Option<String>,
+            description: Option<String>,
             shared: Option<bool>,
             #[serde(default)]
             files: BTreeMap<String, FileDef>,
@@ -71,6 +74,7 @@ impl<'de> Deserialize<'de> for ArtifactDef {
         };
         Ok(ArtifactDef {
             name,
+            description: helper.description,
             shared,
             files: helper.files,
             prompts: helper.prompts,
@@ -110,6 +114,8 @@ pub struct GeneratorInfo {
 pub struct SharedArtifactInfo {
     /// artifact name
     pub artifact_name: String,
+    /// artifact description (optional, from first definition)
+    pub description: Option<String>,
     /// unique generators with their sources
     pub generators: Vec<GeneratorInfo>,
     /// NixOS machine names that use this artifact
@@ -318,6 +324,7 @@ impl MakeConfiguration {
                 artifact_name.clone(),
                 SharedArtifactInfo {
                     artifact_name,
+                    description: first_artifact.description.clone(),
                     generators,
                     nixos_targets,
                     home_targets,
@@ -883,6 +890,125 @@ mod tests {
         assert!(
             info.error.is_none(),
             "Single target should not produce error"
+        );
+    }
+
+    // === Description Field Tests ===
+
+    #[test]
+    fn test_artifact_def_with_description_parsed() {
+        let content = r#"{
+            "nixos": [{
+                "machine": "machine-one",
+                "artifacts": {
+                    "test-secret": {
+                        "name": "test-secret",
+                        "description": "Test artifact description",
+                        "shared": false,
+                        "files": {},
+                        "prompts": {},
+                        "generator": "/nix/store/gen.sh",
+                        "serialization": "test"
+                    }
+                },
+                "config": {}
+            }],
+            "home": []
+        }"#;
+        let (_temp_dir, json_path) = create_temp_make_json(content);
+        let config = MakeConfiguration::read_make_config(&json_path).unwrap();
+
+        let artifact = config
+            .nixos_map
+            .get("machine-one")
+            .unwrap()
+            .get("test-secret")
+            .unwrap();
+        assert_eq!(artifact.name, "test-secret");
+        assert_eq!(
+            artifact.description,
+            Some("Test artifact description".to_string())
+        );
+    }
+
+    #[test]
+    fn test_artifact_def_without_description_defaults_to_none() {
+        let content = r#"{
+            "nixos": [{
+                "machine": "machine-one",
+                "artifacts": {
+                    "test-secret": {
+                        "name": "test-secret",
+                        "shared": false,
+                        "files": {},
+                        "prompts": {},
+                        "generator": "/nix/store/gen.sh",
+                        "serialization": "test"
+                    }
+                },
+                "config": {}
+            }],
+            "home": []
+        }"#;
+        let (_temp_dir, json_path) = create_temp_make_json(content);
+        let config = MakeConfiguration::read_make_config(&json_path).unwrap();
+
+        let artifact = config
+            .nixos_map
+            .get("machine-one")
+            .unwrap()
+            .get("test-secret")
+            .unwrap();
+        assert_eq!(artifact.name, "test-secret");
+        assert_eq!(artifact.description, None);
+    }
+
+    #[test]
+    fn test_shared_artifact_info_includes_description() {
+        let content = r#"{
+            "nixos": [
+                {
+                    "machine": "machine-one",
+                    "artifacts": {
+                        "shared-secret": {
+                            "name": "shared-secret",
+                            "description": "Shared SSH key for all servers",
+                            "shared": true,
+                            "files": {},
+                            "prompts": {},
+                            "generator": "/nix/store/gen.sh",
+                            "serialization": "test"
+                        }
+                    },
+                    "config": {}
+                },
+                {
+                    "machine": "machine-two",
+                    "artifacts": {
+                        "shared-secret": {
+                            "name": "shared-secret",
+                            "description": "Shared SSH key for all servers",
+                            "shared": true,
+                            "files": {},
+                            "prompts": {},
+                            "generator": "/nix/store/gen.sh",
+                            "serialization": "test"
+                        }
+                    },
+                    "config": {}
+                }
+            ],
+            "home": []
+        }"#;
+        let (_temp_dir, json_path) = create_temp_make_json(content);
+        let config = MakeConfiguration::read_make_config(&json_path).unwrap();
+
+        let shared = config.get_shared_artifacts();
+        let info = shared.get("shared-secret").unwrap();
+        assert_eq!(info.artifact_name, "shared-secret");
+        assert_eq!(
+            info.description,
+            Some("Shared SSH key for all servers".to_string())
         );
     }
 }

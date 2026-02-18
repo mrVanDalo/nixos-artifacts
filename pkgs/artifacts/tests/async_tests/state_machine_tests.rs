@@ -74,6 +74,7 @@ fn create_test_artifact(name: &str, has_prompts: bool) -> ArtifactDef {
 
     ArtifactDef {
         name: name.to_string(),
+        description: None,
         shared: false,
         files,
         prompts,

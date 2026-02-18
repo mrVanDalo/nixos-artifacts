@@ -752,6 +752,7 @@ mod tests {
         }
         ArtifactDef {
             name: name.to_string(),
+            description: None,
             shared: false,
             files: BTreeMap::from([(
                 "test".to_string(),

@@ -246,6 +246,8 @@ impl StepLogs {
 pub struct PromptState {
     pub artifact_index: usize,
     pub artifact_name: String,
+    /// artifact description (optional, for display in prompt)
+    pub description: Option<String>,
     pub prompts: Vec<PromptEntry>,
     pub current_prompt_index: usize,
     pub input_mode: InputMode,
@@ -323,8 +325,16 @@ pub struct DoneState {
 pub struct SelectGeneratorState {
     pub artifact_index: usize,
     pub artifact_name: String,
+    /// artifact description (optional, for display in dialog)
+    pub description: Option<String>,
     pub generators: Vec<GeneratorInfo>,
     pub selected_index: usize,
+    /// Prompts required for this artifact (from config::make::PromptDef)
+    pub prompts: Vec<crate::config::make::PromptDef>,
+    /// NixOS machine names that use this artifact
+    pub nixos_targets: Vec<String>,
+    /// Home-manager user identifiers that use this artifact
+    pub home_targets: Vec<String>,
 }
 
 impl SelectGeneratorState {

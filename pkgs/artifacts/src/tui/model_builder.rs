@@ -280,6 +280,7 @@ mod tests {
             "ssh-key".to_string(),
             ArtifactDef {
                 name: "ssh-key".to_string(),
+                description: None,
                 shared: false,
                 files: BTreeMap::from([(
                     "id_ed25519".to_string(),
@@ -308,6 +309,7 @@ mod tests {
             "api-token".to_string(),
             ArtifactDef {
                 name: "api-token".to_string(),
+                description: None,
                 shared: false,
                 files: BTreeMap::from([(
                     "token".to_string(),
@@ -331,6 +333,7 @@ mod tests {
             "gpg-key".to_string(),
             ArtifactDef {
                 name: "gpg-key".to_string(),
+                description: None,
                 shared: false,
                 files: BTreeMap::from([(
                     "key.gpg".to_string(),
@@ -417,6 +420,7 @@ mod tests {
     fn make_shared_artifact(name: &str) -> ArtifactDef {
         ArtifactDef {
             name: name.to_string(),
+            description: None,
             shared: true,
             files: BTreeMap::from([(
                 "secret".to_string(),
@@ -447,6 +451,7 @@ mod tests {
             "unique-one".to_string(),
             ArtifactDef {
                 name: "unique-one".to_string(),
+                description: None,
                 shared: false,
                 files: BTreeMap::new(),
                 prompts: BTreeMap::new(),
@@ -466,6 +471,7 @@ mod tests {
             "unique-two".to_string(),
             ArtifactDef {
                 name: "unique-two".to_string(),
+                description: None,
                 shared: false,
                 files: BTreeMap::new(),
                 prompts: BTreeMap::new(),
@@ -546,6 +552,7 @@ mod tests {
             "shared-secret".to_string(),
             ArtifactDef {
                 name: "shared-secret".to_string(),
+                description: None,
                 shared: true,
                 files: BTreeMap::from([(
                     "id_ed25519".to_string(),
@@ -569,6 +576,7 @@ mod tests {
             "shared-secret".to_string(),
             ArtifactDef {
                 name: "shared-secret".to_string(),
+                description: None,
                 shared: true,
                 files: BTreeMap::from([
                     (

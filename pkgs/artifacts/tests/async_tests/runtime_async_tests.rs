@@ -45,6 +45,7 @@ fn make_test_artifact(name: &str, prompts: Vec<&str>) -> ArtifactDef {
     }
     ArtifactDef {
         name: name.to_string(),
+        description: None,
         shared: false,
         files: BTreeMap::from([(
             "test".to_string(),
