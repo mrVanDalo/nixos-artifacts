@@ -225,6 +225,7 @@ impl ModelState {
                 Screen::Prompt(_) => "Prompt",
                 Screen::Generating(_) => "Generating",
                 Screen::Done(_) => "Done",
+                Screen::ChronologicalLog(_) => "ChronologicalLog",
             },
             selected_index: model.selected_index,
             artifacts: model

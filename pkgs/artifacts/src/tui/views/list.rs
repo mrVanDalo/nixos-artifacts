@@ -95,7 +95,7 @@ fn render_artifact_list_panel(frame: &mut Frame, model: &Model, area: Rect) {
         .collect();
 
     let title = format!(
-        "Artifacts ({}) - j/k: move, Tab: logs, Enter: gen, q: quit",
+        "Artifacts ({}) - j/k: move, Enter: gen, l: logs, q: quit",
         model.entries.len()
     );
 

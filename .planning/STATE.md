@@ -23,15 +23,15 @@ effect execution runs in a background job while the TUI remains interactive.
 | Aspect       | Status                       |
 | ------------ | ---------------------------- |
 | Milestone    | v4.0 🚧 IN PROGRESS          |
-| Phase        | 14 of 14 (in progress)       |
-| Plans        | 4 of 4 complete              |
-| Requirements | 7/7 mapped to Phase 14       |
-| Last Activity | Completed Plan 14-04 (comprehensive dialog tests) |
+| Phase        | 15 of 15 (in progress)       |
+| Plans        | 3 of 3 complete              |
+| Requirements | Phase 15 requirements active   |
+| Last Activity | Completed Plan 15-02 (chronological log view navigation) |
 
 ### Progress Bar
 
 ```
-[████████████████████████████████] 100% — Phase 14: All plans complete, regeneration confirmation fully tested
+[████████████████████████████████] 100% — Phase 15 complete: chronological log view with expandable sections and navigation
 ```
 
 ---
@@ -65,6 +65,21 @@ All decisions preserved in PROJECT.md Validated section.
 - Test coverage: state transitions, keyboard navigation, visual snapshots, edge cases
 - Visual regression testing with 4 insta snapshots for dialog appearance
 
+### Key Decisions from Phase 15 Plan 02
+
+- "Use 'l' key for log view (mnemonic for logs) - consistent with other single-letter shortcuts"
+- "ChronologicalLogState::new() constructor takes artifact_index and artifact_name for clean state creation"
+- "All sections expanded by default - user sees all logs immediately"
+- "Integration tests: add match arm for new Screen variants to prevent compilation errors"
+
+### Key Decisions from Phase 15 Plan 01
+
+- HashSet<LogStep> for expanded_sections - O(1) toggle operations
+- All sections expanded by default for immediate visibility
+- Keyboard shortcuts: 'e' expand all, 'c' collapse all, Space toggle, Tab focus next
+- Separate focused_section field for keyboard navigation distinct from expansion state
+- ChronologicalLogState follows existing {Name}State naming pattern
+
 ### Technical Debt
 
 **From v1.0-v3.0 (all addressed):**
@@ -93,4 +108,4 @@ All decisions preserved in PROJECT.md Validated section.
 
 ---
 
-_Updated: 2026-02-19 — Phase 14 complete (all 4 plans: exists flag, confirmation dialog, status text updates, comprehensive tests)_
+_Updated: 2026-02-19 — Phase 15 complete: chronological log view with expandable sections and navigation_

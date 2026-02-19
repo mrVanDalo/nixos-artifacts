@@ -4,6 +4,9 @@ mod progress;
 mod prompt;
 mod regenerate_dialog;
 
+mod chronological_log;
+pub use chronological_log::render_chronological_log;
+
 use crate::app::model::{Model, Screen, Warning};
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout};
@@ -35,6 +38,7 @@ pub fn render(frame: &mut Frame, model: &Model) {
         Screen::Prompt(state) => render_prompt(frame, state, content_area),
         Screen::Generating(state) => render_progress(frame, state, content_area),
         Screen::Done(state) => render_done(frame, state, content_area),
+        Screen::ChronologicalLog(state) => render_chronological_log(frame, model, state, content_area),
     }
 
     // Render warning banner if there are warnings

@@ -46,7 +46,7 @@
 | 11  | Error Handling Improvements   | v3.0      | Complete    | 2026-02-18 |
 | 12  | Script Output Visibility      | v3.0      | Complete    | 2026-02-18 |
 | 13  | Enhanced Generator Dialog     | v3.0      | Complete    | 2026-02-18 |
-| 14  | Regeneration Confirmation     | v4.0      | Not started | -          |
+| 14  | Regeneration Confirmation         | v4.0      | Complete    | 2026-02-19 |
 
 **Total:** 13 phases complete, 1 phase planned
 
@@ -152,19 +152,33 @@ See [v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 
 Plans:
 
-- [ ] 14-01: Detect existing artifact state and trigger confirmation dialog — Add exists flag to artifact entries, extend check_serialization result, wire detection through model builder
-- [ ] 14-02: Implement dialog UI with Leave/Regenerate options and warning text — Create ConfirmRegenerate screen state, dialog view with side-by-side buttons, keyboard navigation
-- [ ] 14-03: Update status text to show "Regenerating" for existing artifacts — Add exists to GeneratingState, update generating/list views with full sentence format
-- [ ] 14-04: Add comprehensive tests for confirmation dialog behavior — State transition tests, visual snapshots, keyboard navigation tests, status text tests
+- [x] 14-01: Detect existing artifact state and trigger confirmation dialog — Add exists flag to artifact entries, extend check_serialization result, wire detection through model builder — 2026-02-19
+- [x] 14-02: Implement dialog UI with Leave/Regenerate options and warning text — Create ConfirmRegenerate screen state, dialog view with side-by-side buttons, keyboard navigation — 2026-02-19
+- [x] 14-03: Update status text to show "Regenerating" for existing artifacts — Add exists to GeneratingState, update generating/list views with full sentence format — 2026-02-19
+- [x] 14-04: Add comprehensive tests for confirmation dialog behavior — State transition tests, visual snapshots, keyboard navigation tests, status text tests — 2026-02-19
 
 ### Phase 15: Chronological Log View with Expandable Sections
 
-**Goal:** [To be planned]
+**Goal:** Display generation logs chronologically with expandable/collapsible sections per step (Check, Generate, Serialize), allowing users to focus on relevant output
+
 **Depends on:** Phase 14
-**Plans:** 0 plans
+
+**Success Criteria:**
+1. User can view logs in chronological order (not grouped by step)
+2. Each generation step is an expandable section
+3. Sections can be collapsed/expanded with keyboard shortcuts (Space, +/-)
+4. Expanded sections show all log lines for that step
+5. Collapsed sections show summary (line count, error count)
+6. User can scroll through long log output
+7. User can navigate between sections with j/k
+8. User can return to artifact list with Esc/q
+
+**Plans:** 3 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 15 to break down)
+- [ ] 15-01: Add data model and state management for chronological log view — Create ChronologicalLogState, ToggleSection message, update handlers
+- [ ] 15-02: Create chronological log view UI — Implement render function with expandable sections, summary display, scroll support
+- [ ] 15-03: Add keyboard input handling — Implement Space/Enter toggle, +/- expand/collapse, j/k navigation, PageUp/PageDown scroll, Esc/q return
 
 ### Phase 16: Backend Developer Documentation for Custom Serializations
 

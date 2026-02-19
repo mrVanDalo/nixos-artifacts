@@ -64,6 +64,24 @@ pub enum Msg {
         content: String,
     },
 
+    /// Toggle expansion state of a log section (chronological log view)
+    ToggleSection { step: crate::app::model::LogStep },
+
+    /// Scroll log content (chronological log view)
+    ScrollLogs { delta: i32 },
+
+    /// Expand all log sections (chronological log view)
+    ExpandAllSections,
+
+    /// Collapse all log sections (chronological log view)
+    CollapseAllSections,
+
+    /// Navigate to next section in chronological log view
+    FocusNextSection,
+
+    /// Navigate to previous section in chronological log view
+    FocusPreviousSection,
+
     /// Request to quit the application
     Quit,
 

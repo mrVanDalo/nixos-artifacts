@@ -76,6 +76,9 @@ pub fn update(model: Model, msg: Msg) -> (Model, Effect) {
             },
         ) => handle_shared_serialize_finished(model, artifact_index, result),
 
+        // === Chronological Log Screen ===
+        (Screen::ChronologicalLog(_), Msg::Key(key)) => update_chronological_log(model, key),
+
         // === Check serialization results (any screen) ===
         (
             _,
@@ -162,6 +165,8 @@ fn update_artifact_list(mut model: Model, key: KeyEvent) -> (Model, Effect) {
 
         KeyCode::Enter => start_generation_for_selected(model),
 
+        KeyCode::Char('l') => open_chronological_log_view(model),
+
         _ => (model, Effect::None),
     }
 }
@@ -225,6 +230,17 @@ fn start_generation_for_selected(mut model: Model) -> (Model, Effect) {
     // For new artifacts or UpToDate ones, proceed directly
     let artifact_index = model.selected_index;
     start_generation_for_selected_internal(model, artifact_index)
+}
+
+fn open_chronological_log_view(mut model: Model) -> (Model, Effect) {
+    let artifact_index = model.selected_index;
+
+    if let Some(entry) = model.entries.get(artifact_index) {
+        let state = ChronologicalLogState::new(artifact_index, entry.artifact_name().to_string());
+        model.screen = Screen::ChronologicalLog(state);
+    }
+
+    (model, Effect::None)
 }
 
 fn update_prompt(mut model: Model, key: KeyEvent) -> (Model, Effect) {
@@ -708,6 +724,100 @@ fn update_generator_selection(mut model: Model, key: KeyEvent) -> (Model, Effect
                 model.screen = Screen::ArtifactList;
                 (model, Effect::None)
             }
+        }
+
+        _ => (model, Effect::None),
+    }
+}
+
+// === Chronological Log Screen Handler ===
+
+fn update_chronological_log(mut model: Model, key: KeyEvent) -> (Model, Effect) {
+    let Screen::ChronologicalLog(ref mut state) = model.screen else {
+        return (model, Effect::None);
+    };
+
+    // Get the step logs for scroll calculations
+    let step_logs = model
+        .entries
+        .get(state.artifact_index)
+        .map(|e| e.step_logs());
+
+    match key.code {
+        KeyCode::Esc | KeyCode::Char('q') => {
+            // Return to artifact list
+            model.screen = Screen::ArtifactList;
+            (model, Effect::None)
+        }
+
+        KeyCode::Char(' ') | KeyCode::Enter => {
+            // Space or Enter toggles the focused section
+            if let Some(step) = state.focused_section {
+                state.toggle_section(step);
+            }
+            (model, Effect::None)
+        }
+
+        KeyCode::Char('+') | KeyCode::Char('=') => {
+            // '+' key expands all sections
+            state.expand_all();
+            (model, Effect::None)
+        }
+
+        KeyCode::Char('-') => {
+            // '-' key collapses all sections
+            state.collapse_all();
+            (model, Effect::None)
+        }
+
+        KeyCode::Char('e') => {
+            // 'e' key expands all sections (legacy)
+            state.expand_all();
+            (model, Effect::None)
+        }
+
+        KeyCode::Char('c') => {
+            // 'c' key collapses all sections (legacy)
+            state.collapse_all();
+            (model, Effect::None)
+        }
+
+        KeyCode::Up | KeyCode::Char('k') => {
+            // Move focus to previous section
+            state.focus_previous();
+            (model, Effect::None)
+        }
+
+        KeyCode::Down | KeyCode::Char('j') => {
+            // Move focus to next section
+            state.focus_next();
+            (model, Effect::None)
+        }
+
+        KeyCode::PageUp => {
+            // Page up - scroll content
+            if let Some(logs) = step_logs {
+                state.scroll_up(10);
+                let max_scroll = state.max_scroll(logs);
+                state.clamp_scroll(max_scroll);
+            }
+            (model, Effect::None)
+        }
+
+        KeyCode::PageDown => {
+            // Page down - scroll content
+            if let Some(logs) = step_logs {
+                state.scroll_down(10);
+                let max_scroll = state.max_scroll(logs);
+                state.clamp_scroll(max_scroll);
+            }
+            (model, Effect::None)
+        }
+
+        KeyCode::Tab => {
+            // Move focus to next section
+            state.focus_next();
+            (model, Effect::None)
         }
 
         _ => (model, Effect::None),
