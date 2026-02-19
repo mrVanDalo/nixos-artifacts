@@ -2,6 +2,7 @@
 * xref:artifact-definition-example.adoc[Artifact definition example]
 * xref:generate-artifacts-cli.adoc[Generate artifacts (CLI)]
 * xref:defining-backends.adoc[How to define backends]
+* xref:backend-dev-guide.adoc[Backend Developer Guide]
 * xref:how-to-use-a-backend.adoc[How to use a backend]
 * xref:artifacts-workflow-diagrams.adoc[Workflow diagrams]
 * Options

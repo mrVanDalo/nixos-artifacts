@@ -47,8 +47,10 @@
 | 12  | Script Output Visibility      | v3.0      | Complete    | 2026-02-18 |
 | 13  | Enhanced Generator Dialog     | v3.0      | Complete    | 2026-02-18 |
 | 14  | Regeneration Confirmation         | v4.0      | Complete    | 2026-02-19 |
+| 15  | Chronological Log View          | v4.0      | Complete    | 2026-02-19 |
+| 16  | Backend Developer Documentation | v4.0      | Planned     | —          |
 
-**Total:** 13 phases complete, 1 phase planned
+**Total:** 15 phases complete, 1 phase planned
 
 ---
 
@@ -176,19 +178,29 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 15-01: Add data model and state management for chronological log view — Create ChronologicalLogState, ToggleSection message, update handlers
-- [ ] 15-02: Create chronological log view UI — Implement render function with expandable sections, summary display, scroll support
-- [ ] 15-03: Add keyboard input handling — Implement Space/Enter toggle, +/- expand/collapse, j/k navigation, PageUp/PageDown scroll, Esc/q return
+- [x] 15-01: Add data model and state management for chronological log view — Create ChronologicalLogState, ToggleSection message, update handlers — 2026-02-19
+- [x] 15-02: Create chronological log view UI — Implement render function with expandable sections, summary display, scroll support — 2026-02-19
+- [x] 15-03: Add keyboard input handling — Implement Space/Enter toggle, +/- expand/collapse, j/k navigation, PageUp/PageDown scroll, Esc/q return — 2026-02-19
 
 ### Phase 16: Backend Developer Documentation for Custom Serializations
 
 **Goal:** Create comprehensive backend developer documentation in Antora format PLUS a standalone BACKEND_GUIDE.md file that can be copied to other repositories so AI assistants have enough context to write backends
 
 **Depends on:** Phase 15
-**Plans:** 0 plans
+**Plans:** 3 plans
+
+**Success Criteria:**
+1. Antora documentation page exists with complete backend reference
+2. Lifecycle diagram shows script execution flow
+3. Quickstart partial provides copy-paste templates
+4. BACKEND_GUIDE.md is standalone and copy-paste ready
+5. All environment variables documented for each script
+6. Navigation updated with cross-references
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 16 to break down)
+- [ ] 16-01: Create Antora backend developer documentation — Create backend-dev-guide.adoc, lifecycle diagram partial, quickstart partial with complete examples
+- [ ] 16-02: Create standalone BACKEND_GUIDE.md — Self-contained Markdown guide for AI assistants with all script documentation and examples
+- [ ] 16-03: Update navigation and cross-references — Update nav.adoc, add See Also to defining-backends.adoc, update index.adoc
 
 ### Phase 17: Model-based testing with full state capture
 

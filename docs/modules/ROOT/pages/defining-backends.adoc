@@ -5,6 +5,8 @@ A backend implements serialization and deserialization of artifact files. Backen
 
 NOTE: Have a look at xref:generate-artifacts-cli.adoc[artifacts cli] on how to use the defined backends.
 
+NOTE: For a comprehensive backend development guide with complete examples, see xref:backend-dev-guide.adoc[Backend Developer Guide].
+
 WARNING: The backend interface is experimental and may change.
 
 == Environment variables and directories
@@ -132,3 +134,9 @@ done
 ----
 
 NOTE: If a backend does not define `shared_serialize` and a user attempts to generate a shared artifact using that backend, the CLI will report an error indicating the backend lacks shared serialization support.
+
+== See Also
+
+* xref:backend-dev-guide.adoc[Backend Developer Guide] — Complete reference for backend developers
+* xref:how-to-use-a-backend.adoc[How to use a backend] — Using backends in your project
+* xref:generate-artifacts-cli.adoc[Generate artifacts (CLI)] — CLI usage reference

@@ -2,8 +2,8 @@
 
 **Project:** NixOS Artifacts Store — v4.0 Regeneration Safety
 **Current Milestone:** v4.0 🚧 IN PROGRESS
-**Status:** Roadmap created, ready to plan
-**Last Updated:** 2026-02-18
+**Status:** Phase 16 complete, ready for Phase 17
+**Last Updated:** 2026-02-20
 
 ---
 
@@ -14,7 +14,7 @@ See: [.planning/PROJECT.md](./PROJECT.md) (updated 2026-02-18)
 **Core Value:** The TUI must never freeze during long-running operations — all
 effect execution runs in a background job while the TUI remains interactive.
 
-**Current Focus:** Phase 15 — Chronological Log View with Expandable Sections
+**Current Focus:** Phase 16 — Backend Developer Documentation
 
 ---
 
@@ -23,15 +23,15 @@ effect execution runs in a background job while the TUI remains interactive.
 | Aspect       | Status                       |
 | ------------ | ---------------------------- |
 | Milestone    | v4.0 🚧 IN PROGRESS          |
-| Phase        | 15 of 15 (in progress)       |
+| Phase        | 16 of 17 (complete)          |
 | Plans        | 3 of 3 complete              |
-| Requirements | Phase 15 requirements active   |
-| Last Activity | Completed Plan 15-02 (chronological log view navigation) |
+| Requirements | Phase 16 requirements complete   |
+| Last Activity | Completed Plan 16-03 (documentation navigation integration) |
 
 ### Progress Bar
 
 ```
-[████████████████████████████████] 100% — Phase 15 complete: chronological log view with expandable sections and navigation
+[████████████████████████████████] 100% — Phase 16 complete: backend developer documentation with Antora guides, standalone BACKEND_GUIDE.md, and navigation integration
 ```
 
 ---
@@ -65,20 +65,37 @@ All decisions preserved in PROJECT.md Validated section.
 - Test coverage: state transitions, keyboard navigation, visual snapshots, edge cases
 - Visual regression testing with 4 insta snapshots for dialog appearance
 
-### Key Decisions from Phase 15 Plan 02
-
-- "Use 'l' key for log view (mnemonic for logs) - consistent with other single-letter shortcuts"
-- "ChronologicalLogState::new() constructor takes artifact_index and artifact_name for clean state creation"
-- "All sections expanded by default - user sees all logs immediately"
-- "Integration tests: add match arm for new Screen variants to prevent compilation errors"
-
-### Key Decisions from Phase 15 Plan 01
+### Key Decisions from Phase 15
 
 - HashSet<LogStep> for expanded_sections - O(1) toggle operations
 - All sections expanded by default for immediate visibility
 - Keyboard shortcuts: 'e' expand all, 'c' collapse all, Space toggle, Tab focus next
 - Separate focused_section field for keyboard navigation distinct from expansion state
 - ChronologicalLogState follows existing {Name}State naming pattern
+- "Use 'l' key for log view (mnemonic for logs) - consistent with other single-letter shortcuts"
+- ChronologicalLogState::new() constructor takes artifact_index and artifact_name for clean state creation
+- Integration tests: add match arm for new Screen variants to prevent compilation errors
+
+### Key Decisions from Phase 16 Plan 01
+
+- Use partial includes for lifecycle diagram and quickstart to enable reuse
+- Create comprehensive 600+ line guide rather than brief reference
+- Include copy-paste templates for all 4 backend scripts
+- Add migration notes from agenix-rekey and sops-nix
+
+### Key Decisions from Phase 16 Plan 02
+
+- Use Markdown instead of AsciiDoc for standalone BACKEND_GUIDE.md for universal compatibility
+- Include complete working examples, not just snippets
+- Create comprehensive environment variable reference tables
+- Add troubleshooting section for common backend issues
+- Design file to be copy-paste ready to other repositories
+
+### Key Decisions from Phase 16 Plan 03
+
+- Navigation placement: Backend Developer Guide follows brief reference and precedes usage guide
+- Added See Also sections for better cross-linking between documentation pages
+- Created dedicated Backend Development section in index.adoc for discoverability
 
 ### Technical Debt
 
@@ -91,10 +108,14 @@ All decisions preserved in PROJECT.md Validated section.
 - ✅ Shared artifact status transitions correctly
 - ✅ Generator dialog shows rich context
 
+**From Phase 16:**
+
+- None - all documentation requirements met
+
 ### Roadmap Evolution
 
 - Phase 15 added: Chronological Log View with Expandable Sections
-- Phase 16 added: Backend Developer Documentation with Antora docs + BACKEND_GUIDE.md context file for AI assistants
+- Phase 16 added: Backend Developer Documentation with Antora docs
 - Phase 17 added: Model-based testing with full state capture
 
 ---
@@ -105,7 +126,10 @@ All decisions preserved in PROJECT.md Validated section.
 - [Milestones](./milestones/) — Archived milestones
 - [MILESTONES.md](./MILESTONES.md) — Milestone history
 - [ROADMAP.md](./ROADMAP.md) — Current roadmap (to be created)
+- [Phase 16 Plan 01 Summary](./phases/16-backend-dev-docs/16-01-SUMMARY.md) — Backend developer Antora docs
+- [Phase 16 Plan 02 Summary](./phases/16-backend-dev-docs/16-02-SUMMARY.md) — Standalone BACKEND_GUIDE.md
+- [Phase 16 Plan 03 Summary](./phases/16-backend-dev-docs/16-03-SUMMARY.md) — Documentation navigation integration
 
 ---
 
-_Updated: 2026-02-19 — Phase 15 complete: chronological log view with expandable sections and navigation_
+_Updated: 2026-02-20 — Phase 16 complete: backend developer documentation with Antora guides (lifecycle diagram, quickstart templates, navigation integration) and standalone BACKEND_GUIDE.md (733 lines, copy-paste ready)_

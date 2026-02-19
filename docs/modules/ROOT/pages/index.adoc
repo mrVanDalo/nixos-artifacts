@@ -41,3 +41,11 @@ include::partial$artifact-store-example-ssh.adoc[]
 
 .Have a look at
 - xref:artifact-definition-example.adoc[Artifact definition example].
+
+== Backend Development
+
+nixos-artifacts supports custom backends for different storage mechanisms. You can implement your own backend by defining serialization scripts.
+
+* xref:defining-backends.adoc[How to define backends] — Quick reference
+* xref:backend-dev-guide.adoc[Backend Developer Guide] — Complete implementation guide
+* xref:how-to-use-a-backend.adoc[How to use a backend] — Using backends in your project
