@@ -33,7 +33,7 @@ fn render_artifact_list_panel(frame: &mut Frame, model: &Model, area: Rect) {
         .entries
         .iter()
         .map(|entry| {
-            let (icon, style) = status_display(entry.status());
+            let (icon, style, status_text) = status_display_with_text(entry);
 
             // Render based on entry type
             let content = match entry {
@@ -42,7 +42,7 @@ fn render_artifact_list_panel(frame: &mut Frame, model: &Model, area: Rect) {
                         TargetType::Nixos => "N",
                         TargetType::HomeManager => "H",
                     };
-                    Line::from(vec![
+                    let mut spans = vec![
                         Span::styled(icon, style),
                         Span::raw(" "),
                         Span::styled(
@@ -56,12 +56,18 @@ fn render_artifact_list_panel(frame: &mut Frame, model: &Model, area: Rect) {
                             &single.artifact.name,
                             Style::default().add_modifier(Modifier::BOLD),
                         ),
-                    ])
+                    ];
+                    // Add status text for generating state
+                    if let Some(text) = status_text {
+                        spans.push(Span::raw(" "));
+                        spans.push(Span::styled(text, style));
+                    }
+                    Line::from(spans)
                 }
                 ListEntry::Shared(shared) => {
                     let target_count =
                         shared.info.nixos_targets.len() + shared.info.home_targets.len();
-                    Line::from(vec![
+                    let mut spans = vec![
                         Span::styled(icon, style),
                         Span::raw(" "),
                         Span::styled("[S]", Style::default().fg(Color::DarkGray)),
@@ -75,7 +81,13 @@ fn render_artifact_list_panel(frame: &mut Frame, model: &Model, area: Rect) {
                             format!("({} targets)", target_count),
                             Style::default().fg(Color::DarkGray),
                         ),
-                    ])
+                    ];
+                    // Add status text for generating state
+                    if let Some(text) = status_text {
+                        spans.push(Span::raw(" "));
+                        spans.push(Span::styled(text, style));
+                    }
+                    Line::from(spans)
                 }
             };
             ListItem::new(content)
@@ -250,12 +262,29 @@ fn render_log_panel(frame: &mut Frame, model: &Model, area: Rect) {
     frame.render_widget(log_paragraph, area);
 }
 
-fn status_display(status: &ArtifactStatus) -> (&'static str, Style) {
-    match status {
+/// Status display that also returns text for generating state
+/// Returns (icon, style, optional_status_text)
+fn status_display_with_text(entry: &ListEntry) -> (&'static str, Style, Option<String>) {
+    let status = entry.status();
+    let icon_style = match status {
         ArtifactStatus::Pending => ("○", Style::default().fg(Color::Gray)),
         ArtifactStatus::NeedsGeneration => ("◐", Style::default().fg(Color::Yellow)),
         ArtifactStatus::UpToDate => ("✓", Style::default().fg(Color::Green)),
         ArtifactStatus::Generating(_) => ("⟳", Style::default().fg(Color::Cyan)),
         ArtifactStatus::Failed { .. } => ("✗", Style::default().fg(Color::Red)),
-    }
+    };
+
+    // Add status text for generating state based on exists flag
+    let status_text = if matches!(status, ArtifactStatus::Generating(_)) {
+        let exists = match entry {
+            ListEntry::Single(single) => single.exists,
+            ListEntry::Shared(shared) => shared.exists,
+        };
+        let verb = if exists { "Regenerating" } else { "Generating" };
+        Some(format!("{}...", verb))
+    } else {
+        None
+    };
+
+    (icon_style.0, icon_style.1, status_text)
 }

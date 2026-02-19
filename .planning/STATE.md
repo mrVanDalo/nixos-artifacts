@@ -14,7 +14,7 @@ See: [.planning/PROJECT.md](./PROJECT.md) (updated 2026-02-18)
 **Core Value:** The TUI must never freeze during long-running operations — all
 effect execution runs in a background job while the TUI remains interactive.
 
-**Current Focus:** Phase 14 — Regeneration Confirmation Dialog
+**Current Focus:** Phase 15 — Chronological Log View with Expandable Sections
 
 ---
 
@@ -23,15 +23,15 @@ effect execution runs in a background job while the TUI remains interactive.
 | Aspect       | Status                       |
 | ------------ | ---------------------------- |
 | Milestone    | v4.0 🚧 IN PROGRESS          |
-| Phase        | 14 of 14 (ready to plan)     |
-| Plans        | 4 plans defined              |
+| Phase        | 14 of 14 (in progress)       |
+| Plans        | 4 of 4 complete              |
 | Requirements | 7/7 mapped to Phase 14       |
-| Last Activity | Roadmap created             |
+| Last Activity | Completed Plan 14-04 (comprehensive dialog tests) |
 
 ### Progress Bar
 
 ```
-[░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 0% — Roadmap created, ready to plan Phase 14
+[████████████████████████████████] 100% — Phase 14: All plans complete, regeneration confirmation fully tested
 ```
 
 ---
@@ -51,6 +51,20 @@ All decisions preserved in PROJECT.md Validated section.
 - Error handling: Pre-terminal config loading, panic handler with terminal restoration
 - Script output: Real-time streaming via OutputLine messages
 
+### Key Decisions from Phase 14
+
+- exists flag defaults to false until check_serialization proves otherwise
+- Check script convention: Scripts output "EXISTS" keyword to signal artifact already exists
+- Leave button is default selection (safe choice) - prevents accidental regeneration
+- Dialog only appears when exists=true AND status=NeedsGeneration
+- Full sentence format: "{Verb} artifact: {name}" for clarity instead of "Generating: {name}"
+- Verb determined by exists flag: Regenerating for existing, Generating for new
+- Status text shown in list view: "Regenerating..." or "Generating..." during active generation
+- Exists flag flows from entry → GeneratingState → progress view for consistent UX
+- Comprehensive test suite: 26 test cases covering all dialog behaviors
+- Test coverage: state transitions, keyboard navigation, visual snapshots, edge cases
+- Visual regression testing with 4 insta snapshots for dialog appearance
+
 ### Technical Debt
 
 **From v1.0-v3.0 (all addressed):**
@@ -66,6 +80,7 @@ All decisions preserved in PROJECT.md Validated section.
 
 - Phase 15 added: Chronological Log View with Expandable Sections
 - Phase 16 added: Backend Developer Documentation with Antora docs + BACKEND_GUIDE.md context file for AI assistants
+- Phase 17 added: Model-based testing with full state capture
 
 ---
 
@@ -78,4 +93,4 @@ All decisions preserved in PROJECT.md Validated section.
 
 ---
 
-_Updated: 2026-02-18 — v4.0 milestone started_
+_Updated: 2026-02-19 — Phase 14 complete (all 4 plans: exists flag, confirmation dialog, status text updates, comprehensive tests)_

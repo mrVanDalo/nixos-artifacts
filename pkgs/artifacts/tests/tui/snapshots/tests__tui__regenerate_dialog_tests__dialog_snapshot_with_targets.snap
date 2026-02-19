@@ -1,0 +1,28 @@
+---
+source: tests/tui/regenerate_dialog_tests.rs
+assertion_line: 716
+expression: result.to_string()
+---
+Dialog State:
+  artifact_name: shared-secret
+  affected_targets: ["nixos: machine-one", "nixos: machine-two", "nixos: machine-three"]
+  leave_selected: true
+
+Rendered:
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                ┌Regenerating artifact: shared-secret──────────┐                
+                │                                              │                
+                │  This will overwrite the existing artifact.  │                
+                │                                              │                
+                │A┌───────────────────┐ne┌───────────────────┐t│                
+                │ │     > Leave <     │  │    Regenerate     │ │                
+                │ └───────────────────┘  └───────────────────┘ │                
+                │                                              │                
+                │                                              │                
+                └──────────────────────────────────────────────┘

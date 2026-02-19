@@ -6,18 +6,18 @@
 //! 3. Run with real effect handler and snapshot result
 //! 4. Collect serialized artifacts for snapshot verification
 
-use artifacts::app::Msg;
 use artifacts::app::model::Screen;
+use artifacts::app::Msg;
 use artifacts::config::backend::BackendConfiguration;
 use artifacts::config::make::MakeConfiguration;
 use artifacts::config::nix::build_make_from_flake;
-use artifacts::tui::events::ScriptedEventSource;
 use artifacts::tui::events::test_helpers::*;
+use artifacts::tui::events::ScriptedEventSource;
 use artifacts::tui::model_builder::build_model;
 use artifacts::tui::run;
 use insta::assert_debug_snapshot;
-use ratatui::Terminal;
 use ratatui::backend::TestBackend;
+use ratatui::Terminal;
 use serial_test::serial;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -221,6 +221,7 @@ impl ModelState {
             screen: match &model.screen {
                 Screen::ArtifactList => "ArtifactList",
                 Screen::SelectGenerator(_) => "SelectGenerator",
+                Screen::ConfirmRegenerate(_) => "ConfirmRegenerate",
                 Screen::Prompt(_) => "Prompt",
                 Screen::Generating(_) => "Generating",
                 Screen::Done(_) => "Done",

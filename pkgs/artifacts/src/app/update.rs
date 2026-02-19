@@ -40,6 +40,9 @@ pub fn update(model: Model, msg: Msg) -> (Model, Effect) {
         // === Generator Selection Screen ===
         (Screen::SelectGenerator(_), Msg::Key(key)) => update_generator_selection(model, key),
 
+        // === Confirm Regenerate Screen ===
+        (Screen::ConfirmRegenerate(_), Msg::Key(key)) => update_confirm_regenerate(model, key),
+
         // === Prompt Screen ===
         (Screen::Prompt(_), Msg::Key(key)) => update_prompt(model, key),
 
@@ -78,20 +81,38 @@ pub fn update(model: Model, msg: Msg) -> (Model, Effect) {
             _,
             Msg::CheckSerializationResult {
                 artifact_index,
+                needs_generation,
+                exists,
                 result,
                 output,
             },
-        ) => handle_check_result(model, artifact_index, result, output),
+        ) => handle_check_result(
+            model,
+            artifact_index,
+            needs_generation,
+            exists,
+            result,
+            output,
+        ),
 
         // === Shared check serialization results (any screen) ===
         (
             _,
             Msg::SharedCheckSerializationResult {
                 artifact_index,
+                needs_generation,
+                exists,
                 result,
                 output,
             },
-        ) => handle_check_result(model, artifact_index, result, output),
+        ) => handle_check_result(
+            model,
+            artifact_index,
+            needs_generation,
+            exists,
+            result,
+            output,
+        ),
 
         // === Streaming output (any screen) ===
         (
@@ -146,124 +167,64 @@ fn update_artifact_list(mut model: Model, key: KeyEvent) -> (Model, Effect) {
 }
 
 fn start_generation_for_selected(mut model: Model) -> (Model, Effect) {
-    let Some(entry) = model.entries.get(model.selected_index) else {
-        return (model, Effect::None);
+    // First, check if we need to show confirmation dialog
+    let should_show_dialog = {
+        let Some(entry) = model.entries.get(model.selected_index) else {
+            return (model, Effect::None);
+        };
+
+        let artifact_exists = match entry {
+            ListEntry::Single(single) => single.exists,
+            ListEntry::Shared(shared) => shared.exists,
+        };
+        let needs_generation = matches!(entry.status(), ArtifactStatus::NeedsGeneration);
+
+        if artifact_exists && needs_generation {
+            // Extract info needed for the dialog
+            let artifact_name = entry.artifact_name().to_string();
+            let affected_targets = match entry {
+                ListEntry::Single(single) => vec![single.target.clone()],
+                ListEntry::Shared(shared) => {
+                    let mut targets: Vec<String> = shared
+                        .info
+                        .nixos_targets
+                        .iter()
+                        .map(|t| format!("nixos: {}", t))
+                        .chain(
+                            shared
+                                .info
+                                .home_targets
+                                .iter()
+                                .map(|t| format!("home: {}", t)),
+                        )
+                        .collect();
+                    if targets.len() > 5 {
+                        targets.truncate(5);
+                        targets.push("...".to_string());
+                    }
+                    targets
+                }
+            };
+            Some((artifact_name, affected_targets))
+        } else {
+            None
+        }
     };
 
-    match entry {
-        ListEntry::Single(single) => {
-            let prompt_state = create_prompt_state(model.selected_index, single);
-
-            if prompt_state.prompts.is_empty() {
-                // No prompts needed, go straight to generating
-                let effect = Effect::RunGenerator {
-                    artifact_index: model.selected_index,
-                    artifact_name: single.artifact.name.clone(),
-                    target: single.target.clone(),
-                    target_type: single.target_type,
-                    prompts: Default::default(),
-                };
-                model.screen = Screen::Generating(GeneratingState {
-                    artifact_index: model.selected_index,
-                    artifact_name: single.artifact.name.clone(),
-                    step: GenerationStep::RunningGenerator,
-                    log_lines: vec![],
-                });
-                (model, effect)
-            } else {
-                model.screen = Screen::Prompt(prompt_state);
-                (model, Effect::None)
-            }
-        }
-        ListEntry::Shared(shared) => {
-            // Block generation for validation errors
-            if shared.info.error.is_some() {
-                // Error already displayed in log panel via status
-                // Return to list without starting generation
-                return (model, Effect::None);
-            }
-
-            let artifact_index = model.selected_index;
-            let artifact_name = shared.info.artifact_name.clone();
-
-            // Check if there's only one unique generator
-            if shared.info.generators.len() == 1 {
-                // Smart selection: skip dialog, use the only generator
-                let generator_path = shared.info.generators[0].path.clone();
-                let files: Vec<_> = shared.info.files.keys().cloned().collect();
-                let nixos_targets = shared.info.nixos_targets.clone();
-                let home_targets = shared.info.home_targets.clone();
-                let prompts: Vec<PromptEntry> = shared
-                    .info
-                    .prompts
-                    .values()
-                    .map(|p| PromptEntry {
-                        name: p.name.clone(),
-                        description: p.description.clone(),
-                    })
-                    .collect();
-
-                // Store the selected generator in the shared entry
-                if let Some(ListEntry::Shared(shared)) = model.entries.get_mut(artifact_index) {
-                    shared.selected_generator = Some(generator_path.clone());
-                }
-
-                if prompts.is_empty() {
-                    // No prompts needed, go straight to generating
-                    let effect = Effect::RunSharedGenerator {
-                        artifact_index,
-                        artifact_name: artifact_name.clone(),
-                        generator_path,
-                        prompts: Default::default(),
-                        nixos_targets,
-                        home_targets,
-                        files,
-                    };
-                    model.screen = Screen::Generating(GeneratingState {
-                        artifact_index,
-                        artifact_name: artifact_name.clone(),
-                        step: GenerationStep::RunningGenerator,
-                        log_lines: vec![],
-                    });
-                    (model, effect)
-                } else {
-                    // Need to collect prompts first
-                    model.screen = Screen::Prompt(PromptState {
-                        artifact_index,
-                        artifact_name: artifact_name.clone(),
-                        description: None,
-                        prompts,
-                        current_prompt_index: 0,
-                        input_mode: InputMode::Line,
-                        buffer: String::new(),
-                        collected: Default::default(),
-                    });
-                    (model, Effect::None)
-                }
-            } else {
-                // Multiple generators: show selection dialog
-                let prompts: Vec<_> = shared.info.prompts.values().cloned().collect();
-
-                model.screen = Screen::SelectGenerator(SelectGeneratorState {
-                    artifact_index,
-                    artifact_name: artifact_name.clone(),
-                    description: shared.info.description.clone(),
-                    generators: shared.info.generators.clone(),
-                    selected_index: 0,
-                    prompts,
-                    nixos_targets: shared.info.nixos_targets.clone(),
-                    home_targets: shared.info.home_targets.clone(),
-                });
-
-                // The effect is mostly informational now (screen is already set)
-                let effect = Effect::ShowGeneratorSelection {
-                    artifact_index,
-                    artifact_name,
-                };
-                (model, effect)
-            }
-        }
+    // Show dialog if needed
+    if let Some((artifact_name, affected_targets)) = should_show_dialog {
+        model.screen = Screen::ConfirmRegenerate(crate::app::model::ConfirmRegenerateState {
+            artifact_index: model.selected_index,
+            artifact_name,
+            affected_targets,
+            leave_selected: true, // Safe default
+        });
+        return (model, Effect::None);
     }
+
+    // For new artifacts or UpToDate ones, proceed directly
+    let artifact_index = model.selected_index;
+    start_generation_for_selected_internal(model, artifact_index)
 }
 
 fn update_prompt(mut model: Model, key: KeyEvent) -> (Model, Effect) {
@@ -383,6 +344,7 @@ fn finish_prompts_and_start_generation(mut model: Model) -> (Model, Effect) {
         artifact_name: artifact_name.clone(),
         step: GenerationStep::RunningGenerator,
         log_lines: vec![],
+        exists: false, // Prompt screen means new artifact (no confirmation shown)
     });
 
     // Build effect based on entry type
@@ -437,10 +399,22 @@ fn create_prompt_state(artifact_index: usize, entry: &ArtifactEntry) -> PromptSt
 fn handle_check_result(
     mut model: Model,
     artifact_index: usize,
-    result: Result<bool, String>,
+    needs_generation: bool,
+    exists: bool,
+    result: Result<(), String>,
     output: Option<CheckOutput>,
 ) -> (Model, Effect) {
     if let Some(entry) = model.entries.get_mut(artifact_index) {
+        // Update exists flag based on check result
+        match entry {
+            crate::app::model::ListEntry::Single(single) => {
+                single.exists = exists;
+            }
+            crate::app::model::ListEntry::Shared(shared) => {
+                shared.exists = exists;
+            }
+        }
+
         // Add captured script output to logs using helper methods
         if let Some(check_output) = output {
             entry
@@ -453,19 +427,20 @@ fn handle_check_result(
 
         // Add status summary
         match result {
-            Ok(true) => {
-                *entry.status_mut() = ArtifactStatus::NeedsGeneration;
-                entry.step_logs_mut().check.push(LogEntry {
-                    level: LogLevel::Info,
-                    message: "Artifact needs regeneration".to_string(),
-                });
-            }
-            Ok(false) => {
-                *entry.status_mut() = ArtifactStatus::UpToDate;
-                entry.step_logs_mut().check.push(LogEntry {
-                    level: LogLevel::Success,
-                    message: "Already up to date".to_string(),
-                });
+            Ok(()) => {
+                if needs_generation {
+                    *entry.status_mut() = ArtifactStatus::NeedsGeneration;
+                    entry.step_logs_mut().check.push(LogEntry {
+                        level: LogLevel::Info,
+                        message: "Artifact needs regeneration".to_string(),
+                    });
+                } else {
+                    *entry.status_mut() = ArtifactStatus::UpToDate;
+                    entry.step_logs_mut().check.push(LogEntry {
+                        level: LogLevel::Success,
+                        message: "Already up to date".to_string(),
+                    });
+                }
             }
             Err(e) => {
                 *entry.status_mut() = ArtifactStatus::Failed {
@@ -711,6 +686,7 @@ fn update_generator_selection(mut model: Model, key: KeyEvent) -> (Model, Effect
                         artifact_name: shared.info.artifact_name.clone(),
                         step: GenerationStep::RunningGenerator,
                         log_lines: vec![],
+                        exists: shared.exists, // Use entry's exists flag
                     });
                     (model, effect)
                 } else {
@@ -735,6 +711,185 @@ fn update_generator_selection(mut model: Model, key: KeyEvent) -> (Model, Effect
         }
 
         _ => (model, Effect::None),
+    }
+}
+
+// === Confirm Regenerate Dialog Handler ===
+
+fn update_confirm_regenerate(mut model: Model, key: KeyEvent) -> (Model, Effect) {
+    let Screen::ConfirmRegenerate(ref mut state) = model.screen else {
+        return (model, Effect::None);
+    };
+
+    match key.code {
+        KeyCode::Left | KeyCode::Char('h') => {
+            // Move selection to Leave
+            let mut new_state = state.clone();
+            new_state.leave_selected = true;
+            model.screen = Screen::ConfirmRegenerate(new_state);
+            (model, Effect::None)
+        }
+        KeyCode::Right | KeyCode::Char('l') => {
+            // Move selection to Regenerate
+            let mut new_state = state.clone();
+            new_state.leave_selected = false;
+            model.screen = Screen::ConfirmRegenerate(new_state);
+            (model, Effect::None)
+        }
+        KeyCode::Tab => {
+            // Toggle selection
+            let mut new_state = state.clone();
+            new_state.leave_selected = !state.leave_selected;
+            model.screen = Screen::ConfirmRegenerate(new_state);
+            (model, Effect::None)
+        }
+        KeyCode::Enter | KeyCode::Char(' ') => {
+            let artifact_index = state.artifact_index;
+            if state.leave_selected {
+                // Cancel - return to list
+                model.screen = Screen::ArtifactList;
+                (model, Effect::None)
+            } else {
+                // Proceed with regeneration
+                start_generation_for_selected_internal(model, artifact_index)
+            }
+        }
+        KeyCode::Esc => {
+            // Cancel - same as Leave
+            model.screen = Screen::ArtifactList;
+            (model, Effect::None)
+        }
+        _ => (model, Effect::None),
+    }
+}
+
+// === Helper for generation flow ===
+
+fn start_generation_for_selected_internal(
+    mut model: Model,
+    artifact_index: usize,
+) -> (Model, Effect) {
+    let Some(entry) = model.entries.get(artifact_index) else {
+        return (model, Effect::None);
+    };
+
+    match entry {
+        ListEntry::Single(single) => {
+            let prompt_state = create_prompt_state(artifact_index, single);
+
+            if prompt_state.prompts.is_empty() {
+                // No prompts needed, go straight to generating
+                let effect = Effect::RunGenerator {
+                    artifact_index,
+                    artifact_name: single.artifact.name.clone(),
+                    target: single.target.clone(),
+                    target_type: single.target_type,
+                    prompts: Default::default(),
+                };
+                model.screen = Screen::Generating(GeneratingState {
+                    artifact_index,
+                    artifact_name: single.artifact.name.clone(),
+                    step: GenerationStep::RunningGenerator,
+                    log_lines: vec![],
+                    exists: single.exists, // Use entry's exists flag
+                });
+                (model, effect)
+            } else {
+                model.screen = Screen::Prompt(prompt_state);
+                (model, Effect::None)
+            }
+        }
+        ListEntry::Shared(shared) => {
+            // Block generation for validation errors
+            if shared.info.error.is_some() {
+                return (model, Effect::None);
+            }
+
+            let artifact_name = shared.info.artifact_name.clone();
+
+            // Check if there's only one unique generator
+            if shared.info.generators.len() == 1 {
+                // Smart selection: skip dialog, use the only generator
+                let generator_path = shared.info.generators[0].path.clone();
+                let files: Vec<_> = shared.info.files.keys().cloned().collect();
+                let nixos_targets = shared.info.nixos_targets.clone();
+                let home_targets = shared.info.home_targets.clone();
+                let prompts: Vec<PromptEntry> = shared
+                    .info
+                    .prompts
+                    .values()
+                    .map(|p| PromptEntry {
+                        name: p.name.clone(),
+                        description: p.description.clone(),
+                    })
+                    .collect();
+
+                // Store the selected generator in the shared entry
+                let shared_exists = if let Some(ListEntry::Shared(shared)) =
+                    model.entries.get_mut(artifact_index)
+                {
+                    shared.selected_generator = Some(generator_path.clone());
+                    shared.exists
+                } else {
+                    false
+                };
+
+                if prompts.is_empty() {
+                    // No prompts needed, go straight to generating
+                    let effect = Effect::RunSharedGenerator {
+                        artifact_index,
+                        artifact_name: artifact_name.clone(),
+                        generator_path,
+                        prompts: Default::default(),
+                        nixos_targets,
+                        home_targets,
+                        files,
+                    };
+                    model.screen = Screen::Generating(GeneratingState {
+                        artifact_index,
+                        artifact_name: artifact_name.clone(),
+                        step: GenerationStep::RunningGenerator,
+                        log_lines: vec![],
+                        exists: shared_exists, // Use entry's exists flag
+                    });
+                    (model, effect)
+                } else {
+                    // Need to collect prompts first
+                    model.screen = Screen::Prompt(PromptState {
+                        artifact_index,
+                        artifact_name: artifact_name.clone(),
+                        description: None,
+                        prompts,
+                        current_prompt_index: 0,
+                        input_mode: InputMode::Line,
+                        buffer: String::new(),
+                        collected: Default::default(),
+                    });
+                    (model, Effect::None)
+                }
+            } else {
+                // Multiple generators: show selection dialog
+                let prompts: Vec<_> = shared.info.prompts.values().cloned().collect();
+
+                model.screen = Screen::SelectGenerator(SelectGeneratorState {
+                    artifact_index,
+                    artifact_name: artifact_name.clone(),
+                    description: shared.info.description.clone(),
+                    generators: shared.info.generators.clone(),
+                    selected_index: 0,
+                    prompts,
+                    nixos_targets: shared.info.nixos_targets.clone(),
+                    home_targets: shared.info.home_targets.clone(),
+                });
+
+                // The effect is mostly informational now (screen is already set)
+                let effect = Effect::ShowGeneratorSelection {
+                    artifact_index,
+                    artifact_name,
+                };
+                (model, effect)
+            }
+        }
     }
 }
 
@@ -978,6 +1133,7 @@ mod tests {
             artifact: make_test_artifact("ssh-key", vec!["passphrase"]),
             status: ArtifactStatus::Pending,
             step_logs: StepLogs::default(),
+            exists: false,
         };
         let entry2 = ArtifactEntry {
             target: "machine-two".to_string(),
@@ -985,6 +1141,7 @@ mod tests {
             artifact: make_test_artifact("api-token", vec![]),
             status: ArtifactStatus::Pending,
             step_logs: StepLogs::default(),
+            exists: false,
         };
 
         Model {
@@ -1242,6 +1399,7 @@ mod tests {
             artifact_name: "ssh-key".to_string(),
             step: GenerationStep::RunningGenerator,
             log_lines: vec![],
+            exists: false,
         });
 
         // Simulate successful generator completion
@@ -1314,6 +1472,7 @@ mod tests {
             artifact_name: "ssh-key".to_string(),
             step: GenerationStep::RunningGenerator,
             log_lines: vec![],
+            exists: false,
         });
 
         // Update first entry to Generating status
@@ -1389,7 +1548,9 @@ mod tests {
             model,
             Msg::SharedCheckSerializationResult {
                 artifact_index: 0,
-                result: Ok(true), // true = needs generation
+                needs_generation: true,
+                exists: false,
+                result: Ok(()),
                 output: Some(CheckOutput {
                     stdout_lines: vec!["Checking shared artifact...".to_string()],
                     stderr_lines: vec![],
@@ -1421,7 +1582,9 @@ mod tests {
             model,
             Msg::SharedCheckSerializationResult {
                 artifact_index: 0,
-                result: Ok(false), // false = up to date
+                needs_generation: false,
+                exists: true,
+                result: Ok(()),
                 output: None,
             },
         );
@@ -1448,6 +1611,8 @@ mod tests {
             model,
             Msg::SharedCheckSerializationResult {
                 artifact_index: 0,
+                needs_generation: true,
+                exists: false,
                 result: Err("Check script failed".to_string()),
                 output: Some(CheckOutput {
                     stdout_lines: vec![],
@@ -1508,6 +1673,7 @@ mod tests {
             status: ArtifactStatus::Pending,
             step_logs: StepLogs::default(),
             selected_generator: None,
+            exists: false,
         };
 
         let model = Model {
@@ -1582,6 +1748,7 @@ mod tests {
             status: ArtifactStatus::Pending,
             step_logs: StepLogs::default(),
             selected_generator: None,
+            exists: false,
         };
 
         let model = Model {
@@ -1676,6 +1843,7 @@ mod tests {
             status: ArtifactStatus::Pending,
             step_logs: StepLogs::default(),
             selected_generator: None,
+            exists: false,
         };
 
         let model = Model {
@@ -1749,6 +1917,7 @@ mod tests {
             status: ArtifactStatus::Pending,
             step_logs: StepLogs::default(),
             selected_generator: None,
+            exists: false,
         };
 
         let model = Model {
@@ -1811,6 +1980,7 @@ mod tests {
             status: ArtifactStatus::Pending,
             step_logs: StepLogs::default(),
             selected_generator: None,
+            exists: false,
         };
 
         Model {

@@ -254,6 +254,7 @@ fn make_test_model() -> Model {
         artifact: make_test_artifact("ssh-key", vec!["passphrase"]),
         status: ArtifactStatus::Pending,
         step_logs: StepLogs::default(),
+        exists: false,
     };
     let entry2 = ArtifactEntry {
         target: "machine-two".to_string(),
@@ -261,6 +262,7 @@ fn make_test_model() -> Model {
         artifact: make_test_artifact("api-token", vec![]),
         status: ArtifactStatus::UpToDate,
         step_logs: StepLogs::default(),
+        exists: false,
     };
     let entry3 = ArtifactEntry {
         target: "user@host".to_string(),
@@ -268,6 +270,7 @@ fn make_test_model() -> Model {
         artifact: make_test_artifact("gpg-key", vec!["email", "name"]),
         status: ArtifactStatus::NeedsGeneration,
         step_logs: StepLogs::default(),
+        exists: false,
     };
 
     Model {
@@ -614,6 +617,7 @@ fn test_progress_running_generator() {
         artifact_name: "ssh-key".to_string(),
         step: GenerationStep::RunningGenerator,
         log_lines: vec![],
+        exists: false,
     };
 
     let backend = TestBackend::new(60, 15);
@@ -640,6 +644,7 @@ fn test_progress_serializing() {
             "Generator completed successfully".to_string(),
             "Starting serialization...".to_string(),
         ],
+        exists: true, // Test regeneration case
     };
 
     let backend = TestBackend::new(60, 15);
@@ -688,6 +693,7 @@ fn test_multiple_machines_before_generate_all() {
         artifact: make_multiple_machines_artifact("artifact-one"),
         status: ArtifactStatus::Pending,
         step_logs: StepLogs::default(),
+        exists: false,
     };
     let entry2 = ArtifactEntry {
         target: "machine-one".to_string(),
@@ -695,6 +701,7 @@ fn test_multiple_machines_before_generate_all() {
         artifact: make_multiple_machines_artifact("artifact-two"),
         status: ArtifactStatus::Pending,
         step_logs: StepLogs::default(),
+        exists: false,
     };
     let entry3 = ArtifactEntry {
         target: "machine-two".to_string(),
@@ -702,6 +709,7 @@ fn test_multiple_machines_before_generate_all() {
         artifact: make_multiple_machines_artifact("artifact-one"),
         status: ArtifactStatus::Pending,
         step_logs: StepLogs::default(),
+        exists: false,
     };
     let entry4 = ArtifactEntry {
         target: "machine-two".to_string(),
@@ -709,6 +717,7 @@ fn test_multiple_machines_before_generate_all() {
         artifact: make_multiple_machines_artifact("artifact-two"),
         status: ArtifactStatus::Pending,
         step_logs: StepLogs::default(),
+        exists: false,
     };
 
     let model = Model {
@@ -754,6 +763,7 @@ fn test_multiple_machines_after_generate_all() {
         artifact: make_multiple_machines_artifact("artifact-one"),
         status: ArtifactStatus::NeedsGeneration,
         step_logs: StepLogs::default(),
+        exists: false,
     };
     let entry2 = ArtifactEntry {
         target: "machine-one".to_string(),
@@ -761,6 +771,7 @@ fn test_multiple_machines_after_generate_all() {
         artifact: make_multiple_machines_artifact("artifact-two"),
         status: ArtifactStatus::UpToDate,
         step_logs: StepLogs::default(),
+        exists: false,
     };
     let entry3 = ArtifactEntry {
         target: "machine-two".to_string(),
@@ -768,6 +779,7 @@ fn test_multiple_machines_after_generate_all() {
         artifact: make_multiple_machines_artifact("artifact-one"),
         status: ArtifactStatus::NeedsGeneration,
         step_logs: StepLogs::default(),
+        exists: false,
     };
     let entry4 = ArtifactEntry {
         target: "machine-two".to_string(),
@@ -775,6 +787,7 @@ fn test_multiple_machines_after_generate_all() {
         artifact: make_multiple_machines_artifact("artifact-two"),
         status: ArtifactStatus::NeedsGeneration,
         step_logs: StepLogs::default(),
+        exists: false,
     };
 
     let model = Model {
@@ -822,6 +835,7 @@ fn test_artifact_list_with_shared_artifacts() {
         artifact: make_test_artifact("local-secret", vec![]),
         status: ArtifactStatus::Pending,
         step_logs: StepLogs::default(),
+        exists: false,
     };
 
     let shared_entry = SharedEntry {
@@ -839,6 +853,7 @@ fn test_artifact_list_with_shared_artifacts() {
         status: ArtifactStatus::NeedsGeneration,
         step_logs: StepLogs::default(),
         selected_generator: None,
+        exists: false,
     };
 
     let model = Model {
@@ -888,6 +903,7 @@ fn make_shared_entry_with_status(status: ArtifactStatus) -> SharedEntry {
         status,
         step_logs: StepLogs::default(),
         selected_generator: None,
+        exists: false,
     }
 }
 

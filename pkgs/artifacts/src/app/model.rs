@@ -25,6 +25,7 @@ pub enum Screen {
     #[default]
     ArtifactList,
     SelectGenerator(SelectGeneratorState),
+    ConfirmRegenerate(ConfirmRegenerateState),
     Prompt(PromptState),
     Generating(GeneratingState),
     Done(DoneState),
@@ -38,6 +39,8 @@ pub struct ArtifactEntry {
     pub artifact: ArtifactDef,
     pub status: ArtifactStatus,
     pub step_logs: StepLogs,
+    /// Whether the artifact already exists in backend storage
+    pub exists: bool,
 }
 
 /// Whether this is a NixOS machine or home-manager user
@@ -310,6 +313,8 @@ pub struct GeneratingState {
     pub artifact_name: String,
     pub step: GenerationStep,
     pub log_lines: Vec<String>,
+    /// true if regenerating existing artifact, false if creating new
+    pub exists: bool,
 }
 
 /// State when generation is complete
@@ -318,6 +323,17 @@ pub struct DoneState {
     pub generated_count: usize,
     pub skipped_count: usize,
     pub failed: Vec<String>,
+}
+
+/// State for the regeneration confirmation dialog
+#[derive(Debug, Clone)]
+pub struct ConfirmRegenerateState {
+    pub artifact_index: usize,
+    pub artifact_name: String,
+    /// Description of affected targets (for shared artifacts)
+    pub affected_targets: Vec<String>,
+    /// true = Leave selected (safe), false = Regenerate selected
+    pub leave_selected: bool,
 }
 
 /// State for the generator selection screen (for shared artifacts with multiple generators)
@@ -401,6 +417,8 @@ pub struct SharedEntry {
     pub step_logs: StepLogs,
     /// The selected generator path (set after user selection)
     pub selected_generator: Option<String>,
+    /// Whether the artifact already exists in backend storage
+    pub exists: bool,
 }
 
 impl ArtifactStatus {

@@ -146,6 +146,13 @@ impl BackgroundEffectHandler {
                     Ok(Ok(Ok(check_result))) => EffectResult::CheckSerialization {
                         artifact_index,
                         needs_generation: check_result.needs_generation,
+                        exists: if check_result.output.exit_success {
+                            true
+                        } else {
+                            check_result.output.lines.iter().any(|line| {
+                                line.content.contains("EXISTS")
+                            })
+                        },
                         output: ScriptOutput::from_captured(&check_result.output),
                     },
                     Ok(Ok(Err(e))) => {
@@ -157,6 +164,7 @@ impl BackgroundEffectHandler {
                         EffectResult::CheckSerialization {
                             artifact_index,
                             needs_generation: true,
+                            exists: false,
                             output: ScriptOutput::from_message(&format!("Check failed: {}", e)),
                         }
                     }
@@ -169,6 +177,7 @@ impl BackgroundEffectHandler {
                         EffectResult::CheckSerialization {
                             artifact_index,
                             needs_generation: true,
+                            exists: false,
                             output: ScriptOutput::from_message(&format!("Task panicked: {}", e)),
                         }
                     }
@@ -182,6 +191,7 @@ impl BackgroundEffectHandler {
                         EffectResult::CheckSerialization {
                             artifact_index,
                             needs_generation: true,
+                            exists: false,
                             output: ScriptOutput::from_message(&format!(
                                 "Timed out after {} seconds",
                                 BACKGROUND_TASK_TIMEOUT.as_secs()
@@ -553,6 +563,7 @@ impl BackgroundEffectHandler {
                         return EffectResult::SharedCheckSerialization {
                             artifact_index,
                             needs_generation: vec![true; targets.len()],
+                            exists: vec![false; targets.len()],
                             outputs: vec![ScriptOutput::from_message(
                                 &format!("Shared artifact '{}' not found", artifact_name)
                             )],
@@ -585,11 +596,18 @@ impl BackgroundEffectHandler {
                         let needs_gen = check_result.needs_generation;
                         // All targets get the same result (shared artifacts are atomic)
                         let needs_generation = vec![needs_gen; targets.len()];
+                        let exists_val = if check_result.output.exit_success {
+                            true
+                        } else {
+                            check_result.output.lines.iter().any(|line| line.content.contains("EXISTS"))
+                        };
+                        let exists = vec![exists_val; targets.len()];
                         let outputs: Vec<ScriptOutput> =
                             vec![ScriptOutput::from_captured(&check_result.output); targets.len()];
                         EffectResult::SharedCheckSerialization {
                             artifact_index,
                             needs_generation,
+                            exists,
                             outputs,
                         }
                     }
@@ -600,11 +618,13 @@ impl BackgroundEffectHandler {
                             artifact_name_for_error, e
                         ));
                         let needs_generation = vec![true; targets.len()];
+                        let exists = vec![false; targets.len()];
                         let outputs: Vec<ScriptOutput> =
                             vec![ScriptOutput::from_message(&format!("Check failed: {}", e)); targets.len()];
                         EffectResult::SharedCheckSerialization {
                             artifact_index,
                             needs_generation,
+                            exists,
                             outputs,
                         }
                     }
@@ -614,11 +634,13 @@ impl BackgroundEffectHandler {
                             artifact_name_for_error, e
                         ));
                         let needs_generation = vec![true; targets.len()];
+                        let exists = vec![false; targets.len()];
                         let outputs: Vec<ScriptOutput> =
                             vec![ScriptOutput::from_message(&format!("Task panicked: {}", e)); targets.len()];
                         EffectResult::SharedCheckSerialization {
                             artifact_index,
                             needs_generation,
+                            exists,
                             outputs,
                         }
                     }
@@ -630,6 +652,7 @@ impl BackgroundEffectHandler {
                             BACKGROUND_TASK_TIMEOUT.as_secs()
                         ));
                         let needs_generation = vec![true; targets.len()];
+                        let exists = vec![false; targets.len()];
                         let outputs: Vec<ScriptOutput> = vec![
                             ScriptOutput::from_message(&format!(
                                 "Timed out after {} seconds",
@@ -640,6 +663,7 @@ impl BackgroundEffectHandler {
                         EffectResult::SharedCheckSerialization {
                             artifact_index,
                             needs_generation,
+                            exists,
                             outputs,
                         }
                     }

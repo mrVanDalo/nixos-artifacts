@@ -548,18 +548,16 @@ pub fn result_to_message(result: EffectResult) -> Msg {
         EffectResult::CheckSerialization {
             artifact_index,
             needs_generation,
+            exists,
             output,
         } => {
             use crate::app::message::CheckOutput;
-            // Convert bool+ScriptOutput to Result<bool, String>
-            let result = if needs_generation {
-                Ok(true)
-            } else {
-                Ok(false)
-            };
+            // Convert to new message format with separate needs_generation and exists fields
             Msg::CheckSerializationResult {
                 artifact_index,
-                result,
+                needs_generation,
+                exists,
+                result: Ok(()),
                 output: Some(CheckOutput {
                     stdout_lines: output.stdout_lines,
                     stderr_lines: output.stderr_lines,
@@ -613,12 +611,13 @@ pub fn result_to_message(result: EffectResult) -> Msg {
         EffectResult::SharedCheckSerialization {
             artifact_index,
             needs_generation,
+            exists,
             outputs,
         } => {
             use crate::app::message::CheckOutput;
-            // For simplicity, check if any target needs generation
+            // For simplicity, check if any target needs generation or exists
             let any_needs_gen = needs_generation.iter().any(|&b| b);
-            let result = Ok(any_needs_gen);
+            let any_exists = exists.iter().any(|&b| b);
             // Aggregate outputs - take first if any
             let aggregated_output = if outputs.is_empty() {
                 None
@@ -631,7 +630,9 @@ pub fn result_to_message(result: EffectResult) -> Msg {
             };
             Msg::SharedCheckSerializationResult {
                 artifact_index,
-                result,
+                needs_generation: any_needs_gen,
+                exists: any_exists,
+                result: Ok(()),
                 output: aggregated_output,
             }
         }
@@ -776,6 +777,7 @@ mod tests {
             artifact: make_test_artifact("ssh-key", vec!["passphrase"]),
             status: ArtifactStatus::Pending,
             step_logs: StepLogs::default(),
+            exists: false,
         };
         let entry2 = ArtifactEntry {
             target: "machine-two".to_string(),
@@ -783,6 +785,7 @@ mod tests {
             artifact: make_test_artifact("api-token", vec![]),
             status: ArtifactStatus::Pending,
             step_logs: StepLogs::default(),
+            exists: false,
         };
 
         Model {
@@ -991,6 +994,7 @@ mod tests {
         let msg = result_to_message(EffectResult::CheckSerialization {
             artifact_index: 0,
             needs_generation: true,
+            exists: false,
             output: ScriptOutput::default(),
         });
         assert!(matches!(msg, Msg::CheckSerializationResult { .. }));

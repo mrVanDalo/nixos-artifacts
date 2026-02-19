@@ -150,6 +150,7 @@ pub enum EffectResult {
     CheckSerialization {
         artifact_index: usize,
         needs_generation: bool,
+        exists: bool,
         output: ScriptOutput,
     },
 
@@ -173,6 +174,7 @@ pub enum EffectResult {
     SharedCheckSerialization {
         artifact_index: usize,
         needs_generation: Vec<bool>, // One per target
+        exists: Vec<bool>,           // One per target
         outputs: Vec<ScriptOutput>,
     },
 
@@ -249,6 +251,7 @@ async fn execute_effect(cmd: EffectCommand) -> EffectResult {
             EffectResult::CheckSerialization {
                 artifact_index,
                 needs_generation: true,
+                exists: false,
                 output: ScriptOutput::default(),
             }
         }
@@ -280,10 +283,12 @@ async fn execute_effect(cmd: EffectCommand) -> EffectResult {
         } => {
             // TODO: Implement actual shared check_serialization logic
             let needs_generation = vec![true; targets.len()];
+            let exists = vec![false; targets.len()];
             let outputs = vec![ScriptOutput::default(); targets.len()];
             EffectResult::SharedCheckSerialization {
                 artifact_index,
                 needs_generation,
+                exists,
                 outputs,
             }
         }
@@ -345,6 +350,7 @@ mod tests {
         let res = EffectResult::CheckSerialization {
             artifact_index: 3,
             needs_generation: true,
+            exists: false,
             output: ScriptOutput::default(),
         };
         match res {
@@ -419,6 +425,7 @@ mod tests {
             EffectResult::CheckSerialization {
                 artifact_index: 0,
                 needs_generation: true,
+                exists: false,
                 output: ScriptOutput::default(),
             },
             EffectResult::GeneratorFinished {
@@ -436,6 +443,7 @@ mod tests {
             EffectResult::SharedCheckSerialization {
                 artifact_index: 3,
                 needs_generation: vec![true],
+                exists: vec![false],
                 outputs: vec![ScriptOutput::default()],
             },
             EffectResult::SharedGeneratorFinished {

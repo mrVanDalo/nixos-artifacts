@@ -19,7 +19,7 @@ use artifacts::app::model::{
 use artifacts::config::backend::BackendConfiguration;
 use artifacts::config::make::{ArtifactDef, FileDef, MakeConfiguration, PromptDef};
 use artifacts::tui::background::spawn_background_task;
-use artifacts::tui::channels::{EffectCommand, EffectResult};
+use artifacts::tui::channels::{EffectCommand, EffectResult, ScriptOutput};
 use artifacts::tui::events::EventSource;
 use artifacts::tui::runtime::{effect_to_command, result_to_message, run_async};
 use ratatui::Terminal;
@@ -70,6 +70,7 @@ fn make_test_model() -> Model {
         artifact: make_test_artifact("ssh-key", vec!["passphrase"]),
         status: ArtifactStatus::Pending,
         step_logs: StepLogs::default(),
+        exists: false,
     };
     let entry2 = ArtifactEntry {
         target: "machine-two".to_string(),
@@ -77,6 +78,7 @@ fn make_test_model() -> Model {
         artifact: make_test_artifact("api-token", vec![]),
         status: ArtifactStatus::Pending,
         step_logs: StepLogs::default(),
+        exists: false,
     };
 
     Model {
@@ -788,7 +790,8 @@ async fn test_result_to_message_conversion() {
     let result = EffectResult::CheckSerialization {
         artifact_index: 0,
         needs_generation: true,
-        output: Some("test output".to_string()),
+        exists: true,
+        output: ScriptOutput::from_message("test output"),
     };
     let msg = result_to_message(result);
     assert!(matches!(msg, Msg::CheckSerializationResult { .. }));
@@ -797,7 +800,7 @@ async fn test_result_to_message_conversion() {
     let result = EffectResult::GeneratorFinished {
         artifact_index: 1,
         success: true,
-        output: Some("stdout".to_string()),
+        output: ScriptOutput::from_message("stdout"),
         error: None,
     };
     let msg = result_to_message(result);
@@ -807,6 +810,7 @@ async fn test_result_to_message_conversion() {
     let result = EffectResult::SerializeFinished {
         artifact_index: 2,
         success: true,
+        output: ScriptOutput::default(),
         error: None,
     };
     let msg = result_to_message(result);

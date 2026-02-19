@@ -38,7 +38,7 @@ impl BackendEffectHandler {
         entry: &ArtifactEntry,
         target: &str,
         target_type: TargetType,
-    ) -> (Result<bool, String>, Option<CheckOutput>) {
+    ) -> (bool, bool, Result<(), String>, Option<CheckOutput>) {
         let context = target_type.context_str();
         match run_check_serialization(&entry.artifact, target, &self.backend, &self.make, context) {
             Ok(check_result) => {
@@ -47,9 +47,23 @@ impl BackendEffectHandler {
                     stdout_lines,
                     stderr_lines,
                 };
-                (Ok(check_result.needs_generation), Some(output))
+                // Determine exists from check script output
+                // If exit success (exit code 0), artifact exists and is up to date
+                // If exit failure, check output for "EXISTS" keyword
+                let exists = if check_result.output.exit_success {
+                    true
+                } else {
+                    // Check if "EXISTS" appears in any output line
+                    check_result
+                        .output
+                        .lines
+                        .iter()
+                        .any(|line| line.content.contains("EXISTS"))
+                };
+                let needs_generation = check_result.needs_generation;
+                (needs_generation, exists, Ok(()), Some(output))
             }
-            Err(e) => (Err(e.to_string()), None),
+            Err(e) => (true, false, Err(e.to_string()), None),
         }
     }
 
@@ -174,11 +188,13 @@ impl EffectHandler for BackendEffectHandler {
                 target_type,
             } => {
                 let entry = &model.artifacts[artifact_index];
-                let (result, output) =
+                let (needs_generation, exists, result, output) =
                     self.check_if_artifact_needs_generation(entry, &target, target_type);
 
                 Ok(vec![Msg::CheckSerializationResult {
                     artifact_index,
+                    needs_generation,
+                    exists,
                     result,
                     output,
                 }])
@@ -247,14 +263,28 @@ impl EffectHandler for BackendEffectHandler {
                             stdout_lines,
                             stderr_lines,
                         };
+                        // Determine exists from check script output
+                        let exists = if check_result.output.exit_success {
+                            true
+                        } else {
+                            check_result
+                                .output
+                                .lines
+                                .iter()
+                                .any(|line| line.content.contains("EXISTS"))
+                        };
                         Ok(vec![Msg::SharedCheckSerializationResult {
                             artifact_index,
-                            result: Ok(check_result.needs_generation),
+                            needs_generation: check_result.needs_generation,
+                            exists,
+                            result: Ok(()),
                             output: Some(output),
                         }])
                     }
                     Err(e) => Ok(vec![Msg::SharedCheckSerializationResult {
                         artifact_index,
+                        needs_generation: true,
+                        exists: false,
                         result: Err(e.to_string()),
                         output: None,
                     }]),

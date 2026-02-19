@@ -92,6 +92,7 @@ fn create_test_model(artifact_name: &str, has_prompts: bool) -> Model {
         artifact: artifact.clone(),
         status: ArtifactStatus::Pending,
         step_logs: StepLogs::default(),
+        exists: false,
     };
 
     Model {
@@ -317,7 +318,9 @@ fn test_check_serialization_flow_needs_generation() {
         model,
         Msg::CheckSerializationResult {
             artifact_index: 0,
-            result: Ok(true), // true = needs generation
+            needs_generation: true,
+            exists: false,
+            result: Ok(()),
             output: Some(check_output),
         },
     );
@@ -362,7 +365,9 @@ fn test_check_serialization_flow_up_to_date() {
         model,
         Msg::CheckSerializationResult {
             artifact_index: 0,
-            result: Ok(false), // false = up to date
+            needs_generation: false,
+            exists: true,
+            result: Ok(()),
             output: None,
         },
     );
@@ -624,6 +629,8 @@ fn test_check_serialization_failure() {
         model,
         Msg::CheckSerializationResult {
             artifact_index: 0,
+            needs_generation: true,
+            exists: false,
             result: Err("Check script not found".to_string()),
             output: None,
         },
@@ -658,6 +665,7 @@ fn test_batch_effect_processing() {
         artifact: artifact1.clone(),
         status: ArtifactStatus::Pending,
         step_logs: StepLogs::default(),
+        exists: false,
     };
     let entry2 = ArtifactEntry {
         target: "machine-two".to_string(),
@@ -665,6 +673,7 @@ fn test_batch_effect_processing() {
         artifact: artifact2.clone(),
         status: ArtifactStatus::Pending,
         step_logs: StepLogs::default(),
+        exists: false,
     };
 
     let mut model = Model {
@@ -759,7 +768,9 @@ fn test_complete_lifecycle_success() {
         model,
         Msg::CheckSerializationResult {
             artifact_index: 0,
-            result: Ok(true),
+            needs_generation: true,
+            exists: false,
+            result: Ok(()),
             output: None,
         },
     );
@@ -840,6 +851,8 @@ fn test_retry_available_after_failed_check() {
         model,
         Msg::CheckSerializationResult {
             artifact_index: 0,
+            needs_generation: true,
+            exists: false,
             result: Err("Backend not configured".to_string()),
             output: None,
         },
@@ -1017,7 +1030,9 @@ fn test_dual_assertion_strategy_demonstration() {
         model,
         Msg::CheckSerializationResult {
             artifact_index: 0,
-            result: Ok(false), // Up to date
+            needs_generation: false,
+            exists: true,
+            result: Ok(()),
             output: None,
         },
     );

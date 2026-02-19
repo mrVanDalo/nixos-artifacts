@@ -63,13 +63,14 @@ async fn test_background_processes_check_command() {
         EffectResult::CheckSerialization {
             artifact_index,
             needs_generation,
+            exists,
             output,
         } => {
             assert_eq!(artifact_index, 42, "artifact_index should match command");
             // For empty config, artifact not found -> fail-open -> needs_generation
             // The actual behavior depends on the backend implementation
             assert!(
-                output.is_some() || !needs_generation,
+                !output.stdout_lines.is_empty() || !output.stderr_lines.is_empty() || !needs_generation,
                 "Should have output or needs_generation flag"
             );
         }

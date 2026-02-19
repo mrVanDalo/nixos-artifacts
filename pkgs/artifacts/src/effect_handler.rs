@@ -265,17 +265,14 @@ impl EffectHandler {
             EffectResult::CheckSerialization {
                 artifact_index,
                 needs_generation,
+                exists,
                 output: _,
             } => {
-                // Convert bool to Result<bool, String>
-                let result = if needs_generation {
-                    Ok(true)
-                } else {
-                    Ok(false)
-                };
                 Msg::CheckSerializationResult {
                     artifact_index,
-                    result,
+                    needs_generation,
+                    exists,
+                    result: Ok(()),
                     output: None,
                 }
             }
@@ -326,14 +323,17 @@ impl EffectHandler {
             EffectResult::SharedCheckSerialization {
                 artifact_index,
                 needs_generation,
+                exists,
                 outputs: _,
             } => {
-                // For simplicity, check if any target needs generation
+                // For simplicity, check if any target needs generation or exists
                 let any_needs_gen = needs_generation.iter().any(|&b| b);
-                let result = Ok(any_needs_gen);
+                let any_exists = exists.iter().any(|&b| b);
                 Msg::SharedCheckSerializationResult {
                     artifact_index,
-                    result,
+                    needs_generation: any_needs_gen,
+                    exists: any_exists,
+                    result: Ok(()),
                     output: None,
                 }
             }
@@ -507,6 +507,7 @@ mod tests {
         let msg = handler.result_to_message(EffectResult::CheckSerialization {
             artifact_index: 0,
             needs_generation: true,
+            exists: false,
             output: ScriptOutput::default(),
         });
         assert!(matches!(msg, Msg::CheckSerializationResult { .. }));
@@ -533,6 +534,7 @@ mod tests {
         let msg = handler.result_to_message(EffectResult::SharedCheckSerialization {
             artifact_index: 3,
             needs_generation: vec![true, false],
+            exists: vec![false, true],
             outputs: vec![ScriptOutput::default(), ScriptOutput::default()],
         });
         assert!(matches!(msg, Msg::SharedCheckSerializationResult { .. }));

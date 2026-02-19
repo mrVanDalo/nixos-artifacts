@@ -1,10 +1,10 @@
 use crate::app::model::{GeneratingState, GenerationStep};
 use ratatui::{
-    Frame,
     layout::{Constraint, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph},
+    Frame,
 };
 
 /// Render the generation progress view
@@ -27,7 +27,12 @@ pub fn render_progress(frame: &mut Frame, state: &GeneratingState, area: Rect) {
 }
 
 fn render_header(frame: &mut Frame, state: &GeneratingState, area: Rect) {
-    let header = Paragraph::new(format!("Generating: {}", state.artifact_name))
+    let status_verb = if state.exists {
+        "Regenerating"
+    } else {
+        "Generating"
+    };
+    let header = Paragraph::new(format!("{} artifact: {}", status_verb, state.artifact_name))
         .style(
             Style::default()
                 .fg(Color::Cyan)

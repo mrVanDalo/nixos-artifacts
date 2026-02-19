@@ -12,8 +12,10 @@ pub enum Msg {
     /// Check serialization completed for an artifact
     CheckSerializationResult {
         artifact_index: usize,
-        result: Result<bool, String>, // Ok(true) = needs generation, Ok(false) = up to date, Err = failed
-        output: Option<CheckOutput>,  // Captured stdout/stderr from the check script
+        needs_generation: bool,      // true = artifact needs to be regenerated
+        exists: bool,                // true = artifact already exists in backend
+        result: Result<(), String>,  // Err = check failed, Ok = check succeeded
+        output: Option<CheckOutput>, // Captured stdout/stderr from the check script
     },
 
     /// Generator script finished
@@ -37,8 +39,10 @@ pub enum Msg {
     /// Shared check serialization completed for an artifact
     SharedCheckSerializationResult {
         artifact_index: usize,
-        result: Result<bool, String>, // Ok(true) = needs generation, Ok(false) = up to date, Err = failed
-        output: Option<CheckOutput>,  // Captured stdout/stderr from the check script
+        needs_generation: bool,      // true = artifact needs to be regenerated
+        exists: bool,                // true = artifact already exists in backend
+        result: Result<(), String>,  // Err = check failed, Ok = check succeeded
+        output: Option<CheckOutput>, // Captured stdout/stderr from the check script
     },
 
     /// Shared generator script finished

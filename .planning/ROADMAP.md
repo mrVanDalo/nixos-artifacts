@@ -152,10 +152,10 @@ See [v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 
 Plans:
 
-- [ ] 14-01: Detect existing artifact state and trigger confirmation dialog
-- [ ] 14-02: Implement dialog UI with Leave/Regenerate options and warning text
-- [ ] 14-03: Update status text to show "Regenerating" for existing artifacts
-- [ ] 14-04: Add comprehensive tests for confirmation dialog behavior
+- [ ] 14-01: Detect existing artifact state and trigger confirmation dialog — Add exists flag to artifact entries, extend check_serialization result, wire detection through model builder
+- [ ] 14-02: Implement dialog UI with Leave/Regenerate options and warning text — Create ConfirmRegenerate screen state, dialog view with side-by-side buttons, keyboard navigation
+- [ ] 14-03: Update status text to show "Regenerating" for existing artifacts — Add exists to GeneratingState, update generating/list views with full sentence format
+- [ ] 14-04: Add comprehensive tests for confirmation dialog behavior — State transition tests, visual snapshots, keyboard navigation tests, status text tests
 
 ### Phase 15: Chronological Log View with Expandable Sections
 
@@ -175,6 +175,15 @@ Plans:
 
 Plans:
 - [ ] TBD (run /gsd:plan-phase 16 to break down)
+
+### Phase 17: Model-based testing with full state capture
+
+**Goal:** [To be planned]
+**Depends on:** Phase 16
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 17 to break down)
 
 ---
 
