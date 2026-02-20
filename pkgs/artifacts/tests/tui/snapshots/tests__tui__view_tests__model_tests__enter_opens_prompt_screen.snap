@@ -1,0 +1,38 @@
+---
+source: tests/tui/view_tests.rs
+expression: captures
+---
+[
+    StateCapture {
+        step_index: 0,
+        message: "Key(KeyEvent { code: Enter, modifiers: KeyModifiers(0x0) })",
+        model_state: ModelState {
+            screen: "ArtifactList",
+            selected_index: 0,
+            selected_log_step: "Check",
+            artifacts: [
+                ArtifactState {
+                    target: "machine-one",
+                    name: "ssh-key",
+                    status: "NeedsGeneration",
+                    target_type: "nixos",
+                },
+                ArtifactState {
+                    target: "machine-two",
+                    name: "api-token",
+                    status: "UpToDate",
+                    target_type: "nixos",
+                },
+                ArtifactState {
+                    target: "user@host",
+                    name: "gpg-key",
+                    status: "NeedsGeneration",
+                    target_type: "homemanager",
+                },
+            ],
+            error: None,
+            warnings_count: 0,
+        },
+        rendered: "\"Prompt: ssh-key [1/1]                                                           \"\n\"                                                                                \"\n\"────────────────────────────────────────────────────────────────────────────────\"\n\"Field: passphrase                                                               \"\n\"Enter the passphrase value                                                      \"\n\"                                                                                \"\n\"                                                                                \"\n\"┌Input─────────────────────────────────────────────────────────────────────────┐\"\n\"│[line] > █                                                                    │\"\n\"└──────────────────────────────────────────────────────────────────────────────┘\"\n\"Tab: change mode | Enter: submit | Esc: cancel                                  \"\n\"                                                                                \"\n\"                                                                                \"\n\"                                                                                \"\n\"                                                                                \"\n\"                                                                                \"\n\"                                                                                \"\n\"                                                                                \"\n\"                                                                                \"\n\"                                                                                \"\n\"                                                                                \"\n\"                                                                                \"\n\"                                                                                \"\n\"                                                                                \"\n",
+    },
+]

@@ -1,0 +1,5 @@
+---
+source: tests/tui/view_tests.rs
+expression: captures
+---
+[]

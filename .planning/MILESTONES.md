@@ -72,3 +72,36 @@ Full context before generator selection.
 
 ---
 
+
+## v4.0 Regeneration Safety (Shipped: 2026-02-22)
+
+**Phases completed:** 4 phases (14-17), 13 plans, 14 tasks
+**Test coverage:** 131 passing tests (up from 122 in v3.0)
+**Git tag:** v4.0
+**Git range:** 0bc5ff1..4a1321d (66 commits)
+
+**Key accomplishments:**
+
+1. **Regeneration Confirmation Dialog** — "Leave" as default prevents accidental overwrites.
+   "Regenerate" as explicit opt-in. Keyboard navigation with clear warning text.
+   Works for both single and shared artifacts.
+
+2. **Chronological Log View** — Expandable/collapsible sections for Check, Generate, Serialize
+   steps with Space/Enter toggle. Keyboard navigation with j/k between sections.
+   Summary display when collapsed.
+
+3. **Backend Developer Documentation** — 600+ line comprehensive guide in Antora format
+   with lifecycle diagrams and quickstart templates. Standalone BACKEND_GUIDE.md
+   for copy-paste to other repositories.
+
+4. **Model-based Testing** — Elm Architecture pattern demonstrated with 9 state transition
+   tests. Inputs -> Model transformations (via update) -> view rendering. Dual assertion
+   pattern captures both Model state and rendered view.
+
+**Technical Debt:** None — all v4.0 requirements delivered.
+
+**Archive:** [v4.0-ROADMAP.md](milestones/v4.0-ROADMAP.md)  
+**Requirements:** [v4.0-REQUIREMENTS.md](milestones/v4.0-REQUIREMENTS.md)
+
+---
+

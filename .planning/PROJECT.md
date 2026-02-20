@@ -1,4 +1,4 @@
-# NixOS Artifacts Store - v3.0 TUI Polish
+# NixOS Artifacts Store - v4.0 Regeneration Safety
 
 ## What This Is
 
@@ -10,18 +10,17 @@ Architecture pattern.
 
 ## Current State
 
-**Shipped:** v3.0 TUI Polish — 2026-02-18  
-**Status:** Production-ready with polished TUI UX and comprehensive test coverage  
-**Tests:** 122 passing (up from 97 at v2.0)  
-**Requirements:** 20/20 v3 requirements complete
+**Shipped:** v4.0 Regeneration Safety — 2026-02-22  
+**Status:** Production-ready with confirmation dialogs, log views, and comprehensive documentation  
+**Tests:** 131 passing (up from 122 at v3.0)  
+**Requirements:** 27/27 v4 requirements complete (all REGEN-01 to REGEN-07)
 
 **Key Achievements:**
 
-- **Shared artifact status** — Correct icons (needs-generation/up-to-date) instead of stuck "pending"
-- **Smart generator selection** — Auto-skips dialog when only one unique generator
-- **TUI error handling** — Clear stderr messages on failures, zero stdout/stderr pollution during normal operation
-- **Script output visibility** — Real-time stdout/stderr display in TUI detail view
-- **Enhanced generator dialog** — Rich context: artifact name, description, prompts, machines, users
+- **Regeneration confirmation** — "Leave" default prevents accidental overwrites, explicit "Regenerate" opt-in
+- **Chronological log view** — Expandable Check/Generate/Serialize sections with keyboard navigation
+- **Backend developer docs** — Comprehensive 600+ line guide with lifecycle diagrams and quickstart templates
+- **Model-based testing** — 9 Elm Architecture tests documenting inputs → Model → view chain
 
 **Performance:**
 
@@ -33,17 +32,19 @@ Architecture pattern.
 
 ---
 
-## Current Milestone: v4.0 Regeneration Safety
+## Current Milestone: v4.1 Code Quality & Documentation Cleanup
 
-**Goal:** Add a confirmation dialog before regenerating existing artifacts to prevent accidental overwrites.
+**Goal:** Eliminate all compiler warnings, clippy lints, and dead code while ensuring comprehensive Rust documentation.
 
 **Target features:**
 
-- Confirmation dialog when user attempts to regenerate an existing artifact
-- "Leave" as default option (safe choice)
-- "Regenerate" as explicit opt-in action
-- Clear warning that the old artifact will be overwritten
-- Status text shows "Regenerating" instead of "Generating" for existing artifacts
+- Zero clippy warnings (main code and tests)
+- Zero compiler warnings (main code and tests)
+- Dead code elimination (unused functions, variables, imports)
+- Unused file cleanup (orphaned documentation, empty files)
+- Comprehensive Rust documentation (all modules, functions, public APIs)
+- Clean `cargo doc` generation
+- Unused dependency audit
 
 ---
 
@@ -181,6 +182,16 @@ effect execution runs in a background job while the TUI remains interactive.
 
 ## Requirements
 
+### Validated (Shipped in v4.0)
+
+- ✓ **Regeneration confirmation dialog** — "Leave" default prevents accidental overwrites — v4.0
+- ✓ **Regeneration explicit opt-in** — "Regenerate" button for explicit confirmation — v4.0
+- ✓ **Clear overwrite warning** — Dialog warns that old artifact will be overwritten — v4.0
+- ✓ **Regenerating status text** — Shows "Regenerating" not "Generating" for existing artifacts — v4.0
+- ✓ **Chronological log view** — Expandable Check/Generate/Serialize sections — v4.0
+- ✓ **Backend developer documentation** — Comprehensive guide with lifecycle diagrams — v4.0
+- ✓ **Model-based testing** — Elm Architecture tests with state transitions — v4.0
+
 ### Validated (Shipped in v3.0)
 
 - ✓ **Fix shared artifact status icons** — Show correct status (needs-generation/up-to-date) instead of pending — v3.0
@@ -294,7 +305,11 @@ All v3.0 UX issues addressed:
 | **Fail-open check_serialization** | Assume generation on error        | ✓ Good — safe default                |
 | **Option<String> for description**| Backward compatibility            | ✓ Good — optional field pattern      |
 | **Description from first artifact**| Consistent with prompts/files    | ✓ Good — shared aggregation works    |
+| **exists flag pattern**           | Separate existence from generation | ✓ Good — precise regeneration control |
+| **Leave as default**              | Prevents accidental overwrites    | ✓ Good — safety-first UX             |
+| **StateCapture struct**           | Documents Elm Architecture chain  | ✓ Good — living documentation        |
+| **Standalone BACKEND_GUIDE.md**   | Copy-paste ready for other repos | ✓ Good — portable documentation      |
 
 ---
 
-_Last updated: 2026-02-18 after v3.0 milestone complete_
+_Last updated: 2026-02-22 after v4.0 milestone complete_

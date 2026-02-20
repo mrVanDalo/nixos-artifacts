@@ -1,227 +1,147 @@
-# Roadmap: NixOS Artifacts Store
+# Roadmap: v4.1 Code Quality & Documentation Cleanup
 
-**Current Version:** v3.0 ✅ SHIPPED  
-**Last Updated:** 2026-02-18
-
----
-
-## Milestones
-
-- ✅ **v1.0 Background Job Refactor** — Phases 1-4 (shipped 2026-02-15) — [Archive](milestones/v1.0-ROADMAP.md)
-- ✅ **v2.0 Robustness** — Phases 5-8 (shipped 2026-02-17) — [Archive](milestones/v2.0-ROADMAP.md)
-- ✅ **v3.0 TUI Polish** — Phases 9-13 (shipped 2026-02-18) — [Archive](milestones/v3.0-ROADMAP.md)
-- 🚧 **v4.0 Regeneration Safety** — Phase 14 (in progress)
+**Milestone:** v4.1 Code Quality & Documentation Cleanup  
+**Phases:** 5 (18-22)  
+**Requirements:** 24 v1 requirements  
+**Coverage:** 100% (24/24 mapped)  
+**Depth:** Comprehensive  
+**Defined:** 2026-02-22  
 
 ---
 
-## Current Status
+## Overview
 
-**v3.0 TUI Polish complete.** All UX improvements shipped:
-- Shared artifact status fixes
-- Smart generator selection
-- TUI error handling
-- Script output visibility
-- Enhanced generator dialog
+This roadmap delivers a comprehensive cleanup of the NixOS Artifacts Store codebase. The focus is on achieving zero compiler warnings, eliminating dead code, cleaning up unused files, documenting all public APIs, and auditing dependencies. Each phase builds on the previous to create a clean, well-documented, and maintainable codebase.
 
-**v4.0 Regeneration Safety** — Now in progress:
-- Phase 14: Regeneration Confirmation Dialog (4 plans planned)
-- All 7 v4.0 requirements mapped to Phase 14
+The phases follow a logical order: first fix active code issues (linting), then remove what's not needed (dead code, unused files), then document what remains, and finally audit external dependencies.
 
 ---
 
-## Phase Overview
+## Phase 18: Fix Compiler & Clippy Warnings
 
-| #   | Phase                         | Milestone | Status      | Completed  |
-| --- | ----------------------------- | --------- | ----------- | ---------- |
-| 1   | Foundation                    | v1.0      | Complete    | 2026-02-15 |
-| 2   | Single Artifacts              | v1.0      | Complete    | 2026-02-15 |
-| 3   | Shared Artifacts              | v1.0      | Complete    | 2026-02-15 |
-| 4   | Robustness                    | v1.0      | Complete    | 2026-02-15 |
-| 5   | Validation — Testing          | v2.0      | Complete    | 2026-02-16 |
-| 6   | Integration Testing           | v2.0      | Complete    | 2026-02-16 |
-| 7   | Code Quality                  | v2.0      | Complete    | 2026-02-17 |
-| 8   | Smart Logging                 | v2.0      | Complete    | 2026-02-17 |
-| 9   | Shared Artifact Status Fixes  | v3.0      | Complete    | 2026-02-18 |
-| 10  | Smart Generator Selection     | v3.0      | Complete    | 2026-02-18 |
-| 11  | Error Handling Improvements   | v3.0      | Complete    | 2026-02-18 |
-| 12  | Script Output Visibility      | v3.0      | Complete    | 2026-02-18 |
-| 13  | Enhanced Generator Dialog     | v3.0      | Complete    | 2026-02-18 |
-| 14  | Regeneration Confirmation         | v4.0      | Complete    | 2026-02-19 |
-| 15  | Chronological Log View          | v4.0      | Complete    | 2026-02-19 |
-| 16  | Backend Developer Documentation | v4.0      | Planned     | —          |
+**Goal:** Achieve zero warnings from both rustc and clippy across main code and tests
 
-**Total:** 15 phases complete, 1 phase planned
+**Phase Number:** 18  
+**Requirements:** LINT-01, LINT-02, LINT-03, LINT-04, LINT-05  
+**Dependencies:** None (can start immediately)  
+
+### Success Criteria
+
+1. **Main code compiles with zero warnings** — `cargo build` completes with no compiler warnings
+2. **Main code passes clippy with zero warnings** — `cargo clippy` completes with no warnings at default level
+3. **Tests compile with zero warnings** — `cargo test --no-run` completes with no compiler warnings
+4. **Tests pass clippy with zero warnings** — `cargo clippy --tests` completes with no warnings
+5. **Pedantic lints addressed** — Additional clippy lints from clippy::pedantic and clippy::nursery are reviewed and addressed where appropriate
 
 ---
 
-## Completed Milestones
+## Phase 19: Dead Code Elimination
 
-<details>
-<summary>✅ v3.0 TUI Polish (Phases 9-13) — SHIPPED 2026-02-18</summary>
+**Goal:** Remove all dead code including unused functions, variables, imports, and unreachable paths
 
-**Goal:** Fix bugs and improve UX in the TUI
+**Phase Number:** 19  
+**Requirements:** DEAD-01, DEAD-02, DEAD-03, DEAD-04, DEAD-05  
+**Dependencies:** Phase 18 (fix warnings first to see actual dead code clearly)  
 
-**Requirements:**
-- UI-01 to UI-05: UI/UX fixes
-- STAT-01, STAT-02: Status display
-- OUT-01 to OUT-04: Output capture
-- ERR-01 to ERR-04: Error handling
-- GEN-01 to GEN-04: Generator selection
-- DIALOG-01 to DIALOG-05: Enhanced dialog
+### Success Criteria
 
-**Phases:**
-
-- [x] Phase 9: Shared Artifact Status Fixes (4/4 plans) — 2026-02-18
-- [x] Phase 10: Smart Generator Selection (2/2 plans) — 2026-02-18
-- [x] Phase 11: Error Handling Improvements (3/3 plans) — 2026-02-18
-- [x] Phase 12: Script Output Visibility (4/4 plans) — 2026-02-18
-- [x] Phase 13: Enhanced Generator Dialog (2/2 plans) — 2026-02-18
-
-**Key Accomplishments:**
-- Shared artifacts show correct status icons
-- Smart generator selection (skips dialog when one unique generator)
-- TUI errors display to stderr without polluting stdout
-- Script output visible in real-time during execution
-- Enhanced generator dialog with rich context
-
-**Archive:** [v3.0-ROADMAP.md](milestones/v3.0-ROADMAP.md)
-
-</details>
-
-<details>
-<summary>✅ v2.0 Robustness (Phases 5-8) — SHIPPED 2026-02-17</summary>
-
-**Goal:** End-to-end tests, code quality, smart logging
-
-**Requirements:**
-- TEST-01 to TEST-06: End-to-end verification
-- QUAL-01 to QUAL-07: Code readability & structure
-- LOG-01 to LOG-06: Opt-in debug logging
-
-**Phases:**
-
-- [x] Phase 5: Validation — Testing (3/3 plans) — 2026-02-16
-- [x] Phase 6: Integration Testing (5/5 plans) — 2026-02-16
-- [x] Phase 7: Code Quality (3/3 plans) — 2026-02-17
-- [x] Phase 8: Smart Logging (3/3 plans) — 2026-02-17
-
-**Key Accomplishments:**
-- 33+ e2e tests across 5 test modules
-- Headless API for programmatic artifact generation
-- Diagnostic tooling with auto-dump on failure
-- 12 refactored handler functions (all under 50 lines)
-- 18 helper functions in serialization.rs
-- Feature-gated logging with `--log-file` and `--log-level` CLI arguments
-- Zero-cost logging (no overhead when disabled)
-
-**Audit Report:** [v2.0-MILESTONE-AUDIT.md](milestones/v2.0-MILESTONE-AUDIT.md)
-
-</details>
-
-<details>
-<summary>✅ v1.0 Background Job Refactor (Phases 1-4) — SHIPPED 2026-02-15</summary>
-
-See [v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
-
-</details>
-
-### 🚧 v4.0 Regeneration Safety (In Progress)
-
-**Milestone Goal:** Add a confirmation dialog before regenerating existing artifacts to prevent accidental overwrites.
-
-**Requirements:**
-- REGEN-01 to REGEN-07: Regeneration confirmation and safety
-
-#### Phase 14: Regeneration Confirmation Dialog
-
-**Goal:** Users must explicitly confirm before overwriting existing artifacts, with clear warnings and safe defaults
-
-**Depends on:** Phase 13
-
-**Requirements:** REGEN-01, REGEN-02, REGEN-03, REGEN-04, REGEN-05, REGEN-06, REGEN-07
-
-**Success Criteria** (what must be TRUE):
-
-1. User sees confirmation dialog when attempting to regenerate an artifact that already exists (REGEN-01)
-2. Dialog default selection is "Leave" (safe choice, prevents accidental overwrite) (REGEN-02)
-3. User can explicitly choose "Regenerate" to proceed with overwrite (REGEN-03)
-4. Dialog clearly warns that the old artifact will be overwritten (REGEN-04)
-5. Status text shows "Regenerating" instead of "Generating" during overwrite operations (REGEN-05)
-6. Confirmation dialog appears for both single artifacts and shared artifacts (REGEN-06)
-7. Dialog supports keyboard navigation (arrow keys to select, Enter to confirm, Esc to cancel) (REGEN-07)
-
-**Plans:** 4 plans
-
-Plans:
-
-- [x] 14-01: Detect existing artifact state and trigger confirmation dialog — Add exists flag to artifact entries, extend check_serialization result, wire detection through model builder — 2026-02-19
-- [x] 14-02: Implement dialog UI with Leave/Regenerate options and warning text — Create ConfirmRegenerate screen state, dialog view with side-by-side buttons, keyboard navigation — 2026-02-19
-- [x] 14-03: Update status text to show "Regenerating" for existing artifacts — Add exists to GeneratingState, update generating/list views with full sentence format — 2026-02-19
-- [x] 14-04: Add comprehensive tests for confirmation dialog behavior — State transition tests, visual snapshots, keyboard navigation tests, status text tests — 2026-02-19
-
-### Phase 15: Chronological Log View with Expandable Sections
-
-**Goal:** Display generation logs chronologically with expandable/collapsible sections per step (Check, Generate, Serialize), allowing users to focus on relevant output
-
-**Depends on:** Phase 14
-
-**Success Criteria:**
-1. User can view logs in chronological order (not grouped by step)
-2. Each generation step is an expandable section
-3. Sections can be collapsed/expanded with keyboard shortcuts (Space, +/-)
-4. Expanded sections show all log lines for that step
-5. Collapsed sections show summary (line count, error count)
-6. User can scroll through long log output
-7. User can navigate between sections with j/k
-8. User can return to artifact list with Esc/q
-
-**Plans:** 3 plans
-
-Plans:
-- [x] 15-01: Add data model and state management for chronological log view — Create ChronologicalLogState, ToggleSection message, update handlers — 2026-02-19
-- [x] 15-02: Create chronological log view UI — Implement render function with expandable sections, summary display, scroll support — 2026-02-19
-- [x] 15-03: Add keyboard input handling — Implement Space/Enter toggle, +/- expand/collapse, j/k navigation, PageUp/PageDown scroll, Esc/q return — 2026-02-19
-
-### Phase 16: Backend Developer Documentation for Custom Serializations
-
-**Goal:** Create comprehensive backend developer documentation in Antora format PLUS a standalone BACKEND_GUIDE.md file that can be copied to other repositories so AI assistants have enough context to write backends
-
-**Depends on:** Phase 15
-**Plans:** 3 plans
-
-**Success Criteria:**
-1. Antora documentation page exists with complete backend reference
-2. Lifecycle diagram shows script execution flow
-3. Quickstart partial provides copy-paste templates
-4. BACKEND_GUIDE.md is standalone and copy-paste ready
-5. All environment variables documented for each script
-6. Navigation updated with cross-references
-
-Plans:
-- [ ] 16-01: Create Antora backend developer documentation — Create backend-dev-guide.adoc, lifecycle diagram partial, quickstart partial with complete examples
-- [ ] 16-02: Create standalone BACKEND_GUIDE.md — Self-contained Markdown guide for AI assistants with all script documentation and examples
-- [ ] 16-03: Update navigation and cross-references — Update nav.adoc, add See Also to defining-backends.adoc, update index.adoc
-
-### Phase 17: Model-based testing with full state capture
-
-**Goal:** Improve testing infrastructure to better document and verify the Elm Architecture pattern by separating Model transformation tests from View rendering tests. Current view tests only render a small portion of the model, but integration tests capture the full model state changes. This phase brings that same full state capture to view tests, enabling developers to trace how inputs affect the model and how model states render to different views.
-
-**Depends on:** Phase 16
-**Plans:** 3 plans
-
-**Success Criteria:**
-1. Shared ModelState struct exists in dedicated module (derives Debug for automatic capture)
-2. Integration tests refactored to use shared ModelState (no duplication)
-3. View tests capture full Model state alongside rendered view output
-4. New model-based tests demonstrate the Elm Architecture pattern: inputs → Model transformations → view rendering
-5. Tests serve as living documentation for state transitions
-6. All tests use consistent snapshot format with assert_debug_snapshot! for state
-
-Plans:
-- [ ] 17-01: Create shared model_state module — Extract ModelState from integration_tests.rs into reusable tests/tui/model_state.rs module that captures full Model state via Debug trait
-- [ ] 17-02: Update view tests with Model state capture — Modify ViewTestResult to include ModelState, update all artifact list tests to capture both view state and full Model state in dual assertions
-- [ ] 17-03: Add model-based state transition tests — Create mod model_tests with tests demonstrating Elm Architecture pattern: event sequences → update() calls → Model changes → view rendering
+1. **No unused functions in main codebase** — All functions are called or marked with `#[allow(dead_code)]` and justification comment
+2. **No unused variables** — All variables are used or prefixed with underscore if intentionally unused
+3. **No unused imports** — All `use` statements are referenced in code
+4. **No unreachable code paths** — All code paths are reachable or marked with justification
+5. **Dead code attributes justified** — All `#[allow(dead_code)]` attributes have explanatory comments
 
 ---
 
-_Updated: 2026-02-18 — v3.0 TUI Polish complete_
+## Phase 20: Unused File Cleanup
+
+**Goal:** Clean up orphaned documentation, empty files, and unused documentation artifacts
+
+**Phase Number:** 20  
+**Requirements:** FILE-01, FILE-02, FILE-03, FILE-04, FILE-05  
+**Dependencies:** Phase 19 (clean code first, then clean files)  
+
+### Success Criteria
+
+1. **All documentation files referenced** — Every file in `docs/` is included in Antora navigation or build output
+2. **No empty files in repository** — All `.adoc`, `.md`, `.rs` files contain content (except intentional placeholders with comments)
+3. **CLAUDE.md files are active** — All `CLAUDE.md` files are referenced by AI workflows and contain current information
+4. **README.md files are current** — All `README.md` files are up to date and not orphaned from parent projects
+5. **Non-build documentation reviewed** — Documentation not part of Antora build output is either integrated or removed
+
+---
+
+## Phase 21: Rust Documentation
+
+**Goal:** Achieve comprehensive Rust documentation for all public APIs with clean `cargo doc` generation
+
+**Phase Number:** 21  
+**Requirements:** DOC-01, DOC-02, DOC-03, DOC-04, DOC-05, DOC-06, DOC-07, DOC-08  
+**Dependencies:** Phase 20 (clean files first to avoid documenting what gets deleted)  
+
+### Success Criteria
+
+1. **All public modules documented** — Every public module has module-level documentation (`//!`)
+2. **All public functions documented** — Every public function has doc comments (`///`) with description
+3. **All public types documented** — Every public struct and enum has doc comments with field descriptions
+4. **All trait implementations documented** — Trait `impl` blocks have documentation explaining the implementation
+5. **Complex logic explained** — Functions with complex logic have inline comments explaining the "why"
+6. **Clean `cargo doc` generation** — `cargo doc` completes with no warnings or broken links
+7. **Public API examples** — Key public APIs include usage examples in doc comments
+8. **Safety and error documentation** — Functions that panic, return errors, or use unsafe have appropriate sections
+
+---
+
+## Phase 22: Dependency Audit
+
+**Goal:** Audit and clean up unused dependencies, features, and duplicates
+
+**Phase Number:** 22  
+**Requirements:** DEPS-01, DEPS-02, DEPS-03  
+**Dependencies:** Phase 21 (final cleanup phase after all code is documented)  
+
+### Success Criteria
+
+1. **All dependencies used** — Every dependency in `Cargo.toml` is actually used in the codebase
+2. **All features used** — Every feature flag in `Cargo.toml` is actually exercised
+3. **No duplicate dependencies** — Dependencies are deduplicated where avoidable (e.g., multiple versions)
+
+---
+
+## Summary
+
+| Phase | Name | Goal | Requirements | Dependencies |
+|-------|------|------|--------------|--------------|
+| 18 | Fix Compiler & Clippy Warnings | Zero warnings from rustc and clippy | LINT-01 to LINT-05 | None |
+| 19 | Dead Code Elimination | Remove all dead code | DEAD-01 to DEAD-05 | Phase 18 |
+| 20 | Unused File Cleanup | Clean up orphaned files | FILE-01 to FILE-05 | Phase 19 |
+| 21 | Rust Documentation | Document all public APIs | DOC-01 to DOC-08 | Phase 20 |
+| 22 | Dependency Audit | Clean up unused dependencies | DEPS-01 to DEPS-03 | Phase 21 |
+
+**Total:** 5 phases, 24 requirements, 23 success criteria
+
+---
+
+## Execution Notes
+
+### Phase Ordering Rationale
+
+1. **Phase 18 (Lint) first:** Fix active code issues to get a clean baseline
+2. **Phase 19 (Dead code) second:** After linting, actual dead code becomes visible
+3. **Phase 20 (File cleanup) third:** Clean files after code is cleaned (avoid deleting files that might be needed)
+4. **Phase 21 (Documentation) fourth:** Document what remains after cleanup
+5. **Phase 22 (Dependencies) last:** Audit deps after all code changes are complete
+
+### Expected Effort
+
+- Phase 18: 2-4 hours (fix warnings)
+- Phase 19: 2-3 hours (identify and remove dead code)
+- Phase 20: 1-2 hours (file cleanup)
+- Phase 21: 4-6 hours (comprehensive documentation)
+- Phase 22: 1-2 hours (dependency audit)
+
+**Total estimated time:** 10-17 hours across all phases
+
+---
+
+_Last updated: 2026-02-22_

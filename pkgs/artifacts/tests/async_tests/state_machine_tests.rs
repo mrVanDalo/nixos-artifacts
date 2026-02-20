@@ -399,6 +399,7 @@ fn test_generator_flow_success() {
         artifact_name: "test-artifact".to_string(),
         step: GenerationStep::RunningGenerator,
         log_lines: vec![],
+        exists: false,
     });
 
     // Simulate generation effect
@@ -454,6 +455,7 @@ fn test_generator_flow_success() {
         artifact_name: "test-artifact".to_string(),
         step: GenerationStep::Serializing,
         log_lines: vec![],
+        exists: false,
     });
 
     let serialize_output = SerializeOutput {
@@ -492,6 +494,7 @@ fn test_generator_flow_failure() {
         artifact_name: "test-artifact".to_string(),
         step: GenerationStep::RunningGenerator,
         log_lines: vec![],
+        exists: false,
     });
 
     // Simulate generation effect
@@ -548,6 +551,7 @@ fn test_serialize_flow_failure() {
         artifact_name: "test-artifact".to_string(),
         step: GenerationStep::RunningGenerator,
         log_lines: vec![],
+        exists: false,
     });
 
     // Simulate successful generation first
@@ -583,6 +587,7 @@ fn test_serialize_flow_failure() {
         artifact_name: "test-artifact".to_string(),
         step: GenerationStep::Serializing,
         log_lines: vec![],
+        exists: false,
     });
 
     // Simulate failed serialize result
@@ -783,6 +788,7 @@ fn test_complete_lifecycle_success() {
         artifact_name: "test-artifact".to_string(),
         step: GenerationStep::RunningGenerator,
         log_lines: vec![],
+        exists: false,
     });
 
     let gen_effect = Effect::RunGenerator {
@@ -814,6 +820,7 @@ fn test_complete_lifecycle_success() {
         artifact_name: "test-artifact".to_string(),
         step: GenerationStep::Serializing,
         log_lines: vec![],
+        exists: false,
     });
 
     process_effects_and_track(&mut model.clone(), serialize_effect, &mut tracker);

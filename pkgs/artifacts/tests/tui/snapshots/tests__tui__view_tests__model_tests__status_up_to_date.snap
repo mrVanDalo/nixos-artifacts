@@ -1,0 +1,26 @@
+---
+source: tests/tui/view_tests.rs
+expression: captures
+---
+[
+    StateCapture {
+        step_index: 0,
+        message: "CheckSerializationResult { artifact_index: 0, needs_generation: false, exists: true, result: Ok(()), output: None }",
+        model_state: ModelState {
+            screen: "ArtifactList",
+            selected_index: 0,
+            selected_log_step: "Check",
+            artifacts: [
+                ArtifactState {
+                    target: "machine-1",
+                    name: "artifact-1",
+                    status: "Pending",
+                    target_type: "nixos",
+                },
+            ],
+            error: None,
+            warnings_count: 0,
+        },
+        rendered: "\"┌Artifacts (1) - j/k: move, Enter: gen,┐┌Logs: machine-1/artifact-1────────────┐\"\n\"│> ✓ [N] machine-1/artifact-1          ││▼ Check                               │\"\n\"│                                      ││  ✓ Already up to date                │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"└──────────────────────────────────────┘│                                      │\"\n\"○ Pend ◐ Need ✓ OK ✗ Fail               └──────────────────────────────────────┘\"\n",
+    },
+]

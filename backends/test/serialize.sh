@@ -7,8 +7,10 @@ secrets_dir="$project_root/secrets"
 
 # Determine target based on context
 if [ -n "$machine" ]; then
+  echo "serialize to machine"
   target_dir="$secrets_dir/machines/$machine/$artifact"
 elif [ -n "$user" ]; then
+  echo "serialize to user"
   target_dir="$secrets_dir/user/$user/$artifact"
 else
   echo "Error: Neither \$machine nor \$user is set" >&2
