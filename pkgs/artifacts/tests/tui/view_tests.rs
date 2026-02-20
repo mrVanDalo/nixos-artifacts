@@ -1,3 +1,4 @@
+use crate::tui::model_state::ModelState;
 use artifacts::app::model::{
     ArtifactEntry, ArtifactStatus, GeneratingState, GenerationStep, InputMode, ListEntry, LogEntry,
     LogLevel, LogStep, Model, PromptEntry, PromptState, Screen, SelectGeneratorState, SharedEntry,
@@ -20,6 +21,7 @@ use std::fmt;
 
 struct ViewTestResult<S: fmt::Debug> {
     state: S,
+    model: Option<ModelState>,
     rendered: String,
 }
 
@@ -28,10 +30,26 @@ impl<S: fmt::Debug> fmt::Display for ViewTestResult<S> {
         // Write state with Debug formatting
         writeln!(f, "State:")?;
         writeln!(f, "{:#?}", self.state)?;
+
+        // Include model state if present
+        if let Some(ref model) = self.model {
+            writeln!(f)?;
+            writeln!(f, "Model:")?;
+            writeln!(f, "{:#?}", model)?;
+        }
+
         writeln!(f)?;
         writeln!(f, "Rendered:")?;
         // Write rendered output as-is (already has line-by-line format from TestBackend)
         write!(f, "{}", self.rendered)
+    }
+}
+
+impl<S: fmt::Debug> ViewTestResult<S> {
+    /// Add ModelState capture to this test result.
+    fn with_model(mut self, model: &Model) -> Self {
+        self.model = Some(ModelState::from_model(model));
+        self
     }
 }
 
@@ -316,6 +334,7 @@ fn test_artifact_list_initial() {
 
     let result = ViewTestResult {
         state: ArtifactListState::from_model(&model),
+        model: Some(ModelState::from_model(&model)),
         rendered: terminal.backend().to_string(),
     };
     assert_snapshot!(result.to_string());
@@ -363,6 +382,7 @@ fn test_artifact_list_with_selection() {
 
     let result = ViewTestResult {
         state: ArtifactListState::from_model(&model),
+        model: Some(ModelState::from_model(&model)),
         rendered: terminal.backend().to_string(),
     };
     assert_snapshot!(result.to_string());
@@ -434,6 +454,7 @@ fn test_artifact_list_with_failed_status() {
 
     let result = ViewTestResult {
         state: ArtifactListState::from_model(&model),
+        model: Some(ModelState::from_model(&model)),
         rendered: terminal.backend().to_string(),
     };
     assert_snapshot!(result.to_string());
@@ -468,6 +489,7 @@ fn test_prompt_initial_line_mode() {
 
     let result = ViewTestResult {
         state: PromptSnapshot::from_state(&state),
+        model: None,
         rendered: terminal.backend().to_string(),
     };
     assert_snapshot!(result.to_string());
@@ -498,6 +520,7 @@ fn test_prompt_with_input() {
 
     let result = ViewTestResult {
         state: PromptSnapshot::from_state(&state),
+        model: None,
         rendered: terminal.backend().to_string(),
     };
     assert_snapshot!(result.to_string());
@@ -528,6 +551,7 @@ fn test_prompt_hidden_mode() {
 
     let result = ViewTestResult {
         state: PromptSnapshot::from_state(&state),
+        model: None,
         rendered: terminal.backend().to_string(),
     };
     assert_snapshot!(result.to_string());
@@ -558,6 +582,7 @@ fn test_prompt_multiline_mode() {
 
     let result = ViewTestResult {
         state: PromptSnapshot::from_state(&state),
+        model: None,
         rendered: terminal.backend().to_string(),
     };
     assert_snapshot!(result.to_string());
@@ -601,6 +626,7 @@ fn test_prompt_second_of_three() {
 
     let result = ViewTestResult {
         state: PromptSnapshot::from_state(&state),
+        model: None,
         rendered: terminal.backend().to_string(),
     };
     assert_snapshot!(result.to_string());
@@ -629,6 +655,7 @@ fn test_progress_running_generator() {
 
     let result = ViewTestResult {
         state: GeneratingSnapshot::from_state(&state),
+        model: None,
         rendered: terminal.backend().to_string(),
     };
     assert_snapshot!(result.to_string());
@@ -656,6 +683,7 @@ fn test_progress_serializing() {
 
     let result = ViewTestResult {
         state: GeneratingSnapshot::from_state(&state),
+        model: None,
         rendered: terminal.backend().to_string(),
     };
     assert_snapshot!(result.to_string());
@@ -750,6 +778,7 @@ fn test_multiple_machines_before_generate_all() {
 
     let result = ViewTestResult {
         state: ArtifactListState::from_model(&model),
+        model: None,
         rendered: terminal.backend().to_string(),
     };
     assert_snapshot!(result.to_string());
@@ -820,6 +849,7 @@ fn test_multiple_machines_after_generate_all() {
 
     let result = ViewTestResult {
         state: ArtifactListState::from_model(&model),
+        model: None,
         rendered: terminal.backend().to_string(),
     };
     assert_snapshot!(result.to_string());
@@ -879,6 +909,7 @@ fn test_artifact_list_with_shared_artifacts() {
 
     let result = ViewTestResult {
         state: ArtifactListState::from_model(&model),
+        model: None,
         rendered: terminal.backend().to_string(),
     };
     assert_snapshot!(result.to_string());
@@ -931,6 +962,7 @@ fn test_shared_artifact_pending_status() {
 
     let result = ViewTestResult {
         state: ArtifactListState::from_model(&model),
+        model: None,
         rendered: terminal.backend().to_string(),
     };
     assert_snapshot!(result.to_string());
@@ -960,6 +992,7 @@ fn test_shared_artifact_needs_generation_status() {
 
     let result = ViewTestResult {
         state: ArtifactListState::from_model(&model),
+        model: None,
         rendered: terminal.backend().to_string(),
     };
     assert_snapshot!(result.to_string());
@@ -989,6 +1022,7 @@ fn test_shared_artifact_up_to_date_status() {
 
     let result = ViewTestResult {
         state: ArtifactListState::from_model(&model),
+        model: None,
         rendered: terminal.backend().to_string(),
     };
     assert_snapshot!(result.to_string());
@@ -1033,6 +1067,7 @@ fn test_shared_artifact_failed_runtime_error() {
 
     let result = ViewTestResult {
         state: ArtifactListState::from_model(&model),
+        model: None,
         rendered: terminal.backend().to_string(),
     };
     assert_snapshot!(result.to_string());
@@ -1072,6 +1107,7 @@ fn test_shared_artifact_failed_config_error() {
 
     let result = ViewTestResult {
         state: ArtifactListState::from_model(&model),
+        model: None,
         rendered: terminal.backend().to_string(),
     };
     assert_snapshot!(result.to_string());
@@ -1115,6 +1151,7 @@ fn test_generator_selection_single_generator() {
 
     let result = ViewTestResult {
         state: GeneratorSelectionSnapshot::from_state(&state),
+        model: None,
         rendered: terminal.backend().to_string(),
     };
     assert_snapshot!(result.to_string());
@@ -1163,6 +1200,7 @@ fn test_generator_selection_multiple_generators() {
 
     let result = ViewTestResult {
         state: GeneratorSelectionSnapshot::from_state(&state),
+        model: None,
         rendered: terminal.backend().to_string(),
     };
     assert_snapshot!(result.to_string());
@@ -1205,6 +1243,7 @@ fn test_generator_selection_second_selected() {
 
     let result = ViewTestResult {
         state: GeneratorSelectionSnapshot::from_state(&state),
+        model: None,
         rendered: terminal.backend().to_string(),
     };
     assert_snapshot!(result.to_string());
@@ -1253,6 +1292,7 @@ fn test_generator_selection_mixed_source_types() {
 
     let result = ViewTestResult {
         state: GeneratorSelectionSnapshot::from_state(&state),
+        model: None,
         rendered: terminal.backend().to_string(),
     };
     assert_snapshot!(result.to_string());
@@ -1296,6 +1336,7 @@ fn test_generator_selection_singular_vs_plural() {
 
     let result = ViewTestResult {
         state: GeneratorSelectionSnapshot::from_state(&state),
+        model: None,
         rendered: terminal.backend().to_string(),
     };
     assert_snapshot!(result.to_string());
@@ -1354,6 +1395,7 @@ fn test_generator_selection_many_sources() {
 
     let result = ViewTestResult {
         state: GeneratorSelectionSnapshot::from_state(&state),
+        model: None,
         rendered: terminal.backend().to_string(),
     };
     assert_snapshot!(result.to_string());
@@ -1428,7 +1470,225 @@ fn test_generator_selection_multiple_with_mixed_sources() {
 
     let result = ViewTestResult {
         state: GeneratorSelectionSnapshot::from_state(&state),
+        model: None,
         rendered: terminal.backend().to_string(),
     };
     assert_snapshot!(result.to_string());
+}
+
+// ============================================================================
+// Model Tests - demonstrating Elm Architecture pattern
+// ============================================================================
+
+mod model_tests {
+    use super::*;
+    use artifacts::app::message::{KeyEvent, Msg};
+    use artifacts::app::model::{LogStep, Screen};
+    use artifacts::app::update::update;
+
+    /// State capture after running an event sequence
+    #[derive(Debug)]
+    struct StateCapture {
+        step_index: usize,
+        message: String,
+        model_state: ModelState,
+        rendered: String,
+    }
+
+    /// Run an event sequence and capture Model state and rendered view at each step
+    fn run_event_sequence(mut model: Model, events: Vec<Msg>) -> Vec<StateCapture> {
+        let backend = TestBackend::new(80, 24);
+        let mut terminal = Terminal::new(backend).unwrap();
+        let mut captures = Vec::new();
+
+        for (step_index, msg) in events.iter().enumerate() {
+            // Capture state BEFORE processing (shows what state produced the view)
+            let model_state = ModelState::from_model(&model);
+
+            // Apply the message via pure update function
+            let (new_model, _effect) = update(model, msg.clone());
+            model = new_model;
+
+            // Render the view based on new state
+            terminal
+                .draw(|f| match &model.screen {
+                    Screen::ArtifactList => render_artifact_list(f, &model, f.area()),
+                    Screen::Prompt(state) => render_prompt(f, state, f.area()),
+                    _ => {}
+                })
+                .unwrap();
+
+            let rendered = terminal.backend().to_string();
+
+            // Create message description for documentation
+            let message = format!("{:?}", msg);
+
+            captures.push(StateCapture {
+                step_index,
+                message,
+                model_state,
+                rendered,
+            });
+        }
+
+        captures
+    }
+
+    /// Test helper for creating Model with specific entry statuses
+    fn make_model_with_statuses(statuses: Vec<ArtifactStatus>) -> Model {
+        let entries: Vec<ListEntry> = statuses
+            .into_iter()
+            .enumerate()
+            .map(|(i, status)| {
+                ListEntry::Single(ArtifactEntry {
+                    target: format!("machine-{}", i + 1),
+                    target_type: TargetType::Nixos,
+                    artifact: make_test_artifact(&format!("artifact-{}", i + 1), vec![]),
+                    status,
+                    step_logs: StepLogs::default(),
+                    exists: false,
+                })
+            })
+            .collect();
+
+        Model {
+            screen: Screen::ArtifactList,
+            artifacts: vec![], // legacy field
+            entries,
+            selected_index: 0,
+            selected_log_step: LogStep::default(),
+            error: None,
+            warnings: Vec::new(),
+            tick_count: 0,
+        }
+    }
+
+    #[test]
+    fn test_navigate_down_updates_selection() {
+        let model = make_test_model();
+        let events = vec![Msg::Key(KeyEvent::char('j'))];
+
+        let captures = run_event_sequence(model, events);
+
+        insta::assert_debug_snapshot!(captures);
+    }
+
+    #[test]
+    fn test_navigate_up_updates_selection() {
+        let mut model = make_test_model();
+        model.selected_index = 2; // Start at last item
+
+        let events = vec![Msg::Key(KeyEvent::char('k'))];
+
+        let captures = run_event_sequence(model, events);
+
+        insta::assert_debug_snapshot!(captures);
+    }
+
+    #[test]
+    fn test_navigation_sequence_j_k_j() {
+        let model = make_test_model();
+        let events = vec![
+            Msg::Key(KeyEvent::char('j')),
+            Msg::Key(KeyEvent::char('j')),
+            Msg::Key(KeyEvent::char('k')),
+        ];
+
+        let captures = run_event_sequence(model, events);
+
+        insta::assert_debug_snapshot!(captures);
+    }
+
+    #[test]
+    fn test_tab_cycles_log_step() {
+        let model = make_test_model();
+        let events = vec![
+            Msg::Key(KeyEvent::tab()),
+            Msg::Key(KeyEvent::tab()),
+            Msg::Key(KeyEvent::tab()),
+        ];
+
+        let captures = run_event_sequence(model, events);
+
+        insta::assert_debug_snapshot!(captures);
+    }
+
+    #[test]
+    fn test_enter_opens_prompt_screen() {
+        let mut model = make_test_model();
+        // Set first artifact to NeedsGeneration so it can be generated
+        if let ListEntry::Single(ref mut entry) = model.entries[0] {
+            entry.status = ArtifactStatus::NeedsGeneration;
+        }
+
+        let events = vec![Msg::Key(KeyEvent::enter())];
+
+        let captures = run_event_sequence(model, events);
+
+        insta::assert_debug_snapshot!(captures);
+    }
+
+    #[test]
+    fn test_esc_returns_to_list() {
+        let mut model = make_test_model();
+        // Set first artifact to NeedsGeneration
+        if let ListEntry::Single(ref mut entry) = model.entries[0] {
+            entry.status = ArtifactStatus::NeedsGeneration;
+        }
+
+        let events = vec![Msg::Key(KeyEvent::enter()), Msg::Key(KeyEvent::esc())];
+
+        let captures = run_event_sequence(model, events);
+
+        insta::assert_debug_snapshot!(captures);
+    }
+
+    #[test]
+    fn test_status_pending_to_needs_generation() {
+        let model = make_model_with_statuses(vec![ArtifactStatus::Pending]);
+
+        let events = vec![Msg::CheckSerializationResult {
+            artifact_index: 0,
+            needs_generation: true,
+            exists: false,
+            result: Ok(()),
+            output: None,
+        }];
+
+        let captures = run_event_sequence(model, events);
+
+        insta::assert_debug_snapshot!(captures);
+    }
+
+    #[test]
+    fn test_status_up_to_date() {
+        let model = make_model_with_statuses(vec![ArtifactStatus::Pending]);
+
+        let events = vec![Msg::CheckSerializationResult {
+            artifact_index: 0,
+            needs_generation: false,
+            exists: true,
+            result: Ok(()),
+            output: None,
+        }];
+
+        let captures = run_event_sequence(model, events);
+
+        insta::assert_debug_snapshot!(captures);
+    }
+
+    #[test]
+    fn test_mixed_status_artifacts() {
+        let model = make_model_with_statuses(vec![
+            ArtifactStatus::UpToDate,
+            ArtifactStatus::NeedsGeneration,
+            ArtifactStatus::Pending,
+        ]);
+
+        // Capture initial state with no events
+        let events = vec![];
+        let captures = run_event_sequence(model, events);
+
+        insta::assert_debug_snapshot!(captures);
+    }
 }

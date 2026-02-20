@@ -5,6 +5,7 @@ expression: result.to_string()
 State:
 GeneratorSelectionSnapshot {
     artifact_name: "shared-api-key",
+    description: None,
     selected_index: 0,
     generators: [
         GeneratorSnapshot {
@@ -30,26 +31,34 @@ GeneratorSelectionSnapshot {
             ],
         },
     ],
+    prompts: [],
+    nixos_targets: [
+        "prod-server",
+        "dev-machine",
+    ],
+    home_targets: [
+        "alice@workstation",
+    ],
 }
 
 Rendered:
-"┌Select generator for shared artifact "shared-api-key"───────────────┐"
-"│> /nix/store/xxx-gen-prod (1 NixOS machine)                         │"
-"│      └─NixOS: prod-server                                          │"
+"┌Artifact: shared-api-key────────────────────────────────────────────┐"
+"│Shared artifact                                                     │"
+"│────────────────────────────────────────────────────────────────────│"
+"│Select generator for shared-api-key                                 │"
+"│────────────────────────────────────────────────────────────────────│"
+"│No description provided                                             │"
+"│────────────────────────────────────────────────────────────────────│"
+"│> /nix/store/xxx-gen-prod  (1 machine)                              │"
+"│  /nix/store/yyy-gen-dev  (1 machine, 1 user)                       │"
+"│────────────────────────────────────────────────────────────────────│"
+"│All targets:                                                        │"
+"│nixos: dev-machine                                                  │"
+"│nixos: prod-server                                                  │"
+"│home: alice@workstation                                             │"
+"│────────────────────────────────────────────────────────────────────│"
+"│j/k: move, Enter: select, Esc: cancel                               │"
 "│                                                                    │"
-"│  /nix/store/yyy-gen-dev (1 NixOS machine, 1 home-manager user)     │"
-"│      ├─NixOS: dev-machine                                          │"
-"│      └─home-manager: alice@workstation                             │"
 "│                                                                    │"
 "│                                                                    │"
-"│                                                                    │"
-"│                                                                    │"
-"│                                                                    │"
-"│                                                                    │"
-"│                                                                    │"
-"│                                                                    │"
-"│                                                                    │"
-"│                                                                    │"
-"│                                                                    │"
-"│                                                                    │"
-"└ 2 generators found, 3 total targets. Selected generator will be use┘"
+"└────────────────────────────────────────────────────────────────────┘"

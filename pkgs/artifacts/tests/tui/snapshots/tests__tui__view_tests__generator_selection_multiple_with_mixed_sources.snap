@@ -5,6 +5,7 @@ expression: result.to_string()
 State:
 GeneratorSelectionSnapshot {
     artifact_name: "complex-shared",
+    description: None,
     selected_index: 1,
     generators: [
         GeneratorSnapshot {
@@ -47,31 +48,42 @@ GeneratorSelectionSnapshot {
             ],
         },
     ],
+    prompts: [],
+    nixos_targets: [
+        "prod-1",
+        "prod-2",
+        "dev-1",
+    ],
+    home_targets: [
+        "alice@dev",
+        "bob@dev",
+        "charlie@home",
+    ],
 }
 
 Rendered:
-"┌Select generator for shared artifact "complex-shared"─────────────────────────┐"
-"│  /nix/store/gen-prod (2 NixOS machines)                                      │"
-"│      ├─NixOS: prod-1                                                         │"
-"│      └─NixOS: prod-2                                                         │"
-"│                                                                              │"
-"│> /nix/store/gen-dev (1 NixOS machine, 2 home-manager users)                  │"
-"│      ├─NixOS: dev-1                                                          │"
-"│      ├─home-manager: alice@dev                                               │"
-"│      └─home-manager: bob@dev                                                 │"
-"│                                                                              │"
-"│  /nix/store/gen-personal (1 home-manager user)                               │"
-"│      └─home-manager: charlie@home                                            │"
-"│                                                                              │"
-"│                                                                              │"
-"│                                                                              │"
-"│                                                                              │"
-"│                                                                              │"
-"│                                                                              │"
-"│                                                                              │"
-"│                                                                              │"
-"│                                                                              │"
-"│                                                                              │"
+"┌Artifact: complex-shared──────────────────────────────────────────────────────┐"
+"│Shared artifact                                                               │"
+"│──────────────────────────────────────────────────────────────────────────────│"
+"│Select generator for complex-shared                                           │"
+"│──────────────────────────────────────────────────────────────────────────────│"
+"│No description provided                                                       │"
+"│──────────────────────────────────────────────────────────────────────────────│"
+"│  /nix/store/gen-prod  (2 machines)                                           │"
+"│> /nix/store/gen-dev  (1 machine, 2 users)                                    │"
+"│  /nix/store/gen-personal  (1 user)                                           │"
+"│──────────────────────────────────────────────────────────────────────────────│"
+"│All targets:                                                                  │"
+"│nixos: dev-1                                                                  │"
+"│nixos: prod-1                                                                 │"
+"│nixos: prod-2                                                                 │"
+"│home: alice@dev                                                               │"
+"│home: bob@dev                                                                 │"
+"│home: charlie@home                                                            │"
+"│──────────────────────────────────────────────────────────────────────────────│"
+"│j/k: move, Enter: select, Esc: cancel                                         │"
 "│                                                                              │"
 "│                                                                              │"
-"└ 3 generators found, 6 total targets. Selected generator will be used for all ┘"
+"│                                                                              │"
+"│                                                                              │"
+"└──────────────────────────────────────────────────────────────────────────────┘"

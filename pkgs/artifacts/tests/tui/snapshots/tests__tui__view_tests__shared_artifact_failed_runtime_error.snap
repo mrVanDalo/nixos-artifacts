@@ -11,7 +11,7 @@ ArtifactListState {
 }
 
 Rendered:
-"┌Artifacts (1) - j/k: move, Tab: l┐┌Logs: shared-secret──────────────┐"
+"┌Artifacts (1) - j/k: move, Enter:┐┌Logs: shared-secret──────────────┐"
 "│> ✗ [S] shared-secret (2 targets)││✗ FAILED                         │"
 "│                                 ││Error: Generator script exited   │"
 "│                                 ││with code 1                      │"

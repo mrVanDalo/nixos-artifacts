@@ -1,6 +1,5 @@
 ---
 source: tests/tui/view_tests.rs
-assertion_line: 550
 expression: result.to_string()
 ---
 State:
@@ -11,7 +10,7 @@ GeneratingSnapshot {
 }
 
 Rendered:
-"Generating: ssh-key                                         "
+"Generating artifact: ssh-key                                "
 "                                                            "
 "────────────────────────────────────────────────────────────"
 "⟳ Running generator                                         "

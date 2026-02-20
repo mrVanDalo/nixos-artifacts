@@ -5,6 +5,7 @@ expression: result.to_string()
 State:
 GeneratorSelectionSnapshot {
     artifact_name: "widely-used",
+    description: None,
     selected_index: 0,
     generators: [
         GeneratorSnapshot {
@@ -33,26 +34,35 @@ GeneratorSelectionSnapshot {
             ],
         },
     ],
+    prompts: [],
+    nixos_targets: [
+        "server-1",
+        "server-2",
+        "server-3",
+        "server-4",
+        "server-5",
+    ],
+    home_targets: [],
 }
 
 Rendered:
-"┌Select generator for shared artifact "widely-used"────────────────────────────┐"
-"│> /nix/store/shared-gen (5 NixOS machines)                                    │"
-"│      ├─NixOS: server-1                                                       │"
-"│      ├─NixOS: server-2                                                       │"
-"│      ├─NixOS: server-3                                                       │"
-"│      ├─NixOS: server-4                                                       │"
-"│      └─NixOS: server-5                                                       │"
+"┌Artifact: widely-used─────────────────────────────────────────────────────────┐"
+"│Shared artifact                                                               │"
+"│──────────────────────────────────────────────────────────────────────────────│"
+"│Select generator for widely-used                                              │"
+"│──────────────────────────────────────────────────────────────────────────────│"
+"│No description provided                                                       │"
+"│──────────────────────────────────────────────────────────────────────────────│"
+"│> /nix/store/shared-gen  (5 machines)                                         │"
+"│──────────────────────────────────────────────────────────────────────────────│"
+"│All targets:                                                                  │"
+"│nixos: server-1                                                               │"
+"│nixos: server-2                                                               │"
+"│nixos: server-3                                                               │"
+"│nixos: server-4                                                               │"
+"│nixos: server-5                                                               │"
+"│──────────────────────────────────────────────────────────────────────────────│"
+"│j/k: move, Enter: select, Esc: cancel                                         │"
 "│                                                                              │"
 "│                                                                              │"
-"│                                                                              │"
-"│                                                                              │"
-"│                                                                              │"
-"│                                                                              │"
-"│                                                                              │"
-"│                                                                              │"
-"│                                                                              │"
-"│                                                                              │"
-"│                                                                              │"
-"│                                                                              │"
-"└ 1 generators found, 5 total targets. Selected generator will be used for all ┘"
+"└──────────────────────────────────────────────────────────────────────────────┘"

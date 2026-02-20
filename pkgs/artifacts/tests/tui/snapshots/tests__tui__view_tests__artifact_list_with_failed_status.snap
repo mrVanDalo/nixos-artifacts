@@ -32,8 +32,37 @@ ArtifactListState {
     error: None,
 }
 
+Model:
+ModelState {
+    screen: "ArtifactList",
+    selected_index: 0,
+    selected_log_step: "Generate",
+    artifacts: [
+        ArtifactState {
+            target: "machine-one",
+            name: "ssh-key",
+            status: "Failed { error: \"Generator script exited with code 1\", output: \"\", retry_available: true }",
+            target_type: "nixos",
+        },
+        ArtifactState {
+            target: "machine-two",
+            name: "api-token",
+            status: "UpToDate",
+            target_type: "nixos",
+        },
+        ArtifactState {
+            target: "user@host",
+            name: "gpg-key",
+            status: "NeedsGeneration",
+            target_type: "homemanager",
+        },
+    ],
+    error: None,
+    warnings_count: 0,
+}
+
 Rendered:
-"┌Artifacts (3) - j/k: move, Tab: l┐┌Logs: machine-one/ssh-key────────┐"
+"┌Artifacts (3) - j/k: move, Enter:┐┌Logs: machine-one/ssh-key────────┐"
 "│> ✗ [N] machine-one/ssh-key      ││✗ FAILED                         │"
 "│  ✓ [N] machine-two/api-token    ││Error: Generator script exited   │"
 "│  ◐ [H] user@host/gpg-key        ││with code 1                      │"

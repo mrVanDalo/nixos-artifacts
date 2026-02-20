@@ -204,12 +204,23 @@ Plans:
 
 ### Phase 17: Model-based testing with full state capture
 
-**Goal:** [To be planned]
+**Goal:** Improve testing infrastructure to better document and verify the Elm Architecture pattern by separating Model transformation tests from View rendering tests. Current view tests only render a small portion of the model, but integration tests capture the full model state changes. This phase brings that same full state capture to view tests, enabling developers to trace how inputs affect the model and how model states render to different views.
+
 **Depends on:** Phase 16
-**Plans:** 0 plans
+**Plans:** 3 plans
+
+**Success Criteria:**
+1. Shared ModelState struct exists in dedicated module (derives Debug for automatic capture)
+2. Integration tests refactored to use shared ModelState (no duplication)
+3. View tests capture full Model state alongside rendered view output
+4. New model-based tests demonstrate the Elm Architecture pattern: inputs → Model transformations → view rendering
+5. Tests serve as living documentation for state transitions
+6. All tests use consistent snapshot format with assert_debug_snapshot! for state
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 17 to break down)
+- [ ] 17-01: Create shared model_state module — Extract ModelState from integration_tests.rs into reusable tests/tui/model_state.rs module that captures full Model state via Debug trait
+- [ ] 17-02: Update view tests with Model state capture — Modify ViewTestResult to include ModelState, update all artifact list tests to capture both view state and full Model state in dual assertions
+- [ ] 17-03: Add model-based state transition tests — Create mod model_tests with tests demonstrating Elm Architecture pattern: event sequences → update() calls → Model changes → view rendering
 
 ---
 

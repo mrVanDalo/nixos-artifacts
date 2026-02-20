@@ -6,6 +6,7 @@
 //! 3. Run with real effect handler and snapshot result
 //! 4. Collect serialized artifacts for snapshot verification
 
+use crate::tui::model_state::{ArtifactState, ModelState};
 use artifacts::app::model::Screen;
 use artifacts::app::Msg;
 use artifacts::config::backend::BackendConfiguration;
@@ -28,13 +29,6 @@ use std::path::PathBuf;
 
 fn project_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-}
-
-/// Normalize status strings by replacing absolute paths with a placeholder.
-/// This ensures snapshots are stable across different environments.
-fn normalize_status(status: String) -> String {
-    let project = project_root().display().to_string();
-    status.replace(&project, "[PROJECT]")
 }
 
 fn load_example(name: &str) -> (BackendConfiguration, MakeConfiguration) {
@@ -194,59 +188,6 @@ struct TestResult {
     before: ModelState,
     after: ModelState,
     serialized_artifacts: BTreeMap<String, String>,
-}
-
-#[allow(dead_code)]
-#[derive(Debug)]
-struct ModelState {
-    screen: &'static str,
-    selected_index: usize,
-    artifacts: Vec<ArtifactState>,
-    error: Option<String>,
-}
-
-#[allow(dead_code)]
-#[derive(Debug)]
-struct ArtifactState {
-    target: String,
-    name: String,
-    status: String,
-}
-
-impl ModelState {
-    fn from_model(model: &artifacts::app::model::Model) -> Self {
-        use artifacts::app::model::ListEntry;
-
-        Self {
-            screen: match &model.screen {
-                Screen::ArtifactList => "ArtifactList",
-                Screen::SelectGenerator(_) => "SelectGenerator",
-                Screen::ConfirmRegenerate(_) => "ConfirmRegenerate",
-                Screen::Prompt(_) => "Prompt",
-                Screen::Generating(_) => "Generating",
-                Screen::Done(_) => "Done",
-                Screen::ChronologicalLog(_) => "ChronologicalLog",
-            },
-            selected_index: model.selected_index,
-            artifacts: model
-                .entries
-                .iter()
-                .map(|entry| match entry {
-                    ListEntry::Single(single) => ArtifactState {
-                        target: single.target.clone(),
-                        name: single.artifact.name.clone(),
-                        status: normalize_status(format!("{:?}", single.status)),
-                    },
-                    ListEntry::Shared(shared) => ArtifactState {
-                        target: "[shared]".to_string(),
-                        name: shared.info.artifact_name.clone(),
-                        status: normalize_status(format!("{:?}", shared.status)),
-                    },
-                })
-                .collect(),
-            error: model.error.clone(),
-        }
-    }
 }
 
 // =============================================================================

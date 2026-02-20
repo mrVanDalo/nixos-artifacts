@@ -5,6 +5,7 @@ expression: result.to_string()
 State:
 GeneratorSelectionSnapshot {
     artifact_name: "single-source-test",
+    description: None,
     selected_index: 0,
     generators: [
         GeneratorSnapshot {
@@ -26,21 +27,28 @@ GeneratorSelectionSnapshot {
             ],
         },
     ],
+    prompts: [],
+    nixos_targets: [
+        "server-1",
+    ],
+    home_targets: [
+        "alice@laptop",
+    ],
 }
 
 Rendered:
-"┌Select generator for shared artifact "single-source-test"─────────────────────┐"
-"│> /nix/store/single-nixos (1 NixOS machine)                                   │"
-"│      └─NixOS: server-1                                                       │"
-"│                                                                              │"
-"│  /nix/store/single-home (1 home-manager user)                                │"
-"│      └─home-manager: alice@laptop                                            │"
-"│                                                                              │"
-"│                                                                              │"
-"│                                                                              │"
-"│                                                                              │"
-"│                                                                              │"
-"│                                                                              │"
-"│                                                                              │"
-"│                                                                              │"
-"└ 2 generators found, 2 total targets. Selected generator will be used for all ┘"
+"┌Artifact: single-source-test──────────────────────────────────────────────────┐"
+"│Shared artifact                                                               │"
+"│──────────────────────────────────────────────────────────────────────────────│"
+"│Select generator for single-source-test                                       │"
+"│──────────────────────────────────────────────────────────────────────────────│"
+"│No description provided                                                       │"
+"│──────────────────────────────────────────────────────────────────────────────│"
+"│> /nix/store/single-nixos  (1 machine)                                        │"
+"│  /nix/store/single-home  (1 user)                                            │"
+"│──────────────────────────────────────────────────────────────────────────────│"
+"│All targets:                                                                  │"
+"│nixos: server-1                                                               │"
+"│home: alice@laptop                                                            │"
+"│──────────────────────────────────────────────────────────────────────────────│"
+"└──────────────────────────────────────────────────────────────────────────────┘"

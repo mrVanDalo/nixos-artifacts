@@ -19,7 +19,7 @@ ArtifactListState {
 }
 
 Rendered:
-"┌Artifacts (2) - j/k: move, Tab: l┐┌Logs: shared-secret──────────────┐"
+"┌Artifacts (2) - j/k: move, Enter:┐┌Logs: shared-secret──────────────┐"
 "│> ◐ [S] shared-secret (2 targets)││No logs yet. Generate this       │"
 "│  ○ [N] machine-one/local-secret ││artifact to see output.          │"
 "│                                 ││                                 │"

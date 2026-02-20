@@ -5,6 +5,7 @@ expression: result.to_string()
 State:
 GeneratorSelectionSnapshot {
     artifact_name: "shared-cert",
+    description: None,
     selected_index: 0,
     generators: [
         GeneratorSnapshot {
@@ -29,26 +30,35 @@ GeneratorSelectionSnapshot {
             ],
         },
     ],
+    prompts: [],
+    nixos_targets: [
+        "server-1",
+        "server-2",
+    ],
+    home_targets: [
+        "alice@laptop",
+        "bob@desktop",
+    ],
 }
 
 Rendered:
-"┌Select generator for shared artifact "shared-cert"────────────────────────────┐"
-"│> /nix/store/mixed-gen (2 NixOS machines, 2 home-manager users)               │"
-"│      ├─NixOS: server-1                                                       │"
-"│      ├─NixOS: server-2                                                       │"
-"│      ├─home-manager: alice@laptop                                            │"
-"│      └─home-manager: bob@desktop                                             │"
+"┌Artifact: shared-cert─────────────────────────────────────────────────────────┐"
+"│Shared artifact                                                               │"
+"│──────────────────────────────────────────────────────────────────────────────│"
+"│Select generator for shared-cert                                              │"
+"│──────────────────────────────────────────────────────────────────────────────│"
+"│No description provided                                                       │"
+"│──────────────────────────────────────────────────────────────────────────────│"
+"│> /nix/store/mixed-gen  (2 machines, 2 users)                                 │"
+"│──────────────────────────────────────────────────────────────────────────────│"
+"│All targets:                                                                  │"
+"│nixos: server-1                                                               │"
+"│nixos: server-2                                                               │"
+"│home: alice@laptop                                                            │"
+"│home: bob@desktop                                                             │"
+"│──────────────────────────────────────────────────────────────────────────────│"
+"│j/k: move, Enter: select, Esc: cancel                                         │"
 "│                                                                              │"
 "│                                                                              │"
 "│                                                                              │"
-"│                                                                              │"
-"│                                                                              │"
-"│                                                                              │"
-"│                                                                              │"
-"│                                                                              │"
-"│                                                                              │"
-"│                                                                              │"
-"│                                                                              │"
-"│                                                                              │"
-"│                                                                              │"
-"└ 1 generators found, 4 total targets. Selected generator will be used for all ┘"
+"└──────────────────────────────────────────────────────────────────────────────┘"

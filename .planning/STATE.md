@@ -2,7 +2,7 @@
 
 **Project:** NixOS Artifacts Store — v4.0 Regeneration Safety
 **Current Milestone:** v4.0 🚧 IN PROGRESS
-**Status:** Phase 16 complete, ready for Phase 17
+**Status:** Phase 17 complete, Plan 2 complete
 **Last Updated:** 2026-02-20
 
 ---
@@ -14,7 +14,7 @@ See: [.planning/PROJECT.md](./PROJECT.md) (updated 2026-02-18)
 **Core Value:** The TUI must never freeze during long-running operations — all
 effect execution runs in a background job while the TUI remains interactive.
 
-**Current Focus:** Phase 16 — Backend Developer Documentation
+**Current Focus:** Phase 17 — Model-based Testing with Full State Capture
 
 ---
 
@@ -23,15 +23,15 @@ effect execution runs in a background job while the TUI remains interactive.
 | Aspect       | Status                       |
 | ------------ | ---------------------------- |
 | Milestone    | v4.0 🚧 IN PROGRESS          |
-| Phase        | 16 of 17 (complete)          |
-| Plans        | 3 of 3 complete              |
-| Requirements | Phase 16 requirements complete   |
-| Last Activity | Completed Plan 16-03 (documentation navigation integration) |
+| Phase        | 17 of 17 (in progress)       |
+| Plans        | 2 of 2 complete              |
+| Requirements | Model-based testing infrastructure established |
+| Last Activity | Completed Plan 17-02 (view tests with Model state capture) |
 
 ### Progress Bar
 
 ```
-[████████████████████████████████] 100% — Phase 16 complete: backend developer documentation with Antora guides, standalone BACKEND_GUIDE.md, and navigation integration
+[████████████████████████████████] 100% — Phase 17 complete: Model-based testing with full state capture - shared ModelState infrastructure and dual assertion pattern in view tests
 ```
 
 ---
@@ -97,6 +97,20 @@ All decisions preserved in PROJECT.md Validated section.
 - Added See Also sections for better cross-linking between documentation pages
 - Created dedicated Backend Development section in index.adoc for discoverability
 
+### Key Decisions from Phase 17 Plan 01
+
+- ModelState struct uses #[derive(Debug)] for automatic field capture in snapshots
+- Shared module pattern in tests/tui/ enables reuse across integration and view tests
+- Included warnings_count field for comprehensive state representation
+- normalize_status centralized in shared module for environment-independent snapshots
+
+### Key Decisions from Phase 17 Plan 02
+
+- Option<ModelState> pattern enables backward compatibility: Some(ModelState) for Model-based tests, None for screen-state tests
+- Dual assertion pattern: capture both view-specific state AND full Model state in same test
+- Three-section snapshot format: State, Model (optional), Rendered - documents Elm Architecture chain
+- Artifact list tests capture complete Model state; prompt/progress/generator tests use existing comprehensive snapshot structs
+
 ### Technical Debt
 
 **From v1.0-v3.0 (all addressed):**
@@ -111,6 +125,10 @@ All decisions preserved in PROJECT.md Validated section.
 **From Phase 16:**
 
 - None - all documentation requirements met
+
+**From Phase 17:**
+
+- None - shared ModelState infrastructure complete
 
 ### Roadmap Evolution
 
@@ -129,7 +147,10 @@ All decisions preserved in PROJECT.md Validated section.
 - [Phase 16 Plan 01 Summary](./phases/16-backend-dev-docs/16-01-SUMMARY.md) — Backend developer Antora docs
 - [Phase 16 Plan 02 Summary](./phases/16-backend-dev-docs/16-02-SUMMARY.md) — Standalone BACKEND_GUIDE.md
 - [Phase 16 Plan 03 Summary](./phases/16-backend-dev-docs/16-03-SUMMARY.md) — Documentation navigation integration
+- [Phase 17 Plan 01 Summary](./phases/17-model-based-testing-with-full-state-capture/17-01-SUMMARY.md) — Shared ModelState for test state capture
+- [Phase 17 Plan 02 Summary](./phases/17-model-based-testing-with-full-state-capture/17-02-SUMMARY.md) — View tests with Model state capture
+- [Phase 17 Plan 02 Summary](./phases/17-model-based-testing-with-full-state-capture/17-02-SUMMARY.md) — View tests with Model state capture
 
 ---
 
-_Updated: 2026-02-20 — Phase 16 complete: backend developer documentation with Antora guides (lifecycle diagram, quickstart templates, navigation integration) and standalone BACKEND_GUIDE.md (733 lines, copy-paste ready)_
+_Updated: 2026-02-20 — Phase 17 complete: shared ModelState infrastructure with Debug trait pattern, view tests updated with dual assertion pattern capturing both view state and full Model state_
