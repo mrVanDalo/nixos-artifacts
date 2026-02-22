@@ -1,20 +1,20 @@
-# State: v4.1 Code Quality & Documentation Cleanup — Phase 18 🚧 IN PROGRESS
+# State: v4.1 Code Quality & Documentation Cleanup — Phase 19 🚧 IN PROGRESS
 
 **Project:** NixOS Artifacts Store — v4.1 Code Quality & Documentation Cleanup 🚧 IN PROGRESS  
 **Current Milestone:** v4.1 🚧 IN PROGRESS  
-**Status:** Plan 18-01 Complete, ready for 18-02  
-**Last Updated:** 2026-02-22  
+**Status:** Plan 19-01 Complete — All DEAD requirements satisfied  
+**Last Updated:** 2026-02-23
 
 ---
 
 ## Project Reference
 
-See: [.planning/PROJECT.md](./PROJECT.md) (updated 2026-02-22)  
-See: [.planning/ROADMAP.md](./ROADMAP.md) (updated 2026-02-22)  
+See: [.planning/PROJECT.md](./PROJECT.md) (updated 2026-02-23)  
+See: [.planning/ROADMAP.md](./ROADMAP.md) (updated 2026-02-23)  
 
 **Core Value:** The TUI must never freeze during long-running operations — all effect execution runs in a background job while the TUI remains interactive.
 
-**Current Focus:** Phase 18 — Fix Compiler & Clippy Warnings
+**Current Focus:** Phase 19 — Dead Code Elimination ✅ COMPLETE
 
 ---
 
@@ -23,22 +23,59 @@ See: [.planning/ROADMAP.md](./ROADMAP.md) (updated 2026-02-22)
 | Aspect       | Status                       |
 | ------------ | ---------------------------- |
 | Milestone    | v4.1 🚧 IN PROGRESS          |
-| Phase        | **18** — Fix Compiler & Clippy Warnings ✅ COMPLETE |
- | Plan         | **05** ✅ Complete (5 of 5)      |
- | Requirements | LINT-01 ✅, LINT-02 ✅, LINT-03 ✅, LINT-04 ✅, LINT-05 ✅ Complete |
- | Last Activity | Completed 18-05: Pedantic/nursery lints reviewed and configured |
+| Phase        | **19** — Dead Code Elimination ✅ COMPLETE |
+| Plan         | **01** ✅ Complete (1 of 1) |
+| Requirements | DEAD-01 ✅, DEAD-02 ✅, DEAD-03 ✅, DEAD-04 ✅, DEAD-05 ✅ Complete |
+| Last Activity | Completed 19-01: Dead code elimination verified, all attributes justified |
 
 ### Progress Bar
 
 ```
-[████████████████████████████████████] 100% — Phase 18 Complete — All 5 Plans Done
+[████████████████████████████████████] 100% — Phase 19 Complete — Plan 1 Done
 ```
 
-**Milestone Progress:** 1/5 phases complete (20%)
+**Milestone Progress:** 2/5 phases complete (40%)
 
 ---
 
 ## Accumulated Context
+
+### Phase 19: Dead Code Elimination
+
+**Goal:** Identify and remove all dead code from the Rust codebase
+
+**Requirements:**
+- DEAD-01 ✅: No unused functions in main codebase
+- DEAD-02 ✅: No unused variables in main codebase
+- DEAD-03 ✅: No unused imports in main codebase
+- DEAD-04 ✅: No unreachable code paths in main codebase
+- DEAD-05 ✅: All #[allow(dead_code)] attributes have justification comments
+
+**Completed in 19-01:**
+- Verified `cargo build` produces zero warnings (no dead code detected)
+- Verified `cargo clippy` produces zero warnings
+- Verified `cargo test --no-run` produces zero warnings
+- Verified `cargo clippy --tests` produces zero warnings
+- Added justification comments to all 4 #[allow(dead_code)] attributes:
+  - `send_output_line` - kept for Phase 20 (Output Streaming)
+  - `render_warning_banner` - kept for backward compatibility
+  - `verify_output_succeeded` - kept for Phase 22 (Serialization Refactor)
+  - `_MACROS_RS` - required for macro file compilation
+
+**Key Finding:** The codebase was already in excellent condition with zero dead code warnings from Phase 18. This phase focused on ensuring all intentionally kept code has clear justifications.
+
+**Dependencies:** Phase 18 (Fix Compiler & Clippy Warnings) - established zero warnings baseline
+
+**Expected Commands:**
+```bash
+# Main code - should produce zero warnings
+cargo build  # ✅ Zero warnings
+cargo clippy  # ✅ Zero warnings
+
+# Tests - should produce zero warnings
+cargo test --no-run  # ✅ Zero warnings
+cargo clippy --tests  # ✅ Zero warnings
+```
 
 ### Phase 18: Fix Compiler & Clippy Warnings
 
@@ -108,6 +145,10 @@ All decisions preserved in PROJECT.md Validated section.
 
 ## Decisions Made
 
+- All `#[allow(dead_code)]` attributes must have doc comments explaining why they're kept
+- Future-use code should reference the phase that will implement the feature
+- Code kept for backward compatibility should document the newer alternative
+- The codebase achieved zero dead code warnings from Phase 18's excellent cleanup
 - Feature-gate all logging-related code with `#[cfg(feature = "logging")]`
 - Prefix unused variables with underscore, remove completely unused ones
 - Mark intentionally unused functions with `#[allow(dead_code)]`
@@ -133,6 +174,7 @@ All decisions preserved in PROJECT.md Validated section.
 
 | Phase | Plan | Duration | Tasks |
 |-------|------|----------|-------|
+| 19-dead-code-elimination | 01 | 5 min | 3 |
 | 18-fix-compiler-clippy-warnings | 01 | 24 min | 3 |
 | 18-fix-compiler-clippy-warnings | 02 | 12 min | 1 |
 | 18-fix-compiler-clippy-warnings | 03 | 5 min | 1 |
@@ -143,9 +185,9 @@ All decisions preserved in PROJECT.md Validated section.
 
 ## Session Continuity
 
-**Last action:** Completed Plan 18-05: Pedantic/nursery lints reviewed and configured
+**Last action:** Completed Plan 19-01: Dead code elimination verified, all attributes justified
 
-**Next action:** Phase 19: Documentation cleanup (or next phase in v4.1 milestone)
+**Next action:** Phase 20: Output Streaming (or next phase in v4.1 milestone)
 
 **Open questions:**
 - None
@@ -159,6 +201,7 @@ All decisions preserved in PROJECT.md Validated section.
 - [MILESTONES.md](./MILESTONES.md) — Milestone history
 - [ROADMAP.md](./ROADMAP.md) — Current roadmap (v4.1)
 - [REQUIREMENTS.md](./REQUIREMENTS.md) — Requirements for v4.1
+- [19-01-SUMMARY.md](./phases/19-dead-code-elimination/19-01-SUMMARY.md) — Plan 19-01
 - [18-01-SUMMARY.md](./phases/18-fix-compiler-clippy-warnings/18-01-SUMMARY.md) — Plan 18-01
 - [18-02-SUMMARY.md](./phases/18-fix-compiler-clippy-warnings/18-02-SUMMARY.md) — Plan 18-02
 - [18-03-SUMMARY.md](./phases/18-fix-compiler-clippy-warnings/18-03-SUMMARY.md) — Plan 18-03
@@ -167,4 +210,4 @@ All decisions preserved in PROJECT.md Validated section.
 
 ---
 
-_Updated: 2026-02-22 — Phase 18 complete, all 5 plans finished, all LINT requirements satisfied_
+_Updated: 2026-02-23 — Phase 19 complete, all DEAD requirements satisfied_

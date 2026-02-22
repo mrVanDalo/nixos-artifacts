@@ -342,7 +342,9 @@ fn make_failed_result(stderr: String) -> CheckResult {
     }
 }
 
-/// Verify output succeeded, bail on failure
+/// Verify output succeeded, bail on failure.
+/// Helper function for ergonomic Result propagation in scripts.
+/// Kept for future use - Phase 22 will refactor serialization to use this pattern.
 #[allow(dead_code)]
 fn verify_output_succeeded(output: &CapturedOutput, script_name: &str) -> Result<()> {
     if !output.exit_success {

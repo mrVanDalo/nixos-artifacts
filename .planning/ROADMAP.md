@@ -44,7 +44,12 @@ The phases follow a logical order: first fix active code issues (linting), then 
 
 **Phase Number:** 19  
 **Requirements:** DEAD-01, DEAD-02, DEAD-03, DEAD-04, DEAD-05  
-**Dependencies:** Phase 18 (fix warnings first to see actual dead code clearly)  
+**Dependencies:** Phase 18 (fix warnings first to see actual dead code clearly)
+**Status:** 🚧 IN PROGRESS (2026-02-22)
+
+**Plans:** 1 plan
+
+- [ ] 19-01 — Identify and remove all dead code from the Rust codebase
 
 ### Success Criteria
 

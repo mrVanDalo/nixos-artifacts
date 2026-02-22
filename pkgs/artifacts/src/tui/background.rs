@@ -69,6 +69,9 @@ impl BackgroundEffectHandler {
         self.result_tx = Some(sender);
     }
 
+    /// Send an output line to the TUI via the result channel.
+    /// Kept for future use - currently output is batched at end of script execution
+    /// but we may switch to streaming output in a future phase (see Phase 20: Output Streaming)
     #[allow(dead_code)]
     fn send_output_line(&self, artifact_index: usize, stream: OutputStream, content: String) -> bool {
         if let Some(ref tx) = self.result_tx {
