@@ -47,6 +47,7 @@ impl<S: fmt::Debug> fmt::Display for ViewTestResult<S> {
 
 impl<S: fmt::Debug> ViewTestResult<S> {
     /// Add ModelState capture to this test result.
+    #[allow(dead_code)]
     fn with_model(mut self, model: &Model) -> Self {
         self.model = Some(ModelState::from_model(model));
         self
@@ -1487,6 +1488,7 @@ mod model_tests {
     use artifacts::app::update::update;
 
     /// State capture after running an event sequence
+    #[allow(dead_code)]
     #[derive(Debug)]
     struct StateCapture {
         step_index: usize,

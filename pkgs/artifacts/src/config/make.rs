@@ -1,8 +1,7 @@
-use crate::log_trace;
 use anyhow::Context;
 use serde::de::{self, Deserializer};
 use serde::{Deserialize, Serialize};
-use serde_json::{from_str as json_from_str, to_string_pretty, Value};
+use serde_json::{from_str as json_from_str, Value};
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -179,11 +178,14 @@ impl MakeConfiguration {
         let make_text = fs::read_to_string(make_json)
             .with_context(|| format!("reading make config {}", make_json.display()))?;
 
-        let pretty = match json_from_str::<Value>(&make_text) {
-            Ok(v) => to_string_pretty(&v).unwrap_or_else(|_| make_text.clone()),
-            Err(_) => make_text.clone(),
-        };
-        log_trace!("make config (pretty):\n{}", pretty);
+        #[cfg(feature = "logging")]
+        {
+            let pretty = match json_from_str::<Value>(&make_text) {
+                Ok(v) => to_string_pretty(&v).unwrap_or_else(|_| make_text.clone()),
+                Err(_) => make_text.clone(),
+            };
+            log_trace!("make config (pretty):\n{}", pretty);
+        }
 
         let root: MakeRoot = json_from_str(&make_text)
             .with_context(|| format!("parsing make config {}", make_json.display()))?;

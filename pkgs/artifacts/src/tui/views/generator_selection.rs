@@ -2,7 +2,7 @@ use crate::app::model::SelectGeneratorState;
 use crate::config::make::TargetType;
 use ratatui::{
     layout::Rect,
-    style::{Color, Modifier, Style, Stylize},
+    style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, ListState},
     Frame,
@@ -109,8 +109,7 @@ pub fn render_generator_selection(frame: &mut Frame, state: &SelectGeneratorStat
     // Section 3: Description
     let description_text = state
         .description
-        .as_ref()
-        .map(|d| d.as_str())
+        .as_deref()
         .unwrap_or("No description provided");
     items.push(ListItem::new(Line::from(description_text)));
 
@@ -268,53 +267,6 @@ fn format_count_summary(nixos_count: usize, home_count: usize) -> String {
 /// Calculate the visual list index from the logical generator index.
 /// This accounts for all the new sections: type indicator, separators, title, description, prompts, etc.
 fn calculate_visual_index(state: &SelectGeneratorState, _width: usize) -> usize {
-    let mut visual_idx = 0;
-
-    // Type indicator line
-    visual_idx += 1;
-    // Separator
-    visual_idx += 1;
-    // Title line
-    visual_idx += 1;
-    // Separator
-    visual_idx += 1;
-    // Description line
-    visual_idx += 1;
-    // Separator
-    visual_idx += 1;
-
-    // Prompt lines (if any) + separator
-    if !state.prompts.is_empty() {
-        visual_idx += state.prompts.len();
-        visual_idx += 1; // Separator after prompts
-    }
-
-    // Generator lines up to and including the selected one
-    for i in 0..=state.selected_index {
-        visual_idx += 1; // Each generator takes one line
-        if i < state.selected_index {
-            // We don't add extra lines between generators in the new layout
-        }
-    }
-
-    // Separator before targets
-    visual_idx += 1;
-
-    // "All targets:" header
-    visual_idx += 1;
-
-    // Target lines
-    let target_lines = format_all_targets(&state.nixos_targets, &state.home_targets, 10);
-    visual_idx += target_lines.len();
-
-    // Separator before help
-    visual_idx += 1;
-
-    // Since we want the selection to be on the generator line, we need to
-    // find where the selected generator line starts
-    // Actually, let's recalculate more carefully:
-
-    // Reset and count to the selected generator
     let mut idx = 0;
 
     // Fixed sections: type indicator (1) + sep (1) + title (1) + sep (1) + desc (1) + sep (1) = 6

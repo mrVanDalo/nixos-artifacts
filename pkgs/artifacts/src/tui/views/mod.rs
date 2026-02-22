@@ -137,6 +137,7 @@ fn render_error_popup(frame: &mut Frame, error: &str) {
     frame.render_widget(error_text, popup_area);
 }
 
+#[allow(dead_code)]
 fn render_warning_banner(frame: &mut Frame, warnings: &[Warning]) {
     // Legacy function - uses full frame area
     // Kept for backward compatibility, but main render() now uses render_warning_banner_to_area

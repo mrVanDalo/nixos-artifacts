@@ -1,6 +1,5 @@
+#[cfg(feature = "logging")]
 use crate::backend::helpers::pretty_print_shell_escape;
-use crate::log_debug;
-use crate::log_trace;
 
 pub fn build_make_from_flake(flake_path: &std::path::Path) -> anyhow::Result<std::path::PathBuf> {
     // Ensure nix is available
@@ -21,18 +20,21 @@ pub fn build_make_from_flake(flake_path: &std::path::Path) -> anyhow::Result<std
 
     // Attach all arguments at once
 
-    // Pretty-print: shell-escaped command line
-    let prog = nix_bin.to_string_lossy().to_string();
-    let pretty = std::iter::once(pretty_print_shell_escape(&prog))
-        .chain(
-            arguments
-                .iter()
-                .map(|argument| pretty_print_shell_escape(argument)),
-        )
-        .collect::<Vec<_>>()
-        .join(" ");
-    log_debug!("Running nix build on {}", flake_path.display());
-    log_trace!("{}", pretty);
+    #[cfg(feature = "logging")]
+    {
+        // Pretty-print: shell-escaped command line
+        let prog = nix_bin.to_string_lossy().to_string();
+        let _pretty = std::iter::once(pretty_print_shell_escape(&prog))
+            .chain(
+                arguments
+                    .iter()
+                    .map(|argument| pretty_print_shell_escape(argument)),
+            )
+            .collect::<Vec<_>>()
+            .join(" ");
+        log_debug!("Running nix build on {}", flake_path.display());
+        log_trace!("{}", _pretty);
+    }
 
     command.args(&arguments);
     let output = command

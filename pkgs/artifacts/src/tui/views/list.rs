@@ -139,6 +139,7 @@ fn render_log_panel(frame: &mut Frame, model: &Model, area: Rect) {
     let mut lines: Vec<Line> = Vec::new();
 
     // Show error details if the artifact has failed status
+    #[allow(clippy::collapsible_if)]
     if let Some(entry) = selected_entry {
         if let ArtifactStatus::Failed { error, output, retry_available } = entry.status() {
             // Error header - distinguish between config errors and runtime failures

@@ -32,7 +32,7 @@
 
 use anyhow::{Context, Result};
 use artifacts::cli::headless::{
-    DiagnosticInfo, PromptValues, generate_single_artifact_with_diagnostics,
+    generate_single_artifact_with_diagnostics, DiagnosticInfo, PromptValues,
 };
 use artifacts::config::backend::BackendConfiguration;
 use artifacts::config::make::{ArtifactDef, MakeConfiguration};
@@ -178,6 +178,7 @@ pub fn capture_test_environment() -> HashMap<String, String> {
 ///     Ok(())
 /// })?;
 /// ```
+#[allow(dead_code)]
 pub fn run_with_diagnostics<F, T>(test_name: &str, test_fn: F) -> Result<T>
 where
     F: FnOnce() -> Result<T>,

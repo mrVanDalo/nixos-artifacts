@@ -17,12 +17,12 @@ pub mod edge_cases;
 pub mod shared_artifact;
 
 // Re-export diagnostic utilities for use in tests
-pub use diagnostics::{capture_test_environment, dump_test_diagnostics};
+pub use diagnostics::dump_test_diagnostics;
 
 use anyhow::{Context, Result};
 use artifacts::cli::headless::{
-    HeadlessArtifactResult, PromptValues, generate_single_artifact,
-    generate_single_artifact_with_diagnostics,
+    generate_single_artifact, generate_single_artifact_with_diagnostics, HeadlessArtifactResult,
+    PromptValues,
 };
 use artifacts::config::backend::BackendConfiguration;
 use artifacts::config::make::{ArtifactDef, MakeConfiguration};
@@ -73,7 +73,7 @@ fn find_first_artifact(
 }
 
 /// Create a temporary directory for test artifacts.
-fn create_test_storage_dir(test_name: &str) -> Result<TempDir> {
+fn create_test_storage_dir(_test_name: &str) -> Result<TempDir> {
     let temp_dir = TempDir::new()?;
     let storage_dir = temp_dir.path().join("storage");
     fs::create_dir_all(&storage_dir)?;
@@ -81,6 +81,7 @@ fn create_test_storage_dir(test_name: &str) -> Result<TempDir> {
 }
 
 /// Check if a file exists and contains expected content.
+#[allow(dead_code)]
 fn verify_file_content(path: &Path, expected_content: &str) -> Result<()> {
     if !path.exists() {
         return Err(anyhow::anyhow!(
@@ -115,6 +116,8 @@ fn verify_file_content(path: &Path, expected_content: &str) -> Result<()> {
 ///
 /// # Returns
 /// The full path where the artifact should exist
+/// Get the expected path for an artifact in backend storage.
+#[allow(dead_code)]
 fn get_artifact_path(storage_dir: &Path, artifact_name: &str) -> PathBuf {
     // Test backend uses flat storage - artifact name as filename
     storage_dir.join(artifact_name)
@@ -135,6 +138,7 @@ fn get_artifact_path(storage_dir: &Path, artifact_name: &str) -> PathBuf {
 /// let storage = Path::new("/path/to/storage");
 /// verify_artifact_exists(&storage, "my-secret")?;
 /// ```
+#[allow(dead_code)]
 fn verify_artifact_exists(storage_dir: &Path, artifact_name: &str) -> Result<()> {
     let artifact_path = get_artifact_path(storage_dir, artifact_name);
 
@@ -151,7 +155,11 @@ fn verify_artifact_exists(storage_dir: &Path, artifact_name: &str) -> Result<()>
                         .filter_map(|e| e.ok())
                         .map(|e| e.file_name())
                         .collect();
-                    if names.is_empty() { None } else { Some(names) }
+                    if names.is_empty() {
+                        None
+                    } else {
+                        Some(names)
+                    }
                 })
                 .unwrap_or_else(|| vec!["(empty or inaccessible)".into()])
         ));
@@ -179,6 +187,7 @@ fn verify_artifact_exists(storage_dir: &Path, artifact_name: &str) -> Result<()>
 /// let storage = Path::new("/path/to/storage");
 /// verify_artifact_content(&storage, "my-secret", "expected-value")?;
 /// ```
+#[allow(dead_code)]
 fn verify_artifact_content(storage_dir: &Path, artifact_name: &str, expected: &str) -> Result<()> {
     // First verify the artifact exists
     verify_artifact_exists(storage_dir, artifact_name)?;
@@ -224,6 +233,7 @@ fn verify_artifact_content(storage_dir: &Path, artifact_name: &str, expected: &s
 /// let storage = Path::new("/path/to/storage");
 /// cleanup_test_artifacts(&storage, &["artifact-1", "artifact-2"])?;
 /// ```
+#[allow(dead_code)]
 fn cleanup_test_artifacts(storage_dir: &Path, artifact_names: &[&str]) -> Result<()> {
     for artifact_name in artifact_names {
         let artifact_path = get_artifact_path(storage_dir, artifact_name);
@@ -379,7 +389,8 @@ fn e2e_multiple_machines_artifacts_created() -> Result<()> {
 
     // Generate artifacts for each machine
     for machine_name in &machines {
-        if let Some((artifact_name, artifact_def)) = find_first_artifact(&make_config, machine_name)
+        if let Some((_artifact_name, artifact_def)) =
+            find_first_artifact(&make_config, machine_name)
         {
             // This scenario has no prompts
             let prompt_values: PromptValues = BTreeMap::new();
@@ -435,7 +446,7 @@ fn e2e_no_prompts_artifact_creation() -> Result<()> {
         .ok_or_else(|| anyhow::anyhow!("No machines found"))?;
 
     // Get first artifact (this scenario has no prompts)
-    let (artifact_name, artifact_def) = find_first_artifact(&make_config, &machine_name)
+    let (_artifact_name, artifact_def) = find_first_artifact(&make_config, &machine_name)
         .ok_or_else(|| anyhow::anyhow!("No artifacts found"))?;
 
     // Generate with empty prompts
@@ -468,7 +479,7 @@ fn e2e_no_prompts_artifact_creation() -> Result<()> {
 fn e2e_missing_prompts_fails() -> Result<()> {
     let (backend, make_config) = load_example("scenarios/single-artifact-with-prompts")?;
 
-    let (artifact_name, artifact_def) = find_first_artifact(&make_config, "machine-name")
+    let (_artifact_name, artifact_def) = find_first_artifact(&make_config, "machine-name")
         .ok_or_else(|| anyhow::anyhow!("No artifacts found"))?;
 
     // Try to generate without required prompts
@@ -486,7 +497,7 @@ fn e2e_missing_prompts_fails() -> Result<()> {
     // We expect this to either fail during generation or produce empty results
     // The exact behavior depends on the generator script implementation
     match result {
-        Ok(artifact_result) => {
+        Ok(_artifact_result) => {
             // If it succeeded, the files might be empty
             // This is acceptable behavior - the generator reads from non-existent files
             eprintln!("Note: Generator succeeded with empty prompts (expected behavior)");

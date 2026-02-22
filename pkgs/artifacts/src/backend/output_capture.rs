@@ -50,14 +50,15 @@ pub struct CapturedOutput {
     pub exit_success: bool,
 }
 
-impl CapturedOutput {
-    /// Convert the captured output to a single string with all lines joined.
-    pub fn to_string(&self) -> String {
-        self.lines
+impl std::fmt::Display for CapturedOutput {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let content = self
+            .lines
             .iter()
-            .map(|line| &line.content as &str)
+            .map(|line| line.content.as_str())
             .collect::<Vec<&str>>()
-            .join("\n")
+            .join("\n");
+        write!(f, "{}", content)
     }
 }
 

@@ -364,7 +364,7 @@ mod tests {
     #[test]
     fn test_all_effect_command_variants_have_artifact_index() {
         // Test that we can create and match on all variants with artifact_index
-        let commands = vec![
+        let commands = [
             EffectCommand::CheckSerialization {
                 artifact_index: 0,
                 artifact_name: "test".to_string(),
@@ -421,7 +421,7 @@ mod tests {
     #[test]
     fn test_all_effect_result_variants_have_artifact_index() {
         // Test that we can create and match on all result variants with artifact_index
-        let results = vec![
+        let results = [
             EffectResult::CheckSerialization {
                 artifact_index: 0,
                 needs_generation: true,

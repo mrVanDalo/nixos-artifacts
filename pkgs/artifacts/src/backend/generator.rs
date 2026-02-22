@@ -2,6 +2,7 @@ use crate::backend::helpers::{escape_single_quoted, fnv1a64, resolve_path};
 use crate::backend::output_capture::{run_with_captured_output, CapturedOutput};
 use crate::config::make::ArtifactDef;
 use crate::log_debug;
+#[cfg(feature = "logging")]
 use crate::log_trace;
 use crate::string_vec;
 use anyhow::{bail, Context, Result};
@@ -119,7 +120,8 @@ pub fn run_generator_script(
     arguments.extend(string_vec!["--", "/bin/sh"]);
     arguments.push(generator_script_absolut_path.display().to_string());
     let bwrap_command = arguments.join(" ");
-    // Pretty-print the bwrap command for readability in logs
+    // Pretty-print the bwrap command for readability in logs (only when logging feature is enabled)
+    #[cfg(feature = "logging")]
     let bwrap_pretty = {
         let mut result = String::new();
         for (index, argument) in arguments.iter().enumerate() {
@@ -142,6 +144,7 @@ pub fn run_generator_script(
         "run bwrap with command {}",
         generator_script_absolut_path.display()
     );
+    #[cfg(feature = "logging")]
     log_trace!("{}", bwrap_pretty);
 
     // Ensure that our 'out' and 'prompts' override any nix-shell provided 'out'

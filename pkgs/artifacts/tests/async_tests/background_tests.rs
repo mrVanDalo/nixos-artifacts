@@ -63,7 +63,7 @@ async fn test_background_processes_check_command() {
         EffectResult::CheckSerialization {
             artifact_index,
             needs_generation,
-            exists,
+            exists: _,
             output,
         } => {
             assert_eq!(artifact_index, 42, "artifact_index should match command");

@@ -120,20 +120,15 @@ impl Default for GeneratingSubstate {
 }
 
 /// The steps in the artifact generation process.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum GenerationStep {
     /// Checking if generation is needed via check_serialization script
+    #[default]
     CheckSerialization,
     /// Running the generator script to produce files
     RunningGenerator,
     /// Running the serialize script to store files in backend
     Serializing,
-}
-
-impl Default for GenerationStep {
-    fn default() -> Self {
-        GenerationStep::CheckSerialization
-    }
 }
 
 /// A single log entry for an artifact

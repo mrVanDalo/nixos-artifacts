@@ -20,7 +20,6 @@
 use std::collections::HashMap;
 use std::time::Duration;
 
-use tokio::io::AsyncBufReadExt;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel};
 use tokio::time::timeout;
 use tokio_util::sync::CancellationToken;
@@ -70,8 +69,7 @@ impl BackgroundEffectHandler {
         self.result_tx = Some(sender);
     }
 
-    /// Send a streaming output line to the foreground.
-    /// Returns true if the line was sent successfully.
+    #[allow(dead_code)]
     fn send_output_line(&self, artifact_index: usize, stream: OutputStream, content: String) -> bool {
         if let Some(ref tx) = self.result_tx {
             tx.send(EffectResult::OutputLine {
@@ -89,7 +87,7 @@ impl BackgroundEffectHandler {
     /// This is the core effect execution logic that runs in the background.
     /// Uses spawn_blocking for all blocking I/O operations.
     pub async fn execute(&mut self, cmd: EffectCommand) -> EffectResult {
-        log_component("BACKGROUND", &format!("Starting execution of command"));
+        log_component("BACKGROUND", "Starting execution of command");
         match cmd {
             EffectCommand::CheckSerialization {
                 artifact_index,
@@ -101,7 +99,7 @@ impl BackgroundEffectHandler {
                 let backend = self.backend.clone();
                 let make = self.make.clone();
                 let artifact_name_for_error = artifact_name.clone();
-                let target_for_error = target.clone();
+                let _target_for_error = target.clone();
 
                 // Clone values for timeout error handling
                 let artifact_name_for_timeout = artifact_name.clone();
@@ -470,7 +468,7 @@ impl BackgroundEffectHandler {
                             &output_path,
                             &target,
                             &make,
-                            &context,
+                            context,
                         )
                     }),
                 )
@@ -673,7 +671,7 @@ impl BackgroundEffectHandler {
             EffectCommand::RunSharedGenerator {
                 artifact_index,
                 artifact_name,
-                machine_targets,
+                machine_targets: _machine_targets,
                 user_targets: _,
                 prompts,
             } => {

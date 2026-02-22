@@ -758,7 +758,7 @@ fn update_chronological_log(mut model: Model, key: KeyEvent) -> (Model, Effect) 
             (model, Effect::None)
         }
 
-        KeyCode::Char('+') | KeyCode::Char('=') => {
+        KeyCode::Char('+' | '=') => {
             // '+' key expands all sections
             state.expand_all();
             (model, Effect::None)
@@ -1644,11 +1644,8 @@ mod tests {
     /// Test that SharedCheckSerializationResult updates shared artifact status correctly
     #[test]
     fn test_shared_check_serialization_result_updates_status() {
-        use crate::app::model::SharedEntry;
-        use crate::config::make::SharedArtifactInfo;
-
         // Create a model with a shared artifact
-        let mut model = make_test_model_with_shared();
+        let model = make_test_model_with_shared();
 
         // Initial status should be Pending
         assert_eq!(model.entries[0].status(), &ArtifactStatus::Pending);
@@ -1682,9 +1679,6 @@ mod tests {
     /// Test that SharedCheckSerializationResult handles up-to-date status
     #[test]
     fn test_shared_check_serialization_result_up_to_date() {
-        use crate::app::model::SharedEntry;
-        use crate::config::make::SharedArtifactInfo;
-
         let model = make_test_model_with_shared();
 
         // Simulate successful shared check result indicating up-to-date
@@ -1711,9 +1705,6 @@ mod tests {
     /// Test that SharedCheckSerializationResult handles error status
     #[test]
     fn test_shared_check_serialization_result_error() {
-        use crate::app::model::SharedEntry;
-        use crate::config::make::SharedArtifactInfo;
-
         let model = make_test_model_with_shared();
 
         // Simulate failed shared check

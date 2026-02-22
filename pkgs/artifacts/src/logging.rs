@@ -31,13 +31,17 @@
 //! - All macro calls are compiled away (zero runtime cost)
 //! - No file I/O, no allocations, no overhead
 
-use std::fs::File;
-use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::sync::{Mutex, OnceLock};
+use std::sync::OnceLock;
 
 #[cfg(feature = "logging")]
+use std::fs::File;
+#[cfg(feature = "logging")]
 use std::fs::OpenOptions;
+#[cfg(feature = "logging")]
+use std::io::Write;
+#[cfg(feature = "logging")]
+use std::sync::Mutex;
 
 /// Log levels ordered by severity (lowest to highest for filtering)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -77,6 +81,7 @@ impl LogLevel {
 #[derive(Debug)]
 pub struct Logger {
     /// The file handle, protected by a mutex for thread-safe writes
+    #[cfg(feature = "logging")]
     file: Mutex<File>,
     /// Minimum level to log (filters out lower severity messages)
     min_level: LogLevel,
@@ -150,6 +155,7 @@ impl Logger {
     /// 1. Path is not a directory
     /// 2. Parent directory exists or can be created
     /// 3. Parent directory is writable (tested with a temporary file)
+    #[cfg(feature = "logging")]
     fn validate_path(path: &Path) -> anyhow::Result<()> {
         // Check if path is a directory
         if path.is_dir() {
@@ -233,6 +239,7 @@ impl Logger {
     }
 
     /// Format timestamp as HH:MM:SS.mmm
+    #[cfg(feature = "logging")]
     fn format_timestamp() -> String {
         use std::time::SystemTime;
         let now = SystemTime::now()
@@ -306,10 +313,10 @@ pub fn global() -> Option<&'static Logger> {
 /// When the `logging` feature is enabled, writes the message to the log file
 /// at INFO level with the "LEGACY" component prefix.
 /// When disabled, does nothing.
-pub fn log(msg: &str) {
+pub fn log(_msg: &str) {
     #[cfg(feature = "logging")]
     if let Some(logger) = global() {
-        logger.log(LogLevel::Info, "legacy", 0, msg.to_string());
+        logger.log(LogLevel::Info, "legacy", 0, _msg.to_string());
     }
 }
 
@@ -321,10 +328,10 @@ pub fn log(msg: &str) {
 /// When the `logging` feature is enabled, writes the message to the log file
 /// at INFO level with the specified component prefix.
 /// When disabled, does nothing.
-pub fn log_component(component: &str, msg: &str) {
+pub fn log_component(_component: &str, _msg: &str) {
     #[cfg(feature = "logging")]
     if let Some(logger) = global() {
-        logger.log(LogLevel::Info, component, 0, msg.to_string());
+        logger.log(LogLevel::Info, _component, 0, _msg.to_string());
     }
 }
 
@@ -475,10 +482,14 @@ macro_rules! debug {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(feature = "logging")]
     use std::io::Read;
+    #[cfg(feature = "logging")]
     use tempfile::TempDir;
 
     // Import clap::Parser for Cli::parse_from
+    #[cfg(feature = "logging")]
     use clap::Parser;
 
     #[test]
@@ -682,6 +693,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "logging")]
     fn test_format_timestamp() {
         let timestamp = Logger::format_timestamp();
         // Format should be HH:MM:SS.mmm

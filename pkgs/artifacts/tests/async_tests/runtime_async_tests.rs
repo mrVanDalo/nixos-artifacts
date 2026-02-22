@@ -158,11 +158,13 @@ impl EventSource for MockEventSource {
 }
 
 /// Tracks commands sent to the background task
+#[allow(dead_code)]
 #[derive(Debug, Default)]
 struct CommandTracker {
     commands: Vec<EffectCommand>,
 }
 
+#[allow(dead_code)]
 impl CommandTracker {
     fn new() -> Self {
         Self::default()
@@ -264,9 +266,9 @@ async fn test_run_async_drains_results_before_blocking() {
 #[serial_test::serial]
 async fn test_run_async_sends_effects_to_background() {
     // Verify effects are converted to EffectCommands and sent via channels
-    let model = make_test_model();
+    let _model = make_test_model();
     let backend = TestBackend::new(80, 24);
-    let mut terminal = Terminal::new(backend).unwrap();
+    let _terminal = Terminal::new(backend).unwrap();
 
     let _event_source = MockEventSource::with_quit();
     let backend_config = create_test_backend_config();
@@ -674,7 +676,7 @@ async fn test_graceful_shutdown_with_in_flight_commands() {
 
     // Should have received at least some results
     assert!(
-        received.len() >= 1 || received.len() == 5,
+        !received.is_empty() || received.len() == 5,
         "Should receive results before shutdown (got {})",
         received.len()
     );

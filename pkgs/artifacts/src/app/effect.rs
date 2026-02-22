@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 /// Side effects that the runtime must execute.
-/// These are returned by update(), not executed inside it.
+/// These are returned by `update()`, not executed inside it.
 #[derive(Debug, Clone, Default)]
 pub enum Effect {
     /// No side effect
@@ -10,7 +10,7 @@ pub enum Effect {
     None,
 
     /// Multiple effects to execute
-    Batch(Vec<Effect>),
+    Batch(Vec<Self>),
 
     /// Quit the application
     Quit,
@@ -81,26 +81,26 @@ pub enum Effect {
 impl Effect {
     /// Create a batch effect from an iterator of effects.
     /// Returns None if empty, the single effect if one, or Batch if multiple.
-    pub fn batch(effects: impl IntoIterator<Item = Effect>) -> Self {
+    pub fn batch(effects: impl IntoIterator<Item = Self>) -> Self {
         let v: Vec<_> = effects
             .into_iter()
-            .filter(|e| !matches!(e, Effect::None))
+            .filter(|e| !matches!(e, Self::None))
             .collect();
         match v.len() {
-            0 => Effect::None,
+            0 => Self::None,
             1 => v.into_iter().next().unwrap(),
-            _ => Effect::Batch(v),
+            _ => Self::Batch(v),
         }
     }
 
     /// Check if this is the None variant
     pub fn is_none(&self) -> bool {
-        matches!(self, Effect::None)
+        matches!(self, Self::None)
     }
 
     /// Check if this is the Quit variant
     pub fn is_quit(&self) -> bool {
-        matches!(self, Effect::Quit)
+        matches!(self, Self::Quit)
     }
 }
 

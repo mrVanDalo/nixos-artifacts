@@ -22,7 +22,7 @@
 
 use super::*;
 use anyhow::Result;
-use artifacts::cli::headless::{PromptValues, generate_single_artifact};
+use artifacts::cli::headless::{generate_single_artifact, PromptValues};
 use serial_test::serial;
 use std::collections::BTreeMap;
 
@@ -38,7 +38,7 @@ use std::collections::BTreeMap;
 #[serial]
 fn e2e_missing_artifact_config() -> Result<()> {
     // Load a valid configuration first
-    let (backend, make_config) = load_example("scenarios/single-artifact-with-prompts")?;
+    let (_backend, make_config) = load_example("scenarios/single-artifact-with-prompts")?;
 
     // Attempt to find a non-existent artifact
     let result = find_first_artifact(&make_config, "non-existent-machine");
@@ -101,7 +101,7 @@ fn e2e_generator_failure() -> Result<()> {
     let (backend, make_config) = load_example("scenarios/error-missing-files")?;
 
     // The machine name in error-missing-files is "missing-files", not "machine-name"
-    let (artifact_name, artifact_def) = find_first_artifact(&make_config, "missing-files")
+    let (_artifact_name, artifact_def) = find_first_artifact(&make_config, "missing-files")
         .ok_or_else(|| anyhow::anyhow!("No artifacts found for missing-files"))?;
 
     // Attempt generation - this should fail because files are missing
@@ -154,7 +154,7 @@ fn e2e_serialization_failure() -> Result<()> {
     // We test with a valid scenario first to ensure the baseline works
     let (backend, make_config) = load_example("scenarios/single-artifact-with-prompts")?;
 
-    let (artifact_name, artifact_def) = find_first_artifact(&make_config, "machine-name")
+    let (_artifact_name, artifact_def) = find_first_artifact(&make_config, "machine-name")
         .ok_or_else(|| anyhow::anyhow!("No artifacts found"))?;
 
     let prompt_values: PromptValues = BTreeMap::from([
@@ -195,7 +195,7 @@ fn e2e_serialization_failure() -> Result<()> {
 #[serial]
 fn e2e_empty_artifact_name() -> Result<()> {
     // Test that we can load configurations and check artifact names
-    let (backend, make_config) = load_example("scenarios/single-artifact-with-prompts")?;
+    let (_backend, make_config) = load_example("scenarios/single-artifact-with-prompts")?;
 
     // Get the first artifact and verify it has a valid name
     let (artifact_name, _) = find_first_artifact(&make_config, "machine-name")
@@ -215,7 +215,7 @@ fn e2e_empty_artifact_name() -> Result<()> {
 
     // Artifact name should have reasonable length
     assert!(
-        artifact_name.len() > 0 && artifact_name.len() < 256,
+        !artifact_name.is_empty() && artifact_name.len() < 256,
         "Artifact name should have reasonable length"
     );
 
@@ -230,12 +230,12 @@ fn e2e_empty_artifact_name() -> Result<()> {
 #[serial]
 fn e2e_special_characters_in_artifact_name() -> Result<()> {
     // Load configuration and verify artifact names are valid
-    let (backend, make_config) = load_example("scenarios/single-artifact-with-prompts")?;
+    let (_backend, make_config) = load_example("scenarios/single-artifact-with-prompts")?;
 
     // Collect all artifact names
     let mut artifact_names = Vec::new();
-    for (machine, artifacts) in &make_config.nixos_map {
-        for (name, _) in artifacts {
+    for artifacts in make_config.nixos_map.values() {
+        for name in artifacts.keys() {
             artifact_names.push(name.clone());
         }
     }
@@ -288,7 +288,7 @@ fn e2e_error_message_contains_context() -> Result<()> {
     let (backend, make_config) = load_example("scenarios/error-missing-files")?;
 
     // The machine name in error-missing-files is "missing-files", not "machine-name"
-    let (artifact_name, artifact_def) = find_first_artifact(&make_config, "missing-files")
+    let (_artifact_name, artifact_def) = find_first_artifact(&make_config, "missing-files")
         .ok_or_else(|| anyhow::anyhow!("No artifacts found for missing-files"))?;
 
     let prompt_values: PromptValues = BTreeMap::new();
@@ -445,7 +445,7 @@ fn e2e_multiple_failures_reported() -> Result<()> {
 
     // Count total artifacts across all machines
     let mut total_artifacts = 0;
-    for (_, artifacts) in &make_config.nixos_map {
+    for artifacts in make_config.nixos_map.values() {
         total_artifacts += artifacts.len();
     }
 
@@ -537,7 +537,7 @@ fn e2e_backend_config_validation() -> Result<()> {
 fn e2e_artifact_definition_validation() -> Result<()> {
     let (_, make_config) = load_example("scenarios/single-artifact-with-prompts")?;
 
-    for (machine, artifacts) in &make_config.nixos_map {
+    for artifacts in make_config.nixos_map.values() {
         for (name, def) in artifacts {
             // Artifact should have valid name
             assert!(!name.is_empty(), "Artifact name should not be empty");
@@ -655,7 +655,7 @@ fn e2e_prompt_value_validation() -> Result<()> {
 fn e2e_file_path_validation() -> Result<()> {
     let (_, make_config) = load_example("scenarios/single-artifact-with-prompts")?;
 
-    for (machine, artifacts) in &make_config.nixos_map {
+    for artifacts in make_config.nixos_map.values() {
         for (artifact_name, def) in artifacts {
             for (file_name, file_def) in &def.files {
                 let path_opt = &file_def.path;

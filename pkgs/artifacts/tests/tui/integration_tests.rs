@@ -6,8 +6,7 @@
 //! 3. Run with real effect handler and snapshot result
 //! 4. Collect serialized artifacts for snapshot verification
 
-use crate::tui::model_state::{ArtifactState, ModelState};
-use artifacts::app::model::Screen;
+use crate::tui::model_state::ModelState;
 use artifacts::app::Msg;
 use artifacts::config::backend::BackendConfiguration;
 use artifacts::config::make::MakeConfiguration;

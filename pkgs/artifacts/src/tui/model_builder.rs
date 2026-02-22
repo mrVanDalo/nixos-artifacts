@@ -697,7 +697,7 @@ mod tests {
     fn test_shared_artifact_single_target_has_pending_status() {
         let mut config = make_test_config_with_shared();
         // Remove machine-two, leaving only one target
-        config.nixos_map.remove(&"machine-two".to_string());
+        config.nixos_map.remove("machine-two");
 
         let model = build_model(&config);
 

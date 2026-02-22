@@ -3,7 +3,7 @@ use ratatui::{
     layout::{Constraint, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Paragraph, Scrollbar, ScrollbarOrientation},
+    widgets::{Block, Borders, Paragraph},
     Frame,
 };
 
@@ -88,7 +88,7 @@ fn render_scrollable_content(
     area: Rect,
 ) {
     // Calculate layout for three sections
-    let sections = vec![LogStep::Check, LogStep::Generate, LogStep::Serialize];
+    let sections = [LogStep::Check, LogStep::Generate, LogStep::Serialize];
 
     // Each collapsed section gets fixed height, expanded sections share remaining space
     let constraints: Vec<Constraint> = sections

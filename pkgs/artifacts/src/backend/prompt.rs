@@ -175,9 +175,7 @@ fn interactive_read_prompt(prompt_name: &str, description: &str) -> Result<Strin
                     }
 
                     // Esc or Ctrl-C: interrupt and stop the program
-                    (KeyCode::Char('c'), KeyModifiers::CONTROL)
-                    | (KeyCode::Char('C'), KeyModifiers::CONTROL)
-                    | (KeyCode::Esc, _) => {
+                    (KeyCode::Char('c' | 'C'), KeyModifiers::CONTROL) | (KeyCode::Esc, _) => {
                         // restore terminal and propagate an interruption error
                         stdout.queue(Print("\r\n"))?;
                         stdout.flush()?;

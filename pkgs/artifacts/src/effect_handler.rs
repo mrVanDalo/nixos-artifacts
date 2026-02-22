@@ -21,14 +21,11 @@
 //! This ensures the temp directory survives from generator completion to
 //! serialization while being properly cleaned up afterwards.
 
-use std::collections::HashMap;
-
 use tokio::sync::mpsc::UnboundedSender;
 
 use crate::app::effect::Effect;
 use crate::app::message::Msg;
-use crate::app::model::OutputStream;
-use crate::tui::channels::{EffectCommand, EffectResult, ScriptOutput};
+use crate::tui::channels::{EffectCommand, EffectResult};
 
 /// Handler that routes effects to the background task.
 ///
@@ -395,6 +392,7 @@ impl EffectHandler {
 mod tests {
     use super::*;
     use crate::app::model::TargetType;
+    use crate::tui::channels::ScriptOutput;
 
     #[tokio::test]
     async fn test_effect_handler_sends_command() {
@@ -447,6 +445,7 @@ mod tests {
 
     #[test]
     fn test_effect_to_command_handles_all_single_variants() {
+        use std::collections::HashMap;
         let (tx, _) = tokio::sync::mpsc::unbounded_channel::<EffectCommand>();
         let handler = EffectHandler::new(tx);
 

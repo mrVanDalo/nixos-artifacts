@@ -176,51 +176,46 @@ where
 
         // DRAIN PHASE: Process all pending results FIRST
         // This prevents TUI freeze by never blocking when results are available
-        loop {
-            match res_rx.try_recv() {
-                Ok(result) => {
-                    log_component("RUNTIME", &format!("Received result: {:?}", result));
-                    let msg = result_to_message(result);
-                    log_component("RUNTIME", "Converted result to message");
-                    let (new_model, effect) = update(model, msg);
-                    log_component(
-                        "RUNTIME",
-                        &format!(
-                            "Model updated, entries: {}, selected: {}",
-                            new_model.entries.len(),
-                            new_model.selected_index
-                        ),
-                    );
-                    model = new_model;
+        while let Ok(result) = res_rx.try_recv() {
+            log_component("RUNTIME", &format!("Received result: {:?}", result));
+            let msg = result_to_message(result);
+            log_component("RUNTIME", "Converted result to message");
+            let (new_model, effect) = update(model, msg);
+            log_component(
+                "RUNTIME",
+                &format!(
+                    "Model updated, entries: {}, selected: {}",
+                    new_model.entries.len(),
+                    new_model.selected_index
+                ),
+            );
+            model = new_model;
 
-                    // CRITICAL: Execute any effects returned from processing results
-                    // For example, GeneratorFinished returns Serialize effect
-                    let cmds = effect_to_command(effect);
-                    if !cmds.is_empty() {
-                        log_component(
-                            "RUNTIME",
-                            &format!("Executing {} commands from result", cmds.len()),
-                        );
-                        for cmd in cmds {
-                            log_component("RUNTIME", &format!("Sending command: {:?}", cmd));
-                            if cmd_tx.send(cmd).is_err() {
-                                log_component("RUNTIME", "Background task closed, exiting");
-                                model.error =
-                                    Some("Connection to background task lost".to_string());
-                                return Ok(RunResult {
-                                    final_model: model,
-                                    frames_rendered,
-                                });
-                            }
-                        }
+            // CRITICAL: Execute any effects returned from processing results
+            // For example, GeneratorFinished returns Serialize effect
+            let cmds = effect_to_command(effect);
+            if !cmds.is_empty() {
+                log_component(
+                    "RUNTIME",
+                    &format!("Executing {} commands from result", cmds.len()),
+                );
+                for cmd in cmds {
+                    log_component("RUNTIME", &format!("Sending command: {:?}", cmd));
+                    if cmd_tx.send(cmd).is_err() {
+                        log_component("RUNTIME", "Background task closed, exiting");
+                        model.error =
+                            Some("Connection to background task lost".to_string());
+                        return Ok(RunResult {
+                            final_model: model,
+                            frames_rendered,
+                        });
                     }
-
-                    // Re-render after processing result
-                    terminal.draw(|f| render(f, &model))?;
-                    frames_rendered += 1;
                 }
-                Err(_) => break, // Channel empty or closed, break
             }
+
+            // Re-render after processing result
+            terminal.draw(|f| render(f, &model))?;
+            frames_rendered += 1;
         }
 
         // WAIT PHASE: Get next event
@@ -304,46 +299,41 @@ where
 
                 // After sending commands, immediately check for results
                 // This ensures we process Serialize result after Generator without waiting for next event
-                loop {
-                    match res_rx.try_recv() {
-                        Ok(result) => {
+                while let Ok(result) = res_rx.try_recv() {
+                    log_component(
+                        "RUNTIME",
+                        &format!("Received result after command: {:?}", result),
+                    );
+                    let msg = result_to_message(result);
+                    let (new_model, effect) = update(model, msg);
+                    model = new_model;
+
+                    // Execute any follow-up effects
+                    let cmds = effect_to_command(effect);
+                    if !cmds.is_empty() {
+                        log_component(
+                            "RUNTIME",
+                            &format!("Executing {} follow-up commands", cmds.len()),
+                        );
+                        for cmd in cmds {
                             log_component(
                                 "RUNTIME",
-                                &format!("Received result after command: {:?}", result),
+                                &format!("Sending command: {:?}", cmd),
                             );
-                            let msg = result_to_message(result);
-                            let (new_model, effect) = update(model, msg);
-                            model = new_model;
-
-                            // Execute any follow-up effects
-                            let cmds = effect_to_command(effect);
-                            if !cmds.is_empty() {
-                                log_component(
-                                    "RUNTIME",
-                                    &format!("Executing {} follow-up commands", cmds.len()),
-                                );
-                                for cmd in cmds {
-                                    log_component(
-                                        "RUNTIME",
-                                        &format!("Sending command: {:?}", cmd),
-                                    );
-                                    if cmd_tx.send(cmd).is_err() {
-                                        log_component("RUNTIME", "Background task closed, exiting");
-                                        model.error =
-                                            Some("Connection to background task lost".to_string());
-                                        return Ok(RunResult {
-                                            final_model: model,
-                                            frames_rendered,
-                                        });
-                                    }
-                                }
+                            if cmd_tx.send(cmd).is_err() {
+                                log_component("RUNTIME", "Background task closed, exiting");
+                                model.error =
+                                    Some("Connection to background task lost".to_string());
+                                return Ok(RunResult {
+                                    final_model: model,
+                                    frames_rendered,
+                                });
                             }
-
-                            terminal.draw(|f| render(f, &model))?;
-                            frames_rendered += 1;
                         }
-                        Err(_) => break,
                     }
+
+                    terminal.draw(|f| render(f, &model))?;
+                    frames_rendered += 1;
                 }
             } else {
                 // Event source exhausted

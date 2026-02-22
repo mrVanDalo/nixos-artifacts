@@ -4,7 +4,7 @@
 //! the complete application state in tests. It enables documentation of the
 //! Elm Architecture pattern: inputs → Model transformations → View rendering.
 
-use artifacts::app::model::{ArtifactStatus, ListEntry, Model, Screen, TargetType};
+use artifacts::app::model::{ListEntry, Model, Screen, TargetType};
 
 /// Snapshot representation of Model for test state capture.
 ///

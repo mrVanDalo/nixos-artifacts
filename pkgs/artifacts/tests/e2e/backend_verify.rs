@@ -17,7 +17,7 @@
 //! - Scenarios in examples/scenarios/ directory
 
 use anyhow::{Context, Result};
-use artifacts::cli::headless::{PromptValues, generate_single_artifact};
+use artifacts::cli::headless::{generate_single_artifact, PromptValues};
 use serial_test::serial;
 use std::collections::BTreeMap;
 use std::fs;
@@ -31,6 +31,7 @@ use super::{create_test_storage_dir, find_first_artifact, load_example};
 ///
 /// The test backend uses ARTIFACTS_TEST_OUTPUT_DIR environment variable
 /// to determine where to store serialized artifacts.
+#[allow(dead_code)]
 fn get_test_backend_output_dir() -> PathBuf {
     std::env::var("ARTIFACTS_TEST_OUTPUT_DIR")
         .map(PathBuf::from)

@@ -28,6 +28,7 @@ use serial_test::serial;
 // ============================================================================
 
 /// Create a minimal backend config for testing
+#[allow(dead_code)]
 fn create_test_backend_config() -> BackendConfiguration {
     BackendConfiguration {
         config: HashMap::new(),
@@ -37,6 +38,7 @@ fn create_test_backend_config() -> BackendConfiguration {
 }
 
 /// Create a minimal make config for testing
+#[allow(dead_code)]
 fn create_test_make_config() -> MakeConfiguration {
     MakeConfiguration {
         nixos_map: BTreeMap::new(),
@@ -212,9 +214,8 @@ fn effect_to_command(effect: &Effect) -> Option<EffectCommand> {
                 .chain(home_targets.iter())
                 .cloned()
                 .collect(),
-            target_types: std::iter::repeat("nixos".to_string())
-                .take(nixos_targets.len())
-                .chain(std::iter::repeat("home".to_string()).take(home_targets.len()))
+            target_types: std::iter::repeat_n("nixos".to_string(), nixos_targets.len())
+                .chain(std::iter::repeat_n("home".to_string(), home_targets.len()))
                 .collect(),
         }),
         Effect::RunSharedGenerator {
@@ -259,7 +260,7 @@ fn process_effects_and_track(
         _model: &mut Model,
         effect: Effect,
         tracker: &mut CommandTracker,
-        results: &mut Vec<EffectResult>,
+        _results: &mut Vec<EffectResult>,
     ) {
         if let Some(cmd) = effect_to_command(&effect) {
             tracker.track(cmd);
@@ -268,7 +269,7 @@ fn process_effects_and_track(
         // Handle batch effects recursively
         if let Effect::Batch(effects) = effect {
             for e in effects {
-                process_single_effect(_model, e, tracker, results);
+                process_single_effect(_model, e, tracker, _results);
             }
         }
     }
@@ -883,7 +884,7 @@ fn test_retry_available_after_failed_check() {
 #[test]
 #[serial]
 fn test_multiple_command_types_tracked() {
-    let mut model = create_test_model("test-artifact", false);
+    let model = create_test_model("test-artifact", false);
     let mut tracker = CommandTracker::new();
 
     // Send all three main command types
@@ -1007,7 +1008,7 @@ fn test_dual_assertion_strategy_demonstration() {
     // 1. Commands sent match expected variants
     // 2. Final Model state reflects expected outcome
 
-    let mut model = create_test_model("demo-artifact", false);
+    let model = create_test_model("demo-artifact", false);
     let mut tracker = CommandTracker::new();
 
     // === ASPECT 1: Command Tracking ===

@@ -1,12 +1,12 @@
 use artifacts::app::message::{KeyEvent, Msg};
 use artifacts::app::model::{
     ArtifactEntry, ArtifactStatus, ConfirmRegenerateState, GeneratingState, GenerationStep,
-    InputMode, ListEntry, Model, PromptState, Screen, SharedEntry, StepLogs, TargetType,
+    ListEntry, Model, Screen, SharedEntry, StepLogs, TargetType,
 };
 use artifacts::app::update::update;
 use artifacts::config::make::{ArtifactDef, FileDef, PromptDef, SharedArtifactInfo};
 use artifacts::tui::views::render_confirm_regenerate;
-use crossterm::event::{KeyCode, KeyModifiers};
+use crossterm::event::KeyCode;
 use insta::assert_snapshot;
 use ratatui::backend::TestBackend;
 use ratatui::Terminal;
@@ -444,7 +444,7 @@ fn test_dialog_regenerate_proceeds_to_generation() {
 #[test]
 fn test_dialog_regenerate_proceeds_to_prompts() {
     // Given: ConfirmRegenerate with Regenerate selected and prompts needed
-    let mut model = make_test_model_with_existing_artifact();
+    let _model = make_test_model_with_existing_artifact();
     // Replace with artifact that has prompts
     let entry = ArtifactEntry {
         target: "machine-one".to_string(),
@@ -629,7 +629,7 @@ fn buffer_to_string(buffer: &ratatui::buffer::Buffer) -> String {
     let mut result = String::new();
     for y in 0..buffer.area.height {
         for x in 0..buffer.area.width {
-            let cell = buffer.get(x, y);
+            let cell = buffer.cell((x, y)).unwrap();
             result.push(cell.symbol().chars().next().unwrap_or(' '));
         }
         result.push('\n');

@@ -14,6 +14,7 @@ pub enum MockEffectCommand {
 }
 
 /// Mock EffectResult for testing channel communication
+#[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq)]
 pub enum MockEffectResult {
     CheckFinished {
@@ -141,10 +142,11 @@ async fn test_multiple_commands_sequential() {
 
     // Receive and verify FIFO order
     for i in 0..3 {
-        let received = timeout(Duration::from_millis(100), rx_cmd.recv())
-            .await
-            .expect("Should not timeout")
-            .expect(&format!("Should receive message {}", i));
+        let received = match timeout(Duration::from_millis(100), rx_cmd.recv()).await {
+            Ok(Some(cmd)) => cmd,
+            Ok(None) => panic!("Should receive message {}", i),
+            Err(e) => panic!("Should receive message {}: {:?}", i, e),
+        };
 
         assert_eq!(
             received,

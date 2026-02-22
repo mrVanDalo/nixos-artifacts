@@ -13,7 +13,7 @@ use artifacts::config::backend::BackendConfiguration;
 use artifacts::config::make::MakeConfiguration;
 use artifacts::tui::background::spawn_background_task;
 use artifacts::tui::channels::{EffectCommand, EffectResult};
-use tokio::time::{Duration as TokioDuration, timeout};
+use tokio::time::timeout;
 use tokio_util::sync::CancellationToken;
 
 /// Create minimal backend config for testing

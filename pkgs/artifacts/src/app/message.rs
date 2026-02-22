@@ -85,8 +85,8 @@ pub enum Msg {
     /// Request to quit the application
     Quit,
 
-    /// Effect result from background task (contains EffectResult from channels)
-    /// Note: This wraps the EffectResult from the channels module
+    /// Effect result from background task (contains `EffectResult` from channels)
+    /// Note: This wraps the `EffectResult` from the channels module
     ChannelResult(crate::tui::channels::EffectResult),
 }
 
@@ -105,7 +105,7 @@ pub struct SerializeOutput {
     pub stderr_lines: Vec<String>,
 }
 
-/// Output captured from check_serialization script execution
+/// Output captured from `check_serialization` script execution
 #[derive(Debug, Clone)]
 pub struct CheckOutput {
     pub stdout_lines: Vec<String>,

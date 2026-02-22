@@ -309,7 +309,7 @@ mod tests {
     #[test]
     fn test_deref() {
         let temp_file = TempFile::new_file("test").unwrap();
-        let _path_ref: &Path = &*temp_file;
+        let _path_ref: &Path = &temp_file;
     }
 
     #[test]

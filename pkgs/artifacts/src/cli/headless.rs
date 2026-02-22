@@ -148,7 +148,7 @@ impl DiagnosticInfo {
         if self.temp_prompt_contents.is_empty() {
             output.push_str("(no prompt files - prompt values redacted)\n");
         } else {
-            for (name, _content) in &self.temp_prompt_contents {
+            for name in self.temp_prompt_contents.keys() {
                 output.push_str(&format!("{}: [REDACTED]\n", name));
             }
         }
@@ -609,6 +609,7 @@ pub fn generate_all_artifacts_headless(
 }
 
 #[cfg(test)]
+#[allow(unused_imports)]
 mod tests {
     use super::*;
 

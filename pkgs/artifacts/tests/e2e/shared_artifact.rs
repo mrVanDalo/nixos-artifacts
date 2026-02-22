@@ -23,7 +23,7 @@
 //! - Shared artifact scenarios in examples/scenarios/shared-artifacts
 
 use anyhow::{Context, Result};
-use artifacts::cli::headless::{PromptValues, generate_single_artifact};
+use artifacts::cli::headless::{generate_single_artifact, PromptValues};
 use artifacts::config::make::ArtifactDef;
 use serial_test::serial;
 use std::collections::BTreeMap;
@@ -90,10 +90,10 @@ fn find_shared_artifact(
 ) -> Option<(String, ArtifactDef)> {
     // Look in the first machine that has this artifact
     for (machine_name, artifacts) in &make_config.nixos_map {
-        if let Some(def) = artifacts.get(artifact_name) {
-            if def.shared {
-                return Some((machine_name.clone(), def.clone()));
-            }
+        if let Some(def) = artifacts.get(artifact_name)
+            && def.shared
+        {
+            return Some((machine_name.clone(), def.clone()));
         }
     }
     None
@@ -227,18 +227,14 @@ fn e2e_shared_artifact_generation() -> Result<()> {
     );
 
     // Verify the artifact was created in backend storage
-    let artifact_file = verify_artifact_exists(
-        &storage_path,
-        &machine_one,
-        "shared-secret",
-        "shared-key",
-    )
-    .with_context(|| {
-        format!(
+    let artifact_file =
+        verify_artifact_exists(&storage_path, &machine_one, "shared-secret", "shared-key")
+            .with_context(|| {
+                format!(
             "Shared artifact 'shared-secret' should exist in backend storage for machine '{}'",
             machine_one
         )
-    })?;
+            })?;
 
     // Verify the content
     let content = fs::read_to_string(&artifact_file)?;
@@ -277,13 +273,13 @@ fn e2e_shared_artifact_multi_machine() -> Result<()> {
 
     let machine_one = machines
         .iter()
-        .find(|m| m == &&"machine-one")
+        .find(|m| *m == "machine-one")
         .cloned()
         .ok_or_else(|| anyhow::anyhow!("machine-one not found"))?;
 
     let machine_two = machines
         .iter()
-        .find(|m| m == &&"machine-two")
+        .find(|m| *m == "machine-two")
         .cloned()
         .ok_or_else(|| anyhow::anyhow!("machine-two not found"))?;
 
@@ -372,7 +368,7 @@ fn e2e_shared_artifact_single_instance() -> Result<()> {
     let machine_one = make_config
         .nixos_map
         .keys()
-        .find(|k| k == &&"machine-one")
+        .find(|k| *k == "machine-one")
         .cloned()
         .ok_or_else(|| anyhow::anyhow!("machine-one not found"))?;
 
@@ -431,7 +427,7 @@ fn e2e_shared_vs_machine_artifacts() -> Result<()> {
     let machine_one = make_config
         .nixos_map
         .keys()
-        .find(|k| k == &&"machine-one")
+        .find(|k| *k == "machine-one")
         .cloned()
         .ok_or_else(|| anyhow::anyhow!("machine-one not found"))?;
 
@@ -439,7 +435,7 @@ fn e2e_shared_vs_machine_artifacts() -> Result<()> {
     let machine_two = make_config
         .nixos_map
         .keys()
-        .find(|k| k == &&"machine-two")
+        .find(|k| *k == "machine-two")
         .cloned()
         .ok_or_else(|| anyhow::anyhow!("machine-two not found"))?;
 
@@ -579,13 +575,13 @@ fn e2e_shared_artifact_consistency() -> Result<()> {
     let machines: Vec<String> = make_config.nixos_map.keys().cloned().collect();
     let machine_one = machines
         .iter()
-        .find(|m| m == &&"machine-one")
+        .find(|m| *m == "machine-one")
         .cloned()
         .unwrap_or_else(|| machines[0].clone());
 
     let machine_two = machines
         .iter()
-        .find(|m| m == &&"machine-two")
+        .find(|m| *m == "machine-two")
         .cloned()
         .unwrap_or_else(|| machines[1].clone());
 

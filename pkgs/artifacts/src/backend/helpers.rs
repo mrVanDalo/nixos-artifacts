@@ -1,4 +1,4 @@
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 
@@ -48,8 +48,8 @@ pub fn validate_backend_script(
 
 // Compute a deterministic filename based on the 'out' path to keep test snapshots stable
 pub fn fnv1a64(s: &str) -> u64 {
-    let mut hash: u64 = 0xcbf29ce484222325; // FNV offset basis
-    const PRIME: u64 = 0x00000100000001B3; // FNV prime
+    let mut hash: u64 = 0xcbf2_9ce4_8422_2325; // FNV offset basis
+    const PRIME: u64 = 0x0000_0100_0000_01B3; // FNV prime
     for b in s.as_bytes() {
         hash ^= *b as u64;
         hash = hash.wrapping_mul(PRIME);
