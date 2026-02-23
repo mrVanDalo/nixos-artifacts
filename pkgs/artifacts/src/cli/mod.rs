@@ -1,3 +1,27 @@
+//! Command-line interface for the artifacts CLI.
+//!
+//! This module handles CLI argument parsing, path resolution, and TUI initialization.
+//! It serves as the bridge between the command-line interface and the interactive
+//! TUI application.
+//!
+//! # CLI Flow
+//!
+//! 1. Parse command-line arguments using [`clap`]
+//! 2. Resolve flake directory path (default: current directory)
+//! 3. Resolve backend.toml path (env var or flake directory)
+//! 4. Build make configuration from Nix flake evaluation
+//! 5. Filter artifacts based on CLI filters (--machine, --home, --artifact)
+//! 6. Initialize terminal and run TUI
+//!
+//! # Environment Variables
+//!
+//! - `NIXOS_ARTIFACTS_BACKEND_CONFIG` - Override path to backend.toml
+//!
+//! # Exit Codes
+//!
+//! - `0` - Success (all artifacts processed)
+//! - `1` - Error (failed artifacts or configuration error)
+
 pub mod args;
 pub mod headless;
 
@@ -12,11 +36,34 @@ use anyhow::{Context, Result};
 use clap::Parser;
 use std::path::{Path, PathBuf};
 
+/// Resolve the flake directory path.
+///
+/// Returns the provided path if given, otherwise attempts to use
+/// the current working directory, falling back to "." on error.
+///
+/// # Arguments
+///
+/// * `p` - Optional path from CLI arguments
 fn resolve_flake_path(p: &Option<PathBuf>) -> PathBuf {
     p.clone()
         .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")))
 }
 
+/// Resolve the backend.toml configuration file path.
+///
+/// Checks in order:
+/// 1. `NIXOS_ARTIFACTS_BACKEND_CONFIG` environment variable
+/// 2. `{flake_path}/backend.toml`
+///
+/// # Arguments
+///
+/// * `flake_path` - Path to the flake directory
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The env var is set but points to a non-existent file
+/// - No backend.toml exists in the flake directory
 fn resolve_backend_toml(flake_path: &Path) -> Result<PathBuf> {
     match std::env::var("NIXOS_ARTIFACTS_BACKEND_CONFIG") {
         Ok(val) => {

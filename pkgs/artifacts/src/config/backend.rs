@@ -1,9 +1,65 @@
+//! Backend configuration parsing from TOML files.
+//!
+//! This module handles parsing of `backend.toml` files that define serialization
+//! backends for the artifacts CLI. Backends specify how artifacts are stored,
+//! retrieved, and checked for serialization status.
+//!
+//! ## TOML Structure
+//!
+//! A backend.toml file defines one or more backends:
+//!
+//! ```toml
+//! [agenix]
+//! nixos_check_serialization = "./agenix_nixos_check.sh"
+//! nixos_serialize = "./agenix_nixos_serialize.sh"
+//! home_check_serialization = "./agenix_home_check.sh"
+//! home_serialize = "./agenix_home_serialize.sh"
+//!
+//! [agenix.capabilities]
+//! shared = true
+//! serializes = true
+//! ```
+//!
+//! ## Include Directive
+//!
+//! Backend configuration can be split across multiple files using the `include` directive:
+//!
+//! ```toml
+//! include = ["./backends/agenix.toml", "./backends/sops.toml"]
+//!
+//! [test]
+//! check_serialization = "./test_check.sh"
+//! serialize = "./test_serialize.sh"
+//! deserialize = "./test_deserialize.sh"
+//! ```
+//!
+//! Paths in `include` are resolved relative to the file containing the directive.
+//! Circular includes are detected and rejected.
+//!
+//! ## Script Paths
+//!
+//! Script paths can be absolute or relative to the backend.toml file:
+//! - `"./scripts/check.sh"` - relative to the TOML file
+//! - `"/usr/local/bin/check.sh"` - absolute path
+//!
+//! ## Backend Capabilities
+//!
+//! Backends can declare capabilities:
+//! - `shared`: Whether backend supports shared artifacts (multi-machine)
+//! - `serializes`: Whether backend actually persists secrets (false for passthrough)
+//!
+//! Capabilities can be explicitly declared or inferred from script presence.
+
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
+/// Backend-specific settings as a flexible key-value map.
+///
+/// This type allows backends to declare arbitrary configuration settings
+/// that are passed through to serialization scripts via environment variables.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct BackendSettings(pub HashMap<String, serde_json::Value>);
 
@@ -35,6 +91,25 @@ fn default_true() -> bool {
     true
 }
 
+/// Complete backend definition with all script paths and capabilities.
+///
+/// A backend defines the complete lifecycle for artifact serialization:
+/// - Check: Determine if serialization is needed
+/// - Serialize: Store generated artifacts
+/// - Shared variants: For multi-machine artifacts
+///
+/// ## Script Variants
+///
+/// Backends define separate scripts for different target types:
+/// - NixOS: `nixos_check_serialization`, `nixos_serialize`
+/// - Home Manager: `home_check_serialization`, `home_serialize`
+/// - Shared: `shared_check_serialization`, `shared_serialize` (optional)
+///
+/// ## Required Scripts
+///
+/// If `capabilities.serializes` is true (the default), all target-specific
+/// scripts are required except shared scripts which are only required when
+/// `capabilities.shared` is true.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct BackendEntry {
     /// Script to check if NixOS serialization is needed. Required if serializes=true.
@@ -55,8 +130,10 @@ pub struct BackendEntry {
     /// Script to serialize shared secrets. Required if shared=true and serializes=true.
     #[serde(default)]
     pub shared_serialize: Option<String>,
+    /// Backend-specific settings from `[backend_name.settings]` table.
     #[serde(default)]
     pub settings: BackendSettings,
+    /// Capability declarations for this backend.
     #[serde(default)]
     pub capabilities: BackendCapabilities,
 }
@@ -80,7 +157,17 @@ struct BackendFileRaw {
     backends: HashMap<String, BackendEntry>,
 }
 
-/// Container combining backend configuration and its base path
+/// Container combining backend configuration and its base path.
+///
+/// This struct holds the parsed backend configuration along with metadata
+/// about where it was loaded from, which is needed for resolving relative
+/// script paths and error reporting.
+///
+/// ## Field Relationships
+///
+/// - `config`: Map of backend name to [`BackendEntry`]
+/// - `base_path`: Directory containing the primary backend.toml file
+/// - `backend_toml`: Full path to the primary backend.toml file
 #[derive(Debug, Clone)]
 pub struct BackendConfiguration {
     pub config: HashMap<String, BackendEntry>,
@@ -89,6 +176,37 @@ pub struct BackendConfiguration {
 }
 
 impl BackendConfiguration {
+    /// Load and parse a backend.toml file with support for includes.
+    ///
+    /// This function reads the primary backend.toml file and recursively
+    /// processes any `include` directives to build a complete configuration.
+    ///
+    /// ## Arguments
+    ///
+    /// - `backend_toml`: Path to the primary backend.toml file
+    ///
+    /// ## Returns
+    ///
+    /// A [`BackendConfiguration`] containing the parsed backends and path metadata.
+    ///
+    /// ## Errors
+    ///
+    /// Returns an error if:
+    /// - The file cannot be read
+    /// - The TOML is malformed
+    /// - A circular include is detected
+    /// - Required scripts are missing for a backend
+    /// - A duplicate backend name is found across included files
+    ///
+    /// ## Example
+    ///
+    /// ```rust,ignore
+    /// use std::path::Path;
+    ///
+    /// let config = BackendConfiguration::read_backend_config(
+    ///     Path::new("./backend.toml")
+    /// )?;
+    /// ```
     pub fn read_backend_config(backend_toml: &Path) -> Result<BackendConfiguration> {
         let mut visited = HashSet::new();
         let config = Self::load_with_includes(backend_toml, &mut visited)?;
@@ -105,6 +223,20 @@ impl BackendConfiguration {
         })
     }
 
+    /// Recursively load backend configuration with circular include detection.
+    ///
+    /// This internal method handles the recursive loading of backend.toml files
+    /// and their included files. It validates script requirements and resolves
+    /// relative paths to absolute paths.
+    ///
+    /// ## Arguments
+    ///
+    /// - `toml_path`: Path to the TOML file to load
+    /// - `visited`: Set of already-visited canonical paths (for circular detection)
+    ///
+    /// ## Returns
+    ///
+    /// A map of backend names to their [`BackendEntry`] definitions.
     fn load_with_includes(
         toml_path: &Path,
         visited: &mut HashSet<PathBuf>,

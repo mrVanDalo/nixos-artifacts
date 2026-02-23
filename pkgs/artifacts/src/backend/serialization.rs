@@ -1,3 +1,34 @@
+//! Serialization module for artifact storage and retrieval operations.
+//!
+//! This module handles the execution of backend scripts for checking serialization status,
+//! serializing generated artifacts, and deserializing stored artifacts. All operations
+//! support both single-target (NixOS/HomeManager) and shared artifact scenarios.
+//!
+//! # Backend Operations
+//!
+//! Three main operations are supported:
+//!
+//! ## Check Serialization
+//! Determines if an artifact needs regeneration by running the `check_serialization` script.
+//! Exit code 0 means "up-to-date", any non-zero exit means "needs generation".
+//!
+//! ## Serialize
+//! Stores generated files using the `serialize` script. The script receives:
+//! - `$out` - Directory containing generated files
+//! - `$config` - Path to JSON file with backend-specific configuration
+//! - `$artifact` - Artifact name
+//! - `$machine` or `$username` - Target identifier (context-dependent)
+//!
+//! ## Shared Operations
+//! For shared artifacts that span multiple machines/users:
+//! - `run_shared_serialize` - Serializes with machines.json and users.json context
+//! - `run_shared_check_serialization` - Checks status with full context
+//!
+//! # Timeout Protection
+//!
+//! All script executions have a 30-second timeout to prevent hanging operations.
+//! Timeout errors are returned as `ScriptError::Timeout`.
+
 use crate::backend::helpers::{resolve_path, validate_backend_script};
 use crate::backend::output_capture::{
     run_with_captured_output_and_timeout, CapturedOutput, ScriptError,
@@ -13,14 +44,27 @@ use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::time::Duration;
 
-/// Timeout duration for serialization scripts (30 seconds)
+/// Timeout duration for serialization scripts (30 seconds).
+///
+/// This timeout applies to all backend script executions to prevent
+/// indefinite hanging on misconfigured scripts or slow backends.
 const SERIALIZATION_TIMEOUT: Duration = Duration::from_secs(30);
 
-/// Result of running check_serialization script
+/// Result of running check_serialization script.
+///
+/// This struct captures both the success status and any output from
+/// the check script. The `needs_generation` field indicates whether
+/// the artifact should be regenerated.
 pub struct CheckResult {
-    /// True if the artifact needs generation, false if up-to-date
+    /// True if the artifact needs generation, false if up-to-date.
+    ///
+    /// When `true`, the artifact should be regenerated before serialization.
+    /// When `false`, the existing serialized state is current.
     pub needs_generation: bool,
-    /// Captured stdout/stderr from the script
+    /// Captured stdout/stderr from the script execution.
+    ///
+    /// Contains the complete output from the check script, which can
+    /// be useful for debugging or displaying status messages.
     pub output: CapturedOutput,
 }
 
@@ -377,7 +421,37 @@ fn write_check_input_files(
     Ok(())
 }
 
-/// Run the serialize script for a generated artifact
+/// Run the serialize script for a generated artifact.
+///
+/// Executes the serialize script from the backend configuration to store
+/// the generated artifact files. The script receives paths to the output
+/// directory and a configuration JSON file.
+///
+/// # Arguments
+///
+/// * `artifact` - The artifact definition containing serialization backend
+/// * `backend` - The backend configuration with script paths
+/// * `out` - Directory containing the generated files to serialize
+/// * `target_name` - Name of the target (machine or username)
+/// * `make` - The make configuration for backend settings
+/// * `context` - Context string: "nixos", "homemanager", or "shared"
+///
+/// # Returns
+///
+/// Returns the captured output from the serialize script.
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The backend doesn't have a serialize script configured
+/// - The serialize script cannot be found or executed
+/// - The script times out (after 30 seconds)
+/// - The script exits with non-zero status
+///
+/// # Context-Specific Behavior
+///
+/// For "nixos" context: Sets `$machine` environment variable
+/// For "homemanager" context: Sets `$username` environment variable
 pub fn run_serialize(
     artifact: &ArtifactDef,
     backend: &BackendConfiguration,
@@ -436,7 +510,40 @@ pub fn run_serialize(
     Ok(output)
 }
 
-/// Run the shared_serialize script for a generated shared artifact
+/// Run the shared_serialize script for a generated shared artifact.
+///
+/// Shared artifacts span multiple machines or users and require additional
+/// context during serialization. This function builds machines.json and users.json
+/// files containing backend configurations for each target, then executes the
+/// `shared_serialize` script.
+///
+/// # Arguments
+///
+/// * `artifact_name` - Name of the shared artifact being serialized
+/// * `backend_name` - Name of the backend (e.g., "agenix", "sops-nix")
+/// * `backend` - The backend configuration with script paths
+/// * `out` - Directory containing the generated files to serialize
+/// * `make` - The make configuration for backend settings
+/// * `nixos_targets` - List of NixOS machine names for this shared artifact
+/// * `home_targets` - List of home-manager user names for this shared artifact
+///
+/// # Returns
+///
+/// Returns the captured output from the shared_serialize script.
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The backend doesn't support shared artifacts (missing `shared_serialize` script)
+/// - The script cannot be found or executed
+/// - The script times out (after 30 seconds)
+/// - The script exits with non-zero status
+///
+/// # JSON Files
+///
+/// The script receives paths to:
+/// - `$machines` - JSON mapping machine names to their backend configs
+/// - `$users` - JSON mapping user names to their backend configs
 pub fn run_shared_serialize(
     artifact_name: &str,
     backend_name: &str,
@@ -488,7 +595,38 @@ pub fn run_shared_serialize(
     Ok(output)
 }
 
-/// Check if serialization is up to date
+/// Check if serialization is up to date for an artifact.
+///
+/// Runs the `check_serialization` script to determine if the artifact needs
+/// regeneration. The script checks if the current serialized state matches
+/// what would be generated from the current configuration and prompts.
+///
+/// # Behavior
+///
+/// The script uses exit codes to communicate status:
+/// - Exit 0: Artifact is up-to-date (no regeneration needed)
+/// - Exit non-zero: Artifact needs generation
+///
+/// # Arguments
+///
+/// * `artifact` - The artifact definition to check
+/// * `target` - Name of the target (machine or username)
+/// * `backend` - The backend configuration with script paths
+/// * `make` - The make configuration for backend settings
+/// * `context` - Context string: "nixos" or "homemanager"
+///
+/// # Returns
+///
+/// Returns a `CheckResult` containing:
+/// - `needs_generation`: `true` if artifact should be regenerated
+/// - `output`: Captured stdout/stderr from the script
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The backend doesn't have a check_serialization script configured
+/// - The script cannot be found or executed
+/// - The script times out (after 30 seconds)
 pub fn run_check_serialization(
     artifact: &ArtifactDef,
     target: &str,
@@ -556,7 +694,39 @@ pub fn run_check_serialization(
     handle_check_output(result, &artifact.name)
 }
 
-/// Check if shared serialization is up to date
+/// Check if shared serialization is up to date for a shared artifact.
+///
+/// Runs the `shared_check_serialization` script for shared artifacts that span
+/// multiple machines or users. Similar to `run_check_serialization` but provides
+/// machines.json and users.json context for the script to check all targets.
+///
+/// # Behavior
+///
+/// The script uses exit codes to communicate status:
+/// - Exit 0: Artifact is up-to-date for all targets
+/// - Exit non-zero: Artifact needs generation for at least one target
+///
+/// # Arguments
+///
+/// * `artifact_name` - Name of the shared artifact to check
+/// * `backend_name` - Name of the backend (e.g., "agenix", "sops-nix")
+/// * `backend` - The backend configuration with script paths
+/// * `make` - The make configuration for backend settings
+/// * `nixos_targets` - List of NixOS machine names for this shared artifact
+/// * `home_targets` - List of home-manager user names for this shared artifact
+///
+/// # Returns
+///
+/// Returns a `CheckResult` containing:
+/// - `needs_generation`: `true` if artifact should be regenerated
+/// - `output`: Captured stdout/stderr from the script
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The backend doesn't support shared artifacts (missing `shared_check_serialization`)
+/// - The script cannot be found or executed
+/// - The script times out (after 30 seconds)
 pub fn run_shared_check_serialization(
     artifact_name: &str,
     backend_name: &str,

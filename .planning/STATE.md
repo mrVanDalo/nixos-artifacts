@@ -1,8 +1,8 @@
-# State: v4.1 Code Quality & Documentation Cleanup — Phase 20 🚧 IN PROGRESS
+# State: v4.1 Code Quality & Documentation Cleanup — Phase 21 🚧 IN PROGRESS
 
 **Project:** NixOS Artifacts Store — v4.1 Code Quality & Documentation Cleanup 🚧 IN PROGRESS  
 **Current Milestone:** v4.1 🚧 IN PROGRESS  
-**Status:** Plan 20-01 Complete — All FILE requirements satisfied  
+**Status:** Plan 21-05 Complete — all modules documented, cargo doc has zero warnings  
 **Last Updated:** 2026-02-23
 
 ---
@@ -14,7 +14,7 @@ See: [.planning/ROADMAP.md](./ROADMAP.md) (updated 2026-02-23)
 
 **Core Value:** The TUI must never freeze during long-running operations — all effect execution runs in a background job while the TUI remains interactive.
 
-**Current Focus:** Phase 20 — Unused File Cleanup ✅ COMPLETE
+**Current Focus:** Phase 21 — Rust Documentation ✅ IN PROGRESS
 
 ---
 
@@ -23,22 +23,82 @@ See: [.planning/ROADMAP.md](./ROADMAP.md) (updated 2026-02-23)
 | Aspect       | Status                       |
 | ------------ | ---------------------------- |
 | Milestone    | v4.1 🚧 IN PROGRESS          |
-| Phase        | **20** — Unused File Cleanup ✅ COMPLETE |
-| Plan         | **01** ✅ Complete (1 of 1) |
-| Requirements | FILE-01 ✅, FILE-02 ✅, FILE-03 ✅, FILE-04 ✅, FILE-05 ✅ Complete |
-| Last Activity | Completed 20-01: Orphaned documentation files removed, documentation structure validated |
+| Phase        | **21** — Rust Documentation ✅ IN PROGRESS |
+| Plan         | **05** ✅ Complete |
+| Last Activity | Completed 21-05: Added crate-level documentation, documented macros and main binary, cargo doc has zero warnings |
 
 ### Progress Bar
 
 ```
-[████████████████████████████████████] 100% — Phase 20 Complete — Plan 1 Done
+[████████████████████████████████████] 100% — Phase 21 Complete — Plan 5 Done
 ```
 
-**Milestone Progress:** 3/5 phases complete (60%)
+**Milestone Progress:** 4/5 phases complete (80%)
 
 ---
 
 ## Accumulated Context
+
+### Phase 21: Rust Documentation
+
+**Goal:** Establish clean documentation baseline and add comprehensive module documentation
+
+**Requirements:**
+- DOCS-01 ✅: cargo doc produces zero warnings
+- DOCS-02 ✅: All modules have comprehensive documentation (backend and config modules complete)
+- DOCS-03 ✅: All public APIs in config module have doc examples (TOML/JSON structure examples)
+- DOCS-04 ✅: Intra-doc links are valid and working in config module
+- DOCS-05 ✅: Documentation follows Rust best practices
+
+**Completed in 21-01:**
+- Fixed unresolved link warnings in `src/logging.rs` by escaping brackets: `[TIMESTAMP]` → `\[TIMESTAMP\]`
+- Fixed HTML tag warning in `src/tui/channels.rs` by wrapping in backticks: `Option<String>` → `Option<String>`
+- Verified `cargo doc` completes with exactly zero warnings
+- Generated documentation is viewable at `target/doc/artifacts/index.html`
+
+**Completed in 21-02:**
+- Added comprehensive module-level documentation to `src/backend/mod.rs`
+- Documented all public functions in `src/backend/generator.rs` with Arguments/Returns/Errors sections
+- Documented `CheckResult` struct and all serialization functions in `src/backend/serialization.rs`
+- Documented all remaining backend modules: `helpers.rs`, `output_capture.rs`, `prompt.rs`, `tempfile.rs`, `temp_dir.rs`
+- Verified `cargo doc` produces no backend-specific warnings
+
+**Completed in 21-05:**
+- Added comprehensive crate-level documentation to `src/lib.rs` with architecture overview
+- Documented all macros in `src/macros.rs`: `string_vec!`, `log_debug!`, `log_trace!`, `log_error!` with examples
+- Added file-level documentation to `src/bin/artifacts.rs`: commands, configuration, exit codes
+- Fixed all intra-doc link warnings: removed redundant explicit targets, fixed ambiguous links
+- Achieved exactly zero warnings from `cargo doc`
+
+**Completed in 21-04:**
+- Added module-level documentation to `src/app/mod.rs` explaining the Elm Architecture pattern
+- Documented all public types in `src/app/model.rs`: Model, Screen, ArtifactEntry, InputMode, ListEntry, etc.
+- Documented `src/app/message.rs`: Msg, KeyEvent, and output structs
+- Documented `src/app/effect.rs`: Effect enum and side effect descriptors
+- Documented `src/app/update.rs`: Pure update function and screen handlers
+- Documented `src/cli/mod.rs`: CLI flow and path resolution functions
+- Documented `src/cli/args.rs`: CLI arguments with usage examples
+- Documented `src/tui/events.rs`: EventSource trait and implementations
+- Fixed intra-doc links in `src/config/mod.rs` and `src/backend/mod.rs`
+- Reduced cargo doc warnings from 9 to 4
+
+**Completed in 21-03:**
+- Added module-level documentation to `src/config/mod.rs` explaining configuration flow
+- Documented all public types in `src/config/backend.rs`: BackendSettings, BackendEntry, BackendConfiguration
+- Documented all public types in `src/config/make.rs`: FileDef, PromptDef, ArtifactDef, MakeConfiguration
+- Added comprehensive function documentation to `src/config/nix.rs` with build_make_from_flake docs
+- Added intra-doc links between related config types for improved navigation
+
+**Dependencies:** Phase 20 (Unused File Cleanup) - established clean documentation structure
+
+**Expected Commands:**
+```bash
+# Documentation - should produce zero warnings
+cargo doc  # ✅ Zero warnings
+
+# Verify generated docs exist
+ls target/doc/artifacts/index.html  # ✅ File exists
+```
 
 ### Phase 20: Unused File Cleanup
 
@@ -186,6 +246,10 @@ All decisions preserved in PROJECT.md Validated section.
 
 ## Decisions Made
 
+- Escape brackets with `\[`, `\]` to prevent rustdoc from interpreting them as intra-doc links
+- Wrap generic types like `Option<String>` in backticks to prevent HTML tag interpretation
+- Module doc comments with literal brackets must be escaped
+- Generic type parameters in doc text should be code-quoted
 - Orphaned documentation files should be removed rather than kept "just in case"
 - Files outside Antora module structure should be integrated or removed
 - options.adoc was a duplicate/legacy file superseded by options-nixos.adoc and options-homemanager.adoc
@@ -211,6 +275,21 @@ All decisions preserved in PROJECT.md Validated section.
 - Use `Self` keyword instead of repeating type names in enum implementations
 - Add underscores to long numeric literals for readability: `0xcbf2_9ce4_8422_2325`
 - Document each allowed lint with clear justification in code comments
+- Use rustdoc sections (Arguments, Returns, Errors) for complex functions
+- Add module-level documentation explaining the "why" and architecture, not just the "what"
+- Include environment variable documentation in function docs for debugging
+- Add usage examples using `rust,ignore` to prevent doc test execution
+- Document security model (bubblewrap) at module level for visibility
+- Document enum variants with clear descriptions of when each variant occurs
+- Document struct fields inline rather than just at struct level for complex structs
+- Use intra-doc links (e.g., `[BackendEntry]`) to improve navigation between related types
+- Document TOML and JSON structures with inline code examples in module-level docs
+- Add `Arguments`, `Returns`, `Errors` sections to function documentation following Rustdoc conventions
+- Provide usage examples using `rust,ignore` to show code without requiring doc test execution
+- Automatic link resolution preferred over explicit targets `[app]` not `[app](crate::app)`
+- Function references need parentheses `[crate::app::update()]` to disambiguate from module
+- Plain text for macro references in module-level docs when macros aren't in scope at that level
+- Use `#[doc(hidden)]` for feature-gated macro variants to avoid duplicate documentation
 
 ---
 
@@ -218,6 +297,11 @@ All decisions preserved in PROJECT.md Validated section.
 
 | Phase | Plan | Duration | Tasks |
 |-------|------|----------|-------|
+| 21-rust-documentation | 05 | 12 min | 4 |
+| 21-rust-documentation | 04 | 17 min | 3 |
+| 21-rust-documentation | 03 | 8 min | 4 |
+| 21-rust-documentation | 02 | 16 min | 4 |
+| 21-rust-documentation | 01 | 2 min | 3 |
 | 20-unused-file-cleanup | 01 | 3 min | 3 |
 | 19-dead-code-elimination | 01 | 5 min | 3 |
 | 18-fix-compiler-clippy-warnings | 01 | 24 min | 3 |
@@ -230,12 +314,11 @@ All decisions preserved in PROJECT.md Validated section.
 
 ## Session Continuity
 
-**Last action:** Completed Plan 20-01: Orphaned documentation files removed, documentation structure validated
+**Last action:** Completed Plan 21-05: Added crate-level documentation, documented macros and main binary, achieved zero cargo doc warnings
 
-**Next action:** Phase 21: Documentation Consolidation (or next phase in v4.1 milestone)
+**Next action:** Phase 21 complete - all Rust documentation finished. Ready for Phase 22 (Serialization Refactor) or other feature work.
 
-**Open questions:**
-- None
+**Open questions:** None - all modules documented, zero warnings achieved
 
 ---
 
@@ -246,6 +329,11 @@ All decisions preserved in PROJECT.md Validated section.
 - [MILESTONES.md](./MILESTONES.md) — Milestone history
 - [ROADMAP.md](./ROADMAP.md) — Current roadmap (v4.1)
 - [REQUIREMENTS.md](./REQUIREMENTS.md) — Requirements for v4.1
+- [21-05-SUMMARY.md](./phases/21-rust-documentation/21-05-SUMMARY.md) — Plan 21-05
+- [21-04-SUMMARY.md](./phases/21-rust-documentation/21-04-SUMMARY.md) — Plan 21-04
+- [21-03-SUMMARY.md](./phases/21-rust-documentation/21-03-SUMMARY.md) — Plan 21-03
+- [21-02-SUMMARY.md](./phases/21-rust-documentation/21-02-SUMMARY.md) — Plan 21-02
+- [21-01-SUMMARY.md](./phases/21-rust-documentation/21-01-SUMMARY.md) — Plan 21-01
 - [20-01-SUMMARY.md](./phases/20-unused-file-cleanup/20-01-SUMMARY.md) — Plan 20-01
 - [19-01-SUMMARY.md](./phases/19-dead-code-elimination/19-01-SUMMARY.md) — Plan 19-01
 - [18-01-SUMMARY.md](./phases/18-fix-compiler-clippy-warnings/18-01-SUMMARY.md) — Plan 18-01
@@ -256,4 +344,4 @@ All decisions preserved in PROJECT.md Validated section.
 
 ---
 
-_Updated: 2026-02-23 — Phase 20 complete, all FILE requirements satisfied_
+_Updated: 2026-02-23 — Plan 21-05 complete, Phase 21 documentation finished, cargo doc zero warnings_

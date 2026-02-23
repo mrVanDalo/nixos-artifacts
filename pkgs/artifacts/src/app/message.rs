@@ -1,6 +1,22 @@
+//! Message types for the Elm Architecture update loop.
+//!
+//! Messages are the only way to trigger state changes in the application.
+//! They flow from the event source (terminal input, background tasks, timers)
+//! through the update function to produce new state.
+//!
+//! # Message Sources
+//!
+//! - **User input**: `KeyEvent` messages from terminal
+//! - **Background tasks**: Results from generator/serialization scripts
+//! - **Timer**: `Tick` messages for animations
+//! - **Navigation**: Log view messages for scrolling and expansion
+
 use crossterm::event::{KeyCode, KeyModifiers};
 
-/// All possible events/messages in the application
+/// All possible events/messages in the application.
+///
+/// This enum represents every possible event that can cause a state change.
+/// The update function in [`crate::app::update()`] matches on these messages to compute new state.
 #[derive(Debug, Clone)]
 pub enum Msg {
     /// Keyboard input
@@ -18,9 +34,11 @@ pub enum Msg {
         output: Option<CheckOutput>, // Captured stdout/stderr from the check script
     },
 
-    /// Generator script finished
+    /// Generator script finished (per-target artifact).
     GeneratorFinished {
+        /// Index of the artifact that finished
         artifact_index: usize,
+        /// Result containing output or error message
         result: Result<GeneratorOutput, String>,
     },
 
@@ -112,10 +130,23 @@ pub struct CheckOutput {
     pub stderr_lines: Vec<String>,
 }
 
-/// Wrapper around crossterm key events for easier construction in tests
+/// Wrapper around crossterm key events for easier construction in tests.
+///
+/// Provides convenient constructors for common key events, making tests
+/// more readable and easier to write.
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// let enter = KeyEvent::enter();
+/// let ctrl_c = KeyEvent::ctrl('c');
+/// let letter = KeyEvent::char('a');
+/// ```
 #[derive(Debug, Clone)]
 pub struct KeyEvent {
+    /// The key code (character, special key, etc.)
     pub code: KeyCode,
+    /// Modifier keys held during the event
     pub modifiers: KeyModifiers,
 }
 

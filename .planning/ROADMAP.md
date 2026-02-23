@@ -87,6 +87,15 @@ The phases follow a logical order: first fix active code issues (linting), then 
 **Phase Number:** 21  
 **Requirements:** DOC-01, DOC-02, DOC-03, DOC-04, DOC-05, DOC-06, DOC-07, DOC-08  
 **Dependencies:** Phase 20 (clean files first to avoid documenting what gets deleted)  
+**Status:** ✅ COMPLETE (2026-02-23)
+
+**Plans:** 5 plans (all complete)
+
+- [x] 21-01 — Fix cargo doc warnings (broken links, HTML tags)
+- [x] 21-02 — Document backend module (serialization, generators, helpers)
+- [x] 21-03 — Document config module (backend.toml, flake.nix parsing)
+- [x] 21-04 — Document app, cli, and tui modules
+- [x] 21-05 — Document crate root, macros, and finalize
 
 ### Success Criteria
 

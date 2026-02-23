@@ -1,5 +1,69 @@
+//! Nix expression building and evaluation.
+//!
+//! This module handles the execution of `nix build` to extract artifact
+//! configurations from a flake.nix file. It builds and runs a Nix expression
+//! that traverses `nixosConfigurations` and `homeConfigurations` to produce
+//! a JSON file containing all artifact definitions.
+//!
+//! ## Nix Expression
+//!
+//! The [`build_make_from_flake`] function uses an embedded Nix expression
+//! (from `make_expr.nix`) that:
+//!
+//! 1. Imports the flake at the given path
+//! 2. Traverses `nixosConfigurations.<machine>.config.artifacts.store`
+//! 3. Traverses `homeConfigurations."<user>@<host>".config.artifacts.store`
+//! 4. Collects artifact definitions into a structured format
+//! 5. Writes the result as JSON to the Nix store
+//!
+//! ## Usage Flow
+//!
+//! 1. Call [`build_make_from_flake`] with the path to flake.nix
+//! 2. Nix builds the expression and outputs a store path
+//! 3. The store path points to a JSON file (make.json)
+//! 4. Pass the path to [`MakeConfiguration::read_make_config`](super::make::MakeConfiguration)
+//!
+//! ## Error Handling
+//!
+//! Returns errors if:
+//! - Nix is not installed or not in PATH
+//! - The flake.nix cannot be evaluated
+//! - The Nix expression fails to build
+//! - The output path is not a valid file
+
 #[cfg(feature = "logging")]
 use crate::backend::helpers::pretty_print_shell_escape;
+
+/// Build the make.json file from a flake.nix by running `nix build`.
+///
+/// This function executes a Nix build that extracts artifact configurations
+/// from the flake's `nixosConfigurations` and `homeConfigurations`. The
+/// result is a JSON file containing all artifact definitions, which can then
+/// be parsed using [`MakeConfiguration::read_make_config`](super::make::MakeConfiguration).
+///
+/// ## Arguments
+///
+/// * `flake_path` - Path to the directory containing flake.nix
+///
+/// ## Returns
+///
+/// The path to the generated make.json file in the Nix store.
+///
+/// ## Errors
+///
+/// Returns an error if:
+/// - The `nix` command is not found in PATH
+/// - The Nix build fails (invalid flake, evaluation error)
+/// - The build succeeds but returns an empty or invalid path
+///
+/// ## Example
+///
+/// ```rust,ignore
+/// use std::path::Path;
+///
+/// let make_json_path = build_make_from_flake(Path::new("."))?;
+/// let config = MakeConfiguration::read_make_config(&make_json_path)?;
+/// ```
 
 pub fn build_make_from_flake(flake_path: &std::path::Path) -> anyhow::Result<std::path::PathBuf> {
     // Ensure nix is available

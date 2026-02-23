@@ -1,3 +1,32 @@
+//! Generator module for executing artifact generators and verifying output.
+//!
+//! This module handles the execution of generator scripts that produce artifact files.
+//! Generators are external scripts that create files in a temporary output directory
+//! based on user-provided prompts. The module ensures generators produce exactly the
+//! expected files and runs them in isolated bubblewrap containers for security.
+//!
+//! # Generator Scripts
+//!
+//! Generator scripts are executed in a bubblewrap container with:
+//! - `$prompts` directory containing prompt values as files
+//! - `$out` directory where generated files should be written
+//! - Environment variables: `$out`, `$prompts`, `$artifact_context`, `$machine`/`$username`, `$artifact`
+//!
+//! # Verification
+//!
+//! After generation, `verify_generated_files` ensures:
+//! - All expected files (defined in artifact.files) are present
+//! - No extra files are generated
+//! - Files match the expected set exactly
+//!
+//! # Security
+//!
+//! Generator execution uses bubblewrap for containerization:
+//! - Separate user namespace with uid/gid 1000
+//! - Read-only bind mounts for system directories
+//! - Minimal writable directories (only $out, $prompts)
+//! - Custom /etc/passwd for isolation
+
 use crate::backend::helpers::{escape_single_quoted, fnv1a64, resolve_path};
 use crate::backend::output_capture::{run_with_captured_output, CapturedOutput};
 use crate::config::make::ArtifactDef;
@@ -11,7 +40,27 @@ use std::fs;
 use std::path::Path;
 use std::process::Stdio;
 
-/// Verify that the generator produced exactly the expected files for the given artifact
+/// Verify that the generator produced exactly the expected files for the given artifact.
+///
+/// This function checks that the generator script produced:
+/// - All files defined in `artifact.files` (no missing files)
+/// - No additional files not defined in `artifact.files` (no extra files)
+///
+/// # Arguments
+///
+/// * `artifact` - The artifact definition containing the expected file set
+/// * `out_path` - Path to the directory where generator output is located
+///
+/// # Returns
+///
+/// Returns `Ok(())` if the file set matches exactly.
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The output directory cannot be read
+/// - Required files are missing from the output
+/// - Extra files were generated that aren't in the artifact definition
 pub fn verify_generated_files(artifact: &ArtifactDef, out_path: &Path) -> Result<()> {
     let expected_files: HashSet<String> = artifact.files.keys().cloned().collect();
 
@@ -49,7 +98,40 @@ pub fn verify_generated_files(artifact: &ArtifactDef, out_path: &Path) -> Result
     Ok(())
 }
 
-// todo: get rid of nix-shell and use bwrap directly (brwap must be part of the nix-package)
+/// Run a generator script for an artifact in an isolated bubblewrap container.
+///
+/// This function executes the artifact's generator script inside a nix-shell environment
+/// with bubblewrap containerization for security. The generator script is expected to
+/// create files in the `$out` directory based on values from the `$prompts` directory.
+///
+/// # Environment Variables
+///
+/// The generator script receives these environment variables:
+/// * `$out` - Path to the output directory where files should be created
+/// * `$prompts` - Path to directory containing prompt values as files
+/// * `$artifact_context` - Context string: "nixos", "homemanager", or "shared"
+/// * `$machine` - Machine name (for nixos context) or `$username` (for homemanager context)
+/// * `$artifact` - Name of the artifact being generated
+///
+/// # Arguments
+///
+/// * `artifact` - The artifact definition containing the generator script path
+/// * `machine` - Target machine or username for this artifact
+/// * `make_base` - Base path for resolving relative script paths
+/// * `prompts` - Directory containing prompt values as files
+/// * `out` - Directory where generator should create output files
+/// * `context` - Context string: "nixos", "homemanager", or "shared"
+///
+/// # Returns
+///
+/// Returns the captured output from the generator script execution.
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - nix-shell is not found in PATH
+/// - The generator script cannot be found or executed
+/// - The generator script exits with non-zero status
 pub fn run_generator_script(
     artifact: &ArtifactDef,
     machine: &str,
@@ -196,7 +278,46 @@ pub fn run_generator_script(
     Ok(output)
 }
 
-/// Run a generator script by path (for shared artifacts that have a direct generator path)
+/// Run a generator script by its direct path (for shared artifacts).
+///
+/// This is a simplified version of `run_generator_script` that doesn't require
+/// a full artifact definition. It's used for shared artifacts where the generator
+/// path is known directly rather than extracted from an artifact definition.
+///
+/// The generator receives a minimal environment:
+/// * `$out` - Path to the output directory where files should be created
+/// * `$prompts` - Path to directory containing prompt values as files
+/// * `$artifact_context` - Always set to "shared" for this function
+///
+/// # Arguments
+///
+/// * `generator_path` - Path to the generator script to execute
+/// * `make_base` - Base path for resolving relative script paths
+/// * `prompts` - Directory containing prompt values as files
+/// * `out` - Directory where generator should create output files
+///
+/// # Returns
+///
+/// Returns the captured output from the generator script execution.
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - nix-shell is not found in PATH
+/// - The generator script cannot be found or executed
+/// - The generator script exits with non-zero status
+///
+/// # Example
+///
+/// ```rust,ignore
+/// let output = run_generator_script_with_path(
+///     "./generators/ssh_key.sh",
+///     Path::new("/project"),
+///     Path::new("/tmp/prompts"),
+///     Path::new("/tmp/out"),
+/// )?;
+/// assert!(output.exit_success);
+/// ```
 pub fn run_generator_script_with_path(
     generator_path: &str,
     make_base: &Path,

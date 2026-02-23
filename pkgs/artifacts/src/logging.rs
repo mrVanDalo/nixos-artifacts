@@ -4,7 +4,7 @@
 //! - Four logging macros: error!, warn!, info!, debug!
 //! - Logger struct for file-based output with real-time streaming
 //! - Zero-cost when the "logging" feature is disabled (macros expand to nothing)
-//! - Structured log format: [TIMESTAMP] [LEVEL] module: message
+//! - Structured log format: \[TIMESTAMP\] \[LEVEL\] module: message
 //!
 //! # Usage
 //!

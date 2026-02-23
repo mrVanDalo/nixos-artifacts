@@ -31,9 +31,23 @@ all delegate to well-named helpers.
 **Archive:** [v2.0-ROADMAP.md](milestones/v2.0-ROADMAP.md)  
 **Audit:** [v2.0-MILESTONE-AUDIT.md](milestones/v2.0-MILESTONE-AUDIT.md)
 
+## v4.1 Code Quality & Documentation Cleanup (In Progress: 2026-02-22)
+
+**Phases planned:** 5 phases (18-22), 24 requirements  
+**Focus:** Zero compiler warnings, dead code elimination, unused file cleanup, comprehensive Rust documentation
+
+**Key deliverables:**
+
+1. **Zero Compiler & Clippy Warnings** — Main code and tests compile with zero warnings
+2. **Dead Code Elimination** — Remove all unused functions, variables, imports, and unreachable paths
+3. **Unused File Cleanup** — Remove orphaned documentation and empty files
+4. **Rust Documentation** — Comprehensive docs for all public APIs, clean `cargo doc` output
+5. **Dependency Audit** — Ensure all dependencies and features are actually used
+
+**Status:** Requirements and roadmap defined, ready for Phase 18
+
 ---
 
-## v1.0 Background Job Refactor (Shipped: 2026-02-15)
 
 See [v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 

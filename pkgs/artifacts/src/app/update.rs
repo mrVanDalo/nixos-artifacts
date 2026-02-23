@@ -1,10 +1,59 @@
+//! Pure state transition functions for the Elm Architecture.
+//!
+//! This module implements the `update` function - the core of the Elm Architecture.
+//! It takes the current model and a message, and returns a new model and an effect.
+//! All functions in this module are pure (no side effects), making them easy to test.
+//!
+//! # Update Function
+//!
+//! The `update` function is the main entry point:
+//!
+//! ```text
+//! (Model, Msg) -> (Model, Effect)
+//! ```
+//!
+//! - Takes current state and an event
+//! - Returns new state and any side effects to execute
+//! - Never mutates state in place
+//! - Never performs I/O or side effects directly
+//!
+//! # Screen Handlers
+//!
+//! Each screen has its own update handler:
+//! - `update_artifact_list`: List navigation and generation triggers
+//! - `update_generator_selection`: Generator selection for shared artifacts
+//! - `update_prompt`: Prompt input and submission
+//! - `update_chronological_log`: Log viewing and navigation
+//! - `update_confirm_regenerate`: Regeneration confirmation
+//!
+//! # Testing
+//!
+//! Pure functions make testing straightforward:
+//!
+//! ```rust,ignore
+//! let model = make_test_model();
+//! let (new_model, effect) = update(model, Msg::Key(KeyEvent::char('j')));
+//! assert_eq!(new_model.selected_index, 1);
+//! assert!(effect.is_none());
+//! ```
+
 use super::effect::Effect;
 use super::message::{CheckOutput, GeneratorOutput, KeyEvent, Msg, SerializeOutput};
 use super::model::*;
 use crossterm::event::{KeyCode, KeyModifiers};
 
 /// Compute the initial effect to run when the app starts.
-/// This triggers check_serialization for all pending artifacts.
+///
+/// This triggers `check_serialization` for all pending artifacts,
+/// determining which artifacts need regeneration before user interaction.
+///
+/// # Arguments
+///
+/// * `model` - The initial application model
+///
+/// # Returns
+///
+/// A batched [`Effect::CheckSerialization`] for all pending entries
 pub fn init(model: &Model) -> Effect {
     let effects: Vec<Effect> = model
         .entries

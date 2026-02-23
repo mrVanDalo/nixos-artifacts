@@ -1,10 +1,31 @@
+//! Event sources for the TUI application.
+//!
+//! This module provides abstractions for event input, allowing both
+//! production terminal events and scripted test events.
+//!
+//! # Event Source Abstraction
+//!
+//! The [`EventSource`] trait abstracts over different event sources:
+//! - [`TerminalEventSource`]: Reads real keyboard input from the terminal
+//! - [`ScriptedEventSource`]: Provides scripted events for testing
+//!
+//! This abstraction enables testing the update logic without requiring
+//! actual terminal interaction.
+
 use crate::app::message::{KeyEvent, Msg};
 use crossterm::event::{self, Event, KeyEventKind};
 use std::collections::VecDeque;
 use std::time::Duration;
 
 /// Trait for sources of application events.
-/// This abstraction allows injecting test events in tests.
+///
+/// This abstraction allows injecting test events in tests, making
+/// the TUI logic testable without actual terminal interaction.
+///
+/// # Implementations
+///
+/// - [`TerminalEventSource`]: Production implementation reading from terminal
+/// - [`ScriptedEventSource`]: Test implementation with predefined events
 pub trait EventSource {
     /// Get the next event, if available.
     /// Returns None when the event source is exhausted.
@@ -16,6 +37,9 @@ pub trait EventSource {
 }
 
 /// Production event source that reads from the terminal via crossterm.
+///
+/// Polls the terminal for keyboard events at a configured tick rate.
+/// Returns `Msg::Tick` when no key events are available.
 pub struct TerminalEventSource {
     tick_rate: Duration,
 }

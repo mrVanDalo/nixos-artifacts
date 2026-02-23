@@ -1,9 +1,58 @@
+//! Helper utilities for backend script execution and path handling.
+//!
+//! This module provides common utility functions used by the backend module:
+//! - Path resolution for relative script paths
+//! - Shell escaping for safe command construction
+//! - Hash generation for deterministic temporary filenames
+//! - Backend script validation (executable checks)
+//!
+//! # Safety
+//!
+//! All path operations handle both absolute and relative paths correctly.
+//! Shell escaping functions properly quote special characters to prevent
+//! injection attacks when constructing shell commands.
+
 use anyhow::{bail, Result};
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 
 /// Validate that a backend script exists, is a file, and is executable.
-/// Returns a clear error message if any check fails.
+///
+/// Performs comprehensive validation of a backend script:
+/// 1. Checks that the script file exists
+/// 2. Verifies it's a regular file (not a directory)
+/// 3. Ensures the file has execute permissions
+///
+/// # Arguments
+///
+/// * `backend_name` - Name of the backend (for error messages)
+/// * `step_name` - Name of the step (e.g., "serialize", "check_serialization")
+/// * `base_path` - Base directory for resolving relative paths
+/// * `script_path` - Path to the script (relative to base_path or absolute)
+///
+/// # Returns
+///
+/// Returns the canonicalized (absolute) path to the script if validation passes.
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The script file does not exist
+/// - The path points to a directory instead of a file
+/// - The file is not executable
+/// - The path cannot be resolved
+///
+/// # Example
+///
+/// ```rust,ignore
+/// let script_path = validate_backend_script(
+///     "agenix",
+///     "serialize",
+///     Path::new("/project/backends"),
+///     "agenix_serialize.sh",
+/// )?;
+/// // script_path is now absolute: /project/backends/agenix_serialize.sh
+/// ```
 pub fn validate_backend_script(
     backend_name: &str,
     step_name: &str,
@@ -46,7 +95,32 @@ pub fn validate_backend_script(
     Ok(std::fs::canonicalize(&resolved).unwrap_or(resolved))
 }
 
-// Compute a deterministic filename based on the 'out' path to keep test snapshots stable
+/// Compute a 64-bit FNV-1a hash of a string.
+///
+/// This hash function is used to generate deterministic filenames based on
+/// the 'out' path. The same input string will always produce the same hash,
+/// which keeps test snapshots stable across runs.
+///
+/// # Algorithm
+///
+/// Uses the FNV-1a (Fowler-Noll-Vo) hash algorithm:
+/// - Offset basis: 0xcbf2_9ce4_8422_2325
+/// - Prime: 0x0000_0100_0000_01B3
+///
+/// # Arguments
+///
+/// * `s` - The string to hash
+///
+/// # Returns
+///
+/// Returns a 64-bit unsigned hash value
+///
+/// # Example
+///
+/// ```rust,ignore
+/// let hash = fnv1a64("/tmp/artifact-out");
+/// // hash is deterministic for the same input
+/// ```
 pub fn fnv1a64(s: &str) -> u64 {
     let mut hash: u64 = 0xcbf2_9ce4_8422_2325; // FNV offset basis
     const PRIME: u64 = 0x0000_0100_0000_01B3; // FNV prime
@@ -57,6 +131,37 @@ pub fn fnv1a64(s: &str) -> u64 {
     hash
 }
 
+/// Resolve a path relative to a base directory.
+///
+/// If the path is already absolute, it's returned as-is. Otherwise, it's
+/// resolved relative to the provided base directory.
+///
+/// # Arguments
+///
+/// * `base_dir` - The base directory for relative path resolution
+/// * `relative_path` - The path to resolve (can be absolute or relative)
+///
+/// # Returns
+///
+/// Returns a `PathBuf` representing the resolved path
+///
+/// # Example
+///
+/// ```rust,ignore
+/// // Relative path - resolved against base_dir
+/// let path = resolve_path(
+///     Path::new("/project"),
+///     "backends/agenix.sh",
+/// );
+/// assert_eq!(path, PathBuf::from("/project/backends/agenix.sh"));
+///
+/// // Absolute path - returned as-is
+/// let path = resolve_path(
+///     Path::new("/project"),
+///     "/etc/nixos/config.nix",
+/// );
+/// assert_eq!(path, PathBuf::from("/etc/nixos/config.nix"));
+/// ```
 pub(crate) fn resolve_path(base_dir: &Path, relative_path: &str) -> PathBuf {
     let path = Path::new(relative_path);
     if path.is_absolute() {
@@ -76,7 +181,28 @@ pub fn pretty_print_shell_escape(input: &str) -> String {
     }
 }
 
-// Replace ' with '\'' for safe single-quoting
+/// Escape a string for safe use within single-quoted shell arguments.
+///
+/// Single quotes in shell are literal - except that a single quote itself
+/// cannot appear inside single quotes. This function escapes single quotes
+/// by ending the quoted string, adding an escaped quote, and starting a
+/// new quoted string.
+///
+/// # Arguments
+///
+/// * `input` - The string to escape
+///
+/// # Returns
+///
+/// Returns the escaped string suitable for use within single quotes
+///
+/// # Example
+///
+/// ```rust,ignore
+/// let escaped = escape_single_quoted("it's a test");
+/// // Returns: it'\''s a test
+/// // In shell: 'it'\''s a test' produces: it's a test
+/// ```
 pub fn escape_single_quoted(input: &str) -> String {
     input.replace('\'', "'\\''")
 }

@@ -1,3 +1,28 @@
+//! User prompt handling for artifact generation.
+//!
+//! This module manages interactive and non-interactive prompting for artifact
+//! generation. It reads user input for prompts defined in artifact configurations
+//! and writes the values to files for generator scripts to consume.
+//!
+//! # Prompt Types
+//!
+//! Three input modes are supported in interactive mode:
+//! - **Line mode**: Single-line input, press Enter to submit
+//! - **Multiline mode**: Multi-line input, press Ctrl+D to submit
+//! - **Hidden mode**: Password-style input, characters appear as `*`
+//!
+//! # Input Modes
+//!
+//! In interactive mode (terminal attached), users get a rich interface with
+//! mode switching via Tab key. In non-interactive mode (piped input), prompts
+//! are read line-by-line from stdin.
+//!
+//! # Generator Integration
+//!
+//! Prompt values are written to individual files in the prompts directory,
+//! where each file is named after the prompt and contains the user's value.
+//! Generator scripts read these files via the `$prompts` environment variable.
+
 use crate::config::make::{ArtifactDef, PromptDef};
 use anyhow::{Context, Result};
 use crossterm::{
@@ -11,12 +36,33 @@ use std::io::{BufRead, IsTerminal, Stdin, Write};
 use std::path::Path;
 use std::{fs, io};
 
+/// Collection of prompt results for an artifact.
+///
+/// Maps prompt names to their user-provided values.
 #[derive(Debug)]
 pub struct PromptResult {
+    /// Map of prompt name to user-provided value
     pub results: HashMap<String, String>,
 }
 
 impl PromptResult {
+    /// Write all prompt values to files in the specified directory.
+    ///
+    /// Each prompt is written to a separate file named after the prompt.
+    /// This allows generator scripts to read individual prompt values
+    /// by reading files from the `$prompts` directory.
+    ///
+    /// # Arguments
+    ///
+    /// * `dir` - Directory where prompt files should be written
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` if all files were written successfully.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if any file cannot be written.
     pub fn write_prompts_to_files(&self, dir: &Path) -> Result<()> {
         for (name, value) in &self.results {
             let file_path = dir.join(name);
@@ -27,6 +73,29 @@ impl PromptResult {
     }
 }
 
+/// Read all prompts for an artifact and collect the results.
+///
+/// Iterates through all prompts defined for the artifact, prompting
+/// the user for each one. Returns a `PromptResult` containing all
+/// collected values.
+///
+/// # Arguments
+    ///
+    /// * `artifact` - The artifact definition containing prompts to read
+///
+/// # Returns
+///
+/// Returns a `PromptResult` with all prompt values.
+///
+/// # Errors
+///
+/// Returns an error if any prompt cannot be read or if the user interrupts.
+///
+/// # Interactive vs Non-Interactive
+///
+/// Automatically detects if running in a terminal:
+/// - Terminal: Uses interactive mode with full TUI
+/// - Piped: Uses non-interactive mode reading lines from stdin
 pub fn read_artifact_prompts(artifact: &ArtifactDef) -> Result<PromptResult> {
     let mut results = HashMap::new();
 

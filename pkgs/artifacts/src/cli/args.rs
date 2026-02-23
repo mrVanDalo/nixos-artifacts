@@ -1,16 +1,60 @@
+//! Command-line argument definitions using clap.
+//!
+//! This module defines the CLI interface for the artifacts command.
+//! All arguments are defined using clap derive macros for type safety
+//! and automatic help generation.
+//!
+//! # Usage Examples
+//!
+//! ```bash
+//! # Run TUI with default settings
+//! artifacts
+//!
+//! # Filter by machine
+//! artifacts --machine server-1
+//!
+//! # Filter by home-manager user
+//! artifacts --home alice@host
+//!
+//! # Filter by artifact name
+//! artifacts --artifact ssh-key
+//!
+//! # Combined filters
+//! artifacts --machine server-1 --artifact ssh-key
+//!
+//! # Specify flake directory
+//! artifacts /path/to/flake
+//!
+//! # Disable emoji output
+//! artifacts --no-emoji
+//! ```
+
 use clap::{Parser, ValueEnum};
 use std::path::PathBuf;
 
+/// Logging level for debug output.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
 pub enum LogLevel {
+    /// Error messages only
     Error,
+    /// Warnings and errors
     Warn,
+    /// Informational messages
     Info,
+    /// Debug output (most verbose)
     Debug,
 }
 
+/// Command-line arguments for the artifacts CLI.
+///
+/// Parsed using clap derive macros. Use `--help` for full documentation.
 #[derive(Debug, Parser)]
-#[command(name = "artifacts", version, about = "TUI for managing NixOS Artifacts", long_about = None)]
+#[command(
+    name = "artifacts",
+    version,
+    about = "TUI for managing NixOS Artifacts",
+    long_about = None
+)]
 pub struct Cli {
     /// Path to flake directory (default: current directory)
     pub flake: Option<PathBuf>,

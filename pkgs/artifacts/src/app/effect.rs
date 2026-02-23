@@ -1,8 +1,31 @@
+//! Side effect descriptors for the Elm Architecture runtime.
+//!
+//! This module defines the `Effect` enum - descriptions of side effects
+//! that the runtime executes. Effects are returned by the pure `update`
+//! function, keeping state transitions testable and predictable.
+//!
+//! # Effect Execution
+//!
+//! Effects are executed by the runtime (see [`crate::tui::runtime`]) which
+//! spawns background tasks to run scripts. Results are fed back into the
+//! update loop as messages.
+//!
+//! # Design Pattern
+//!
+//! Effects are data, not actions. The `update` function describes what
+//! should happen (e.g., "run this generator"), and the runtime handles
+//! the actual execution asynchronously.
+//!
+//! [`crate::tui::runtime`]: crate::tui::runtime
+
 use std::collections::HashMap;
 use std::path::PathBuf;
 
 /// Side effects that the runtime must execute.
-/// These are returned by `update()`, not executed inside it.
+///
+/// These are returned by [`update`](crate::app::update::update), not executed inside it.
+/// The runtime converts these into [`crate::tui::channels::EffectCommand`]s and sends them to
+/// the background task for execution.
 #[derive(Debug, Clone, Default)]
 pub enum Effect {
     /// No side effect

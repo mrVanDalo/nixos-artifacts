@@ -142,7 +142,7 @@ pub enum OutputStream {
 /// Results sent from background task back to foreground.
 ///
 /// Each variant corresponds to an `EffectCommand` and includes `artifact_index`
-/// for dispatch. Errors are encoded as bool+Option<String> rather than Result
+/// for dispatch. Errors are encoded as `bool+Option<String>` rather than Result
 /// to avoid serialization issues over channels.
 #[derive(Debug, Clone)]
 pub enum EffectResult {

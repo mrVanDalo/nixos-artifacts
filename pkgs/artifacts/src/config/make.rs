@@ -1,3 +1,60 @@
+//! Artifact configuration from Nix flake evaluation.
+//!
+//! This module handles the extraction and parsing of artifact definitions
+//! from `flake.nix` files. It supports both NixOS configurations (machines)
+//! and home-manager configurations (users).
+//!
+//! ## Configuration Flow
+//!
+//! 1. Nix expression is built via [`nix::build_make_expr`](super::nix)
+//! 2. `nix eval` produces JSON output containing artifact definitions
+//! 3. JSON is parsed into [`MakeConfiguration`] with typed structures
+//! 4. TUI uses the configuration to drive artifact generation
+//!
+//! ## JSON Structure
+//!
+//! The expected JSON format from Nix evaluation:
+//!
+//! ```json
+//! {
+//!   "nixos": [{
+//!     "machine": "machine-one",
+//!     "artifacts": {
+//!       "ssh-key": {
+//!         "name": "ssh-key",
+//!         "shared": false,
+//!         "files": {
+//!           "id_ed25519": {
+//!             "name": "id_ed25519",
+//!             "path": "/run/secrets/id_ed25519",
+//!             "owner": "root",
+//!             "group": "root"
+//!           }
+//!         },
+//!         "prompts": {
+//!           "passphrase": {
+//!             "name": "passphrase",
+//!             "description": "SSH key passphrase"
+//!           }
+//!         },
+//!         "generator": "/nix/store/.../generate.sh",
+//!         "serialization": "agenix"
+//!       }
+//!     },
+//!     "config": {
+//!       "agenix": { "publicKey": "ssh-ed25519 ..." }
+//!     }
+//!   }],
+//!   "home": []
+//! }
+//! ```
+//!
+//! ## Artifact Types
+//!
+//! - **Per-machine artifacts**: Defined in `nixos` array, scoped to specific machines
+//! - **Per-user artifacts**: Defined in `home` array, scoped to home-manager users
+//! - **Shared artifacts**: Marked with `"shared": true`, shared across multiple targets
+
 use anyhow::Context;
 use serde::de::{self, Deserializer};
 use serde::{Deserialize, Serialize};
@@ -6,37 +63,58 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+/// File definition within an artifact.
+///
+/// Specifies the properties of a single file that will be generated
+/// and where it should be deployed.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FileDef {
+    /// Name identifier for this file within the artifact
     pub name: String,
+    /// Target path where the file will be deployed
     pub path: Option<String>,
+    /// File owner (NixOS only, system-level permissions)
     pub owner: Option<String>,
+    /// File group (NixOS only, system-level permissions)
     pub group: Option<String>,
 }
 
+/// Prompt definition for user input during generation.
+///
+/// Prompts are collected from the user before running the generator
+/// and passed to the generator script via environment variables.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PromptDef {
+    /// Name identifier for this prompt (used as env var name)
     pub name: String,
+    /// Human-readable description shown in the TUI
     pub description: Option<String>,
 }
 
+/// Complete artifact definition extracted from Nix configuration.
+///
+/// An artifact represents a logical secret bundle that produces one or more
+/// deployable files. It includes:
+/// - Files to be generated and their deployment properties
+/// - Prompts for user input
+/// - Generator script that produces the files
+/// - Backend reference for serialization
 #[derive(Debug, Clone, Serialize)]
 pub struct ArtifactDef {
-    /// artifact name
+    /// Artifact name identifier
     pub name: String,
-    /// artifact description (optional)
+    /// Optional description for display in the TUI
     pub description: Option<String>,
-    /// is artifact shared across machines
-    /// (not implemented yet)
+    /// Whether this artifact is shared across multiple machines/users
     pub shared: bool,
-    /// files to be created, keyed by file name
+    /// Files to be created, keyed by file name
     pub files: BTreeMap<String, FileDef>,
-    /// prompts to be asked, keyed by prompt name
+    /// Prompts to collect from user, keyed by prompt name
     pub prompts: BTreeMap<String, PromptDef>,
-    /// generator script to be run to generate secrets
+    /// Path to the generator script that produces files
     pub generator: String,
-    /// serialization script to be run to serialize secrets
-    pub serialization: String, // backend reference name
+    /// Backend name for serialization (references backend.toml)
+    pub serialization: String,
 }
 
 impl<'de> Deserialize<'de> for ArtifactDef {
@@ -83,65 +161,103 @@ impl<'de> Deserialize<'de> for ArtifactDef {
     }
 }
 
-/// Type of target that defines an artifact
+/// Type of target that defines an artifact.
+///
+/// Artifacts can be defined in either NixOS machine configurations
+/// or home-manager user configurations.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub enum TargetType {
+    /// NixOS machine configuration (system-level artifacts)
     Nixos,
+    /// Home-manager user configuration (user-level artifacts)
     HomeManager,
 }
 
-/// Source of a generator - which target defines it
+/// Source of a generator - which target defines it.
+///
+/// Tracks which target (machine or user) provides a specific
+/// generator script for shared artifact generation.
 #[derive(Debug, Clone, Serialize)]
 pub struct GeneratorSource {
-    /// machine name or user identifier
+    /// Machine name or user identifier (e.g., "machine-one" or "alice@workstation")
     pub target: String,
-    /// type of target
+    /// Type of target (NixOS or HomeManager)
     pub target_type: TargetType,
 }
 
-/// A unique generator script with its sources
+/// A unique generator script with its sources.
+///
+/// For shared artifacts, multiple targets may use the same generator
+/// script. This struct tracks the script path and all targets that
+/// reference it.
 #[derive(Debug, Clone, Serialize)]
 pub struct GeneratorInfo {
-    /// generator script path
+    /// Path to the generator script (Nix store path)
     pub path: String,
-    /// targets that use this generator
+    /// Targets that use this generator (for shared artifacts)
     pub sources: Vec<GeneratorSource>,
 }
 
-/// Aggregated information about a shared artifact across all targets
+/// Aggregated information about a shared artifact across all targets.
+///
+/// Shared artifacts are marked with `shared: true` and can be used
+/// across multiple NixOS machines and home-manager users. This
+/// struct aggregates information from all targets for display and
+/// generation purposes.
+///
+/// ## Validation
+///
+/// Shared artifacts must have identical file definitions across all
+/// targets. If files mismatch, the `error` field contains a message.
 #[derive(Debug, Clone, Serialize)]
 pub struct SharedArtifactInfo {
-    /// artifact name
+    /// Artifact name identifier
     pub artifact_name: String,
-    /// artifact description (optional, from first definition)
+    /// Artifact description (from first definition found)
     pub description: Option<String>,
-    /// unique generators with their sources
+    /// Unique generators with their sources (different targets may use different generators)
     pub generators: Vec<GeneratorInfo>,
     /// NixOS machine names that use this artifact
     pub nixos_targets: Vec<String>,
     /// Home-manager user identifiers that use this artifact
     pub home_targets: Vec<String>,
-    /// serialization backend name
+    /// Backend name for serialization (references backend.toml)
     pub backend_name: String,
-    /// prompts collected from first definition (shared artifacts should have identical prompts)
+    /// Prompts from first definition (shared artifacts must have identical prompts)
     pub prompts: BTreeMap<String, PromptDef>,
-    /// files collected from first definition (shared artifacts should have identical files)
+    /// Files from first definition (shared artifacts must have identical files)
     pub files: BTreeMap<String, FileDef>,
-    /// validation error if file definitions mismatch across targets
+    /// Validation error if file definitions mismatch across targets
     pub error: Option<String>,
 }
 
+/// Central configuration structure extracted from Nix flake.
+///
+/// This is the primary data structure that holds all artifact definitions
+/// extracted from `nix eval` of the flake.nix file. It contains separate
+/// maps for NixOS machines and home-manager users.
+///
+/// ## Field Structure
+///
+/// - `nixos_map`: machine-name → (artifact-name → artifact)
+/// - `home_map`: user-name → (artifact-name → artifact)
+/// - `nixos_config`: machine-name → (backend-name → config-map)
+/// - `home_config`: user-name → (backend-name → config-map)
+/// - `make_base`: Directory containing the make.json file
+/// - `make_json`: Path to the make.json file
 #[derive(Clone)]
 pub struct MakeConfiguration {
-    // nixos: machine-name -> (artifact-name -> artifact)
+    /// NixOS machines: machine-name → (artifact-name → artifact)
     pub nixos_map: BTreeMap<String, BTreeMap<String, ArtifactDef>>,
-    // home: user-name -> (artifact-name -> artifact)
+    /// Home-manager users: user-name → (artifact-name → artifact)
     pub home_map: BTreeMap<String, BTreeMap<String, ArtifactDef>>,
-    // nixos: machine-name -> (backend-name -> backend-config map)
+    /// Per-machine backend configs: machine-name → (backend-name → config-map)
     pub nixos_config: BTreeMap<String, BTreeMap<String, BTreeMap<String, Value>>>,
-    // home: user-name -> (backend-name -> backend-config map)
+    /// Per-user backend configs: user-name → (backend-name → config-map)
     pub home_config: BTreeMap<String, BTreeMap<String, BTreeMap<String, Value>>>,
+    /// Directory containing the make.json file
     pub make_base: PathBuf,
+    /// Path to the make.json file
     pub make_json: PathBuf,
 }
 

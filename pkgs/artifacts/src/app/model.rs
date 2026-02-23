@@ -1,17 +1,41 @@
+//! Application state types for the Elm Architecture implementation.
+//!
+//! This module defines all the state types used by the application:
+//! - [`Model`]: The root application state
+//! - [`Screen`]: Current view/screen being displayed
+//! - [`ArtifactStatus`]: Lifecycle state of artifact generation
+//! - [`ListEntry`]: Unified list entry type (single or shared artifacts)
+//! - Various screen states for prompts, generation, logs, etc.
+//!
+//! # State Immutability
+//!
+//! All types in this module are designed for immutability:
+//! - All fields are `pub` for pattern matching
+//! - Update functions create new instances rather than mutate
+//! - Cloning is cheap (most fields are small or reference-counted)
+
 use crate::config::make::{ArtifactDef, GeneratorInfo, SharedArtifactInfo};
 use ratatui::style::{Color, Style};
 use std::collections::{HashMap, HashSet};
 
-/// Root application state
+/// Root application state containing all UI data.
+///
+/// This is the single source of truth for the TUI. All state changes
+/// flow through the update function, producing a new Model.
 #[derive(Debug, Clone, Default)]
 pub struct Model {
+    /// Current screen being displayed (determines what view renders)
     pub screen: Screen,
-    /// Legacy field - list of per-target artifacts
+    /// Legacy field - list of per-target artifacts (kept for backward compatibility)
     pub artifacts: Vec<ArtifactEntry>,
-    /// New field - unified list of entries (single and shared)
+    /// Unified list of entries displayed in the artifact list
+    /// Contains both single artifacts and shared artifacts
     pub entries: Vec<ListEntry>,
+    /// Currently selected entry index in the artifact list
     pub selected_index: usize,
+    /// Currently selected log step for viewing output
     pub selected_log_step: LogStep,
+    /// Critical error message (displayed in a banner)
     pub error: Option<String>,
     /// Non-blocking warnings about backend capability issues
     pub warnings: Vec<Warning>,
@@ -19,36 +43,60 @@ pub struct Model {
     pub tick_count: usize,
 }
 
-/// Current screen/view being displayed
+/// Current screen/view being displayed in the TUI.
+///
+/// The screen determines which view is rendered and which update
+/// handler processes keyboard input.
 #[derive(Debug, Clone, Default)]
 pub enum Screen {
+    /// Main artifact list view - the default screen
+    /// Shows all artifacts with their status
     #[default]
     ArtifactList,
+    /// Generator selection dialog for shared artifacts with multiple generators
     SelectGenerator(SelectGeneratorState),
+    /// Confirmation dialog before regenerating existing artifacts
     ConfirmRegenerate(ConfirmRegenerateState),
+    /// Prompt input screen for collecting user input
     Prompt(PromptState),
+    /// Generation progress screen with live output
     Generating(GeneratingState),
+    /// Completion screen showing generation summary
     Done(DoneState),
     /// Chronological log view with expandable sections per generation step
     ChronologicalLog(ChronologicalLogState),
 }
 
-/// An artifact with its associated machine/user and status
+/// A per-target artifact entry (one machine or user).
+///
+/// Represents an artifact that belongs to a specific target (NixOS machine
+/// or home-manager user). Each target has its own independent copy.
 #[derive(Debug, Clone)]
 pub struct ArtifactEntry {
+    /// Target name (e.g., "machine-one" or "alice@host")
     pub target: String,
+    /// Type of target (NixOS machine or home-manager user)
     pub target_type: TargetType,
+    /// The artifact definition (name, files, prompts, generator)
     pub artifact: ArtifactDef,
+    /// Current generation status
     pub status: ArtifactStatus,
+    /// Logs organized by generation step
     pub step_logs: StepLogs,
     /// Whether the artifact already exists in backend storage
     pub exists: bool,
 }
 
-/// Whether this is a NixOS machine or home-manager user
+/// Target type for artifact entries.
+///
+/// Determines the context (NixOS vs home-manager) and affects
+/// how artifacts are serialized and which environment variables
+/// are passed to scripts.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TargetType {
+    /// NixOS machine configuration
     Nixos,
+    /// Home-manager user configuration
     HomeManager,
 }
 
@@ -120,6 +168,11 @@ impl Default for GeneratingSubstate {
 }
 
 /// The steps in the artifact generation process.
+///
+/// These steps are executed in order:
+/// 1. CheckSerialization - Determine if regeneration is needed
+/// 2. RunningGenerator - Execute the generator script
+/// 3. Serializing - Store generated files in the backend
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum GenerationStep {
     /// Checking if generation is needed via check_serialization script
@@ -131,34 +184,42 @@ pub enum GenerationStep {
     Serializing,
 }
 
-/// A single log entry for an artifact
+/// A single log entry for an artifact generation step.
 #[derive(Debug, Clone)]
 pub struct LogEntry {
+    /// Severity level of the log entry
     pub level: LogLevel,
+    /// Log message content
     pub message: String,
 }
 
-/// Log severity/category
+/// Log severity/category for log entries.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LogLevel {
-    Info,    // Summary messages
-    Output,  // Stdout from scripts
-    Error,   // Stderr from scripts
-    Success, // Completion messages
+    /// Summary messages
+    Info,
+    /// Stdout from generator/backend scripts
+    Output,
+    /// Stderr from generator/backend scripts
+    Error,
+    /// Completion/success messages
+    Success,
 }
 
-/// Identifies which stream a line came from for streaming output
+/// Identifies which stream a line came from for streaming output.
 #[derive(Debug, Clone, Copy)]
 pub enum OutputStream {
+    /// Standard output from a script
     Stdout,
+    /// Standard error from a script
     Stderr,
 }
 
 impl From<crate::tui::channels::OutputStream> for OutputStream {
     fn from(stream: crate::tui::channels::OutputStream) -> Self {
         match stream {
-            crate::tui::channels::OutputStream::Stdout => OutputStream::Stdout,
-            crate::tui::channels::OutputStream::Stderr => OutputStream::Stderr,
+            crate::tui::channels::OutputStream::Stdout => Self::Stdout,
+            crate::tui::channels::OutputStream::Stderr => Self::Stderr,
         }
     }
 }
@@ -366,17 +427,27 @@ impl StepLogs {
     }
 }
 
-/// State for the prompt input screen
+/// State for the prompt input screen.
+///
+/// Collects user input for artifact prompts before generation.
+/// Supports three input modes: line, multiline, and hidden (for secrets).
 #[derive(Debug, Clone)]
 pub struct PromptState {
+    /// Index of the artifact being prompted for
     pub artifact_index: usize,
+    /// Artifact name for display
     pub artifact_name: String,
-    /// artifact description (optional, for display in prompt)
+    /// Artifact description (optional, for display)
     pub description: Option<String>,
+    /// List of prompts to collect
     pub prompts: Vec<PromptEntry>,
+    /// Index of the current prompt being collected
     pub current_prompt_index: usize,
+    /// Current input mode (line/multiline/hidden)
     pub input_mode: InputMode,
+    /// Current input buffer
     pub buffer: String,
+    /// Already collected prompt values (name -> value)
     pub collected: HashMap<String, String>,
 }
 
@@ -401,12 +472,19 @@ pub struct PromptEntry {
     pub description: Option<String>,
 }
 
-/// Input mode for prompts
+/// Input mode for collecting prompt values.
+///
+/// - `Line`: Single line input (Enter submits)
+/// - `Multiline`: Multi-line input (Ctrl+D submits, Enter adds newline)
+/// - `Hidden`: Password-style input (characters hidden)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum InputMode {
+    /// Single line input (Enter submits)
     #[default]
     Line,
+    /// Multi-line input (Ctrl+D submits)
     Multiline,
+    /// Password-style hidden input
     Hidden,
 }
 
@@ -481,7 +559,11 @@ impl SelectGeneratorState {
     }
 }
 
-/// An entry in the artifact list that can be either per-target or shared
+/// An entry in the artifact list that can be either per-target or shared.
+///
+/// This enum unifies the artifact list display, handling both:
+/// - Single artifacts (one per target)
+/// - Shared artifacts (one artifact shared across multiple targets)
 #[derive(Debug, Clone)]
 pub enum ListEntry {
     /// Per-target artifact (one machine or user)
