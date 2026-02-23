@@ -1,8 +1,8 @@
-# State: v4.1 Code Quality & Documentation Cleanup — Phase 19 🚧 IN PROGRESS
+# State: v4.1 Code Quality & Documentation Cleanup — Phase 20 🚧 IN PROGRESS
 
 **Project:** NixOS Artifacts Store — v4.1 Code Quality & Documentation Cleanup 🚧 IN PROGRESS  
 **Current Milestone:** v4.1 🚧 IN PROGRESS  
-**Status:** Plan 19-01 Complete — All DEAD requirements satisfied  
+**Status:** Plan 20-01 Complete — All FILE requirements satisfied  
 **Last Updated:** 2026-02-23
 
 ---
@@ -14,7 +14,7 @@ See: [.planning/ROADMAP.md](./ROADMAP.md) (updated 2026-02-23)
 
 **Core Value:** The TUI must never freeze during long-running operations — all effect execution runs in a background job while the TUI remains interactive.
 
-**Current Focus:** Phase 19 — Dead Code Elimination ✅ COMPLETE
+**Current Focus:** Phase 20 — Unused File Cleanup ✅ COMPLETE
 
 ---
 
@@ -23,22 +23,63 @@ See: [.planning/ROADMAP.md](./ROADMAP.md) (updated 2026-02-23)
 | Aspect       | Status                       |
 | ------------ | ---------------------------- |
 | Milestone    | v4.1 🚧 IN PROGRESS          |
-| Phase        | **19** — Dead Code Elimination ✅ COMPLETE |
+| Phase        | **20** — Unused File Cleanup ✅ COMPLETE |
 | Plan         | **01** ✅ Complete (1 of 1) |
-| Requirements | DEAD-01 ✅, DEAD-02 ✅, DEAD-03 ✅, DEAD-04 ✅, DEAD-05 ✅ Complete |
-| Last Activity | Completed 19-01: Dead code elimination verified, all attributes justified |
+| Requirements | FILE-01 ✅, FILE-02 ✅, FILE-03 ✅, FILE-04 ✅, FILE-05 ✅ Complete |
+| Last Activity | Completed 20-01: Orphaned documentation files removed, documentation structure validated |
 
 ### Progress Bar
 
 ```
-[████████████████████████████████████] 100% — Phase 19 Complete — Plan 1 Done
+[████████████████████████████████████] 100% — Phase 20 Complete — Plan 1 Done
 ```
 
-**Milestone Progress:** 2/5 phases complete (40%)
+**Milestone Progress:** 3/5 phases complete (60%)
 
 ---
 
 ## Accumulated Context
+
+### Phase 20: Unused File Cleanup
+
+**Goal:** Audit and clean up orphaned documentation files, empty files, and unused documentation artifacts
+
+**Requirements:**
+- FILE-01 ✅: All docs/ files are referenced in nav.adoc or included in pages
+- FILE-02 ✅: No empty .adoc, .md, or .rs files exist
+- FILE-03 ✅: All CLAUDE.md files are current and useful
+- FILE-04 ✅: All README.md files are current and not orphaned
+- FILE-05 ✅: No orphaned documentation files exist
+
+**Completed in 20-01:**
+- Audited all documentation files in docs/modules/ROOT/pages/ and partials/
+- Identified and removed orphaned options.adoc (not referenced in nav.adoc)
+- Identified and removed orphaned backend-implementation-guide.md (outside Antora structure)
+- Verified all CLAUDE.md files are current (root: 136 lines, docs: 163 lines, pkgs/artifacts: 614 lines)
+- Verified all README.md files are current (root: 41 lines, docs: 27 lines)
+- Confirmed no empty files exist
+- Documentation builds successfully with `nix run .#build-docs`
+
+**Key Finding:** Two orphaned files were identified:
+1. docs/modules/ROOT/pages/options.adoc - orphaned page not in nav.adoc
+2. docs/backend-implementation-guide.md - comprehensive guide outside Antora build structure
+
+**Dependencies:** Phase 19 (Dead Code Elimination) - established clean codebase
+
+**Expected Commands:**
+```bash
+# Build documentation - should succeed
+nix run .#build-docs  # ✅ Build successful
+
+# Check for empty files - should return nothing
+find . -name "*.adoc" -o -name "*.md" -o -name "*.rs" | xargs -I {} sh -c 'test -s "{}" || echo "Empty: {}"'  # ✅ No output
+
+# Verify CLAUDE.md files
+wc -l CLAUDE.md docs/CLAUDE.md pkgs/artifacts/CLAUDE.md  # ✅ All have substantial content
+
+# Verify README.md files
+wc -l README.md docs/README.md  # ✅ All have substantial content
+```
 
 ### Phase 19: Dead Code Elimination
 
@@ -145,6 +186,9 @@ All decisions preserved in PROJECT.md Validated section.
 
 ## Decisions Made
 
+- Orphaned documentation files should be removed rather than kept "just in case"
+- Files outside Antora module structure should be integrated or removed
+- options.adoc was a duplicate/legacy file superseded by options-nixos.adoc and options-homemanager.adoc
 - All `#[allow(dead_code)]` attributes must have doc comments explaining why they're kept
 - Future-use code should reference the phase that will implement the feature
 - Code kept for backward compatibility should document the newer alternative
@@ -174,6 +218,7 @@ All decisions preserved in PROJECT.md Validated section.
 
 | Phase | Plan | Duration | Tasks |
 |-------|------|----------|-------|
+| 20-unused-file-cleanup | 01 | 3 min | 3 |
 | 19-dead-code-elimination | 01 | 5 min | 3 |
 | 18-fix-compiler-clippy-warnings | 01 | 24 min | 3 |
 | 18-fix-compiler-clippy-warnings | 02 | 12 min | 1 |
@@ -185,9 +230,9 @@ All decisions preserved in PROJECT.md Validated section.
 
 ## Session Continuity
 
-**Last action:** Completed Plan 19-01: Dead code elimination verified, all attributes justified
+**Last action:** Completed Plan 20-01: Orphaned documentation files removed, documentation structure validated
 
-**Next action:** Phase 20: Output Streaming (or next phase in v4.1 milestone)
+**Next action:** Phase 21: Documentation Consolidation (or next phase in v4.1 milestone)
 
 **Open questions:**
 - None
@@ -201,6 +246,7 @@ All decisions preserved in PROJECT.md Validated section.
 - [MILESTONES.md](./MILESTONES.md) — Milestone history
 - [ROADMAP.md](./ROADMAP.md) — Current roadmap (v4.1)
 - [REQUIREMENTS.md](./REQUIREMENTS.md) — Requirements for v4.1
+- [20-01-SUMMARY.md](./phases/20-unused-file-cleanup/20-01-SUMMARY.md) — Plan 20-01
 - [19-01-SUMMARY.md](./phases/19-dead-code-elimination/19-01-SUMMARY.md) — Plan 19-01
 - [18-01-SUMMARY.md](./phases/18-fix-compiler-clippy-warnings/18-01-SUMMARY.md) — Plan 18-01
 - [18-02-SUMMARY.md](./phases/18-fix-compiler-clippy-warnings/18-02-SUMMARY.md) — Plan 18-02
@@ -210,4 +256,4 @@ All decisions preserved in PROJECT.md Validated section.
 
 ---
 
-_Updated: 2026-02-23 — Phase 19 complete, all DEAD requirements satisfied_
+_Updated: 2026-02-23 — Phase 20 complete, all FILE requirements satisfied_
