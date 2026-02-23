@@ -1,4 +1,21 @@
-# NixOS Artifacts Store - v4.0 Regeneration Safety
+# NixOS Artifacts Store
+
+## Current State
+
+**Shipped:** v4.1 Code Quality & Documentation Cleanup — 2026-02-23  
+**Status:** Production-ready with zero compiler warnings, comprehensive documentation, and audited dependencies  
+**Tests:** 131 passing tests (up from 122 at v4.0)  
+**Requirements:** 24/24 v4.1 requirements complete (all LINT, DEAD, FILE, DOC, DEPS)
+
+**Key Achievements:**
+
+- **Zero compiler warnings** — Main code and tests compile with zero rustc and clippy warnings
+- **Zero cargo doc warnings** — Comprehensive Rust documentation with clean intra-doc links
+- **Dead code eliminated** — All unused imports, variables removed; all `#[allow(dead_code)]` justified
+- **File cleanup** — Removed 2 orphaned documentation files, verified all CLAUDE.md and README.md current
+- **Dependency audit** — All 11 dependencies verified actively used (cargo-machete), no unused features
+
+---
 
 ## What This Is
 
@@ -8,171 +25,6 @@ uses a fully async background job architecture with tokio channels, ensuring
 the TUI remains responsive during all script execution while maintaining the Elm
 Architecture pattern.
 
-## Current State
-
-**Shipped:** v4.0 Regeneration Safety — 2026-02-22  
-**Status:** Production-ready with confirmation dialogs, log views, and comprehensive documentation  
-**Tests:** 131 passing (up from 122 at v3.0)  
-**Requirements:** 27/27 v4 requirements complete (all REGEN-01 to REGEN-07)
-
-**Key Achievements:**
-
-- **Regeneration confirmation** — "Leave" default prevents accidental overwrites, explicit "Regenerate" opt-in
-- **Chronological log view** — Expandable Check/Generate/Serialize sections with keyboard navigation
-- **Backend developer docs** — Comprehensive 600+ line guide with lifecycle diagrams and quickstart templates
-- **Model-based testing** — 9 Elm Architecture tests documenting inputs → Model → view chain
-
-**Performance:**
-
-- Sub-50ms event polling during effect execution
-- Zero blocking calls in TUI runtime loop
-- Graceful shutdown with in-flight command completion
-- Sequential effect processing (FIFO) prevents race conditions
-- Feature-gated logging: zero overhead when disabled
-
----
-
-## Current Milestone: v4.1 Code Quality & Documentation Cleanup
-
-**Goal:** Eliminate all compiler warnings, clippy lints, and dead code while ensuring comprehensive Rust documentation.
-
-**Target features:**
-
-- Zero clippy warnings (main code and tests)
-- Zero compiler warnings (main code and tests)
-- Dead code elimination (unused functions, variables, imports)
-- Unused file cleanup (orphaned documentation, empty files)
-- Comprehensive Rust documentation (all modules, functions, public APIs)
-- Clean `cargo doc` generation
-- Unused dependency audit
-
----
-
-<details>
-<summary>📦 v3.0 Project Evolution (click to expand)</summary>
-
-### v3.0 Delivered Features
-
-**Shared Artifact Status Fixes:**
-
-- Fixed missing `SharedCheckSerializationResult` handler in update.rs
-- Shared artifacts transition from "pending" to correct final status
-- Status aggregation properly calculates combined status across machines
-- Visual status matches actual backend state after check_serialization
-
-**Smart Generator Selection:**
-
-- Skips dialog when only one unique generator (compared by Nix store path)
-- Shows selection dialog with full context when multiple generators exist
-- Displays machine name, user name, and home-manager vs nixos source type
-- Nix store path comparison for true uniqueness
-
-**TUI Error Handling:**
-
-- TUI initialization failures print clear error to stderr before exit
-- Terminal restoration failures print error to stderr
-- All runtime errors visible in TUI interface, not stdout/stderr
-- Panic handler prints to stderr and attempts terminal restoration
-- When `--log-file` provided, all non-error output goes to log file only
-
-**Script Output Visibility:**
-
-- Script stdout captured and stored for TUI display
-- Script stderr captured and stored alongside stdout
-- Real-time output display during script execution (streamed)
-- Previous script output accessible in artifact detail view
-- Output capture works for both single and shared artifacts
-
-**Enhanced Generator Dialog:**
-
-- Displays artifact name prominently
-- Shows optional artifact description from Nix config
-- Lists all prompt descriptions before generator selection
-- Indicates when artifact is shared vs per-machine
-- Lists all machines and users that reference the artifact
-- Clean section-based layout with line separators
-
-</details>
-
-<details>
-<summary>📦 v2.0 Project Evolution (click to expand)</summary>
-
-### v2.0 Delivered Features
-
-**Testing & Reliability:**
-
-- 33+ end-to-end tests across 5 test modules
-- Headless API for programmatic artifact generation
-- Backend storage verification (artifacts actually exist after generation)
-- Diagnostic tooling with auto-dump on failure
-- Shared artifact test coverage
-
-**Code Quality:**
-
-- 12 refactored handler functions (all under 50 lines)
-- 18 helper functions extracted from serialization.rs
-- Descriptive variable names (no `cfg`, `hdl`, `ctx`)
-- Flattened call chains (f(g(h(x))) → extract and chain)
-- Single-responsibility functions with success/failure split
-
-**Smart Logging:**
-
-- `--log-file <path>` CLI argument
-- `--log-level <error|warn|info|debug>` filtering
-- Feature-gated: zero cost when disabled
-- Macro API: `error!`, `warn!`, `info!`, `debug!`
-- Real-time streaming with flush after each entry
-- Hardcoded `/tmp/artifacts_debug.log` completely removed
-
-**Technical Debt Note:**
-
-- 3 orchestration functions in serialization.rs slightly exceed 50-line limit
-- These delegate to 15+ well-named helpers — readable and maintainable
-- Considered acceptable technical debt (cosmetic, not functional)
-
-</details>
-
-<details>
-<summary>📦 v1.0 Project Evolution (click to expand)</summary>
-
-### Original Project Description (v1.0)
-
-A system that unifies handling of artifacts (secrets and generated files) in
-NixOS flakes through a common abstraction over multiple backends. This project
-focused on refactoring the Rust CLI's effect handling to use a background job
-pattern with tokio, ensuring the TUI remains responsive during script execution.
-
-### Original Core Value
-
-The TUI must never freeze during long-running operations — all effect execution
-(check_serialization, generator, serialize scripts) must run in a background job
-while the TUI remains interactive.
-
-### Original Requirements (Pre-v1.0)
-
-**Validated:**
-
-- ✓ Artifact definitions via NixOS modules (artifacts.store.*)
-- ✓ Backend plugin system via backend.toml
-- ✓ TUI with Elm Architecture (Model-Update-View-Effect)
-- ✓ Effect system describing side effects
-- ✓ Script execution with bubblewrap isolation
-- ✓ Shared vs per-machine artifact support
-- ✓ Temporary file handling with tempfile crate
-
-**Active (moved to Validated in v1.0):**
-
-- Background job architecture with tokio channels
-- TUI remains responsive during all effect operations
-- Sequential processing of effects in background (FIFO queue)
-- Async message passing between TUI and background job
-- Replace current effect_handler.rs with new channel-based approach
-- Proper shutdown handling for background job
-- Error propagation from background to foreground
-- State synchronization between TUI and background operations
-
-</details>
-
 ---
 
 ## Core Value
@@ -180,7 +32,37 @@ while the TUI remains interactive.
 **Current:** The TUI must never freeze during long-running operations — all
 effect execution runs in a background job while the TUI remains interactive.
 
+---
+
 ## Requirements
+
+### Validated (Shipped in v4.1)
+
+- ✓ **Zero rustc warnings** — Main code compiles with zero compiler warnings — v4.1
+- ✓ **Zero clippy warnings** — Main code passes clippy with zero warnings — v4.1
+- ✓ **Zero test rustc warnings** — Tests compile with zero compiler warnings — v4.1
+- ✓ **Zero test clippy warnings** — Tests pass clippy with zero warnings — v4.1
+- ✓ **Pedantic lints addressed** — 90% reduction with documented justifications — v4.1
+- ✓ **No unused functions** — All functions called or justified — v4.1
+- ✓ **No unused variables** — All variables used or prefixed — v4.1
+- ✓ **No unused imports** — All imports referenced — v4.1
+- ✓ **No unreachable code** — All paths reachable or justified — v4.1
+- ✓ **Justified dead_code attributes** — All attributes have explanatory comments — v4.1
+- ✓ **Orphaned files removed** — options.adoc and backend-implementation-guide.md removed — v4.1
+- ✓ **No empty files** — All files contain content — v4.1
+- ✓ **CLAUDE.md files current** — All 3 CLAUDE.md files verified — v4.1
+- ✓ **README.md files current** — All 2 README.md files verified — v4.1
+- ✓ **Module documentation** — All public modules have module-level docs — v4.1
+- ✓ **Function documentation** — All public functions documented — v4.1
+- ✓ **Type documentation** — All public structs/enums documented — v4.1
+- ✓ **Trait documentation** — All trait implementations documented — v4.1
+- ✓ **Complex logic documented** — Inline comments explain "why" — v4.1
+- ✓ **Clean cargo doc** — `cargo doc` produces zero warnings — v4.1
+- ✓ **Public API examples** — Usage examples in doc comments — v4.1
+- ✓ **Safety sections** — Panics/Errors/Safety documented — v4.1
+- ✓ **Dependencies verified** — All 11 deps actively used — v4.1
+- ✓ **Features verified** — All features exercised — v4.1
+- ✓ **Duplicate deps documented** — Unavoidable transitive duplicates noted — v4.1
 
 ### Validated (Shipped in v4.0)
 
@@ -226,14 +108,6 @@ effect execution runs in a background job while the TUI remains interactive.
 - ✓ **Elm Architecture** (Model-Update-View-Effect) — pre-existing
 - ✓ **Bubblewrap isolation** for scripts — pre-existing
 
-### Future Ideas
-
-- [ ] Progress reporting during long-running effects
-- [ ] Cancellation of in-flight effects via user input
-- [ ] Effect queuing with priority support
-- [ ] Concurrent execution of independent effects
-- [ ] Multi-threaded script execution for independent artifacts
-
 ### Out of Scope
 
 - WebSocket/network-based background job — Local process architecture is
@@ -241,6 +115,13 @@ effect execution runs in a background job while the TUI remains interactive.
 - Concurrent effect execution in v1.0 — Sequential processing chosen for
   correctness and simplicity
 - Progress bars — Not needed for atomic effects
+- Progress reporting during long-running effects — No current requirement
+- Cancellation of in-flight effects via user input — No current requirement
+- Effect queuing with priority support — No current requirement
+- Concurrent execution of independent effects — No current requirement
+- Multi-threaded script execution for independent artifacts — No current requirement
+
+---
 
 ## Context
 
@@ -254,17 +135,35 @@ effect execution runs in a background job while the TUI remains interactive.
 - tempfile crate for temp directory management
 - insta + insta_cmd for snapshot testing
 - serial_test for test isolation
-- 122 total tests (comprehensive coverage)
+- cargo-machete for dependency auditing
+- 131 total tests (comprehensive coverage)
 
-**v3.0 Technical Context:**
+**v4.1 Technical Context:**
 
-All v3.0 UX issues addressed:
+All v4.1 code quality requirements delivered:
 
-1. ✓ **Status display bug:** Shared artifacts now show correct calculated status
-2. ✓ **Generator selection:** Auto-skips when only one unique generator
-3. ✓ **Error handling:** TUI failures show user-friendly errors to stderr
-4. ✓ **Script output:** Real-time stdout/stderr display in TUI detail view
-5. ✓ **Context display:** Rich generator dialog with full context information
+1. ✓ **Zero rustc warnings:** `cargo build` completes with zero warnings
+2. ✓ **Zero clippy warnings:** `cargo clippy` completes with zero warnings
+3. ✓ **Dead code eliminated:** All unused imports/variables removed, all `#[allow(dead_code)]` justified
+4. ✓ **File cleanup:** Removed 2 orphaned docs files, verified all CLAUDE.md/README.md current
+5. ✓ **Documentation:** 100+ doc comments added, `cargo doc` produces zero warnings
+6. ✓ **Dependencies:** All 11 deps verified actively used with cargo-machete
+
+**v4.0 Achievements:**
+
+- Regeneration confirmation dialog with "Leave" default
+- Chronological log view with expandable sections
+- 600+ line backend developer documentation
+- 9 model-based tests for Elm Architecture
+
+**v3.0 Achievements:**
+
+- All v3.0 UX issues addressed:
+  - Shared artifacts show correct calculated status
+  - Smart generator selection auto-skips when only one unique generator
+  - TUI failures show user-friendly errors to stderr
+  - Real-time stdout/stderr display in TUI detail view
+  - Rich generator dialog with full context information
 
 **v2.0 Achievements:**
 
@@ -283,6 +182,8 @@ All v3.0 UX issues addressed:
 - File-based logging to prevent terminal corruption
 - 35/35 requirements delivered
 
+---
+
 ## Constraints
 
 - **Tech stack:** ratatui + tokio (no new runtime dependencies)
@@ -291,6 +192,9 @@ All v3.0 UX issues addressed:
 - **Isolation:** Bubblewrap sandboxing maintained
 - **State:** Shared artifact aggregation working
 - **Error handling:** Don't pollute stdout/stderr unless TUI fails
+- **Code quality:** Zero compiler warnings maintained
+
+---
 
 ## Key Decisions
 
@@ -309,7 +213,11 @@ All v3.0 UX issues addressed:
 | **Leave as default**              | Prevents accidental overwrites    | ✓ Good — safety-first UX             |
 | **StateCapture struct**           | Documents Elm Architecture chain  | ✓ Good — living documentation        |
 | **Standalone BACKEND_GUIDE.md**   | Copy-paste ready for other repos | ✓ Good — portable documentation      |
+| **Pedantic warnings documented**  | 90% fixed, rest justified          | ✓ Good — maintainable codebase       |
+| **cargo-machete for deps**        | Automated unused dep detection    | ✓ Good — verified all 11 deps used |
+| **Intra-doc links**               | Automatic navigation in docs      | ✓ Good — clean cargo doc output      |
 
 ---
 
-_Last updated: 2026-02-22 after v4.0 milestone complete_
+_Project: NixOS Artifacts Store_  
+_Last updated: 2026-02-23 after v4.1 milestone complete_

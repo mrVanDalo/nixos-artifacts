@@ -1,165 +1,108 @@
-# Roadmap: v4.1 Code Quality & Documentation Cleanup
+# Roadmap: NixOS Artifacts Store
 
-**Milestone:** v4.1 Code Quality & Documentation Cleanup  
-**Phases:** 5 (18-22)  
-**Requirements:** 24 v1 requirements  
-**Coverage:** 100% (24/24 mapped)  
-**Depth:** Comprehensive  
-**Defined:** 2026-02-22  
+## Milestones
 
----
-
-## Overview
-
-This roadmap delivers a comprehensive cleanup of the NixOS Artifacts Store codebase. The focus is on achieving zero compiler warnings, eliminating dead code, cleaning up unused files, documenting all public APIs, and auditing dependencies. Each phase builds on the previous to create a clean, well-documented, and maintainable codebase.
-
-The phases follow a logical order: first fix active code issues (linting), then remove what's not needed (dead code, unused files), then document what remains, and finally audit external dependencies.
+- ✅ **v4.1 Code Quality & Documentation** — Phases 18-22 (shipped 2026-02-23)
+- ✅ **v4.0 Regeneration Safety** — Phases 14-17 (shipped 2026-02-22)
+- ✅ **v3.0 TUI Polish** — Phases 9-13 (shipped 2026-02-18)
+- ✅ **v2.0 Robustness** — Phases 5-8 (shipped 2026-02-17)
+- ✅ **v1.0 Background Job** — Phases 1-4 (shipped 2026-02-10)
 
 ---
 
-## Phase 18: Fix Compiler & Clippy Warnings
+## Phases
 
-**Goal:** Achieve zero warnings from both rustc and clippy across main code and tests
+<details>
+<summary>✅ v4.1 Code Quality & Documentation (Phases 18-22) — SHIPPED 2026-02-23</summary>
 
-**Phase Number:** 18  
-**Requirements:** LINT-01, LINT-02, LINT-03, LINT-04, LINT-05  
-**Dependencies:** None (can start immediately)  
-**Status:** ✅ COMPLETE (2026-02-22)
+- [x] Phase 18: Fix Compiler & Clippy Warnings (5/5 plans) — completed 2026-02-22
+- [x] Phase 19: Dead Code Elimination (1/1 plan) — completed 2026-02-23
+- [x] Phase 20: Unused File Cleanup (1/1 plan) — completed 2026-02-23
+- [x] Phase 21: Rust Documentation (5/5 plans) — completed 2026-02-23
+- [x] Phase 22: Dependency Audit (1/1 plan) — completed 2026-02-23
 
-**Plans:** 5 plans (all complete)
+See [v4.1-ROADMAP.md](milestones/v4.1-ROADMAP.md) for full details.
 
-### Success Criteria
+</details>
 
-1. **Main code compiles with zero warnings** — `cargo build` completes with no compiler warnings
-2. **Main code passes clippy with zero warnings** — `cargo clippy` completes with no warnings at default level
-3. **Tests compile with zero warnings** — `cargo test --no-run` completes with no compiler warnings
-4. **Tests pass clippy with zero warnings** — `cargo clippy --tests` completes with no warnings
-5. **Pedantic lints addressed** — Additional clippy lints from clippy::pedantic and clippy::nursery are reviewed and addressed where appropriate
+<details>
+<summary>✅ v4.0 Regeneration Safety (Phases 14-17) — SHIPPED 2026-02-22</summary>
 
----
+- [x] Phase 14: Regeneration Confirmation — completed 2026-02-22
+- [x] Phase 15: Chronological Log View — completed 2026-02-22
+- [x] Phase 16: Backend Developer Docs — completed 2026-02-22
+- [x] Phase 17: Model-Based Testing — completed 2026-02-22
 
-## Phase 19: Dead Code Elimination
+See [v4.0-ROADMAP.md](milestones/v4.0-ROADMAP.md) for full details.
 
-**Goal:** Remove all dead code including unused functions, variables, imports, and unreachable paths
+</details>
 
-**Phase Number:** 19  
-**Requirements:** DEAD-01, DEAD-02, DEAD-03, DEAD-04, DEAD-05  
-**Dependencies:** Phase 18 (fix warnings first to see actual dead code clearly)
-**Status:** 🚧 IN PROGRESS (2026-02-22)
+<details>
+<summary>✅ v3.0 TUI Polish (Phases 9-13) — SHIPPED 2026-02-18</summary>
 
-**Plans:** 1 plan
+- [x] Phase 9: Shared Artifact Status Fixes — completed 2026-02-18
+- [x] Phase 10: Smart Generator Selection — completed 2026-02-18
+- [x] Phase 11: TUI Error Handling — completed 2026-02-18
+- [x] Phase 12: Script Output Visibility — completed 2026-02-18
+- [x] Phase 13: Enhanced Generator Dialog — completed 2026-02-18
 
-- [ ] 19-01 — Identify and remove all dead code from the Rust codebase
+See [v3.0-ROADMAP.md](milestones/v3.0-ROADMAP.md) for full details.
 
-### Success Criteria
+</details>
 
-1. **No unused functions in main codebase** — All functions are called or marked with `#[allow(dead_code)]` and justification comment
-2. **No unused variables** — All variables are used or prefixed with underscore if intentionally unused
-3. **No unused imports** — All `use` statements are referenced in code
-4. **No unreachable code paths** — All code paths are reachable or marked with justification
-5. **Dead code attributes justified** — All `#[allow(dead_code)]` attributes have explanatory comments
+<details>
+<summary>✅ v2.0 Robustness (Phases 5-8) — SHIPPED 2026-02-17</summary>
 
----
+- [x] Phase 5: Validation — completed 2026-02-17
+- [x] Phase 6: Integration Testing — completed 2026-02-17
+- [x] Phase 7: Code Quality — completed 2026-02-17
+- [x] Phase 8: Smart Logging — completed 2026-02-17
 
-## Phase 20: Unused File Cleanup
+See [v2.0-ROADMAP.md](milestones/v2.0-ROADMAP.md) for full details.
 
-**Goal:** Clean up orphaned documentation, empty files, and unused documentation artifacts
+</details>
 
-**Phase Number:** 20  
-**Requirements:** FILE-01, FILE-02, FILE-03, FILE-04, FILE-05  
-**Dependencies:** Phase 19 (clean code first, then clean files)  
-**Status:** ✅ COMPLETE (2026-02-23)
+<details>
+<summary>✅ v1.0 Background Job (Phases 1-4) — SHIPPED 2026-02-10</summary>
 
-### Success Criteria
+- [x] Phase 1: Foundation — completed 2026-02-10
+- [x] Phase 2: Single Artifacts — completed 2026-02-10
+- [x] Phase 3: Shared Artifacts — completed 2026-02-10
+- [x] Phase 4: Robustness — completed 2026-02-10
 
-1. **All documentation files referenced** — Every file in `docs/` is included in Antora navigation or build output
-2. **No empty files in repository** — All `.adoc`, `.md`, `.rs` files contain content (except intentional placeholders with comments)
-3. **CLAUDE.md files are active** — All `CLAUDE.md` files are referenced by AI workflows and contain current information
-4. **README.md files are current** — All `README.md` files are up to date and not orphaned from parent projects
-5. **Non-build documentation reviewed** — Documentation not part of Antora build output is either integrated or removed
+See [v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md) for full details.
 
----
-
-## Phase 21: Rust Documentation
-
-**Goal:** Achieve comprehensive Rust documentation for all public APIs with clean `cargo doc` generation
-
-**Phase Number:** 21  
-**Requirements:** DOC-01, DOC-02, DOC-03, DOC-04, DOC-05, DOC-06, DOC-07, DOC-08  
-**Dependencies:** Phase 20 (clean files first to avoid documenting what gets deleted)  
-**Status:** ✅ COMPLETE (2026-02-23)
-
-**Plans:** 5 plans (all complete)
-
-- [x] 21-01 — Fix cargo doc warnings (broken links, HTML tags)
-- [x] 21-02 — Document backend module (serialization, generators, helpers)
-- [x] 21-03 — Document config module (backend.toml, flake.nix parsing)
-- [x] 21-04 — Document app, cli, and tui modules
-- [x] 21-05 — Document crate root, macros, and finalize
-
-### Success Criteria
-
-1. **All public modules documented** — Every public module has module-level documentation (`//!`)
-2. **All public functions documented** — Every public function has doc comments (`///`) with description
-3. **All public types documented** — Every public struct and enum has doc comments with field descriptions
-4. **All trait implementations documented** — Trait `impl` blocks have documentation explaining the implementation
-5. **Complex logic explained** — Functions with complex logic have inline comments explaining the "why"
-6. **Clean `cargo doc` generation** — `cargo doc` completes with no warnings or broken links
-7. **Public API examples** — Key public APIs include usage examples in doc comments
-8. **Safety and error documentation** — Functions that panic, return errors, or use unsafe have appropriate sections
+</details>
 
 ---
 
-## Phase 22: Dependency Audit
+## Progress
 
-**Goal:** Audit and clean up unused dependencies, features, and duplicates
-
-**Phase Number:** 22  
-**Requirements:** DEPS-01, DEPS-02, DEPS-03  
-**Dependencies:** Phase 21 (final cleanup phase after all code is documented)  
-
-### Success Criteria
-
-1. **All dependencies used** — Every dependency in `Cargo.toml` is actually used in the codebase
-2. **All features used** — Every feature flag in `Cargo.toml` is actually exercised
-3. **No duplicate dependencies** — Dependencies are deduplicated where avoidable (e.g., multiple versions)
-
----
-
-## Summary
-
-| Phase | Name | Goal | Requirements | Dependencies |
-|-------|------|------|--------------|--------------|
-| 18 | Fix Compiler & Clippy Warnings | Zero warnings from rustc and clippy | LINT-01 to LINT-05 | None |
-| 19 | Dead Code Elimination | Remove all dead code | DEAD-01 to DEAD-05 | Phase 18 |
-| 20 | Unused File Cleanup | Clean up orphaned files | FILE-01 to FILE-05 | Phase 19 |
-| 21 | Rust Documentation | Document all public APIs | DOC-01 to DOC-08 | Phase 20 |
-| 22 | Dependency Audit | Clean up unused dependencies | DEPS-01 to DEPS-03 | Phase 21 |
-
-**Total:** 5 phases, 24 requirements, 23 success criteria
-
----
-
-## Execution Notes
-
-### Phase Ordering Rationale
-
-1. **Phase 18 (Lint) first:** Fix active code issues to get a clean baseline
-2. **Phase 19 (Dead code) second:** After linting, actual dead code becomes visible
-3. **Phase 20 (File cleanup) third:** Clean files after code is cleaned (avoid deleting files that might be needed)
-4. **Phase 21 (Documentation) fourth:** Document what remains after cleanup
-5. **Phase 22 (Dependencies) last:** Audit deps after all code changes are complete
-
-### Expected Effort
-
-- Phase 18: 2-4 hours (fix warnings)
-- Phase 19: 2-3 hours (identify and remove dead code)
-- Phase 20: 1-2 hours (file cleanup)
-- Phase 21: 4-6 hours (comprehensive documentation)
-- Phase 22: 1-2 hours (dependency audit)
-
-**Total estimated time:** 10-17 hours across all phases
+| Phase             | Milestone | Plans Complete | Status      | Completed  |
+| ----------------- | --------- | -------------- | ----------- | ---------- |
+| 1. Foundation     | v1.0      | 3/3            | Complete    | 2026-02-10 |
+| 2. Single Artifacts | v1.0    | 3/3            | Complete    | 2026-02-10 |
+| 3. Shared Artifacts | v1.0    | 6/6            | Complete    | 2026-02-10 |
+| 4. Robustness     | v1.0      | 3/3            | Complete    | 2026-02-10 |
+| 5. Validation     | v2.0      | 3/3            | Complete    | 2026-02-17 |
+| 6. Integration Testing | v2.0 | 5/5            | Complete    | 2026-02-17 |
+| 7. Code Quality   | v2.0      | 3/3            | Complete    | 2026-02-17 |
+| 8. Smart Logging  | v2.0      | 3/3            | Complete    | 2026-02-17 |
+| 9. Shared Artifact Status | v3.0 | 4/4      | Complete    | 2026-02-18 |
+| 10. Smart Generator Selection | v3.0 | 2/2 | Complete    | 2026-02-18 |
+| 11. TUI Error Handling | v3.0 | 3/3      | Complete    | 2026-02-18 |
+| 12. Script Output Visibility | v3.0 | 4/4 | Complete    | 2026-02-18 |
+| 13. Enhanced Generator Dialog | v3.0 | 2/2 | Complete    | 2026-02-18 |
+| 14. Regeneration Confirmation | v4.0 | 4/4 | Complete    | 2026-02-22 |
+| 15. Chronological Log View | v4.0 | 3/3 | Complete    | 2026-02-22 |
+| 16. Backend Developer Docs | v4.0 | 3/3 | Complete    | 2026-02-22 |
+| 17. Model-Based Testing | v4.0 | 3/3 | Complete    | 2026-02-22 |
+| 18. Fix Compiler & Clippy Warnings | v4.1 | 5/5 | Complete | 2026-02-22 |
+| 19. Dead Code Elimination | v4.1 | 1/1 | Complete | 2026-02-23 |
+| 20. Unused File Cleanup | v4.1 | 1/1 | Complete | 2026-02-23 |
+| 21. Rust Documentation | v4.1 | 5/5 | Complete | 2026-02-23 |
+| 22. Dependency Audit | v4.1 | 1/1 | Complete | 2026-02-23 |
 
 ---
 
-_Last updated: 2026-02-22_
+_Last updated: 2026-02-23_

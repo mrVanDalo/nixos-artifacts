@@ -58,6 +58,8 @@
 use anyhow::Context;
 use serde::de::{self, Deserializer};
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "logging")]
+use serde_json::to_string_pretty;
 use serde_json::{from_str as json_from_str, Value};
 use std::collections::BTreeMap;
 use std::fs;
