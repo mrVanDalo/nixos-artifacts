@@ -1,5 +1,5 @@
 use crate::app::effect::Effect;
-use crate::app::message::Msg;
+use crate::app::message::Message;
 use crate::app::model::Model;
 use crate::app::{init, update};
 use crate::config::backend::BackendConfiguration;
@@ -26,7 +26,7 @@ pub struct RunResult {
 pub trait EffectHandler {
     /// Execute an effect and return any resulting messages.
     /// The handler may return messages that should be fed back into the update loop.
-    fn execute(&mut self, effect: Effect, model: &Model) -> Result<Vec<Msg>>;
+    fn execute(&mut self, effect: Effect, model: &Model) -> Result<Vec<Message>>;
 }
 
 /// A no-op effect handler that ignores all effects.
@@ -35,7 +35,7 @@ pub trait EffectHandler {
 pub struct NoOpEffectHandler;
 
 impl EffectHandler for NoOpEffectHandler {
-    fn execute(&mut self, _effect: Effect, _model: &Model) -> Result<Vec<Msg>> {
+    fn execute(&mut self, _effect: Effect, _model: &Model) -> Result<Vec<Message>> {
         Ok(vec![])
     }
 }
@@ -533,7 +533,7 @@ pub fn effect_to_command(effect: Effect) -> Vec<EffectCommand> {
 }
 
 /// Convert an EffectResult from the background into a Msg for the update loop.
-pub fn result_to_message(result: EffectResult) -> Msg {
+pub fn result_to_message(result: EffectResult) -> Message {
     match result {
         EffectResult::CheckSerialization {
             artifact_index,
@@ -543,7 +543,7 @@ pub fn result_to_message(result: EffectResult) -> Msg {
         } => {
             use crate::app::message::CheckOutput;
             // Convert to new message format with separate needs_generation and exists fields
-            Msg::CheckSerializationResult {
+            Message::CheckSerializationResult {
                 artifact_index,
                 needs_generation,
                 exists,
@@ -571,7 +571,7 @@ pub fn result_to_message(result: EffectResult) -> Msg {
             } else {
                 Err(error.unwrap_or_else(|| "Generator failed".to_string()))
             };
-            Msg::GeneratorFinished {
+            Message::GeneratorFinished {
                 artifact_index,
                 result,
             }
@@ -592,7 +592,7 @@ pub fn result_to_message(result: EffectResult) -> Msg {
             } else {
                 Err(error.unwrap_or_else(|| "Serialize failed".to_string()))
             };
-            Msg::SerializeFinished {
+            Message::SerializeFinished {
                 artifact_index,
                 result,
             }
@@ -618,7 +618,7 @@ pub fn result_to_message(result: EffectResult) -> Msg {
                     stderr_lines: first.stderr_lines.clone(),
                 })
             };
-            Msg::SharedCheckSerializationResult {
+            Message::SharedCheckSerializationResult {
                 artifact_index,
                 needs_generation: any_needs_gen,
                 exists: any_exists,
@@ -643,7 +643,7 @@ pub fn result_to_message(result: EffectResult) -> Msg {
             } else {
                 Err(error.unwrap_or_else(|| "Shared generator failed".to_string()))
             };
-            Msg::SharedGeneratorFinished {
+            Message::SharedGeneratorFinished {
                 artifact_index,
                 result,
             }
@@ -655,7 +655,7 @@ pub fn result_to_message(result: EffectResult) -> Msg {
         } => {
             // TODO: Aggregate results properly
             use crate::app::message::SerializeOutput;
-            Msg::SharedSerializeFinished {
+            Message::SharedSerializeFinished {
                 artifact_index,
                 result: Ok(SerializeOutput {
                     stdout_lines: vec![],
@@ -668,7 +668,7 @@ pub fn result_to_message(result: EffectResult) -> Msg {
             artifact_index,
             stream,
             content,
-        } => Msg::OutputLine {
+        } => Message::OutputLine {
             artifact_index,
             stream: crate::app::model::OutputStream::from(stream),
             content,
@@ -987,7 +987,7 @@ mod tests {
             exists: false,
             output: ScriptOutput::default(),
         });
-        assert!(matches!(msg, Msg::CheckSerializationResult { .. }));
+        assert!(matches!(msg, Message::CheckSerializationResult { .. }));
 
         // Test GeneratorFinished result
         let msg = result_to_message(EffectResult::GeneratorFinished {
@@ -996,7 +996,7 @@ mod tests {
             output: ScriptOutput::default(),
             error: None,
         });
-        assert!(matches!(msg, Msg::GeneratorFinished { .. }));
+        assert!(matches!(msg, Message::GeneratorFinished { .. }));
 
         // Test SerializeFinished result
         let msg = result_to_message(EffectResult::SerializeFinished {
@@ -1005,7 +1005,7 @@ mod tests {
             output: ScriptOutput::default(),
             error: None,
         });
-        assert!(matches!(msg, Msg::SerializeFinished { .. }));
+        assert!(matches!(msg, Message::SerializeFinished { .. }));
     }
 
     // === Async Runtime Tests ===
@@ -1072,7 +1072,7 @@ mod tests {
         let initial_tick = model.tick_count;
 
         // Tick message should increment counter
-        let (new_model, effect) = update(model, Msg::Tick);
+        let (new_model, effect) = update(model, Message::Tick);
 
         assert_eq!(
             new_model.tick_count,
@@ -1082,7 +1082,7 @@ mod tests {
         assert!(effect.is_none(), "Tick should not produce effects");
     }
 
-    /// Test that key events are converted to Msg::Key
+    /// Test that key events are converted to Message::Key
     #[tokio::test]
     async fn test_runtime_key_message() {
         use crossterm::event::KeyCode;
@@ -1097,7 +1097,7 @@ mod tests {
         };
 
         // Process the key event
-        let (new_model, effect) = update(model, Msg::Key(key_event));
+        let (new_model, effect) = update(model, Message::Key(key_event));
 
         // 'j' should navigate down
         assert_eq!(

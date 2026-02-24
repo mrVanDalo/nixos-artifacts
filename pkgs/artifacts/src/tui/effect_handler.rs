@@ -1,6 +1,6 @@
-use crate::app::message::{CheckOutput, GeneratorOutput, SerializeOutput};
+use crate::app::message::{CheckOutput, GeneratorOutput, Message, SerializeOutput};
 use crate::app::model::{ArtifactEntry, Model, TargetType};
-use crate::app::{Effect, Msg};
+use crate::app::Effect;
 use crate::backend::generator::{run_generator_script, verify_generated_files};
 use crate::backend::output_capture::{CapturedOutput, OutputStream};
 use crate::backend::serialization::{
@@ -177,7 +177,7 @@ fn split_captured_output(captured: &CapturedOutput) -> (Vec<String>, Vec<String>
 }
 
 impl EffectHandler for BackendEffectHandler {
-    fn execute(&mut self, effect: Effect, model: &Model) -> Result<Vec<Msg>> {
+    fn execute(&mut self, effect: Effect, model: &Model) -> Result<Vec<Message>> {
         match effect {
             Effect::None | Effect::Quit | Effect::Batch(_) => Ok(vec![]),
 
@@ -191,7 +191,7 @@ impl EffectHandler for BackendEffectHandler {
                 let (needs_generation, exists, result, output) =
                     self.check_if_artifact_needs_generation(entry, &target, target_type);
 
-                Ok(vec![Msg::CheckSerializationResult {
+                Ok(vec![Message::CheckSerializationResult {
                     artifact_index,
                     needs_generation,
                     exists,
@@ -216,7 +216,7 @@ impl EffectHandler for BackendEffectHandler {
                     &prompts,
                 );
 
-                Ok(vec![Msg::GeneratorFinished {
+                Ok(vec![Message::GeneratorFinished {
                     artifact_index,
                     result,
                 }])
@@ -233,7 +233,7 @@ impl EffectHandler for BackendEffectHandler {
                 let result =
                     self.serialize_generated_output_to_backend(entry, &target, target_type);
 
-                Ok(vec![Msg::SerializeFinished {
+                Ok(vec![Message::SerializeFinished {
                     artifact_index,
                     result,
                 }])
@@ -273,7 +273,7 @@ impl EffectHandler for BackendEffectHandler {
                                 .iter()
                                 .any(|line| line.content.contains("EXISTS"))
                         };
-                        Ok(vec![Msg::SharedCheckSerializationResult {
+                        Ok(vec![Message::SharedCheckSerializationResult {
                             artifact_index,
                             needs_generation: check_result.needs_generation,
                             exists,
@@ -281,7 +281,7 @@ impl EffectHandler for BackendEffectHandler {
                             output: Some(output),
                         }])
                     }
-                    Err(e) => Ok(vec![Msg::SharedCheckSerializationResult {
+                    Err(e) => Ok(vec![Message::SharedCheckSerializationResult {
                         artifact_index,
                         needs_generation: true,
                         exists: false,

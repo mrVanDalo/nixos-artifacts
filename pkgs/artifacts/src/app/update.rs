@@ -9,7 +9,7 @@
 //! The `update` function is the main entry point:
 //!
 //! ```text
-//! (Model, Msg) -> (Model, Effect)
+//! (Model, Message) -> (Model, Effect)
 //! ```
 //!
 //! - Takes current state and an event
@@ -32,13 +32,13 @@
 //!
 //! ```rust,ignore
 //! let model = make_test_model();
-//! let (new_model, effect) = update(model, Msg::Key(KeyEvent::char('j')));
+//! let (new_model, effect) = update(model, Message::Key(KeyEvent::char('j')));
 //! assert_eq!(new_model.selected_index, 1);
 //! assert!(effect.is_none());
 //! ```
 
 use super::effect::Effect;
-use super::message::{CheckOutput, GeneratorOutput, KeyEvent, Msg, SerializeOutput};
+use super::message::{CheckOutput, GeneratorOutput, KeyEvent, Message, SerializeOutput};
 use super::model::*;
 use crossterm::event::{KeyCode, KeyModifiers};
 
@@ -79,59 +79,59 @@ pub fn init(model: &Model) -> Effect {
     Effect::batch(effects)
 }
 
-/// Pure state transition: (Model, Msg) -> (Model, Effect)
+/// Pure state transition: (Model, Message) -> (Model, Effect)
 /// This function has NO side effects - it only computes new state.
-pub fn update(model: Model, msg: Msg) -> (Model, Effect) {
+pub fn update(model: Model, msg: Message) -> (Model, Effect) {
     match (&model.screen, msg) {
         // === Artifact List Screen ===
-        (Screen::ArtifactList, Msg::Key(key)) => update_artifact_list(model, key),
+        (Screen::ArtifactList, Message::Key(key)) => update_artifact_list(model, key),
 
         // === Generator Selection Screen ===
-        (Screen::SelectGenerator(_), Msg::Key(key)) => update_generator_selection(model, key),
+        (Screen::SelectGenerator(_), Message::Key(key)) => update_generator_selection(model, key),
 
         // === Confirm Regenerate Screen ===
-        (Screen::ConfirmRegenerate(_), Msg::Key(key)) => update_confirm_regenerate(model, key),
+        (Screen::ConfirmRegenerate(_), Message::Key(key)) => update_confirm_regenerate(model, key),
 
         // === Prompt Screen ===
-        (Screen::Prompt(_), Msg::Key(key)) => update_prompt(model, key),
+        (Screen::Prompt(_), Message::Key(key)) => update_prompt(model, key),
 
         // === Generating Screen ===
         (
             Screen::Generating(_),
-            Msg::GeneratorFinished {
+            Message::GeneratorFinished {
                 artifact_index,
                 result,
             },
         ) => handle_generator_finished(model, artifact_index, result),
         (
             Screen::Generating(_),
-            Msg::SerializeFinished {
+            Message::SerializeFinished {
                 artifact_index,
                 result,
             },
         ) => handle_serialize_finished(model, artifact_index, result),
         (
             Screen::Generating(_),
-            Msg::SharedGeneratorFinished {
+            Message::SharedGeneratorFinished {
                 artifact_index,
                 result,
             },
         ) => handle_shared_generator_finished(model, artifact_index, result),
         (
             Screen::Generating(_),
-            Msg::SharedSerializeFinished {
+            Message::SharedSerializeFinished {
                 artifact_index,
                 result,
             },
         ) => handle_shared_serialize_finished(model, artifact_index, result),
 
         // === Chronological Log Screen ===
-        (Screen::ChronologicalLog(_), Msg::Key(key)) => update_chronological_log(model, key),
+        (Screen::ChronologicalLog(_), Message::Key(key)) => update_chronological_log(model, key),
 
         // === Check serialization results (any screen) ===
         (
             _,
-            Msg::CheckSerializationResult {
+            Message::CheckSerializationResult {
                 artifact_index,
                 needs_generation,
                 exists,
@@ -150,7 +150,7 @@ pub fn update(model: Model, msg: Msg) -> (Model, Effect) {
         // === Shared check serialization results (any screen) ===
         (
             _,
-            Msg::SharedCheckSerializationResult {
+            Message::SharedCheckSerializationResult {
                 artifact_index,
                 needs_generation,
                 exists,
@@ -169,7 +169,7 @@ pub fn update(model: Model, msg: Msg) -> (Model, Effect) {
         // === Streaming output (any screen) ===
         (
             _,
-            Msg::OutputLine {
+            Message::OutputLine {
                 artifact_index,
                 stream,
                 content,
@@ -177,8 +177,8 @@ pub fn update(model: Model, msg: Msg) -> (Model, Effect) {
         ) => handle_output_line(model, artifact_index, stream, content),
 
         // === Global ===
-        (_, Msg::Quit) => (model, Effect::Quit),
-        (_, Msg::Tick) => {
+        (_, Message::Quit) => (model, Effect::Quit),
+        (_, Message::Tick) => {
             let mut model = model;
             model.tick_count += 1;
             (model, Effect::None)
@@ -1318,7 +1318,7 @@ mod tests {
     #[test]
     fn test_navigate_down() {
         let model = make_test_model();
-        let (new_model, effect) = update(model, Msg::Key(KeyEvent::char('j')));
+        let (new_model, effect) = update(model, Message::Key(KeyEvent::char('j')));
 
         assert_eq!(new_model.selected_index, 1);
         assert!(effect.is_none());
@@ -1328,7 +1328,7 @@ mod tests {
     fn test_navigate_up() {
         let mut model = make_test_model();
         model.selected_index = 1;
-        let (new_model, effect) = update(model, Msg::Key(KeyEvent::char('k')));
+        let (new_model, effect) = update(model, Message::Key(KeyEvent::char('k')));
 
         assert_eq!(new_model.selected_index, 0);
         assert!(effect.is_none());
@@ -1337,7 +1337,7 @@ mod tests {
     #[test]
     fn test_navigate_up_at_top_stays() {
         let model = make_test_model();
-        let (new_model, _) = update(model, Msg::Key(KeyEvent::char('k')));
+        let (new_model, _) = update(model, Message::Key(KeyEvent::char('k')));
 
         assert_eq!(new_model.selected_index, 0);
     }
@@ -1346,7 +1346,7 @@ mod tests {
     fn test_navigate_down_at_bottom_stays() {
         let mut model = make_test_model();
         model.selected_index = 1;
-        let (new_model, _) = update(model, Msg::Key(KeyEvent::char('j')));
+        let (new_model, _) = update(model, Message::Key(KeyEvent::char('j')));
 
         assert_eq!(new_model.selected_index, 1);
     }
@@ -1354,7 +1354,7 @@ mod tests {
     #[test]
     fn test_quit_with_q() {
         let model = make_test_model();
-        let (_, effect) = update(model, Msg::Key(KeyEvent::char('q')));
+        let (_, effect) = update(model, Message::Key(KeyEvent::char('q')));
 
         assert!(effect.is_quit());
     }
@@ -1362,7 +1362,7 @@ mod tests {
     #[test]
     fn test_quit_with_esc() {
         let model = make_test_model();
-        let (_, effect) = update(model, Msg::Key(KeyEvent::esc()));
+        let (_, effect) = update(model, Message::Key(KeyEvent::esc()));
 
         assert!(effect.is_quit());
     }
@@ -1370,7 +1370,7 @@ mod tests {
     #[test]
     fn test_enter_opens_prompt_screen() {
         let model = make_test_model();
-        let (new_model, _) = update(model, Msg::Key(KeyEvent::enter()));
+        let (new_model, _) = update(model, Message::Key(KeyEvent::enter()));
 
         assert!(matches!(new_model.screen, Screen::Prompt(_)));
     }
@@ -1379,7 +1379,7 @@ mod tests {
     fn test_enter_skips_prompt_if_no_prompts() {
         let mut model = make_test_model();
         model.selected_index = 1; // api-token has no prompts
-        let (new_model, effect) = update(model, Msg::Key(KeyEvent::enter()));
+        let (new_model, effect) = update(model, Message::Key(KeyEvent::enter()));
 
         assert!(matches!(new_model.screen, Screen::Generating(_)));
         assert!(matches!(effect, Effect::RunGenerator { .. }));
@@ -1402,8 +1402,8 @@ mod tests {
             collected: Default::default(),
         });
 
-        let (model, _) = update(model, Msg::Key(KeyEvent::char('h')));
-        let (model, _) = update(model, Msg::Key(KeyEvent::char('i')));
+        let (model, _) = update(model, Message::Key(KeyEvent::char('h')));
+        let (model, _) = update(model, Message::Key(KeyEvent::char('i')));
 
         if let Screen::Prompt(state) = &model.screen {
             assert_eq!(state.buffer, "hi");
@@ -1429,7 +1429,7 @@ mod tests {
             collected: Default::default(),
         });
 
-        let (model, _) = update(model, Msg::Key(KeyEvent::backspace()));
+        let (model, _) = update(model, Message::Key(KeyEvent::backspace()));
 
         if let Screen::Prompt(state) = &model.screen {
             assert_eq!(state.buffer, "hell");
@@ -1455,7 +1455,7 @@ mod tests {
             collected: Default::default(),
         });
 
-        let (model, _) = update(model, Msg::Key(KeyEvent::tab()));
+        let (model, _) = update(model, Message::Key(KeyEvent::tab()));
 
         if let Screen::Prompt(state) = &model.screen {
             assert_eq!(state.input_mode, InputMode::Multiline);
@@ -1481,7 +1481,7 @@ mod tests {
             collected: Default::default(),
         });
 
-        let (model, _) = update(model, Msg::Key(KeyEvent::tab()));
+        let (model, _) = update(model, Message::Key(KeyEvent::tab()));
 
         if let Screen::Prompt(state) = &model.screen {
             assert_eq!(state.input_mode, InputMode::Line);
@@ -1504,7 +1504,7 @@ mod tests {
             collected: Default::default(),
         });
 
-        let (model, _) = update(model, Msg::Key(KeyEvent::esc()));
+        let (model, _) = update(model, Message::Key(KeyEvent::esc()));
 
         assert!(matches!(model.screen, Screen::ArtifactList));
     }
@@ -1514,14 +1514,14 @@ mod tests {
         let model = make_test_model();
         assert_eq!(model.selected_log_step, LogStep::Check);
 
-        let (model, effect) = update(model, Msg::Key(KeyEvent::tab()));
+        let (model, effect) = update(model, Message::Key(KeyEvent::tab()));
         assert_eq!(model.selected_log_step, LogStep::Generate);
         assert!(effect.is_none());
 
-        let (model, _) = update(model, Msg::Key(KeyEvent::tab()));
+        let (model, _) = update(model, Message::Key(KeyEvent::tab()));
         assert_eq!(model.selected_log_step, LogStep::Serialize);
 
-        let (model, _) = update(model, Msg::Key(KeyEvent::tab()));
+        let (model, _) = update(model, Message::Key(KeyEvent::tab()));
         assert_eq!(model.selected_log_step, LogStep::Check);
     }
 
@@ -1533,7 +1533,7 @@ mod tests {
         let mut model = make_test_model();
         model.selected_index = 1; // api-token has no prompts
 
-        let (new_model, effect) = update(model, Msg::Key(KeyEvent::enter()));
+        let (new_model, effect) = update(model, Message::Key(KeyEvent::enter()));
 
         // Should be generating screen
         assert!(
@@ -1570,7 +1570,7 @@ mod tests {
 
         let (new_model, effect) = update(
             model,
-            Msg::GeneratorFinished {
+            Message::GeneratorFinished {
                 artifact_index: 0,
                 result,
             },
@@ -1652,7 +1652,7 @@ mod tests {
 
         let (new_model, _effect) = update(
             model,
-            Msg::GeneratorFinished {
+            Message::GeneratorFinished {
                 artifact_index: 0,
                 result,
             },
@@ -1702,7 +1702,7 @@ mod tests {
         // Simulate successful shared check result indicating generation needed
         let (new_model, effect) = update(
             model,
-            Msg::SharedCheckSerializationResult {
+            Message::SharedCheckSerializationResult {
                 artifact_index: 0,
                 needs_generation: true,
                 exists: false,
@@ -1733,7 +1733,7 @@ mod tests {
         // Simulate successful shared check result indicating up-to-date
         let (new_model, effect) = update(
             model,
-            Msg::SharedCheckSerializationResult {
+            Message::SharedCheckSerializationResult {
                 artifact_index: 0,
                 needs_generation: false,
                 exists: true,
@@ -1759,7 +1759,7 @@ mod tests {
         // Simulate failed shared check
         let (new_model, effect) = update(
             model,
-            Msg::SharedCheckSerializationResult {
+            Message::SharedCheckSerializationResult {
                 artifact_index: 0,
                 needs_generation: true,
                 exists: false,
@@ -1838,7 +1838,7 @@ mod tests {
         };
 
         // Press Enter on shared artifact
-        let (new_model, effect) = update(model, Msg::Key(KeyEvent::enter()));
+        let (new_model, effect) = update(model, Message::Key(KeyEvent::enter()));
 
         // Should go directly to Prompt screen, not SelectGenerator
         assert!(
@@ -1913,7 +1913,7 @@ mod tests {
         };
 
         // Press Enter on shared artifact
-        let (new_model, effect) = update(model, Msg::Key(KeyEvent::enter()));
+        let (new_model, effect) = update(model, Message::Key(KeyEvent::enter()));
 
         // Should go directly to Generating screen
         assert!(
@@ -2008,7 +2008,7 @@ mod tests {
         };
 
         // Press Enter on shared artifact
-        let (new_model, effect) = update(model, Msg::Key(KeyEvent::enter()));
+        let (new_model, effect) = update(model, Message::Key(KeyEvent::enter()));
 
         // Should show SelectGenerator screen
         assert!(
@@ -2082,7 +2082,7 @@ mod tests {
         };
 
         // Press Enter on shared artifact
-        let (new_model, _) = update(model, Msg::Key(KeyEvent::enter()));
+        let (new_model, _) = update(model, Message::Key(KeyEvent::enter()));
 
         // Verify the selected_generator was stored in the entry
         if let ListEntry::Shared(shared) = &new_model.entries[0] {

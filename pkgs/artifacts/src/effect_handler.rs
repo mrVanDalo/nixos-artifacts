@@ -24,7 +24,7 @@
 use tokio::sync::mpsc::UnboundedSender;
 
 use crate::app::effect::Effect;
-use crate::app::message::Msg;
+use crate::app::message::Message;
 use crate::tui::channels::{EffectCommand, EffectResult};
 
 /// Handler that routes effects to the background task.
@@ -257,7 +257,7 @@ impl EffectHandler {
     /// # Returns
     ///
     /// The Msg variant to feed into the update loop
-    pub fn result_to_message(&mut self, result: EffectResult) -> Msg {
+    pub fn result_to_message(&mut self, result: EffectResult) -> Message {
         match result {
             EffectResult::CheckSerialization {
                 artifact_index,
@@ -265,7 +265,7 @@ impl EffectHandler {
                 exists,
                 output: _,
             } => {
-                Msg::CheckSerializationResult {
+                Message::CheckSerializationResult {
                     artifact_index,
                     needs_generation,
                     exists,
@@ -290,7 +290,7 @@ impl EffectHandler {
                 } else {
                     Err(error.unwrap_or_else(|| "Generator failed".to_string()))
                 };
-                Msg::GeneratorFinished {
+                Message::GeneratorFinished {
                     artifact_index,
                     result,
                 }
@@ -311,7 +311,7 @@ impl EffectHandler {
                 } else {
                     Err(error.unwrap_or_else(|| "Serialize failed".to_string()))
                 };
-                Msg::SerializeFinished {
+                Message::SerializeFinished {
                     artifact_index,
                     result,
                 }
@@ -326,7 +326,7 @@ impl EffectHandler {
                 // For simplicity, check if any target needs generation or exists
                 let any_needs_gen = needs_generation.iter().any(|&b| b);
                 let any_exists = exists.iter().any(|&b| b);
-                Msg::SharedCheckSerializationResult {
+                Message::SharedCheckSerializationResult {
                     artifact_index,
                     needs_generation: any_needs_gen,
                     exists: any_exists,
@@ -351,7 +351,7 @@ impl EffectHandler {
                 } else {
                     Err(error.unwrap_or_else(|| "Shared generator failed".to_string()))
                 };
-                Msg::SharedGeneratorFinished {
+                Message::SharedGeneratorFinished {
                     artifact_index,
                     result,
                 }
@@ -363,7 +363,7 @@ impl EffectHandler {
             } => {
                 // TODO: Aggregate results properly
                 use crate::app::message::SerializeOutput;
-                Msg::SharedSerializeFinished {
+                Message::SharedSerializeFinished {
                     artifact_index,
                     result: Ok(SerializeOutput {
                         stdout_lines: vec![],
@@ -378,7 +378,7 @@ impl EffectHandler {
                 content,
             } => {
                 // Streaming output line received during script execution
-                Msg::OutputLine {
+                Message::OutputLine {
                     artifact_index,
                     stream: crate::app::model::OutputStream::from(stream),
                     content,
@@ -509,7 +509,7 @@ mod tests {
             exists: false,
             output: ScriptOutput::default(),
         });
-        assert!(matches!(msg, Msg::CheckSerializationResult { .. }));
+        assert!(matches!(msg, Message::CheckSerializationResult { .. }));
 
         // Test GeneratorFinished result
         let msg = handler.result_to_message(EffectResult::GeneratorFinished {
@@ -518,7 +518,7 @@ mod tests {
             output: ScriptOutput::from_message("output"),
             error: None,
         });
-        assert!(matches!(msg, Msg::GeneratorFinished { .. }));
+        assert!(matches!(msg, Message::GeneratorFinished { .. }));
 
         // Test SerializeFinished result
         let msg = handler.result_to_message(EffectResult::SerializeFinished {
@@ -527,7 +527,7 @@ mod tests {
             output: ScriptOutput::default(),
             error: None,
         });
-        assert!(matches!(msg, Msg::SerializeFinished { .. }));
+        assert!(matches!(msg, Message::SerializeFinished { .. }));
 
         // Test SharedCheckSerialization result
         let msg = handler.result_to_message(EffectResult::SharedCheckSerialization {
@@ -536,7 +536,7 @@ mod tests {
             exists: vec![false, true],
             outputs: vec![ScriptOutput::default(), ScriptOutput::default()],
         });
-        assert!(matches!(msg, Msg::SharedCheckSerializationResult { .. }));
+        assert!(matches!(msg, Message::SharedCheckSerializationResult { .. }));
 
         // Test SharedGeneratorFinished result
         let msg = handler.result_to_message(EffectResult::SharedGeneratorFinished {
@@ -545,14 +545,14 @@ mod tests {
             output: ScriptOutput::default(),
             error: None,
         });
-        assert!(matches!(msg, Msg::SharedGeneratorFinished { .. }));
+        assert!(matches!(msg, Message::SharedGeneratorFinished { .. }));
 
         // Test SharedSerializeFinished result
         let msg = handler.result_to_message(EffectResult::SharedSerializeFinished {
             artifact_index: 5,
             results: vec![("target".to_string(), true, ScriptOutput::default())],
         });
-        assert!(matches!(msg, Msg::SharedSerializeFinished { .. }));
+        assert!(matches!(msg, Message::SharedSerializeFinished { .. }));
     }
 
     #[test]
@@ -568,7 +568,7 @@ mod tests {
         });
 
         match msg {
-            Msg::GeneratorFinished { result, .. } => {
+            Message::GeneratorFinished { result, .. } => {
                 assert!(result.is_err());
                 assert_eq!(result.unwrap_err(), "Script failed");
             }

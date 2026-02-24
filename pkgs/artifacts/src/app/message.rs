@@ -18,7 +18,7 @@ use crossterm::event::{KeyCode, KeyModifiers};
 /// This enum represents every possible event that can cause a state change.
 /// The update function in [`crate::app::update()`] matches on these messages to compute new state.
 #[derive(Debug, Clone)]
-pub enum Msg {
+pub enum Message {
     /// Keyboard input
     Key(KeyEvent),
 
