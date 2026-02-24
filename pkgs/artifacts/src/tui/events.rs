@@ -34,6 +34,12 @@ pub trait EventSource {
     /// Check if an event is available without consuming it.
     /// Returns true if next_event() would return immediately.
     fn has_event(&mut self) -> bool;
+
+    /// Check if the event source is permanently exhausted.
+    /// Returns true when the source will never produce more events.
+    /// For terminal sources, this always returns false.
+    /// For scripted/test sources, this returns true when all events are consumed.
+    fn is_exhausted(&mut self) -> bool;
 }
 
 /// Production event source that reads from the terminal via crossterm.
@@ -78,6 +84,11 @@ impl EventSource for TerminalEventSource {
         // Check if an event is available without consuming it
         event::poll(std::time::Duration::from_secs(0)).unwrap_or(false)
     }
+
+    fn is_exhausted(&mut self) -> bool {
+        // Terminal source never exhausts - it always produces Tick events
+        false
+    }
 }
 
 /// Test event source that replays a scripted sequence of events.
@@ -117,6 +128,10 @@ impl EventSource for ScriptedEventSource {
 
     fn has_event(&mut self) -> bool {
         !self.events.is_empty()
+    }
+
+    fn is_exhausted(&mut self) -> bool {
+        self.events.is_empty()
     }
 }
 

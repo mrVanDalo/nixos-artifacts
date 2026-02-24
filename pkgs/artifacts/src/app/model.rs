@@ -745,38 +745,4 @@ mod tests {
             "shared"
         );
     }
-
-    #[test]
-    fn test_log_step_cycles() {
-        let step = LogStep::Check;
-        assert_eq!(step.next(), LogStep::Generate);
-        assert_eq!(step.next().next(), LogStep::Serialize);
-        assert_eq!(step.next().next().next(), LogStep::Check);
-    }
-
-    #[test]
-    fn test_target_type_context_str() {
-        assert_eq!(
-            TargetType::NixOS {
-                machine: "test".to_string()
-            }
-            .context_str(),
-            "nixos"
-        );
-        assert_eq!(
-            TargetType::HomeManager {
-                username: "test".to_string()
-            }
-            .context_str(),
-            "homemanager"
-        );
-        assert_eq!(
-            TargetType::Shared {
-                nixos_targets: vec![],
-                home_targets: vec![]
-            }
-            .context_str(),
-            "shared"
-        );
-    }
 }

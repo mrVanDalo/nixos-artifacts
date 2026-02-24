@@ -254,7 +254,7 @@ where
                             }
                             Ok(None) => {
                                 log_component("RUNTIME", "Result channel closed during drain");
-                                model.error = Some("Background task disconnected".to_string());
+                                // This is expected during shutdown - background task finished cleanly
                                 break;
                             }
                             Err(_) => {
@@ -340,7 +340,35 @@ where
                 break;
             }
         } else {
-            // No events ready - check if we should wait
+            // No events ready - check if we should wait or exit
+            // First, check if the event source is permanently exhausted
+            if events.is_exhausted() {
+                log_component("RUNTIME", "Event source exhausted, initiating graceful shutdown");
+
+                // Signal background to shut down
+                shutdown_token.cancel();
+                log_component("RUNTIME", "Shutdown signal sent to background");
+
+                // Drain any pending results with timeout
+                const SHUTDOWN_DRAIN_TIMEOUT: Duration = Duration::from_secs(1);
+                let drain_start = Instant::now();
+
+                while drain_start.elapsed() < SHUTDOWN_DRAIN_TIMEOUT {
+                    match tokio::time::timeout(Duration::from_millis(100), res_rx.recv()).await {
+                        Ok(Some(result)) => {
+                            log_component("RUNTIME", "Drained result during exhausted shutdown");
+                            let msg = result_to_message(result);
+                            let (new_model, _) = update(model, msg);
+                            model = new_model;
+                        }
+                        Ok(None) | Err(_) => break,
+                    }
+                }
+
+                drop(cmd_tx);
+                break;
+            }
+
             // Use select! to wait for either events or results or shutdown
             tokio::select! {
                 // Try to get a result
@@ -428,25 +456,23 @@ pub fn effect_to_command(effect: Effect) -> Vec<EffectCommand> {
         Effect::CheckSerialization {
             artifact_index,
             artifact_name,
-            target,
             target_type,
         } => vec![EffectCommand::CheckSerialization {
             artifact_index,
             artifact_name,
-            target,
+            target: target_type.target_name().unwrap_or("shared").to_string(),
             target_type: target_type.to_string(),
         }],
 
         Effect::RunGenerator {
             artifact_index,
             artifact_name,
-            target,
             target_type,
             prompts,
         } => vec![EffectCommand::RunGenerator {
             artifact_index,
             artifact_name,
-            target,
+            target: target_type.target_name().unwrap_or("shared").to_string(),
             target_type: target_type.to_string(),
             prompts,
         }],
@@ -454,13 +480,12 @@ pub fn effect_to_command(effect: Effect) -> Vec<EffectCommand> {
         Effect::Serialize {
             artifact_index,
             artifact_name,
-            target,
             target_type,
             out_dir: _,
         } => vec![EffectCommand::Serialize {
             artifact_index,
             artifact_name,
-            target,
+            target: target_type.target_name().unwrap_or("shared").to_string(),
             target_type: target_type.to_string(),
         }],
 
@@ -762,16 +787,14 @@ mod tests {
 
     fn make_test_model() -> Model {
         let entry1 = ArtifactEntry {
-            target: "machine-one".to_string(),
-            target_type: TargetType::NixOS,
+            target_type: TargetType::NixOS { machine: "machine-one".to_string() },
             artifact: make_test_artifact("ssh-key", vec!["passphrase"]),
             status: ArtifactStatus::Pending,
             step_logs: StepLogs::default(),
             exists: false,
         };
         let entry2 = ArtifactEntry {
-            target: "machine-two".to_string(),
-            target_type: TargetType::NixOS,
+            target_type: TargetType::NixOS { machine: "machine-two".to_string() },
             artifact: make_test_artifact("api-token", vec![]),
             status: ArtifactStatus::Pending,
             step_logs: StepLogs::default(),
@@ -958,8 +981,7 @@ mod tests {
         let cmd = effect_to_command(Effect::CheckSerialization {
             artifact_index: 0,
             artifact_name: "test".to_string(),
-            target: "machine".to_string(),
-            target_type: TargetType::NixOS,
+            target_type: TargetType::NixOS { machine: "machine".to_string() },
         });
         assert_eq!(cmd.len(), 1);
         assert!(matches!(cmd[0], EffectCommand::CheckSerialization { .. }));
@@ -968,8 +990,7 @@ mod tests {
         let cmd = effect_to_command(Effect::RunGenerator {
             artifact_index: 0,
             artifact_name: "test".to_string(),
-            target: "machine".to_string(),
-            target_type: TargetType::NixOS,
+            target_type: TargetType::NixOS { machine: "machine".to_string() },
             prompts: HashMap::new(),
         });
         assert_eq!(cmd.len(), 1);

@@ -42,7 +42,6 @@ pub enum Effect {
     CheckSerialization {
         artifact_index: usize,
         artifact_name: String,
-        target: String,
         target_type: crate::app::model::TargetType,
     },
 
@@ -50,7 +49,6 @@ pub enum Effect {
     RunGenerator {
         artifact_index: usize,
         artifact_name: String,
-        target: String,
         target_type: crate::app::model::TargetType,
         prompts: HashMap<String, String>,
     },
@@ -59,7 +57,6 @@ pub enum Effect {
     Serialize {
         artifact_index: usize,
         artifact_name: String,
-        target: String,
         target_type: crate::app::model::TargetType,
         out_dir: PathBuf,
     },

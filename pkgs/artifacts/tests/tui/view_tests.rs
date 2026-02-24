@@ -83,11 +83,8 @@ impl ArtifactListState {
                 .artifacts
                 .iter()
                 .map(|a| ArtifactSnapshot {
-                    target: a.target.clone(),
-                    target_type: match a.target_type {
-                        TargetType::NixOS => "nixos",
-                        TargetType::HomeManager => "homemanager",
-                    },
+                    target: a.target_type.target_name().unwrap_or("shared").to_string(),
+                    target_type: a.target_type.context_str(),
                     name: a.artifact.name.clone(),
                     status: format!("{:?}", a.status),
                     has_logs: !a.step_logs.check.is_empty()
@@ -211,7 +208,7 @@ impl GeneratorSelectionSnapshot {
                         .map(|s| SourceSnapshot {
                             target: s.target.clone(),
                             target_type: match s.target_type {
-                                ConfigTargetType::NixOS => "nixos",
+                                ConfigTargetType::Nixos => "nixos",
                                 ConfigTargetType::HomeManager => "homemanager",
                             },
                         })
@@ -268,24 +265,27 @@ fn make_test_artifact(name: &str, prompts: Vec<&str>) -> ArtifactDef {
 
 fn make_test_model() -> Model {
     let entry1 = ArtifactEntry {
-        target: "machine-one".to_string(),
-        target_type: TargetType::NixOS,
+        target_type: TargetType::NixOS {
+            machine: "machine-one".to_string(),
+        },
         artifact: make_test_artifact("ssh-key", vec!["passphrase"]),
         status: ArtifactStatus::Pending,
         step_logs: StepLogs::default(),
         exists: false,
     };
     let entry2 = ArtifactEntry {
-        target: "machine-two".to_string(),
-        target_type: TargetType::NixOS,
+        target_type: TargetType::NixOS {
+            machine: "machine-two".to_string(),
+        },
         artifact: make_test_artifact("api-token", vec![]),
         status: ArtifactStatus::UpToDate,
         step_logs: StepLogs::default(),
         exists: false,
     };
     let entry3 = ArtifactEntry {
-        target: "user@host".to_string(),
-        target_type: TargetType::HomeManager,
+        target_type: TargetType::HomeManager {
+            username: "user@host".to_string(),
+        },
         artifact: make_test_artifact("gpg-key", vec!["email", "name"]),
         status: ArtifactStatus::NeedsGeneration,
         step_logs: StepLogs::default(),
@@ -717,32 +717,36 @@ fn make_multiple_machines_artifact(name: &str) -> ArtifactDef {
 #[test]
 fn test_multiple_machines_before_generate_all() {
     let entry1 = ArtifactEntry {
-        target: "machine-one".to_string(),
-        target_type: TargetType::NixOS,
+        target_type: TargetType::NixOS {
+            machine: "machine-one".to_string(),
+        },
         artifact: make_multiple_machines_artifact("artifact-one"),
         status: ArtifactStatus::Pending,
         step_logs: StepLogs::default(),
         exists: false,
     };
     let entry2 = ArtifactEntry {
-        target: "machine-one".to_string(),
-        target_type: TargetType::NixOS,
+        target_type: TargetType::NixOS {
+            machine: "machine-one".to_string(),
+        },
         artifact: make_multiple_machines_artifact("artifact-two"),
         status: ArtifactStatus::Pending,
         step_logs: StepLogs::default(),
         exists: false,
     };
     let entry3 = ArtifactEntry {
-        target: "machine-two".to_string(),
-        target_type: TargetType::NixOS,
+        target_type: TargetType::NixOS {
+            machine: "machine-two".to_string(),
+        },
         artifact: make_multiple_machines_artifact("artifact-one"),
         status: ArtifactStatus::Pending,
         step_logs: StepLogs::default(),
         exists: false,
     };
     let entry4 = ArtifactEntry {
-        target: "machine-two".to_string(),
-        target_type: TargetType::NixOS,
+        target_type: TargetType::NixOS {
+            machine: "machine-two".to_string(),
+        },
         artifact: make_multiple_machines_artifact("artifact-two"),
         status: ArtifactStatus::Pending,
         step_logs: StepLogs::default(),
@@ -788,32 +792,36 @@ fn test_multiple_machines_before_generate_all() {
 #[test]
 fn test_multiple_machines_after_generate_all() {
     let entry1 = ArtifactEntry {
-        target: "machine-one".to_string(),
-        target_type: TargetType::NixOS,
+        target_type: TargetType::NixOS {
+            machine: "machine-one".to_string(),
+        },
         artifact: make_multiple_machines_artifact("artifact-one"),
         status: ArtifactStatus::NeedsGeneration,
         step_logs: StepLogs::default(),
         exists: false,
     };
     let entry2 = ArtifactEntry {
-        target: "machine-one".to_string(),
-        target_type: TargetType::NixOS,
+        target_type: TargetType::NixOS {
+            machine: "machine-one".to_string(),
+        },
         artifact: make_multiple_machines_artifact("artifact-two"),
         status: ArtifactStatus::UpToDate,
         step_logs: StepLogs::default(),
         exists: false,
     };
     let entry3 = ArtifactEntry {
-        target: "machine-two".to_string(),
-        target_type: TargetType::NixOS,
+        target_type: TargetType::NixOS {
+            machine: "machine-two".to_string(),
+        },
         artifact: make_multiple_machines_artifact("artifact-one"),
         status: ArtifactStatus::NeedsGeneration,
         step_logs: StepLogs::default(),
         exists: false,
     };
     let entry4 = ArtifactEntry {
-        target: "machine-two".to_string(),
-        target_type: TargetType::NixOS,
+        target_type: TargetType::NixOS {
+            machine: "machine-two".to_string(),
+        },
         artifact: make_multiple_machines_artifact("artifact-two"),
         status: ArtifactStatus::NeedsGeneration,
         step_logs: StepLogs::default(),
@@ -861,8 +869,9 @@ fn test_artifact_list_with_shared_artifacts() {
     use artifacts::config::make::SharedArtifactInfo;
 
     let single_entry = ArtifactEntry {
-        target: "machine-one".to_string(),
-        target_type: TargetType::NixOS,
+        target_type: TargetType::NixOS {
+            machine: "machine-one".to_string(),
+        },
         artifact: make_test_artifact("local-secret", vec![]),
         status: ArtifactStatus::Pending,
         step_logs: StepLogs::default(),
@@ -870,6 +879,10 @@ fn test_artifact_list_with_shared_artifacts() {
     };
 
     let shared_entry = SharedEntry {
+        target_type: TargetType::Shared {
+            nixos_targets: vec!["machine-one".to_string(), "machine-two".to_string()],
+            home_targets: vec![],
+        },
         info: SharedArtifactInfo {
             artifact_name: "shared-secret".to_string(),
             description: None,
@@ -921,6 +934,10 @@ fn make_shared_entry_with_status(status: ArtifactStatus) -> SharedEntry {
     use artifacts::config::make::SharedArtifactInfo;
 
     SharedEntry {
+        target_type: TargetType::Shared {
+            nixos_targets: vec!["machine-one".to_string(), "machine-two".to_string()],
+            home_targets: vec![],
+        },
         info: SharedArtifactInfo {
             artifact_name: "shared-secret".to_string(),
             description: None,
@@ -1129,11 +1146,11 @@ fn test_generator_selection_single_generator() {
             sources: vec![
                 GeneratorSource {
                     target: "machine-one".to_string(),
-                    target_type: ConfigTargetType::NixOS,
+                    target_type: ConfigTargetType::Nixos,
                 },
                 GeneratorSource {
                     target: "machine-two".to_string(),
-                    target_type: ConfigTargetType::NixOS,
+                    target_type: ConfigTargetType::Nixos,
                 },
             ],
         }],
@@ -1169,7 +1186,7 @@ fn test_generator_selection_multiple_generators() {
                 path: "/nix/store/xxx-gen-prod".to_string(),
                 sources: vec![GeneratorSource {
                     target: "prod-server".to_string(),
-                    target_type: ConfigTargetType::NixOS,
+                    target_type: ConfigTargetType::Nixos,
                 }],
             },
             GeneratorInfo {
@@ -1177,7 +1194,7 @@ fn test_generator_selection_multiple_generators() {
                 sources: vec![
                     GeneratorSource {
                         target: "dev-machine".to_string(),
-                        target_type: ConfigTargetType::NixOS,
+                        target_type: ConfigTargetType::Nixos,
                     },
                     GeneratorSource {
                         target: "alice@workstation".to_string(),
@@ -1218,14 +1235,14 @@ fn test_generator_selection_second_selected() {
                 path: "/nix/store/xxx-gen-prod".to_string(),
                 sources: vec![GeneratorSource {
                     target: "prod-server".to_string(),
-                    target_type: ConfigTargetType::NixOS,
+                    target_type: ConfigTargetType::Nixos,
                 }],
             },
             GeneratorInfo {
                 path: "/nix/store/yyy-gen-dev".to_string(),
                 sources: vec![GeneratorSource {
                     target: "dev-machine".to_string(),
-                    target_type: ConfigTargetType::NixOS,
+                    target_type: ConfigTargetType::Nixos,
                 }],
             },
         ],
@@ -1262,11 +1279,11 @@ fn test_generator_selection_mixed_source_types() {
             sources: vec![
                 GeneratorSource {
                     target: "server-1".to_string(),
-                    target_type: ConfigTargetType::NixOS,
+                    target_type: ConfigTargetType::Nixos,
                 },
                 GeneratorSource {
                     target: "server-2".to_string(),
-                    target_type: ConfigTargetType::NixOS,
+                    target_type: ConfigTargetType::Nixos,
                 },
                 GeneratorSource {
                     target: "alice@laptop".to_string(),
@@ -1311,7 +1328,7 @@ fn test_generator_selection_singular_vs_plural() {
                 path: "/nix/store/single-nixos".to_string(),
                 sources: vec![GeneratorSource {
                     target: "server-1".to_string(),
-                    target_type: ConfigTargetType::NixOS,
+                    target_type: ConfigTargetType::Nixos,
                 }],
             },
             GeneratorInfo {
@@ -1355,23 +1372,23 @@ fn test_generator_selection_many_sources() {
             sources: vec![
                 GeneratorSource {
                     target: "server-1".to_string(),
-                    target_type: ConfigTargetType::NixOS,
+                    target_type: ConfigTargetType::Nixos,
                 },
                 GeneratorSource {
                     target: "server-2".to_string(),
-                    target_type: ConfigTargetType::NixOS,
+                    target_type: ConfigTargetType::Nixos,
                 },
                 GeneratorSource {
                     target: "server-3".to_string(),
-                    target_type: ConfigTargetType::NixOS,
+                    target_type: ConfigTargetType::Nixos,
                 },
                 GeneratorSource {
                     target: "server-4".to_string(),
-                    target_type: ConfigTargetType::NixOS,
+                    target_type: ConfigTargetType::Nixos,
                 },
                 GeneratorSource {
                     target: "server-5".to_string(),
-                    target_type: ConfigTargetType::NixOS,
+                    target_type: ConfigTargetType::Nixos,
                 },
             ],
         }],
@@ -1415,11 +1432,11 @@ fn test_generator_selection_multiple_with_mixed_sources() {
                 sources: vec![
                     GeneratorSource {
                         target: "prod-1".to_string(),
-                        target_type: ConfigTargetType::NixOS,
+                        target_type: ConfigTargetType::Nixos,
                     },
                     GeneratorSource {
                         target: "prod-2".to_string(),
-                        target_type: ConfigTargetType::NixOS,
+                        target_type: ConfigTargetType::Nixos,
                     },
                 ],
             },
@@ -1428,7 +1445,7 @@ fn test_generator_selection_multiple_with_mixed_sources() {
                 sources: vec![
                     GeneratorSource {
                         target: "dev-1".to_string(),
-                        target_type: ConfigTargetType::NixOS,
+                        target_type: ConfigTargetType::Nixos,
                     },
                     GeneratorSource {
                         target: "alice@dev".to_string(),
@@ -1483,7 +1500,7 @@ fn test_generator_selection_multiple_with_mixed_sources() {
 
 mod model_tests {
     use super::*;
-    use artifacts::app::message::{KeyEvent, Msg};
+    use artifacts::app::message::{KeyEvent, Message};
     use artifacts::app::model::{LogStep, Screen};
     use artifacts::app::update::update;
 
@@ -1498,7 +1515,7 @@ mod model_tests {
     }
 
     /// Run an event sequence and capture Model state and rendered view at each step
-    fn run_event_sequence(mut model: Model, events: Vec<Msg>) -> Vec<StateCapture> {
+    fn run_event_sequence(mut model: Model, events: Vec<Message>) -> Vec<StateCapture> {
         let backend = TestBackend::new(80, 24);
         let mut terminal = Terminal::new(backend).unwrap();
         let mut captures = Vec::new();
@@ -1542,9 +1559,11 @@ mod model_tests {
             .into_iter()
             .enumerate()
             .map(|(i, status)| {
+                let machine = format!("machine-{}", i + 1);
                 ListEntry::Single(ArtifactEntry {
-                    target: format!("machine-{}", i + 1),
-                    target_type: TargetType::NixOS,
+                    target_type: TargetType::NixOS {
+                        machine: machine.clone(),
+                    },
                     artifact: make_test_artifact(&format!("artifact-{}", i + 1), vec![]),
                     status,
                     step_logs: StepLogs::default(),
@@ -1568,7 +1587,7 @@ mod model_tests {
     #[test]
     fn test_navigate_down_updates_selection() {
         let model = make_test_model();
-        let events = vec![Msg::Key(KeyEvent::char('j'))];
+        let events = vec![Message::Key(KeyEvent::char('j'))];
 
         let captures = run_event_sequence(model, events);
 
@@ -1580,7 +1599,7 @@ mod model_tests {
         let mut model = make_test_model();
         model.selected_index = 2; // Start at last item
 
-        let events = vec![Msg::Key(KeyEvent::char('k'))];
+        let events = vec![Message::Key(KeyEvent::char('k'))];
 
         let captures = run_event_sequence(model, events);
 
@@ -1591,9 +1610,9 @@ mod model_tests {
     fn test_navigation_sequence_j_k_j() {
         let model = make_test_model();
         let events = vec![
-            Msg::Key(KeyEvent::char('j')),
-            Msg::Key(KeyEvent::char('j')),
-            Msg::Key(KeyEvent::char('k')),
+            Message::Key(KeyEvent::char('j')),
+            Message::Key(KeyEvent::char('j')),
+            Message::Key(KeyEvent::char('k')),
         ];
 
         let captures = run_event_sequence(model, events);
@@ -1605,9 +1624,9 @@ mod model_tests {
     fn test_tab_cycles_log_step() {
         let model = make_test_model();
         let events = vec![
-            Msg::Key(KeyEvent::tab()),
-            Msg::Key(KeyEvent::tab()),
-            Msg::Key(KeyEvent::tab()),
+            Message::Key(KeyEvent::tab()),
+            Message::Key(KeyEvent::tab()),
+            Message::Key(KeyEvent::tab()),
         ];
 
         let captures = run_event_sequence(model, events);
@@ -1623,7 +1642,7 @@ mod model_tests {
             entry.status = ArtifactStatus::NeedsGeneration;
         }
 
-        let events = vec![Msg::Key(KeyEvent::enter())];
+        let events = vec![Message::Key(KeyEvent::enter())];
 
         let captures = run_event_sequence(model, events);
 
@@ -1638,7 +1657,10 @@ mod model_tests {
             entry.status = ArtifactStatus::NeedsGeneration;
         }
 
-        let events = vec![Msg::Key(KeyEvent::enter()), Msg::Key(KeyEvent::esc())];
+        let events = vec![
+            Message::Key(KeyEvent::enter()),
+            Message::Key(KeyEvent::esc()),
+        ];
 
         let captures = run_event_sequence(model, events);
 
@@ -1649,7 +1671,7 @@ mod model_tests {
     fn test_status_pending_to_needs_generation() {
         let model = make_model_with_statuses(vec![ArtifactStatus::Pending]);
 
-        let events = vec![Msg::CheckSerializationResult {
+        let events = vec![Message::CheckSerializationResult {
             artifact_index: 0,
             needs_generation: true,
             exists: false,
@@ -1666,7 +1688,7 @@ mod model_tests {
     fn test_status_up_to_date() {
         let model = make_model_with_statuses(vec![ArtifactStatus::Pending]);
 
-        let events = vec![Msg::CheckSerializationResult {
+        let events = vec![Message::CheckSerializationResult {
             artifact_index: 0,
             needs_generation: false,
             exists: true,

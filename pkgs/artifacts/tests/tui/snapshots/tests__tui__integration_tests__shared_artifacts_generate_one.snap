@@ -11,46 +11,56 @@ TestResult {
     before: ModelState {
         screen: "ArtifactList",
         selected_index: 0,
+        selected_log_step: "Check",
         artifacts: [
             ArtifactState {
                 target: "[shared]",
                 name: "shared-secret",
                 status: "Pending",
+                target_type: "shared",
             },
             ArtifactState {
                 target: "machine-one",
                 name: "local-secret",
                 status: "Pending",
+                target_type: "nixos",
             },
             ArtifactState {
                 target: "machine-two",
                 name: "local-secret",
                 status: "Pending",
+                target_type: "nixos",
             },
         ],
         error: None,
+        warnings_count: 0,
     },
     after: ModelState {
         screen: "Generating",
         selected_index: 0,
+        selected_log_step: "Check",
         artifacts: [
             ArtifactState {
                 target: "[shared]",
                 name: "shared-secret",
                 status: "Pending",
+                target_type: "shared",
             },
             ArtifactState {
                 target: "machine-one",
                 name: "local-secret",
                 status: "Pending",
+                target_type: "nixos",
             },
             ArtifactState {
                 target: "machine-two",
                 name: "local-secret",
                 status: "Pending",
+                target_type: "nixos",
             },
         ],
         error: None,
+        warnings_count: 0,
     },
     serialized_artifacts: {},
 }

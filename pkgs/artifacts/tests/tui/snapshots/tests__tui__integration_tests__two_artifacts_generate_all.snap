@@ -10,36 +10,44 @@ TestResult {
     before: ModelState {
         screen: "ArtifactList",
         selected_index: 0,
+        selected_log_step: "Check",
         artifacts: [
             ArtifactState {
                 target: "machine-name",
                 name: "artifact-one",
                 status: "Pending",
+                target_type: "nixos",
             },
             ArtifactState {
                 target: "machine-name",
                 name: "artifact-two",
                 status: "Pending",
+                target_type: "nixos",
             },
         ],
         error: None,
+        warnings_count: 0,
     },
     after: ModelState {
         screen: "ArtifactList",
         selected_index: 0,
+        selected_log_step: "Check",
         artifacts: [
             ArtifactState {
                 target: "machine-name",
                 name: "artifact-one",
                 status: "Pending",
+                target_type: "nixos",
             },
             ArtifactState {
                 target: "machine-name",
                 name: "artifact-two",
                 status: "Pending",
+                target_type: "nixos",
             },
         ],
         error: None,
+        warnings_count: 0,
     },
     serialized_artifacts: {},
 }

@@ -55,7 +55,11 @@ impl ModelState {
                 .iter()
                 .map(|entry| match entry {
                     ListEntry::Single(single) => ArtifactState {
-                        target: single.target.clone(),
+                        target: single
+                            .target_type
+                            .target_name()
+                            .unwrap_or("shared")
+                            .to_string(),
                         name: single.artifact.name.clone(),
                         status: normalize_status(format!("{:?}", single.status)),
                         target_type: single.target_type.context_str(),
@@ -146,8 +150,9 @@ mod tests {
     #[test]
     fn test_model_state_with_single_entry() {
         let entry = ArtifactEntry {
-            target: "machine-one".to_string(),
-            target_type: TargetType::NixOS,
+            target_type: TargetType::NixOS {
+                machine: "machine-one".to_string(),
+            },
             artifact: make_test_artifact("test-artifact"),
             status: ArtifactStatus::NeedsGeneration,
             step_logs: StepLogs::default(),

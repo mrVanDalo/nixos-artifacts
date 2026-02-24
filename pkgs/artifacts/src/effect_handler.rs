@@ -128,25 +128,23 @@ impl EffectHandler {
             Effect::CheckSerialization {
                 artifact_index,
                 artifact_name,
-                target,
                 target_type,
             } => Some(EffectCommand::CheckSerialization {
                 artifact_index,
                 artifact_name,
-                target,
+                target: target_type.target_name().unwrap_or("shared").to_string(),
                 target_type: target_type.to_string(),
             }),
 
             Effect::RunGenerator {
                 artifact_index,
                 artifact_name,
-                target,
                 target_type,
                 prompts,
             } => Some(EffectCommand::RunGenerator {
                 artifact_index,
                 artifact_name,
-                target,
+                target: target_type.target_name().unwrap_or("shared").to_string(),
                 target_type: target_type.to_string(),
                 prompts,
             }),
@@ -154,13 +152,12 @@ impl EffectHandler {
             Effect::Serialize {
                 artifact_index,
                 artifact_name,
-                target,
                 target_type,
                 out_dir: _,
             } => Some(EffectCommand::Serialize {
                 artifact_index,
                 artifact_name,
-                target,
+                target: target_type.target_name().unwrap_or("shared").to_string(),
                 target_type: target_type.to_string(),
             }),
 
@@ -391,8 +388,7 @@ mod tests {
         let effect = Effect::CheckSerialization {
             artifact_index: 0,
             artifact_name: "test".to_string(),
-            target: "machine".to_string(),
-            target_type: TargetType::NixOS,
+            target_type: TargetType::NixOS { machine: "machine".to_string() },
         };
 
         handler.run_effect(effect).await.unwrap();
@@ -449,8 +445,7 @@ mod tests {
         let cmd = handler.effect_to_command(Effect::CheckSerialization {
             artifact_index: 0,
             artifact_name: "test".to_string(),
-            target: "machine".to_string(),
-            target_type: TargetType::NixOS,
+            target_type: TargetType::NixOS { machine: "machine".to_string() },
         });
         assert!(matches!(
             cmd,
@@ -461,8 +456,7 @@ mod tests {
         let cmd = handler.effect_to_command(Effect::RunGenerator {
             artifact_index: 1,
             artifact_name: "test".to_string(),
-            target: "machine".to_string(),
-            target_type: TargetType::HomeManager,
+            target_type: TargetType::HomeManager { username: "alice".to_string() },
             prompts: HashMap::new(),
         });
         assert!(matches!(cmd, Some(EffectCommand::RunGenerator { .. })));
@@ -471,8 +465,7 @@ mod tests {
         let cmd = handler.effect_to_command(Effect::Serialize {
             artifact_index: 2,
             artifact_name: "test".to_string(),
-            target: "machine".to_string(),
-            target_type: TargetType::NixOS,
+            target_type: TargetType::NixOS { machine: "machine".to_string() },
             out_dir: std::path::PathBuf::from("/tmp"),
         });
         assert!(matches!(cmd, Some(EffectCommand::Serialize { .. })));

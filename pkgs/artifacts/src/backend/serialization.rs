@@ -110,14 +110,6 @@ fn handle_check_output(
     }
 }
 
-/// Get target label for logging
-fn get_target_label(target_type: &TargetType) -> &'static str {
-    match target_type {
-        TargetType::HomeManager { .. } => "username",
-        TargetType::NixOS { .. } | TargetType::Shared { .. } => "machine",
-    }
-}
-
 /// Build machines JSON file mapping machine names to backend configs
 fn build_machines_json(
     make: &MakeConfiguration,

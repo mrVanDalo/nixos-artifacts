@@ -7,7 +7,7 @@
 //! 4. Collect serialized artifacts for snapshot verification
 
 use crate::tui::model_state::ModelState;
-use artifacts::app::Msg;
+use artifacts::app::Message;
 use artifacts::config::backend::BackendConfiguration;
 use artifacts::config::make::MakeConfiguration;
 use artifacts::config::nix::build_make_from_flake;
@@ -195,7 +195,7 @@ struct TestResult {
 
 #[derive(Default)]
 struct Events {
-    messages: Vec<Msg>,
+    messages: Vec<Message>,
     descriptions: Vec<String>,
 }
 

@@ -381,11 +381,18 @@ impl AsRef<Path> for TempFile {
 mod tests {
     use super::*;
     use std::fs;
+    use std::sync::atomic::{AtomicU64, Ordering};
     use std::time::Duration;
+
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
+
+    fn unique_prefix(base: &str) -> String {
+        format!("{}_{}", base, COUNTER.fetch_add(1, Ordering::SeqCst))
+    }
 
     #[test]
     fn test_temp_file_creation() {
-        let temp_file = TempFile::new_file("test").unwrap();
+        let temp_file = TempFile::new_file(&unique_prefix("test")).unwrap();
         assert!(temp_file.is_file());
         assert!(temp_file.path().exists());
 
@@ -398,7 +405,7 @@ mod tests {
 
     #[test]
     fn test_temp_dir_creation() {
-        let temp_dir = TempFile::new_dir("test").unwrap();
+        let temp_dir = TempFile::new_dir(&unique_prefix("test")).unwrap();
         assert!(temp_dir.is_dir());
         assert!(temp_dir.path().exists());
 
@@ -412,7 +419,7 @@ mod tests {
     #[test]
     fn test_temp_file_with_content() {
         let content = b"Hello, World!";
-        let temp_file = TempFile::new_file_with_content("test", content).unwrap();
+        let temp_file = TempFile::new_file_with_content(&unique_prefix("test"), content).unwrap();
 
         assert_eq!(temp_file.size, content.len() as u64);
 
@@ -422,13 +429,13 @@ mod tests {
 
     #[test]
     fn test_deref() {
-        let temp_file = TempFile::new_file("test").unwrap();
+        let temp_file = TempFile::new_file(&unique_prefix("test")).unwrap();
         let _path_ref: &Path = &temp_file;
     }
 
     #[test]
     fn test_as_ref() {
-        let temp_file = TempFile::new_file("test").unwrap();
+        let temp_file = TempFile::new_file(&unique_prefix("test")).unwrap();
         let _path_ref: &Path = temp_file.as_ref();
     }
 }

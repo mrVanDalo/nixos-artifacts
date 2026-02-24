@@ -64,11 +64,6 @@ pub fn init(model: &Model) -> Effect {
             ListEntry::Single(single) => Effect::CheckSerialization {
                 artifact_index: i,
                 artifact_name: single.artifact.name.clone(),
-                target: single
-                    .target_type
-                    .target_name()
-                    .unwrap_or("unknown")
-                    .to_string(),
                 target_type: single.target_type.clone(),
             },
             ListEntry::Shared(shared) => Effect::SharedCheckSerialization {
@@ -425,11 +420,6 @@ fn finish_prompts_and_start_generation(mut model: Model) -> (Model, Effect) {
         ListEntry::Single(single) => Effect::RunGenerator {
             artifact_index,
             artifact_name,
-            target: single
-                .target_type
-                .target_name()
-                .unwrap_or("unknown")
-                .to_string(),
             target_type: single.target_type.clone(),
             prompts,
         },
@@ -583,11 +573,6 @@ fn handle_generator_success(
         ListEntry::Single(single) => Effect::Serialize {
             artifact_index,
             artifact_name: single.artifact.name.clone(),
-            target: single
-                .target_type
-                .target_name()
-                .unwrap_or("unknown")
-                .to_string(),
             target_type: single.target_type.clone(),
             out_dir: Default::default(),
         },
@@ -957,11 +942,6 @@ fn start_generation_for_selected_internal(
                 let effect = Effect::RunGenerator {
                     artifact_index,
                     artifact_name: single.artifact.name.clone(),
-                    target: single
-                        .target_type
-                        .target_name()
-                        .unwrap_or("unknown")
-                        .to_string(),
                     target_type: single.target_type.clone(),
                     prompts: Default::default(),
                 };
@@ -1982,7 +1962,6 @@ mod tests {
     /// Test that multiple generators shows selection dialog
     #[test]
     fn test_multiple_generators_shows_dialog() {
-        use crate::app::model::SharedEntry;
         use crate::app::model::{SharedEntry, TargetType};
         use crate::config::make::{GeneratorInfo, GeneratorSource, SharedArtifactInfo};
         use std::collections::BTreeMap;

@@ -12,7 +12,7 @@
 use std::collections::{BTreeMap, HashMap};
 
 use artifacts::app::effect::Effect;
-use artifacts::app::message::{CheckOutput, GeneratorOutput, Msg, SerializeOutput};
+use artifacts::app::message::{CheckOutput, GeneratorOutput, Message, SerializeOutput};
 use artifacts::app::model::{
     ArtifactEntry, ArtifactStatus, GeneratingState, GenerationStep, ListEntry, Model, Screen,
     StepLogs, TargetType,
@@ -89,8 +89,9 @@ fn create_test_artifact(name: &str, has_prompts: bool) -> ArtifactDef {
 fn create_test_model(artifact_name: &str, has_prompts: bool) -> Model {
     let artifact = create_test_artifact(artifact_name, has_prompts);
     let entry = ArtifactEntry {
-        target: "machine-one".to_string(),
-        target_type: TargetType::NixOS,
+        target_type: TargetType::NixOS {
+            machine: "machine-one".to_string(),
+        },
         artifact: artifact.clone(),
         status: ArtifactStatus::Pending,
         step_logs: StepLogs::default(),
@@ -167,37 +168,34 @@ fn effect_to_command(effect: &Effect) -> Option<EffectCommand> {
         Effect::CheckSerialization {
             artifact_index,
             artifact_name,
-            target,
             target_type,
         } => Some(EffectCommand::CheckSerialization {
             artifact_index: *artifact_index,
             artifact_name: artifact_name.clone(),
-            target: target.clone(),
+            target: target_type.target_name().unwrap_or("shared").to_string(),
             target_type: target_type.context_str().to_string(),
         }),
         Effect::RunGenerator {
             artifact_index,
             artifact_name,
-            target,
             target_type,
             prompts,
         } => Some(EffectCommand::RunGenerator {
             artifact_index: *artifact_index,
             artifact_name: artifact_name.clone(),
-            target: target.clone(),
+            target: target_type.target_name().unwrap_or("shared").to_string(),
             target_type: target_type.context_str().to_string(),
             prompts: prompts.clone(),
         }),
         Effect::Serialize {
             artifact_index,
             artifact_name,
-            target,
             target_type,
             ..
         } => Some(EffectCommand::Serialize {
             artifact_index: *artifact_index,
             artifact_name: artifact_name.clone(),
-            target: target.clone(),
+            target: target_type.target_name().unwrap_or("shared").to_string(),
             target_type: target_type.context_str().to_string(),
         }),
         Effect::SharedCheckSerialization {
@@ -299,8 +297,9 @@ fn test_check_serialization_flow_needs_generation() {
     let check_effect = Effect::CheckSerialization {
         artifact_index: 0,
         artifact_name: "test-artifact".to_string(),
-        target: "machine-one".to_string(),
-        target_type: TargetType::NixOS,
+        target_type: TargetType::NixOS {
+            machine: "machine-one".to_string(),
+        },
     };
 
     process_effects_and_track(&mut model, check_effect, &mut tracker);
@@ -317,7 +316,7 @@ fn test_check_serialization_flow_needs_generation() {
     };
     let (new_model, _) = update(
         model,
-        Msg::CheckSerializationResult {
+        Message::CheckSerializationResult {
             artifact_index: 0,
             needs_generation: true,
             exists: false,
@@ -351,8 +350,9 @@ fn test_check_serialization_flow_up_to_date() {
     let check_effect = Effect::CheckSerialization {
         artifact_index: 0,
         artifact_name: "test-artifact".to_string(),
-        target: "machine-one".to_string(),
-        target_type: TargetType::NixOS,
+        target_type: TargetType::NixOS {
+            machine: "machine-one".to_string(),
+        },
     };
 
     process_effects_and_track(&mut model, check_effect, &mut tracker);
@@ -364,7 +364,7 @@ fn test_check_serialization_flow_up_to_date() {
     // Simulate successful check result indicating no generation needed
     let (new_model, _) = update(
         model,
-        Msg::CheckSerializationResult {
+        Message::CheckSerializationResult {
             artifact_index: 0,
             needs_generation: false,
             exists: true,
@@ -407,8 +407,9 @@ fn test_generator_flow_success() {
     let generator_effect = Effect::RunGenerator {
         artifact_index: 0,
         artifact_name: "test-artifact".to_string(),
-        target: "machine-one".to_string(),
-        target_type: TargetType::NixOS,
+        target_type: TargetType::NixOS {
+            machine: "machine-one".to_string(),
+        },
         prompts: HashMap::new(),
     };
 
@@ -427,7 +428,7 @@ fn test_generator_flow_success() {
     };
     let (model_after_gen, serialize_effect) = update(
         model.clone(),
-        Msg::GeneratorFinished {
+        Message::GeneratorFinished {
             artifact_index: 0,
             result: Ok(generator_output),
         },
@@ -465,7 +466,7 @@ fn test_generator_flow_success() {
     };
     let (final_model, _) = update(
         model_for_serialize,
-        Msg::SerializeFinished {
+        Message::SerializeFinished {
             artifact_index: 0,
             result: Ok(serialize_output),
         },
@@ -502,8 +503,9 @@ fn test_generator_flow_failure() {
     let generator_effect = Effect::RunGenerator {
         artifact_index: 0,
         artifact_name: "test-artifact".to_string(),
-        target: "machine-one".to_string(),
-        target_type: TargetType::NixOS,
+        target_type: TargetType::NixOS {
+            machine: "machine-one".to_string(),
+        },
         prompts: HashMap::new(),
     };
 
@@ -516,7 +518,7 @@ fn test_generator_flow_failure() {
     // Simulate failed generator result
     let (final_model, _) = update(
         model,
-        Msg::GeneratorFinished {
+        Message::GeneratorFinished {
             artifact_index: 0,
             result: Err("Generator script failed with exit code 1".to_string()),
         },
@@ -563,7 +565,7 @@ fn test_serialize_flow_failure() {
     };
     let (model_after_gen, _) = update(
         model.clone(),
-        Msg::GeneratorFinished {
+        Message::GeneratorFinished {
             artifact_index: 0,
             result: Ok(generator_output),
         },
@@ -573,8 +575,9 @@ fn test_serialize_flow_failure() {
     let serialize_effect = Effect::Serialize {
         artifact_index: 0,
         artifact_name: "test-artifact".to_string(),
-        target: "machine-one".to_string(),
-        target_type: TargetType::NixOS,
+        target_type: TargetType::NixOS {
+            machine: "machine-one".to_string(),
+        },
         out_dir: std::path::PathBuf::from("/tmp"),
     };
 
@@ -594,7 +597,7 @@ fn test_serialize_flow_failure() {
     // Simulate failed serialize result
     let (final_model, _) = update(
         model_for_serialize,
-        Msg::SerializeFinished {
+        Message::SerializeFinished {
             artifact_index: 0,
             result: Err("Serialize script failed".to_string()),
         },
@@ -623,8 +626,9 @@ fn test_check_serialization_failure() {
     let check_effect = Effect::CheckSerialization {
         artifact_index: 0,
         artifact_name: "test-artifact".to_string(),
-        target: "machine-one".to_string(),
-        target_type: TargetType::NixOS,
+        target_type: TargetType::NixOS {
+            machine: "machine-one".to_string(),
+        },
     };
 
     process_effects_and_track(&mut model.clone(), check_effect, &mut tracker);
@@ -633,7 +637,7 @@ fn test_check_serialization_failure() {
     // Simulate failed check result
     let (final_model, _) = update(
         model,
-        Msg::CheckSerializationResult {
+        Message::CheckSerializationResult {
             artifact_index: 0,
             needs_generation: true,
             exists: false,
@@ -666,16 +670,18 @@ fn test_batch_effect_processing() {
     let artifact2 = create_test_artifact("artifact-2", false);
 
     let entry1 = ArtifactEntry {
-        target: "machine-one".to_string(),
-        target_type: TargetType::NixOS,
+        target_type: TargetType::NixOS {
+            machine: "machine-one".to_string(),
+        },
         artifact: artifact1.clone(),
         status: ArtifactStatus::Pending,
         step_logs: StepLogs::default(),
         exists: false,
     };
     let entry2 = ArtifactEntry {
-        target: "machine-two".to_string(),
-        target_type: TargetType::NixOS,
+        target_type: TargetType::NixOS {
+            machine: "machine-two".to_string(),
+        },
         artifact: artifact2.clone(),
         status: ArtifactStatus::Pending,
         step_logs: StepLogs::default(),
@@ -700,14 +706,16 @@ fn test_batch_effect_processing() {
         Effect::CheckSerialization {
             artifact_index: 0,
             artifact_name: "artifact-1".to_string(),
-            target: "machine-one".to_string(),
-            target_type: TargetType::NixOS,
+            target_type: TargetType::NixOS {
+                machine: "machine-one".to_string(),
+            },
         },
         Effect::CheckSerialization {
             artifact_index: 1,
             artifact_name: "artifact-2".to_string(),
-            target: "machine-two".to_string(),
-            target_type: TargetType::NixOS,
+            target_type: TargetType::NixOS {
+                machine: "machine-one".to_string(),
+            },
         },
     ]);
 
@@ -734,8 +742,9 @@ fn test_artifact_index_preservation() {
         let effect = Effect::CheckSerialization {
             artifact_index: idx,
             artifact_name: "test".to_string(),
-            target: "machine".to_string(),
-            target_type: TargetType::NixOS,
+            target_type: TargetType::NixOS {
+                machine: "machine-one".to_string(),
+            },
         };
 
         process_effects_and_track(&mut model.clone(), effect, &mut tracker);
@@ -764,15 +773,16 @@ fn test_complete_lifecycle_success() {
     let check_effect = Effect::CheckSerialization {
         artifact_index: 0,
         artifact_name: "test-artifact".to_string(),
-        target: "machine-one".to_string(),
-        target_type: TargetType::NixOS,
+        target_type: TargetType::NixOS {
+            machine: "machine-one".to_string(),
+        },
     };
     process_effects_and_track(&mut model, check_effect, &mut tracker);
 
     // Check result says we need generation
     let (model, _) = update(
         model,
-        Msg::CheckSerializationResult {
+        Message::CheckSerializationResult {
             artifact_index: 0,
             needs_generation: true,
             exists: false,
@@ -795,8 +805,9 @@ fn test_complete_lifecycle_success() {
     let gen_effect = Effect::RunGenerator {
         artifact_index: 0,
         artifact_name: "test-artifact".to_string(),
-        target: "machine-one".to_string(),
-        target_type: TargetType::NixOS,
+        target_type: TargetType::NixOS {
+            machine: "machine-one".to_string(),
+        },
         prompts: HashMap::new(),
     };
     process_effects_and_track(&mut model.clone(), gen_effect, &mut tracker);
@@ -808,7 +819,7 @@ fn test_complete_lifecycle_success() {
     };
     let (model_after_gen, serialize_effect) = update(
         model_with_screen,
-        Msg::GeneratorFinished {
+        Message::GeneratorFinished {
             artifact_index: 0,
             result: Ok(gen_output),
         },
@@ -832,7 +843,7 @@ fn test_complete_lifecycle_success() {
     };
     let (final_model, _) = update(
         model_for_serialize,
-        Msg::SerializeFinished {
+        Message::SerializeFinished {
             artifact_index: 0,
             result: Ok(serialize_output),
         },
@@ -857,7 +868,7 @@ fn test_retry_available_after_failed_check() {
 
     let (final_model, _) = update(
         model,
-        Msg::CheckSerializationResult {
+        Message::CheckSerializationResult {
             artifact_index: 0,
             needs_generation: true,
             exists: false,
@@ -892,21 +903,24 @@ fn test_multiple_command_types_tracked() {
         Effect::CheckSerialization {
             artifact_index: 0,
             artifact_name: "check".to_string(),
-            target: "m1".to_string(),
-            target_type: TargetType::NixOS,
+            target_type: TargetType::NixOS {
+                machine: "machine-one".to_string(),
+            },
         },
         Effect::RunGenerator {
             artifact_index: 0,
             artifact_name: "gen".to_string(),
-            target: "m2".to_string(),
-            target_type: TargetType::NixOS,
+            target_type: TargetType::NixOS {
+                machine: "machine-one".to_string(),
+            },
             prompts: HashMap::new(),
         },
         Effect::Serialize {
             artifact_index: 0,
             artifact_name: "ser".to_string(),
-            target: "m3".to_string(),
-            target_type: TargetType::NixOS,
+            target_type: TargetType::NixOS {
+                machine: "machine-one".to_string(),
+            },
             out_dir: std::path::PathBuf::from("/tmp"),
         },
     ];
@@ -949,15 +963,17 @@ fn test_batch_filters_none_effects() {
         Effect::CheckSerialization {
             artifact_index: 0,
             artifact_name: "test".to_string(),
-            target: "m1".to_string(),
-            target_type: TargetType::NixOS,
+            target_type: TargetType::NixOS {
+                machine: "machine-one".to_string(),
+            },
         },
         Effect::None,
         Effect::RunGenerator {
             artifact_index: 0,
             artifact_name: "test".to_string(),
-            target: "m2".to_string(),
-            target_type: TargetType::NixOS,
+            target_type: TargetType::NixOS {
+                machine: "machine-one".to_string(),
+            },
             prompts: HashMap::new(),
         },
     ]);
@@ -976,8 +992,9 @@ fn test_all_command_variants_extractable() {
     let test_effect = Effect::CheckSerialization {
         artifact_index: 42,
         artifact_name: "test-check".to_string(),
-        target: "machine-test".to_string(),
-        target_type: TargetType::NixOS,
+        target_type: TargetType::NixOS {
+            machine: "machine-one".to_string(),
+        },
     };
 
     let cmd = effect_to_command(&test_effect);
@@ -992,7 +1009,7 @@ fn test_all_command_variants_extractable() {
     {
         assert_eq!(artifact_index, 42);
         assert_eq!(artifact_name, "test-check");
-        assert_eq!(target, "machine-test");
+        assert_eq!(target, "machine-one");
         assert_eq!(target_type, "nixos");
     } else {
         panic!("Expected CheckSerialization variant");
@@ -1016,8 +1033,9 @@ fn test_dual_assertion_strategy_demonstration() {
     let check_effect = Effect::CheckSerialization {
         artifact_index: 0,
         artifact_name: "demo-artifact".to_string(),
-        target: "machine-one".to_string(),
-        target_type: TargetType::NixOS,
+        target_type: TargetType::NixOS {
+            machine: "machine-one".to_string(),
+        },
     };
 
     process_effects_and_track(&mut model.clone(), check_effect, &mut tracker);
@@ -1036,7 +1054,7 @@ fn test_dual_assertion_strategy_demonstration() {
     // Apply check result to model
     let (final_model, _) = update(
         model,
-        Msg::CheckSerializationResult {
+        Message::CheckSerializationResult {
             artifact_index: 0,
             needs_generation: false,
             exists: true,

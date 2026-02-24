@@ -13,15 +13,40 @@ TUI for managing NixOS Artifacts
 Usage: artifacts [OPTIONS] [FLAKE]
 
 Arguments:
-  [FLAKE]  Path to flake directory (default: current directory)
+  [FLAKE]
+          Path to flake directory (default: current directory)
 
 Options:
-      --machine <MACHINE>      Filter by machine name (repeatable)
-      --home <HOME>            Filter by home-manager user (repeatable)
-      --artifact <ARTIFACT>    Filter by artifact name (repeatable)
-      --log-level <LOG_LEVEL>  Set the logging level [default: info] [possible values: error, warning, info, debug, trace]
-      --no-emoji               Disable emoji output
-  -h, --help                   Print help
-  -V, --version                Print version
+      --machine <MACHINE>
+          Filter by machine name (repeatable)
+
+      --home <HOME>
+          Filter by home-manager user (repeatable)
+
+      --artifact <ARTIFACT>
+          Filter by artifact name (repeatable)
+
+      --no-emoji
+          Disable emoji output
+
+      --log-file <PATH>
+          Path to log file for debug output
+
+      --log-level <LOG_LEVEL>
+          Set the logging level (requires --log-file)
+
+          Possible values:
+          - error: Error messages only
+          - warn:  Warnings and errors
+          - info:  Informational messages
+          - debug: Debug output (most verbose)
+          
+          [default: debug]
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+  -V, --version
+          Print version
 
 ----- stderr -----

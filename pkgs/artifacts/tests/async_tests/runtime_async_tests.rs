@@ -12,7 +12,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::time::Duration;
 
 use artifacts::app::effect::Effect;
-use artifacts::app::message::Msg;
+use artifacts::app::message::Message;
 use artifacts::app::model::{
     ArtifactEntry, ArtifactStatus, ListEntry, Model, Screen, StepLogs, TargetType,
 };
@@ -65,16 +65,14 @@ fn make_test_artifact(name: &str, prompts: Vec<&str>) -> ArtifactDef {
 /// Create a test model with artifact entries
 fn make_test_model() -> Model {
     let entry1 = ArtifactEntry {
-        target: "machine-one".to_string(),
-        target_type: TargetType::NixOS,
+        target_type: TargetType::NixOS { machine: "machine-one".to_string() },
         artifact: make_test_artifact("ssh-key", vec!["passphrase"]),
         status: ArtifactStatus::Pending,
         step_logs: StepLogs::default(),
         exists: false,
     };
     let entry2 = ArtifactEntry {
-        target: "machine-two".to_string(),
-        target_type: TargetType::NixOS,
+        target_type: TargetType::NixOS { machine: "machine-two".to_string() },
         artifact: make_test_artifact("api-token", vec![]),
         status: ArtifactStatus::Pending,
         step_logs: StepLogs::default(),
@@ -117,12 +115,12 @@ fn create_test_make_config() -> MakeConfiguration {
 /// Mock event source that can be pre-programmed with events
 #[derive(Debug)]
 struct MockEventSource {
-    events: Vec<Msg>,
+    events: Vec<Message>,
     current_index: usize,
 }
 
 impl MockEventSource {
-    fn new(events: Vec<Msg>) -> Self {
+    fn new(events: Vec<Message>) -> Self {
         Self {
             events,
             current_index: 0,
@@ -134,7 +132,7 @@ impl MockEventSource {
     }
 
     fn with_quit() -> Self {
-        Self::new(vec![Msg::Key(artifacts::app::KeyEvent {
+        Self::new(vec![Message::Key(artifacts::app::KeyEvent {
             code: crossterm::event::KeyCode::Char('q'),
             modifiers: crossterm::event::KeyModifiers::empty(),
         })])
@@ -142,7 +140,7 @@ impl MockEventSource {
 }
 
 impl EventSource for MockEventSource {
-    fn next_event(&mut self) -> Option<Msg> {
+    fn next_event(&mut self) -> Option<Message> {
         if self.current_index < self.events.len() {
             let event = self.events[self.current_index].clone();
             self.current_index += 1;
@@ -154,6 +152,10 @@ impl EventSource for MockEventSource {
 
     fn has_event(&mut self) -> bool {
         self.current_index < self.events.len()
+    }
+
+    fn is_exhausted(&mut self) -> bool {
+        self.current_index >= self.events.len()
     }
 }
 
@@ -203,11 +205,11 @@ async fn test_run_async_processes_events() {
 
     // Create events: navigate down, then quit
     let events = vec![
-        Msg::Key(artifacts::app::KeyEvent {
+        Message::Key(artifacts::app::KeyEvent {
             code: crossterm::event::KeyCode::Char('j'),
             modifiers: crossterm::event::KeyModifiers::empty(),
         }),
-        Msg::Key(artifacts::app::KeyEvent {
+        Message::Key(artifacts::app::KeyEvent {
             code: crossterm::event::KeyCode::Char('q'),
             modifiers: crossterm::event::KeyModifiers::empty(),
         }),
@@ -258,7 +260,9 @@ async fn test_run_async_drains_results_before_blocking() {
 
     // Initial effect (CheckSerialization) should have been processed
     // The model should still be valid
-    assert!(result.final_model.error.is_none());
+    if result.final_model.error.is_some() {
+        panic!("Expected no error, got: {:?}", result.final_model.error);
+    }
     assert_eq!(result.final_model.entries.len(), 2);
 }
 
@@ -341,7 +345,7 @@ async fn test_run_async_handles_results() {
 
     // Verify message type
     match msg {
-        Msg::CheckSerializationResult {
+        Message::CheckSerializationResult {
             artifact_index,
             result,
             ..
@@ -767,8 +771,7 @@ async fn test_effect_to_command_conversion() {
     let effect = Effect::CheckSerialization {
         artifact_index: 0,
         artifact_name: "test".to_string(),
-        target: "machine".to_string(),
-        target_type: TargetType::NixOS,
+        target_type: TargetType::NixOS { machine: "machine-one".to_string() },
     };
     let cmds = effect_to_command(effect);
     assert_eq!(cmds.len(), 1);
@@ -796,7 +799,7 @@ async fn test_result_to_message_conversion() {
         output: ScriptOutput::from_message("test output"),
     };
     let msg = result_to_message(result);
-    assert!(matches!(msg, Msg::CheckSerializationResult { .. }));
+    assert!(matches!(msg, Message::CheckSerializationResult { .. }));
 
     // Test GeneratorFinished result
     let result = EffectResult::GeneratorFinished {
@@ -806,7 +809,7 @@ async fn test_result_to_message_conversion() {
         error: None,
     };
     let msg = result_to_message(result);
-    assert!(matches!(msg, Msg::GeneratorFinished { .. }));
+    assert!(matches!(msg, Message::GeneratorFinished { .. }));
 
     // Test SerializeFinished result
     let result = EffectResult::SerializeFinished {
@@ -816,7 +819,7 @@ async fn test_result_to_message_conversion() {
         error: None,
     };
     let msg = result_to_message(result);
-    assert!(matches!(msg, Msg::SerializeFinished { .. }));
+    assert!(matches!(msg, Message::SerializeFinished { .. }));
 }
 
 // ============================================================================
@@ -833,11 +836,11 @@ async fn test_full_async_cycle() {
 
     // Navigate then quit
     let events = vec![
-        Msg::Key(artifacts::app::KeyEvent {
+        Message::Key(artifacts::app::KeyEvent {
             code: crossterm::event::KeyCode::Char('j'),
             modifiers: crossterm::event::KeyModifiers::empty(),
         }),
-        Msg::Key(artifacts::app::KeyEvent {
+        Message::Key(artifacts::app::KeyEvent {
             code: crossterm::event::KeyCode::Char('q'),
             modifiers: crossterm::event::KeyModifiers::empty(),
         }),
@@ -857,7 +860,9 @@ async fn test_full_async_cycle() {
     .unwrap();
 
     // Should complete without error
-    assert!(result.final_model.error.is_none());
+    if result.final_model.error.is_some() {
+        panic!("Expected no error, got: {:?}", result.final_model.error);
+    }
     // Should have navigated
     assert_eq!(result.final_model.selected_index, 1);
     // Should have rendered frames
@@ -874,19 +879,19 @@ async fn test_async_with_multiple_events() {
 
     // Navigate down twice, up once, then quit
     let events = vec![
-        Msg::Key(artifacts::app::KeyEvent {
+        Message::Key(artifacts::app::KeyEvent {
             code: crossterm::event::KeyCode::Char('j'),
             modifiers: crossterm::event::KeyModifiers::empty(),
         }),
-        Msg::Key(artifacts::app::KeyEvent {
+        Message::Key(artifacts::app::KeyEvent {
             code: crossterm::event::KeyCode::Char('j'),
             modifiers: crossterm::event::KeyModifiers::empty(),
         }),
-        Msg::Key(artifacts::app::KeyEvent {
+        Message::Key(artifacts::app::KeyEvent {
             code: crossterm::event::KeyCode::Char('k'),
             modifiers: crossterm::event::KeyModifiers::empty(),
         }),
-        Msg::Key(artifacts::app::KeyEvent {
+        Message::Key(artifacts::app::KeyEvent {
             code: crossterm::event::KeyCode::Char('q'),
             modifiers: crossterm::event::KeyModifiers::empty(),
         }),
@@ -905,6 +910,7 @@ async fn test_async_with_multiple_events() {
     .await
     .unwrap();
 
-    // j, j, k from index 0 should land at index 1
-    assert_eq!(result.final_model.selected_index, 1);
+    // j, j, k from index 0 should land at index 0
+    // (0 -> j -> 1 -> j -> 1 (max) -> k -> 0)
+    assert_eq!(result.final_model.selected_index, 0);
 }

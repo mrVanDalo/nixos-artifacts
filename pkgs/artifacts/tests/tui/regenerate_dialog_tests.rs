@@ -1,4 +1,4 @@
-use artifacts::app::message::{KeyEvent, Msg};
+use artifacts::app::message::{KeyEvent, Message};
 use artifacts::app::model::{
     ArtifactEntry, ArtifactStatus, ConfirmRegenerateState, GeneratingState, GenerationStep,
     ListEntry, Model, Screen, SharedEntry, StepLogs, TargetType,
@@ -49,8 +49,9 @@ fn make_test_artifact(name: &str, prompts: Vec<&str>) -> ArtifactDef {
 
 fn make_test_model_with_existing_artifact() -> Model {
     let entry = ArtifactEntry {
-        target: "machine-one".to_string(),
-        target_type: TargetType::NixOS,
+        target_type: TargetType::NixOS {
+            machine: "machine-one".to_string(),
+        },
         artifact: make_test_artifact("ssh-key", vec![]),
         status: ArtifactStatus::NeedsGeneration,
         step_logs: StepLogs::default(),
@@ -71,8 +72,9 @@ fn make_test_model_with_existing_artifact() -> Model {
 
 fn make_test_model_with_new_artifact() -> Model {
     let entry = ArtifactEntry {
-        target: "machine-one".to_string(),
-        target_type: TargetType::NixOS,
+        target_type: TargetType::NixOS {
+            machine: "machine-one".to_string(),
+        },
         artifact: make_test_artifact("ssh-key", vec![]),
         status: ArtifactStatus::NeedsGeneration,
         step_logs: StepLogs::default(),
@@ -93,6 +95,10 @@ fn make_test_model_with_new_artifact() -> Model {
 
 fn make_shared_entry(exists: bool) -> SharedEntry {
     SharedEntry {
+        target_type: TargetType::Shared {
+            nixos_targets: vec!["machine-one".to_string(), "machine-two".to_string()],
+            home_targets: vec![],
+        },
         info: SharedArtifactInfo {
             artifact_name: "shared-secret".to_string(),
             description: None,
@@ -175,7 +181,7 @@ fn test_dialog_appears_for_existing_artifact() {
     let model = make_test_model_with_existing_artifact();
 
     // When: User presses Enter on artifact list
-    let (new_model, _effect) = update(model, Msg::Key(KeyEvent::enter()));
+    let (new_model, _effect) = update(model, Message::Key(KeyEvent::enter()));
 
     // Then: Screen transitions to ConfirmRegenerate (not directly to generation)
     assert!(
@@ -191,7 +197,7 @@ fn test_dialog_skips_for_new_artifact() {
     let model = make_test_model_with_new_artifact();
 
     // When: User presses Enter on artifact list
-    let (new_model, _effect) = update(model, Msg::Key(KeyEvent::enter()));
+    let (new_model, _effect) = update(model, Message::Key(KeyEvent::enter()));
 
     // Then: Screen transitions directly to generating (no dialog)
     assert!(
@@ -205,7 +211,7 @@ fn test_dialog_skips_for_new_artifact() {
 fn test_dialog_default_selection_is_leave() {
     // Given: ConfirmRegenerate state just opened
     let model = make_test_model_with_existing_artifact();
-    let (model, _) = update(model, Msg::Key(KeyEvent::enter()));
+    let (model, _) = update(model, Message::Key(KeyEvent::enter()));
 
     // Then: leave_selected is true (safe default)
     if let Screen::ConfirmRegenerate(state) = &model.screen {
@@ -230,7 +236,7 @@ fn test_dialog_keyboard_left_selects_leave() {
     });
 
     // When: User presses Left arrow
-    let (new_model, _effect) = update(model, Msg::Key(KeyEvent::from_code(KeyCode::Left)));
+    let (new_model, _effect) = update(model, Message::Key(KeyEvent::from_code(KeyCode::Left)));
 
     // Then: Leave is selected
     if let Screen::ConfirmRegenerate(state) = &new_model.screen {
@@ -255,7 +261,7 @@ fn test_dialog_keyboard_right_selects_regenerate() {
     });
 
     // When: User presses Right arrow
-    let (new_model, _effect) = update(model, Msg::Key(KeyEvent::from_code(KeyCode::Right)));
+    let (new_model, _effect) = update(model, Message::Key(KeyEvent::from_code(KeyCode::Right)));
 
     // Then: Regenerate is selected
     if let Screen::ConfirmRegenerate(state) = &new_model.screen {
@@ -279,7 +285,7 @@ fn test_dialog_keyboard_vim_keys_work() {
         leave_selected: false,
     });
 
-    let (new_model, _) = update(model.clone(), Msg::Key(KeyEvent::char('h')));
+    let (new_model, _) = update(model.clone(), Message::Key(KeyEvent::char('h')));
     if let Screen::ConfirmRegenerate(state) = &new_model.screen {
         assert!(state.leave_selected, "'h' key should select Leave");
     }
@@ -292,7 +298,7 @@ fn test_dialog_keyboard_vim_keys_work() {
         leave_selected: true,
     });
 
-    let (new_model, _) = update(model, Msg::Key(KeyEvent::char('l')));
+    let (new_model, _) = update(model, Message::Key(KeyEvent::char('l')));
     if let Screen::ConfirmRegenerate(state) = &new_model.screen {
         assert!(!state.leave_selected, "'l' key should select Regenerate");
     }
@@ -310,7 +316,7 @@ fn test_dialog_keyboard_tab_toggles_selection() {
     });
 
     // When: User presses Tab
-    let (new_model, _effect) = update(model, Msg::Key(KeyEvent::from_code(KeyCode::Tab)));
+    let (new_model, _effect) = update(model, Message::Key(KeyEvent::from_code(KeyCode::Tab)));
 
     // Then: Selection toggles to Regenerate
     if let Screen::ConfirmRegenerate(state) = &new_model.screen {
@@ -323,7 +329,7 @@ fn test_dialog_keyboard_tab_toggles_selection() {
     }
 
     // When: User presses Tab again
-    let (new_model2, _effect2) = update(new_model, Msg::Key(KeyEvent::from_code(KeyCode::Tab)));
+    let (new_model2, _effect2) = update(new_model, Message::Key(KeyEvent::from_code(KeyCode::Tab)));
 
     // Then: Selection toggles back to Leave
     if let Screen::ConfirmRegenerate(state) = &new_model2.screen {
@@ -348,7 +354,7 @@ fn test_dialog_enter_confirms_selection() {
     });
 
     // When: User presses Enter
-    let (new_model, _effect) = update(model, Msg::Key(KeyEvent::enter()));
+    let (new_model, _effect) = update(model, Message::Key(KeyEvent::enter()));
 
     // Then: Proceeds to generation
     assert!(
@@ -369,7 +375,7 @@ fn test_dialog_space_confirms_selection() {
     });
 
     // When: User presses Space
-    let (new_model, _effect) = update(model, Msg::Key(KeyEvent::char(' ')));
+    let (new_model, _effect) = update(model, Message::Key(KeyEvent::char(' ')));
 
     // Then: Proceeds to generation
     assert!(
@@ -390,7 +396,7 @@ fn test_dialog_esc_cancels() {
     });
 
     // When: User presses Esc
-    let (new_model, _effect) = update(model, Msg::Key(KeyEvent::from_code(KeyCode::Esc)));
+    let (new_model, _effect) = update(model, Message::Key(KeyEvent::from_code(KeyCode::Esc)));
 
     // Then: Returns to ArtifactList
     assert!(
@@ -411,7 +417,7 @@ fn test_dialog_leave_returns_to_list() {
     });
 
     // When: User presses Enter (confirming Leave)
-    let (new_model, _effect) = update(model, Msg::Key(KeyEvent::enter()));
+    let (new_model, _effect) = update(model, Message::Key(KeyEvent::enter()));
 
     // Then: Returns to ArtifactList
     assert!(
@@ -432,7 +438,7 @@ fn test_dialog_regenerate_proceeds_to_generation() {
     });
 
     // When: User presses Enter (confirming Regenerate)
-    let (new_model, _effect) = update(model, Msg::Key(KeyEvent::enter()));
+    let (new_model, _effect) = update(model, Message::Key(KeyEvent::enter()));
 
     // Then: Proceeds to Generating (no prompts for this artifact)
     assert!(
@@ -447,8 +453,9 @@ fn test_dialog_regenerate_proceeds_to_prompts() {
     let _model = make_test_model_with_existing_artifact();
     // Replace with artifact that has prompts
     let entry = ArtifactEntry {
-        target: "machine-one".to_string(),
-        target_type: TargetType::NixOS,
+        target_type: TargetType::NixOS {
+            machine: "machine-one".to_string(),
+        },
         artifact: make_test_artifact("ssh-key", vec!["passphrase"]),
         status: ArtifactStatus::NeedsGeneration,
         step_logs: StepLogs::default(),
@@ -471,7 +478,7 @@ fn test_dialog_regenerate_proceeds_to_prompts() {
     };
 
     // When: User presses Enter (confirming Regenerate)
-    let (new_model, _effect) = update(model, Msg::Key(KeyEvent::enter()));
+    let (new_model, _effect) = update(model, Message::Key(KeyEvent::enter()));
 
     // Then: Proceeds to Prompt
     assert!(
@@ -486,7 +493,7 @@ fn test_shared_artifact_shows_affected_targets() {
     let model = make_test_model_with_shared_artifact(true);
 
     // When: User presses Enter on shared artifact
-    let (new_model, _effect) = update(model, Msg::Key(KeyEvent::enter()));
+    let (new_model, _effect) = update(model, Message::Key(KeyEvent::enter()));
 
     // Then: ConfirmRegenerate screen opens with affected targets
     if let Screen::ConfirmRegenerate(state) = &new_model.screen {
@@ -515,7 +522,7 @@ fn test_dialog_skips_for_new_shared_artifact() {
     let model = make_test_model_with_shared_artifact(false);
 
     // When: User presses Enter
-    let (new_model, _effect) = update(model, Msg::Key(KeyEvent::enter()));
+    let (new_model, _effect) = update(model, Message::Key(KeyEvent::enter()));
 
     // Then: No confirmation dialog shown (shared artifacts go to SelectGenerator or Generating/Prompt)
     assert!(
@@ -568,7 +575,7 @@ fn test_status_text_generating_state_for_new() {
 fn test_generating_state_exists_flows_from_entry() {
     // Verify that exists flag flows correctly from entry to GeneratingState
     let model_existing = make_test_model_with_existing_artifact();
-    let (new_model, _) = update(model_existing, Msg::Key(KeyEvent::enter()));
+    let (new_model, _) = update(model_existing, Message::Key(KeyEvent::enter()));
 
     // Should proceed to generation (dialog skipped due to no prompts, but for this test
     // we need an artifact WITH prompts so we can check the dialog flow)
@@ -586,8 +593,9 @@ fn test_generating_state_exists_flows_from_entry() {
 fn test_entry_exists_used_for_dialog_decision() {
     // This test verifies the core logic that determines when to show the dialog
     let entry_with_exists = ArtifactEntry {
-        target: "test".to_string(),
-        target_type: TargetType::NixOS,
+        target_type: TargetType::NixOS {
+            machine: "test".to_string(),
+        },
         artifact: make_test_artifact("test", vec![]),
         status: ArtifactStatus::NeedsGeneration,
         step_logs: StepLogs::default(),
@@ -604,8 +612,9 @@ fn test_entry_exists_used_for_dialog_decision() {
     );
 
     let entry_without_exists = ArtifactEntry {
-        target: "test".to_string(),
-        target_type: TargetType::NixOS,
+        target_type: TargetType::NixOS {
+            machine: "test".to_string(),
+        },
         artifact: make_test_artifact("test", vec![]),
         status: ArtifactStatus::NeedsGeneration,
         step_logs: StepLogs::default(),
@@ -755,8 +764,9 @@ fn test_dialog_snapshot_shared_artifact() {
 fn test_dialog_appears_only_for_needs_generation() {
     // Given: Existing artifact that is UpToDate (not NeedsGeneration)
     let entry = ArtifactEntry {
-        target: "machine-one".to_string(),
-        target_type: TargetType::NixOS,
+        target_type: TargetType::NixOS {
+            machine: "machine-one".to_string(),
+        },
         artifact: make_test_artifact("ssh-key", vec![]),
         status: ArtifactStatus::UpToDate,
         step_logs: StepLogs::default(),
@@ -775,7 +785,7 @@ fn test_dialog_appears_only_for_needs_generation() {
     };
 
     // When: User presses Enter
-    let (new_model, _effect) = update(model, Msg::Key(KeyEvent::enter()));
+    let (new_model, _effect) = update(model, Message::Key(KeyEvent::enter()));
 
     // Then: No dialog shown (artifact is up to date, doesn't need generation)
     // Note: This may go to generation or stay on list depending on implementation
@@ -823,7 +833,7 @@ fn test_dialog_with_many_targets_truncation() {
     };
 
     // When: User presses Enter
-    let (new_model, _) = update(model, Msg::Key(KeyEvent::enter()));
+    let (new_model, _) = update(model, Message::Key(KeyEvent::enter()));
 
     // Then: Targets should be truncated
     if let Screen::ConfirmRegenerate(state) = &new_model.screen {
