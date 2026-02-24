@@ -30,15 +30,30 @@
 use crate::backend::helpers::{escape_single_quoted, fnv1a64, resolve_path};
 use crate::backend::output_capture::{run_with_captured_output, CapturedOutput};
 use crate::config::make::ArtifactDef;
-use crate::log_debug;
-#[cfg(feature = "logging")]
-use crate::log_trace;
 use crate::string_vec;
 use anyhow::{bail, Context, Result};
 use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
 use std::process::Stdio;
+
+/// Format bwrap arguments for readable multi-line logging.
+#[cfg(feature = "logging")]
+fn format_bwrap_command(arguments: &[String]) -> String {
+    let mut result = String::new();
+    for (index, argument) in arguments.iter().enumerate() {
+        if index == 0 {
+            result.push_str(argument);
+        } else if argument.starts_with("--") {
+            result.push_str(" \\\n");
+            result.push_str(argument);
+        } else {
+            result.push(' ');
+            result.push_str(argument);
+        }
+    }
+    result
+}
 
 /// Verify that the generator produced exactly the expected files for the given artifact.
 ///
@@ -202,32 +217,12 @@ pub fn run_generator_script(
     arguments.extend(string_vec!["--", "/bin/sh"]);
     arguments.push(generator_script_absolut_path.display().to_string());
     let bwrap_command = arguments.join(" ");
-    // Pretty-print the bwrap command for readability in logs (only when logging feature is enabled)
-    #[cfg(feature = "logging")]
-    let bwrap_pretty = {
-        let mut result = String::new();
-        for (index, argument) in arguments.iter().enumerate() {
-            if index == 0 {
-                result.push_str(argument);
-            } else if argument.starts_with("--") {
-                // start a new line for option keys (including the standalone "--")
-                result.push_str(" \\\n");
-                result.push_str(argument);
-            } else {
-                // keep values on the same line as their preceding key
-                result.push(' ');
-                result.push_str(argument);
-            }
-        }
-        result
-    };
-    // Keep the original prefix but print as multiline for readability
-    log_debug!(
+    crate::log_debug!(
         "run bwrap with command {}",
         generator_script_absolut_path.display()
     );
     #[cfg(feature = "logging")]
-    log_trace!("{}", bwrap_pretty);
+    crate::log_debug!("{}", format_bwrap_command(&arguments));
 
     // Ensure that our 'out' and 'prompts' override any nix-shell provided 'out'
     let out_quoted = escape_single_quoted(&out.display().to_string());
@@ -382,7 +377,7 @@ pub fn run_generator_script_with_path(
     arguments.push(generator_script_absolut_path.display().to_string());
     let bwrap_command = arguments.join(" ");
 
-    log_debug!(
+    crate::log_debug!(
         "run shared generator bwrap with command {}",
         generator_script_absolut_path.display()
     );

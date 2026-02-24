@@ -31,7 +31,6 @@
 //! - The Nix expression fails to build
 //! - The output path is not a valid file
 
-#[cfg(feature = "logging")]
 use crate::backend::helpers::pretty_print_shell_escape;
 
 /// Build the make.json file from a flake.nix by running `nix build`.
@@ -64,7 +63,6 @@ use crate::backend::helpers::pretty_print_shell_escape;
 /// let make_json_path = build_make_from_flake(Path::new("."))?;
 /// let config = MakeConfiguration::read_make_config(&make_json_path)?;
 /// ```
-
 pub fn build_make_from_flake(flake_path: &std::path::Path) -> anyhow::Result<std::path::PathBuf> {
     // Ensure nix is available
     let nix_bin = which::which("nix")
@@ -83,22 +81,17 @@ pub fn build_make_from_flake(flake_path: &std::path::Path) -> anyhow::Result<std
     arguments.extend(string_vec!["--expr", expr]);
 
     // Attach all arguments at once
-
-    #[cfg(feature = "logging")]
-    {
-        // Pretty-print: shell-escaped command line
-        let prog = nix_bin.to_string_lossy().to_string();
-        let _pretty = std::iter::once(pretty_print_shell_escape(&prog))
-            .chain(
-                arguments
-                    .iter()
-                    .map(|argument| pretty_print_shell_escape(argument)),
-            )
-            .collect::<Vec<_>>()
-            .join(" ");
-        log_debug!("Running nix build on {}", flake_path.display());
-        log_trace!("{}", _pretty);
-    }
+    let prog = nix_bin.to_string_lossy().to_string();
+    let _pretty = std::iter::once(pretty_print_shell_escape(&prog))
+        .chain(
+            arguments
+                .iter()
+                .map(|argument| pretty_print_shell_escape(argument)),
+        )
+        .collect::<Vec<_>>()
+        .join(" ");
+    crate::log_debug!("Running nix build on {}", flake_path.display());
+    crate::log_debug!("{}", _pretty);
 
     command.args(&arguments);
     let output = command

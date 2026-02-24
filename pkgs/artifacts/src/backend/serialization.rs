@@ -36,7 +36,6 @@ use crate::backend::output_capture::{
 use crate::backend::tempfile::TempFile;
 use crate::config::backend::{BackendConfiguration, BackendEntry};
 use crate::config::make::{ArtifactDef, MakeConfiguration};
-use crate::log_debug;
 use anyhow::{bail, Context, Result};
 use serde_json::{json, to_string_pretty, Map, Value};
 use std::fs;
@@ -84,9 +83,9 @@ fn handle_check_output(
         Ok(out) => {
             let needs_generation = !out.exit_success;
             if out.exit_success {
-                log_debug!("OK -> skipping generation");
+                crate::log_debug!("OK -> skipping generation");
             } else {
-                log_debug!("needs generation");
+                crate::log_debug!("needs generation");
             }
             Ok(CheckResult {
                 needs_generation,
@@ -97,7 +96,7 @@ fn handle_check_output(
             script_name: name,
             timeout_secs,
         }) => {
-            log_debug!(
+            crate::log_debug!(
                 "{} timed out after {}s for {}",
                 name,
                 timeout_secs,
@@ -111,7 +110,7 @@ fn handle_check_output(
 }
 
 /// Get target label for logging
-#[cfg(feature = "logging")]
+#[allow(dead_code)]
 fn get_target_label(context: &str) -> &str {
     if context == "homemanager" {
         "username"
@@ -571,7 +570,7 @@ pub fn run_shared_serialize(
     let (_, machines_file) = build_machines_json(make, nixos_targets, backend_name)?;
     let (_, users_file) = build_users_json(make, home_targets, backend_name)?;
 
-    log_debug!(
+    crate::log_debug!(
         "running shared_serialize: artifact=\"{}\" out=\"{}\" machines=\"{}\" users=\"{}\"",
         artifact_name,
         out.display(),
@@ -658,19 +657,15 @@ pub fn run_check_serialization(
         script_path,
     )?;
 
-    #[cfg(feature = "logging")]
-    {
-        let target_label = get_target_label(context);
-        log_debug!(
-            "running {}: env inputs=\"{}\" {}=\"{}\" artifact=\"{}\" {}",
-            script_info.script_name,
-            inputs.display(),
-            target_label,
-            target,
-            artifact.name,
-            script_abs.display()
-        );
-    }
+    crate::log_debug!(
+        "running {}: env inputs=\"{}\" {}=\"{}\" artifact=\"{}\" {}",
+        script_info.script_name,
+        inputs.display(),
+        get_target_label(context),
+        target,
+        artifact.name,
+        script_abs.display()
+    );
 
     let mut cmd = build_check_command(
         &script_abs,
@@ -753,7 +748,7 @@ pub fn run_shared_check_serialization(
     let (_, machines_file) = build_machines_json(make, nixos_targets, backend_name)?;
     let (_, users_file) = build_users_json(make, home_targets, backend_name)?;
 
-    log_debug!(
+    crate::log_debug!(
         "running shared_check_serialization: artifact=\"{}\" machines=\"{}\" users=\"{}\"",
         artifact_name,
         machines_file.display(),

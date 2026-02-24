@@ -95,10 +95,12 @@ pub async fn run() -> Result<()> {
     let cli = args::Cli::parse();
 
     // Initialize logger first using new macro-based system
-    #[cfg(feature = "logging")]
     {
         use crate::logging;
-        if let Err(error) = logging::init_from_args(&cli) {
+        use crate::logging::LogLevel;
+        let log_file = cli.log_file.as_deref();
+        let log_level = LogLevel::from_cli_level(&cli.log_level);
+        if let Err(error) = logging::init(log_file, log_level) {
             eprintln!("Failed to initialize logging: {}", error);
             // Continue anyway - logging is optional
         }
@@ -156,9 +158,8 @@ async fn run_tui(
         let log_file_enabled = cli.is_logging_enabled();
 
         if log_file_enabled {
-            // When --log-file provided, message goes to log file only via info! macro
-            #[cfg(feature = "logging")]
-            crate::info!("No artifacts found matching the specified filters");
+            // When --log-file provided, message goes to log file only via log_info! macro
+            crate::log_info!("No artifacts found matching the specified filters");
             // No stdout output when logging to file
         } else {
             // No log file, print to stdout
@@ -174,12 +175,10 @@ async fn run_tui(
     let mut terminal_guard = TerminalGuard::new().context("Failed to initialize terminal")?;
 
     // Log TUI startup with entry count
-    #[cfg(feature = "logging")]
-    crate::info!("Starting run_tui with {} entries", model.entries.len());
+    crate::log_info!("Starting run_tui with {} entries", model.entries.len());
 
     // Log before running async TUI
-    #[cfg(feature = "logging")]
-    crate::info!("About to call run_async");
+    crate::log_info!("About to call run_async");
 
     // Run the TUI asynchronously with terminal event source
     let mut events = TerminalEventSource::default();

@@ -70,20 +70,8 @@ impl EffectHandler {
     /// This method converts the Effect into an EffectCommand and sends it
     /// to the background task for execution. Returns an error if the channel
     /// is closed (background task exited).
-    #[cfg(feature = "logging")]
     pub async fn run_effect(&mut self, effect: Effect) -> anyhow::Result<()> {
-        crate::debug!("Sending effect to background: {:?}", effect);
-        if let Some(cmd) = self.effect_to_command(effect) {
-            self.command_tx
-                .send(cmd)
-                .map_err(|_| anyhow::anyhow!("Background task channel closed"))?;
-        }
-        Ok(())
-    }
-
-    /// Send an effect command to the background task (without logging feature).
-    #[cfg(not(feature = "logging"))]
-    pub async fn run_effect(&mut self, effect: Effect) -> anyhow::Result<()> {
+        crate::log_debug!("Sending effect to background: {:?}", effect);
         if let Some(cmd) = self.effect_to_command(effect) {
             self.command_tx
                 .send(cmd)

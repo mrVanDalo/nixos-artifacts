@@ -39,8 +39,8 @@
 //!
 //! The crate supports the following Cargo features:
 //!
-//! - **`logging`**: Enables file-based logging via `log` and `fern` crates.
-//!   When enabled, logging macros ([`log_debug!`], [`log_trace!`], [`log_error!`])
+//! - **`logging`**: Enables file-based logging via the custom Logger.
+//!   When enabled, logging macros ([`log_error!`], [`log_warn!`], [`log_info!`], [`log_debug!`])
 //!   write to log files. When disabled, these macros compile to nothing
 //!   (zero-cost abstraction).
 //!
@@ -203,7 +203,7 @@ pub mod cli;
 pub mod config;
 pub mod tui;
 
-// Logging macros (error!, warn!, info!, debug!) are automatically exported
+// Logging macros (log_error!, log_warn!, log_info!, log_debug!) are automatically exported
 // at the crate root via #[macro_export] in src/logging.rs.
 // They are feature-gated - when "logging" feature is disabled, they compile to nothing.
 

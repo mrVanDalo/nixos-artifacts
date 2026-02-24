@@ -1,7 +1,7 @@
 //! File-based structured logging with feature-gated macro API.
 //!
 //! This module provides a complete logging infrastructure with:
-//! - Four logging macros: error!, warn!, info!, debug!
+//! - Four logging macros: log_error!, log_warn!, log_info!, log_debug!
 //! - Logger struct for file-based output with real-time streaming
 //! - Zero-cost when the "logging" feature is disabled (macros expand to nothing)
 //! - Structured log format: \[TIMESTAMP\] \[LEVEL\] module: message
@@ -9,15 +9,15 @@
 //! # Usage
 //!
 //! ```rust
-//! use artifacts::error;
-//! use artifacts::warn;
-//! use artifacts::info;
-//! use artifacts::debug;
+//! use artifacts::log_error;
+//! use artifacts::log_warn;
+//! use artifacts::log_info;
+//! use artifacts::log_debug;
 //!
-//! error!("Failed to load configuration: {}", path);
-//! warn!("Using default configuration");
-//! info!("Started with {} artifacts", count);
-//! debug!("Processing artifact: {:?}", artifact);
+//! log_error!("Failed to load configuration: {}", path);
+//! log_warn!("Using default configuration");
+//! log_info!("Started with {} artifacts", count);
+//! log_debug!("Processing artifact: {:?}", artifact);
 //! ```
 //!
 //! # Features
@@ -58,7 +58,6 @@ pub enum LogLevel {
 
 impl LogLevel {
     /// Parse LogLevel from CLI LogLevel
-    #[cfg(feature = "logging")]
     pub fn from_cli_level(level: &crate::cli::args::LogLevel) -> Self {
         use crate::cli::args::LogLevel as CliLevel;
         match level {
@@ -90,9 +89,9 @@ pub struct Logger {
 }
 
 impl Logger {
-    /// Create a new logger from CLI arguments.
+    /// Create a new logger.
     ///
-    /// Returns `Ok(None)` if logging is not requested (--log-file not provided).
+    /// Returns `Ok(None)` if logging is not requested (log_file is None).
     /// Returns `Ok(Some(Logger))` when logging is enabled and file is writable.
     ///
     /// # Fail Fast Validation
@@ -103,21 +102,15 @@ impl Logger {
     /// - Verifies directory is writable with a test file
     /// - Opens the log file (overwrites existing)
     /// - Sets file permissions to 640 (owner read/write, group read)
-    ///
-    /// # Arguments
-    ///
-    /// * `args` - The parsed CLI arguments
     #[cfg(feature = "logging")]
-    pub fn new_from_args(args: &crate::cli::args::Cli) -> anyhow::Result<Option<Self>> {
-        let path = match &args.log_file {
+    pub fn new(log_file: Option<&Path>, log_level: LogLevel) -> anyhow::Result<Option<Self>> {
+        let path = match log_file {
             Some(p) => p,
             None => return Ok(None),
         };
 
-        // Fail fast validation
         Self::validate_path(path)?;
 
-        // Open file (overwrite mode, create dirs)
         let file = OpenOptions::new()
             .create(true)
             .write(true)
@@ -125,7 +118,6 @@ impl Logger {
             .open(path)
             .map_err(|e| anyhow::anyhow!("Failed to open log file: {}", e))?;
 
-        // Set permissions to 640
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
@@ -134,18 +126,15 @@ impl Logger {
             file.set_permissions(perms)?;
         }
 
-        let min_level = LogLevel::from_cli_level(&args.log_level);
-
         Ok(Some(Self {
             file: Mutex::new(file),
-            min_level,
-            path: path.clone(),
+            min_level: log_level,
+            path: path.to_path_buf(),
         }))
     }
 
-    /// Create a stub logger when logging feature is disabled.
     #[cfg(not(feature = "logging"))]
-    pub fn new_from_args(_args: &crate::cli::args::Cli) -> anyhow::Result<Option<Self>> {
+    pub fn new(_log_file: Option<&Path>, _log_level: LogLevel) -> anyhow::Result<Option<Self>> {
         Ok(None)
     }
 
@@ -238,6 +227,12 @@ impl Logger {
         }
     }
 
+    /// No-op log when logging feature is disabled.
+    #[cfg(not(feature = "logging"))]
+    pub fn log(&self, _level: LogLevel, _module_path: &str, _line: u32, _message: String) {
+        // Intentionally empty - no-op when logging is disabled
+    }
+
     /// Format timestamp as HH:MM:SS.mmm
     #[cfg(feature = "logging")]
     fn format_timestamp() -> String {
@@ -271,15 +266,14 @@ impl Logger {
 /// Uses OnceLock for thread-safe lazy initialization.
 static GLOBAL_LOGGER: OnceLock<Option<Logger>> = OnceLock::new();
 
-/// Initialize the global logger from CLI arguments.
+/// Initialize the global logger.
 ///
 /// This should be called once at application startup.
 /// If a logger already exists, this returns an error.
 #[cfg(feature = "logging")]
-pub fn init_from_args(args: &crate::cli::args::Cli) -> anyhow::Result<()> {
-    let logger = Logger::new_from_args(args)?;
+pub fn init(log_file: Option<&Path>, log_level: LogLevel) -> anyhow::Result<()> {
+    let logger = Logger::new(log_file, log_level)?;
 
-    // Store in global - this will fail if already initialized
     GLOBAL_LOGGER
         .set(logger)
         .map_err(|_| anyhow::anyhow!("Logger already initialized"))?;
@@ -287,9 +281,8 @@ pub fn init_from_args(args: &crate::cli::args::Cli) -> anyhow::Result<()> {
     Ok(())
 }
 
-/// No-op initialization when logging feature is disabled.
 #[cfg(not(feature = "logging"))]
-pub fn init_from_args(_args: &crate::cli::args::Cli) -> anyhow::Result<()> {
+pub fn init(_log_file: Option<&Path>, _log_level: LogLevel) -> anyhow::Result<()> {
     Ok(())
 }
 
@@ -347,12 +340,12 @@ pub fn log_component(_component: &str, _msg: &str) {
 /// # Examples
 ///
 /// ```rust
-/// error!("Failed to load file: {}", path);
-/// error!("Configuration error: {:?}", err);
+/// log_error!("Failed to load file: {}", path);
+/// log_error!("Configuration error: {:?}", err);
 /// ```
 #[cfg(feature = "logging")]
 #[macro_export]
-macro_rules! error {
+macro_rules! log_error {
     ($($arg:tt)*) => {{
         if let Some(logger) = $crate::logging::global() {
             logger.log(
@@ -365,6 +358,13 @@ macro_rules! error {
     }};
 }
 
+/// No-op error macro when logging is disabled.
+#[cfg(not(feature = "logging"))]
+#[macro_export]
+macro_rules! log_error {
+    ($($arg:tt)*) => {};
+}
+
 /// Log a warning message.
 ///
 /// When the `logging` feature is enabled, writes to the log file.
@@ -373,12 +373,12 @@ macro_rules! error {
 /// # Examples
 ///
 /// ```rust
-/// warn!("Using default configuration");
-/// warn!("Deprecated feature: {}", feature_name);
+/// log_warn!("Using default configuration");
+/// log_warn!("Deprecated feature: {}", feature_name);
 /// ```
 #[cfg(feature = "logging")]
 #[macro_export]
-macro_rules! warn {
+macro_rules! log_warn {
     ($($arg:tt)*) => {{
         if let Some(logger) = $crate::logging::global() {
             logger.log(
@@ -391,6 +391,13 @@ macro_rules! warn {
     }};
 }
 
+/// No-op warning macro when logging is disabled.
+#[cfg(not(feature = "logging"))]
+#[macro_export]
+macro_rules! log_warn {
+    ($($arg:tt)*) => {};
+}
+
 /// Log an informational message.
 ///
 /// When the `logging` feature is enabled, writes to the log file.
@@ -399,12 +406,12 @@ macro_rules! warn {
 /// # Examples
 ///
 /// ```rust
-/// info!("Starting application");
-/// info!("Loaded {} artifacts", count);
+/// log_info!("Starting application");
+/// log_info!("Loaded {} artifacts", count);
 /// ```
 #[cfg(feature = "logging")]
 #[macro_export]
-macro_rules! info {
+macro_rules! log_info {
     ($($arg:tt)*) => {{
         if let Some(logger) = $crate::logging::global() {
             logger.log(
@@ -417,6 +424,13 @@ macro_rules! info {
     }};
 }
 
+/// No-op info macro when logging is disabled.
+#[cfg(not(feature = "logging"))]
+#[macro_export]
+macro_rules! log_info {
+    ($($arg:tt)*) => {};
+}
+
 /// Log a debug message with module path and line number.
 ///
 /// When the `logging` feature is enabled, writes to the log file.
@@ -427,12 +441,12 @@ macro_rules! info {
 /// # Examples
 ///
 /// ```rust
-/// debug!("Processing artifact: {:?}", artifact);
-/// debug!("State: {} files, {} prompts", file_count, prompt_count);
+/// log_debug!("Processing artifact: {:?}", artifact);
+/// log_debug!("State: {} files, {} prompts", file_count, prompt_count);
 /// ```
 #[cfg(feature = "logging")]
 #[macro_export]
-macro_rules! debug {
+macro_rules! log_debug {
     ($($arg:tt)*) => {{
         if let Some(logger) = $crate::logging::global() {
             logger.log(
@@ -445,33 +459,10 @@ macro_rules! debug {
     }};
 }
 
-// Zero-cost macros when logging feature is disabled
-
-/// No-op error macro when logging is disabled.
-#[cfg(not(feature = "logging"))]
-#[macro_export]
-macro_rules! error {
-    ($($arg:tt)*) => {};
-}
-
-/// No-op warning macro when logging is disabled.
-#[cfg(not(feature = "logging"))]
-#[macro_export]
-macro_rules! warn {
-    ($($arg:tt)*) => {};
-}
-
-/// No-op info macro when logging is disabled.
-#[cfg(not(feature = "logging"))]
-#[macro_export]
-macro_rules! info {
-    ($($arg:tt)*) => {};
-}
-
 /// No-op debug macro when logging is disabled.
 #[cfg(not(feature = "logging"))]
 #[macro_export]
-macro_rules! debug {
+macro_rules! log_debug {
     ($($arg:tt)*) => {};
 }
 
@@ -487,10 +478,6 @@ mod tests {
     use std::io::Read;
     #[cfg(feature = "logging")]
     use tempfile::TempDir;
-
-    // Import clap::Parser for Cli::parse_from
-    #[cfg(feature = "logging")]
-    use clap::Parser;
 
     #[test]
     fn test_log_level_ordering() {
@@ -514,48 +501,27 @@ mod tests {
     #[test]
     #[cfg(feature = "logging")]
     fn test_logger_creation_without_log_file() {
-        use crate::cli::args::Cli;
-
-        // Create minimal CLI args without --log-file
-        let args = Cli::parse_from(["artifacts"]);
-
-        // Should return None
-        let result = Logger::new_from_args(&args).unwrap();
+        let result = Logger::new(None, LogLevel::Info).unwrap();
         assert!(result.is_none());
     }
 
     #[test]
     #[cfg(feature = "logging")]
     fn test_logger_validates_writability() {
-        use crate::cli::args::Cli;
-
-        // Create temp directory for log file
         let temp_dir = TempDir::new().unwrap();
         let log_path = temp_dir.path().join("test.log");
 
-        // Create CLI args with log file
-        let args = Cli::parse_from([
-            "artifacts",
-            "--log-file",
-            log_path.to_str().unwrap(),
-            "--log-level",
-            "debug",
-        ]);
-
-        // Create logger
-        let logger = Logger::new_from_args(&args)
+        let logger = Logger::new(Some(&log_path), LogLevel::Debug)
             .unwrap()
             .expect("Logger should be created");
         assert_eq!(logger.path(), log_path);
         assert_eq!(logger.min_level(), LogLevel::Debug);
 
-        // Check file was created with correct permissions
         let metadata = std::fs::metadata(&log_path).unwrap();
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
             let perms = metadata.permissions().mode();
-            // Should be 0o640 (owner rw, group r)
             assert_eq!(perms & 0o777, 0o640);
         }
     }
@@ -563,15 +529,9 @@ mod tests {
     #[test]
     #[cfg(feature = "logging")]
     fn test_logger_rejects_directory() {
-        use crate::cli::args::Cli;
-
-        // Create temp directory
         let temp_dir = TempDir::new().unwrap();
 
-        // Try to use directory as log file
-        let args = Cli::parse_from(["artifacts", "--log-file", temp_dir.path().to_str().unwrap()]);
-
-        let result = Logger::new_from_args(&args);
+        let result = Logger::new(Some(temp_dir.path()), LogLevel::Info);
         assert!(result.is_err());
         match result {
             Err(e) => {
@@ -585,22 +545,13 @@ mod tests {
     #[test]
     #[cfg(feature = "logging")]
     fn test_logger_writes_to_file() {
-        use crate::cli::args::Cli;
-
         let temp_dir = TempDir::new().unwrap();
         let log_path = temp_dir.path().join("test.log");
 
-        let args = Cli::parse_from([
-            "artifacts",
-            "--log-file",
-            log_path.to_str().unwrap(),
-            "--log-level",
-            "debug",
-        ]);
+        let logger = Logger::new(Some(&log_path), LogLevel::Debug)
+            .unwrap()
+            .unwrap();
 
-        let logger = Logger::new_from_args(&args).unwrap().unwrap();
-
-        // Write a log entry
         logger.log(
             super::LogLevel::Info,
             "test_module",
@@ -608,7 +559,6 @@ mod tests {
             "Test message".to_string(),
         );
 
-        // Read file and verify content
         let mut content = String::new();
         let mut file = File::open(&log_path).unwrap();
         file.read_to_string(&mut content).unwrap();
@@ -616,28 +566,19 @@ mod tests {
         assert!(content.contains("[INFO]"));
         assert!(content.contains("test_module"));
         assert!(content.contains("Test message"));
-        assert!(!content.contains(":42:")); // INFO doesn't include line number
+        assert!(!content.contains(":42:"));
     }
 
     #[test]
     #[cfg(feature = "logging")]
     fn test_logger_debug_includes_line_number() {
-        use crate::cli::args::Cli;
-
         let temp_dir = TempDir::new().unwrap();
         let log_path = temp_dir.path().join("test.log");
 
-        let args = Cli::parse_from([
-            "artifacts",
-            "--log-file",
-            log_path.to_str().unwrap(),
-            "--log-level",
-            "debug",
-        ]);
+        let logger = Logger::new(Some(&log_path), LogLevel::Debug)
+            .unwrap()
+            .unwrap();
 
-        let logger = Logger::new_from_args(&args).unwrap().unwrap();
-
-        // Write debug log at specific line
         logger.log(
             super::LogLevel::Debug,
             "test_module",
@@ -645,12 +586,10 @@ mod tests {
             "Debug message".to_string(),
         );
 
-        // Read file
         let mut content = String::new();
         let mut file = File::open(&log_path).unwrap();
         file.read_to_string(&mut content).unwrap();
 
-        // DEBUG should include line number
         assert!(content.contains("[DEBUG]"));
         assert!(content.contains("test_module:999:"));
     }
@@ -658,34 +597,22 @@ mod tests {
     #[test]
     #[cfg(feature = "logging")]
     fn test_level_filtering() {
-        use crate::cli::args::Cli;
-
         let temp_dir = TempDir::new().unwrap();
         let log_path = temp_dir.path().join("test.log");
 
-        // Set minimum level to WARN
-        let args = Cli::parse_from([
-            "artifacts",
-            "--log-file",
-            log_path.to_str().unwrap(),
-            "--log-level",
-            "warn",
-        ]);
+        let logger = Logger::new(Some(&log_path), LogLevel::Warn)
+            .unwrap()
+            .unwrap();
 
-        let logger = Logger::new_from_args(&args).unwrap().unwrap();
-
-        // Write at different levels
         logger.log(super::LogLevel::Debug, "test", 1, "debug".to_string());
         logger.log(super::LogLevel::Info, "test", 2, "info".to_string());
         logger.log(super::LogLevel::Warn, "test", 3, "warn".to_string());
         logger.log(super::LogLevel::Error, "test", 4, "error".to_string());
 
-        // Read file
         let mut content = String::new();
         let mut file = File::open(&log_path).unwrap();
         file.read_to_string(&mut content).unwrap();
 
-        // Should only see WARN and ERROR
         assert!(!content.contains("debug"));
         assert!(!content.contains("info"));
         assert!(content.contains("warn"));
@@ -711,10 +638,10 @@ mod tests {
             // These should compile (don't execute since no logger initialized)
             // Just verifying syntax is valid
             let _ = || {
-                crate::error!("test {}", 1);
-                crate::warn!("test {}", 2);
-                crate::info!("test {}", 3);
-                crate::debug!("test {}", 4);
+                crate::log_error!("test {}", 1);
+                crate::log_warn!("test {}", 2);
+                crate::log_info!("test {}", 3);
+                crate::log_debug!("test {}", 4);
             };
         }
 
@@ -722,10 +649,10 @@ mod tests {
         #[cfg(not(feature = "logging"))]
         {
             // These should compile and have no runtime cost
-            crate::error!("test {}", 1);
-            crate::warn!("test {}", 2);
-            crate::info!("test {}", 3);
-            crate::debug!("test {}", 4);
+            crate::log_error!("test {}", 1);
+            crate::log_warn!("test {}", 2);
+            crate::log_info!("test {}", 3);
+            crate::log_debug!("test {}", 4);
         }
     }
 

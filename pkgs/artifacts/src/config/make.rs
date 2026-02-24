@@ -302,7 +302,7 @@ impl MakeConfiguration {
                 Ok(v) => to_string_pretty(&v).unwrap_or_else(|_| make_text.clone()),
                 Err(_) => make_text.clone(),
             };
-            log_trace!("make config (pretty):\n{}", pretty);
+            crate::log_debug!("make config (pretty):\n{}", pretty);
         }
 
         let root: MakeRoot = json_from_str(&make_text)

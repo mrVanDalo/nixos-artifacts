@@ -11,7 +11,6 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 toml = "0.8"
 which = "6"
-log = { version = "0.4", features = ["std", "serde"], optional = true }
 crossterm = "0.28"
 ratatui = "0.29"
 tokio = { version = "1", features = ["sync", "rt", "rt-multi-thread", "macros", "time", "signal", "test-util"] }
@@ -26,7 +25,7 @@ tempfile = "3"
 
 [features]
 default = []
-logging = ["dep:log"]
+logging = []
 
 # Single binary target
 [[bin]]

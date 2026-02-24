@@ -23,10 +23,7 @@
 //! ## Logging
 //!
 //! When the `logging` feature is enabled, errors are written to the log file
-//! before being printed to stderr. See the `--log` argument for log file path.
-
-#[cfg(feature = "logging")]
-use log::error;
+//! before being printed to stderr. See the `--log-file` argument for log file path.
 
 /// Main entry point for the artifacts CLI.
 ///
@@ -35,9 +32,7 @@ use log::error;
 #[tokio::main]
 async fn main() {
     if let Err(err) = artifacts::cli::run().await {
-        #[cfg(feature = "logging")]
-        error!("{:#}", err);
-        #[cfg(not(feature = "logging"))]
+        artifacts::log_error!("{:#}", err);
         eprintln!("{:#}", err);
         std::process::exit(1);
     }
