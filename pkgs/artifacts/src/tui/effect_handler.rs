@@ -6,7 +6,7 @@ use crate::backend::output_capture::{CapturedOutput, OutputStream};
 use crate::backend::serialization::{
     run_check_serialization, run_serialize, run_shared_check_serialization,
 };
-use crate::backend::temp_dir::create_temp_dir;
+
 use crate::config::backend::BackendConfiguration;
 use crate::config::make::MakeConfiguration;
 use crate::tui::runtime::EffectHandler;
@@ -77,31 +77,31 @@ impl BackendEffectHandler {
     ) -> Result<GeneratorOutput, String> {
         let context = target_type.context();
 
-        let prompt_dir = create_temp_dir(Some(&format!("prompt-{}", artifact_name)))
+        let prompt_dir = tempfile::TempDir::new()
             .context("creating prompt temp dir")
             .map_err(|e| e.to_string())?;
 
-        let out_dir = create_temp_dir(Some(&format!("out-{}", artifact_name)))
+        let out_dir = tempfile::TempDir::new()
             .context("creating output temp dir")
             .map_err(|e| e.to_string())?;
 
-        self.write_prompts_to_directory(prompts, &prompt_dir.path_buf)?;
+        self.write_prompts_to_directory(prompts, prompt_dir.path())?;
 
         let captured = run_generator_script(
             &entry.artifact,
             target,
             &self.make.make_base,
-            &prompt_dir.path_buf,
-            &out_dir.path_buf,
+            prompt_dir.path(),
+            out_dir.path(),
             context,
         )
         .map_err(|e| e.to_string())?;
 
-        verify_generated_files(&entry.artifact, &out_dir.path_buf).map_err(|e| e.to_string())?;
+        verify_generated_files(&entry.artifact, out_dir.path()).map_err(|e| e.to_string())?;
 
         let files_generated = entry.artifact.files.len();
 
-        self.current_out_dir = Some(out_dir.path_buf.clone());
+        self.current_out_dir = Some(out_dir.path().to_path_buf());
         std::mem::forget(out_dir);
 
         let (stdout_lines, stderr_lines) = split_captured_output(&captured);
