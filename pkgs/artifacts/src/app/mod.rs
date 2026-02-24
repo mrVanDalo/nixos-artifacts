@@ -42,8 +42,7 @@ pub mod message;
 pub mod model;
 pub mod update;
 
-// Re-exports for convenient access from other modules
 pub use effect::Effect;
 pub use message::{KeyEvent, Message};
-pub use model::{ArtifactEntry, ArtifactStatus, InputMode, Model, PromptState, Screen};
+pub use model::{ArtifactEntry, ArtifactStatus, InputMode, Model, PromptState, Screen, TargetType};
 pub use update::{init, update};

@@ -24,6 +24,7 @@ use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel};
 use tokio::time::timeout;
 use tokio_util::sync::CancellationToken;
 
+use crate::app::model::TargetType;
 use crate::backend;
 use crate::config::backend::BackendConfiguration;
 use crate::config::make::{ArtifactDef, MakeConfiguration};
@@ -107,6 +108,13 @@ impl BackgroundEffectHandler {
                 // Clone values for timeout error handling
                 let artifact_name_for_timeout = artifact_name.clone();
 
+                // Build TargetType from the command
+                let target_type_enum = if target_type == "home" {
+                    TargetType::HomeManager { username: target.clone() }
+                } else {
+                    TargetType::NixOS { machine: target.clone() }
+                };
+
                 // Spawn blocking task to execute check_serialization with timeout
                 let result = timeout(
                     BACKGROUND_TASK_TIMEOUT,
@@ -130,14 +138,8 @@ impl BackgroundEffectHandler {
                                 )
                             })?;
 
-                        let context = if target_type == "home" {
-                            "homemanager"
-                        } else {
-                            "nixos"
-                        };
-
                         backend::serialization::run_check_serialization(
-                            &artifact, &target, &backend, &make, context,
+                            &artifact, &target_type_enum, &backend, &make,
                         )
                     }),
                 )
@@ -280,10 +282,10 @@ impl BackgroundEffectHandler {
                     }
                 }
 
-                let context = if target_type == "home" {
-                    "homemanager"
+                let target_type_enum = if target_type == "home" {
+                    TargetType::HomeManager { username: target.clone() }
                 } else {
-                    "nixos"
+                    TargetType::NixOS { machine: target.clone() }
                 };
                 let prompts_path = prompts_dir.path().to_path_buf();
                 let make_base = make.make_base.clone();
@@ -301,11 +303,10 @@ impl BackgroundEffectHandler {
                     tokio::task::spawn_blocking(move || {
                         backend::generator::run_generator_script(
                             &artifact_for_spawn,
-                            &target,
+                            &target_type_enum,
                             &make_base,
                             &prompts_path,
                             &output_path,
-                            context,
                         )
                     }),
                 )
@@ -448,10 +449,10 @@ impl BackgroundEffectHandler {
                     .collect();
 
                 let _backend_name = artifact.serialization.clone();
-                let context = if target_type == "home" {
-                    "homemanager"
+                let target_type_enum = if target_type == "home" {
+                    TargetType::HomeManager { username: target.clone() }
                 } else {
-                    "nixos"
+                    TargetType::NixOS { machine: target.clone() }
                 };
                 let backend = self.backend.clone();
                 let make = self.make.clone();
@@ -469,9 +470,8 @@ impl BackgroundEffectHandler {
                             &artifact,
                             &backend,
                             &output_path,
-                            &target,
+                            &target_type_enum,
                             &make,
-                            context,
                         )
                     }),
                 )

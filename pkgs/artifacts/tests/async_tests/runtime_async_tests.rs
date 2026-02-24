@@ -66,7 +66,7 @@ fn make_test_artifact(name: &str, prompts: Vec<&str>) -> ArtifactDef {
 fn make_test_model() -> Model {
     let entry1 = ArtifactEntry {
         target: "machine-one".to_string(),
-        target_type: TargetType::Nixos,
+        target_type: TargetType::NixOS,
         artifact: make_test_artifact("ssh-key", vec!["passphrase"]),
         status: ArtifactStatus::Pending,
         step_logs: StepLogs::default(),
@@ -74,7 +74,7 @@ fn make_test_model() -> Model {
     };
     let entry2 = ArtifactEntry {
         target: "machine-two".to_string(),
-        target_type: TargetType::Nixos,
+        target_type: TargetType::NixOS,
         artifact: make_test_artifact("api-token", vec![]),
         status: ArtifactStatus::Pending,
         step_logs: StepLogs::default(),
@@ -768,7 +768,7 @@ async fn test_effect_to_command_conversion() {
         artifact_index: 0,
         artifact_name: "test".to_string(),
         target: "machine".to_string(),
-        target_type: TargetType::Nixos,
+        target_type: TargetType::NixOS,
     };
     let cmds = effect_to_command(effect);
     assert_eq!(cmds.len(), 1);

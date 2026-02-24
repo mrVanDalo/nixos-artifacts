@@ -27,6 +27,7 @@
 //! - Minimal writable directories (only $out, $prompts)
 //! - Custom /etc/passwd for isolation
 
+use crate::app::model::TargetType;
 use crate::backend::helpers::{escape_single_quoted, fnv1a64, resolve_path};
 use crate::backend::output_capture::{run_with_captured_output, CapturedOutput};
 use crate::config::make::ArtifactDef;
@@ -34,12 +35,145 @@ use crate::string_vec;
 use anyhow::{bail, Context, Result};
 use std::collections::HashSet;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Stdio;
 
-/// Format bwrap arguments for readable multi-line logging.
+/// Resolve and canonicalize a generator script path.
+fn resolve_generator_path(make_base: &Path, generator_script: &str) -> PathBuf {
+    let resolved = resolve_path(make_base, generator_script);
+    fs::canonicalize(&resolved).unwrap_or(resolved)
+}
+
+/// Create a temporary passwd file for bwrap container isolation.
+fn create_temp_passwd(out: &Path) -> Result<PathBuf> {
+    let passwd_content = "user:x:1000:1000::/tmp:/bin/sh\n";
+    let hash = fnv1a64(&out.display().to_string());
+    let mut temp_path = std::env::temp_dir();
+    temp_path.push(format!("artifacts-cli-passwd-{:016x}.txt", hash));
+    fs::write(&temp_path, passwd_content).with_context(|| {
+        format!(
+            "failed to create temporary passwd file at {}",
+            temp_path.display()
+        )
+    })?;
+    Ok(temp_path)
+}
+
+/// Build bwrap command arguments for container isolation.
+fn build_bwrap_arguments(
+    generator_path: &Path,
+    prompts: &Path,
+    out: &Path,
+    temp_passwd: &Path,
+) -> Vec<String> {
+    let mut args = string_vec!["bwrap"];
+    args.extend(string_vec!["--unshare-all", "--unshare-user"]);
+    args.extend(string_vec!["--uid", "1000"]);
+    args.extend(string_vec!["--gid", "1000"]);
+    args.extend(string_vec!["--tmpfs", "/"]);
+    args.extend(string_vec!["--chdir", "/"]);
+    args.extend(string_vec!["--ro-bind", "/nix/store", "/nix/store"]);
+    args.extend(string_vec!["--tmpfs", "/usr/lib/systemd"]);
+    args.extend(string_vec!["--proc", "/proc"]);
+    args.extend(string_vec!["--dev", "/dev"]);
+    args.extend(string_vec!["--bind", prompts.display(), prompts.display()]);
+    args.extend(string_vec!["--bind", out.display(), out.display()]);
+    if let Some(gen_dir) = generator_path.parent() {
+        args.extend(string_vec![
+            "--ro-bind",
+            gen_dir.display(),
+            gen_dir.display()
+        ]);
+    }
+    if Path::new("/bin").exists() {
+        args.extend(string_vec!["--ro-bind", "/bin", "/bin"]);
+    }
+    if Path::new("/usr/bin").exists() {
+        args.extend(string_vec!["--ro-bind", "/usr/bin", "/usr/bin"]);
+    }
+    args.extend(string_vec![
+        "--ro-bind",
+        temp_passwd.display(),
+        "/etc/passwd"
+    ]);
+    args.extend(string_vec!["--", "/bin/sh"]);
+    args.push(generator_path.display().to_string());
+    args
+}
+
+/// Build environment exports for artifact-specific generators.
+fn build_env_exports(
+    out: &Path,
+    prompts: &Path,
+    target_type: &TargetType,
+    artifact_name: &str,
+) -> String {
+    let out_quoted = escape_single_quoted(&out.display().to_string());
+    let prompts_quoted = escape_single_quoted(&prompts.display().to_string());
+    let artifact_quoted = escape_single_quoted(artifact_name);
+    let context_quoted = escape_single_quoted(target_type.context_str());
+
+    match target_type {
+        TargetType::HomeManager { username } => {
+            let username_quoted = escape_single_quoted(username);
+            format!(
+                "export out='{}'; export prompts='{}'; export artifact_context='{}'; export username='{}'; export artifact='{}';",
+                out_quoted, prompts_quoted, context_quoted, username_quoted, artifact_quoted
+            )
+        }
+        TargetType::NixOS { machine } => {
+            let machine_quoted = escape_single_quoted(machine);
+            format!(
+                "export out='{}'; export prompts='{}'; export artifact_context='{}'; export machine='{}'; export artifact='{}';",
+                out_quoted, prompts_quoted, context_quoted, machine_quoted, artifact_quoted
+            )
+        }
+        TargetType::Shared { .. } => {
+            format!(
+                "export out='{}'; export prompts='{}'; export artifact_context='{}'; export artifact='{}';",
+                out_quoted, prompts_quoted, context_quoted, artifact_quoted
+            )
+        }
+    }
+}
+
+/// Build environment exports for shared artifact generators.
+fn build_shared_env_exports(out: &Path, prompts: &Path) -> String {
+    let out_quoted = escape_single_quoted(&out.display().to_string());
+    let prompts_quoted = escape_single_quoted(&prompts.display().to_string());
+    format!(
+        "export out='{}'; export prompts='{}'; export artifact_context='shared';",
+        out_quoted, prompts_quoted
+    )
+}
+
+/// Execute generator in nix-shell with bwrap containerization.
+fn execute_generator_in_bwrap(
+    nix_shell: &Path,
+    arguments: &[String],
+    env_exports: &str,
+) -> Result<CapturedOutput> {
+    let bwrap_command = arguments.join(" ");
+    let run_command = format!("{} {}", env_exports, bwrap_command);
+
+    let mut cmd = std::process::Command::new(nix_shell);
+    cmd.arg("-p")
+        .arg("bash")
+        .arg("bubblewrap")
+        .arg("--run")
+        .arg(&run_command)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+
+    let child = cmd
+        .spawn()
+        .context("failed to start generator in nix-shell")?;
+    run_with_captured_output(child).context("failed to capture generator output")
+}
+
+/// Log the bwrap command with formatted output.
 #[cfg(feature = "logging")]
-fn format_bwrap_command(arguments: &[String]) -> String {
+fn log_bwrap_command(arguments: &[String]) {
     let mut result = String::new();
     for (index, argument) in arguments.iter().enumerate() {
         if index == 0 {
@@ -52,8 +186,12 @@ fn format_bwrap_command(arguments: &[String]) -> String {
             result.push_str(argument);
         }
     }
-    result
+    crate::log_debug!("{}", result);
 }
+
+/// Log the bwrap command (no-op when logging is disabled).
+#[cfg(not(feature = "logging"))]
+fn log_bwrap_command(_arguments: &[String]) {}
 
 /// Verify that the generator produced exactly the expected files for the given artifact.
 ///
@@ -131,11 +269,10 @@ pub fn verify_generated_files(artifact: &ArtifactDef, out_path: &Path) -> Result
 /// # Arguments
 ///
 /// * `artifact` - The artifact definition containing the generator script path
-/// * `machine` - Target machine or username for this artifact
+/// * `target_type` - Target type with name (Nixos { machine }, HomeManager { username }, or Shared)
 /// * `make_base` - Base path for resolving relative script paths
 /// * `prompts` - Directory containing prompt values as files
 /// * `out` - Directory where generator should create output files
-/// * `context` - Context string: "nixos", "homemanager", or "shared"
 ///
 /// # Returns
 ///
@@ -149,122 +286,24 @@ pub fn verify_generated_files(artifact: &ArtifactDef, out_path: &Path) -> Result
 /// - The generator script exits with non-zero status
 pub fn run_generator_script(
     artifact: &ArtifactDef,
-    machine: &str,
+    target_type: &TargetType,
     make_base: &Path,
     prompts: &Path,
     out: &Path,
-    context: &str,
 ) -> Result<CapturedOutput> {
-    let generator_script = artifact.generator.as_ref();
-    let generator_script_path = resolve_path(make_base, generator_script);
-    let generator_script_absolut_path =
-        fs::canonicalize(&generator_script_path).unwrap_or_else(|_| generator_script_path.clone());
-
-    // Only use nix-shell. If it fails, return an error to stop the program gracefully.
+    let generator_path = resolve_generator_path(make_base, artifact.generator.as_ref());
     let nix_shell = which::which("nix-shell")
         .context("nix-shell is required to run the generator but was not found in PATH")?;
+    let temp_passwd = create_temp_passwd(out)?;
+    let arguments = build_bwrap_arguments(&generator_path, prompts, out, &temp_passwd);
 
-    // Prepare a temporary /etc/passwd to be bind-mounted read-only inside bwrap
-    // Requirement: entries "user:1000:1000:/tmp:/bin/sh"
-    let passwd_content = "user:x:1000:1000::/tmp:/bin/sh\n";
+    crate::log_debug!("run bwrap with command {}", generator_path.display());
+    log_bwrap_command(&arguments);
 
-    let out_path_str = out.display().to_string();
-    let hash = fnv1a64(&out_path_str);
-    let mut temp_passwd_path = std::env::temp_dir();
-    let file_name = format!("artifacts-cli-passwd-{:016x}.txt", hash);
-    temp_passwd_path.push(file_name);
+    let env_exports = build_env_exports(out, prompts, target_type, &artifact.name);
+    let output = execute_generator_in_bwrap(&nix_shell, &arguments, &env_exports)?;
 
-    fs::write(&temp_passwd_path, passwd_content).with_context(|| {
-        format!(
-            "failed to create temporary passwd file at {}",
-            temp_passwd_path.display()
-        )
-    })?;
-
-    // Build the bwrap command as a single string for nix-shell --run
-    // Start with the always-present arguments using vec![] to appease clippy
-    let mut arguments: Vec<String> = string_vec!["bwrap"];
-    arguments.extend(string_vec!["--unshare-all", "--unshare-user"]);
-    arguments.extend(string_vec!["--uid", "1000"]);
-    arguments.extend(string_vec!["--gid", "1000"]);
-    arguments.extend(string_vec!["--tmpfs", "/"]);
-    arguments.extend(string_vec!["--chdir", "/"]);
-    arguments.extend(string_vec!["--ro-bind", "/nix/store", "/nix/store"]);
-    arguments.extend(string_vec!["--tmpfs", "/usr/lib/systemd"]);
-    arguments.extend(string_vec!["--proc", "/proc"]);
-    arguments.extend(string_vec!["--dev", "/dev"]);
-    arguments.extend(string_vec!["--bind", prompts.display(), prompts.display()]);
-    arguments.extend(string_vec!["--bind", out.display(), out.display()]);
-    if let Some(gen_dir) = generator_script_absolut_path.parent() {
-        arguments.extend(string_vec![
-            "--ro-bind",
-            gen_dir.display(),
-            gen_dir.display()
-        ]);
-    }
-    if Path::new("/bin").exists() {
-        arguments.extend(string_vec!["--ro-bind", "/bin", "/bin"]);
-    }
-    if Path::new("/usr/bin").exists() {
-        arguments.extend(string_vec!["--ro-bind", "/usr/bin", "/usr/bin"]);
-    }
-    // Bind our custom passwd into the namespace as read-only
-    arguments.extend(string_vec![
-        "--ro-bind",
-        temp_passwd_path.display(),
-        "/etc/passwd"
-    ]);
-    arguments.extend(string_vec!["--", "/bin/sh"]);
-    arguments.push(generator_script_absolut_path.display().to_string());
-    let bwrap_command = arguments.join(" ");
-    crate::log_debug!(
-        "run bwrap with command {}",
-        generator_script_absolut_path.display()
-    );
-    #[cfg(feature = "logging")]
-    crate::log_debug!("{}", format_bwrap_command(&arguments));
-
-    // Ensure that our 'out' and 'prompts' override any nix-shell provided 'out'
-    let out_quoted = escape_single_quoted(&out.display().to_string());
-    let prompts_quoted = escape_single_quoted(&prompts.display().to_string());
-    let machine_quoted = escape_single_quoted(machine);
-    let artifact_quoted = escape_single_quoted(&artifact.name);
-    let context_quoted = escape_single_quoted(context);
-
-    // Build env exports depending on context
-    let env_exports = if context == "homemanager" {
-        format!(
-            "export out='{}'; export prompts='{}'; export artifact_context='{}'; export username='{}'; export artifact='{}';",
-            out_quoted, prompts_quoted, context_quoted, machine_quoted, artifact_quoted
-        )
-    } else {
-        format!(
-            "export out='{}'; export prompts='{}'; export artifact_context='{}'; export machine='{}'; export artifact='{}';",
-            out_quoted, prompts_quoted, context_quoted, machine_quoted, artifact_quoted
-        )
-    };
-
-    let nix_shell_run_command = format!("{} {}", env_exports, bwrap_command);
-
-    let mut generator_command = std::process::Command::new(nix_shell);
-    generator_command
-        .arg("-p")
-        .arg("bash")
-        .arg("bubblewrap")
-        .arg("--run")
-        .arg(&nix_shell_run_command)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
-
-    // Do not pass 'out' or 'prompt' here to avoid being overridden by nix-shell internals
-    let child = generator_command
-        .spawn()
-        .context("failed to start generator in nix-shell")?;
-
-    let output = run_with_captured_output(child).context("failed to capture generator output")?;
-
-    // Best-effort cleanup of the temporary passwd file
-    let _ = fs::remove_file(&temp_passwd_path);
+    let _ = fs::remove_file(&temp_passwd);
 
     if !output.exit_success {
         bail!("generator failed inside nix-shell with non-zero exit status");
@@ -319,97 +358,22 @@ pub fn run_generator_script_with_path(
     prompts: &Path,
     out: &Path,
 ) -> Result<CapturedOutput> {
-    let generator_script_path = resolve_path(make_base, generator_path);
-    let generator_script_absolut_path =
-        fs::canonicalize(&generator_script_path).unwrap_or_else(|_| generator_script_path.clone());
-
+    let resolved_generator_path = resolve_generator_path(make_base, generator_path);
     let nix_shell = which::which("nix-shell")
         .context("nix-shell is required to run the generator but was not found in PATH")?;
-
-    // Prepare a temporary /etc/passwd to be bind-mounted read-only inside bwrap
-    let passwd_content = "user:x:1000:1000::/tmp:/bin/sh\n";
-
-    let out_path_str = out.display().to_string();
-    let hash = fnv1a64(&out_path_str);
-    let mut temp_passwd_path = std::env::temp_dir();
-    let file_name = format!("artifacts-cli-passwd-{:016x}.txt", hash);
-    temp_passwd_path.push(file_name);
-
-    fs::write(&temp_passwd_path, passwd_content).with_context(|| {
-        format!(
-            "failed to create temporary passwd file at {}",
-            temp_passwd_path.display()
-        )
-    })?;
-
-    // Build the bwrap command
-    let mut arguments: Vec<String> = string_vec!["bwrap"];
-    arguments.extend(string_vec!["--unshare-all", "--unshare-user"]);
-    arguments.extend(string_vec!["--uid", "1000"]);
-    arguments.extend(string_vec!["--gid", "1000"]);
-    arguments.extend(string_vec!["--tmpfs", "/"]);
-    arguments.extend(string_vec!["--chdir", "/"]);
-    arguments.extend(string_vec!["--ro-bind", "/nix/store", "/nix/store"]);
-    arguments.extend(string_vec!["--tmpfs", "/usr/lib/systemd"]);
-    arguments.extend(string_vec!["--proc", "/proc"]);
-    arguments.extend(string_vec!["--dev", "/dev"]);
-    arguments.extend(string_vec!["--bind", prompts.display(), prompts.display()]);
-    arguments.extend(string_vec!["--bind", out.display(), out.display()]);
-    if let Some(gen_dir) = generator_script_absolut_path.parent() {
-        arguments.extend(string_vec![
-            "--ro-bind",
-            gen_dir.display(),
-            gen_dir.display()
-        ]);
-    }
-    if Path::new("/bin").exists() {
-        arguments.extend(string_vec!["--ro-bind", "/bin", "/bin"]);
-    }
-    if Path::new("/usr/bin").exists() {
-        arguments.extend(string_vec!["--ro-bind", "/usr/bin", "/usr/bin"]);
-    }
-    arguments.extend(string_vec![
-        "--ro-bind",
-        temp_passwd_path.display(),
-        "/etc/passwd"
-    ]);
-    arguments.extend(string_vec!["--", "/bin/sh"]);
-    arguments.push(generator_script_absolut_path.display().to_string());
-    let bwrap_command = arguments.join(" ");
+    let temp_passwd = create_temp_passwd(out)?;
+    let arguments = build_bwrap_arguments(&resolved_generator_path, prompts, out, &temp_passwd);
 
     crate::log_debug!(
         "run shared generator bwrap with command {}",
-        generator_script_absolut_path.display()
+        resolved_generator_path.display()
     );
+    log_bwrap_command(&arguments);
 
-    // Build env exports for shared artifact (no specific target)
-    let out_quoted = escape_single_quoted(&out.display().to_string());
-    let prompts_quoted = escape_single_quoted(&prompts.display().to_string());
+    let env_exports = build_shared_env_exports(out, prompts);
+    let output = execute_generator_in_bwrap(&nix_shell, &arguments, &env_exports)?;
 
-    let env_exports = format!(
-        "export out='{}'; export prompts='{}'; export artifact_context='shared';",
-        out_quoted, prompts_quoted
-    );
-
-    let nix_shell_run_command = format!("{} {}", env_exports, bwrap_command);
-
-    let mut generator_command = std::process::Command::new(nix_shell);
-    generator_command
-        .arg("-p")
-        .arg("bash")
-        .arg("bubblewrap")
-        .arg("--run")
-        .arg(&nix_shell_run_command)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
-
-    let child = generator_command
-        .spawn()
-        .context("failed to start generator in nix-shell")?;
-
-    let output = run_with_captured_output(child).context("failed to capture generator output")?;
-
-    let _ = fs::remove_file(&temp_passwd_path);
+    let _ = fs::remove_file(&temp_passwd);
 
     if !output.exit_success {
         bail!("shared generator failed inside nix-shell with non-zero exit status");

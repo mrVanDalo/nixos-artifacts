@@ -147,7 +147,7 @@ mod tests {
     fn test_model_state_with_single_entry() {
         let entry = ArtifactEntry {
             target: "machine-one".to_string(),
-            target_type: TargetType::Nixos,
+            target_type: TargetType::NixOS,
             artifact: make_test_artifact("test-artifact"),
             status: ArtifactStatus::NeedsGeneration,
             step_logs: StepLogs::default(),

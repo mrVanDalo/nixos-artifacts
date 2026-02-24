@@ -39,7 +39,7 @@ impl BackendEffectHandler {
         target: &str,
         target_type: TargetType,
     ) -> (bool, bool, Result<(), String>, Option<CheckOutput>) {
-        let context = target_type.context_str();
+        let context = target_type.context();
         match run_check_serialization(&entry.artifact, target, &self.backend, &self.make, context) {
             Ok(check_result) => {
                 let (stdout_lines, stderr_lines) = split_captured_output(&check_result.output);
@@ -75,7 +75,7 @@ impl BackendEffectHandler {
         target_type: TargetType,
         prompts: &HashMap<String, String>,
     ) -> Result<GeneratorOutput, String> {
-        let context = target_type.context_str();
+        let context = target_type.context();
 
         let prompt_dir = create_temp_dir(Some(&format!("prompt-{}", artifact_name)))
             .context("creating prompt temp dir")

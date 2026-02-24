@@ -73,9 +73,7 @@ pub enum Screen {
 /// or home-manager user). Each target has its own independent copy.
 #[derive(Debug, Clone)]
 pub struct ArtifactEntry {
-    /// Target name (e.g., "machine-one" or "alice@host")
-    pub target: String,
-    /// Type of target (NixOS machine or home-manager user)
+    /// Type of target (NixOS machine or home-manager user) with name
     pub target_type: TargetType,
     /// The artifact definition (name, files, prompts, generator)
     pub artifact: ArtifactDef,
@@ -89,22 +87,40 @@ pub struct ArtifactEntry {
 
 /// Target type for artifact entries.
 ///
-/// Determines the context (NixOS vs home-manager) and affects
+/// Determines the context (NixOS vs home-manager vs shared) and affects
 /// how artifacts are serialized and which environment variables
 /// are passed to scripts.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TargetType {
     /// NixOS machine configuration
-    Nixos,
+    NixOS { machine: String },
     /// Home-manager user configuration
-    HomeManager,
+    HomeManager { username: String },
+    /// Shared artifact across multiple machines/users
+    Shared {
+        nixos_targets: Vec<String>,
+        home_targets: Vec<String>,
+    },
 }
 
 impl TargetType {
-    pub fn context_str(self) -> &'static str {
+    pub fn context_str(&self) -> &'static str {
         match self {
-            Self::Nixos => "nixos",
-            Self::HomeManager => "homemanager",
+            Self::NixOS { .. } => "nixos",
+            Self::HomeManager { .. } => "homemanager",
+            Self::Shared { .. } => "shared",
+        }
+    }
+
+    pub fn is_shared(&self) -> bool {
+        matches!(self, Self::Shared { .. })
+    }
+
+    pub fn target_name(&self) -> Option<&str> {
+        match self {
+            Self::NixOS { machine } => Some(machine),
+            Self::HomeManager { username } => Some(username),
+            Self::Shared { .. } => None,
         }
     }
 }
@@ -611,11 +627,21 @@ impl ListEntry {
     pub fn is_shared(&self) -> bool {
         matches!(self, ListEntry::Shared(_))
     }
+
+    pub fn target_type(&self) -> &TargetType {
+        match self {
+            ListEntry::Single(entry) => &entry.target_type,
+            ListEntry::Shared(entry) => &entry.target_type,
+        }
+    }
 }
 
 /// A shared artifact entry in the list
 #[derive(Debug, Clone)]
 pub struct SharedEntry {
+    /// Target type containing nixos_targets and home_targets
+    pub target_type: TargetType,
+    /// Shared artifact info (artifact name, generators, backend, prompts, files)
     pub info: SharedArtifactInfo,
     pub status: ArtifactStatus,
     pub step_logs: StepLogs,
@@ -696,8 +722,28 @@ mod tests {
 
     #[test]
     fn test_target_type_context_str() {
-        assert_eq!(TargetType::Nixos.context_str(), "nixos");
-        assert_eq!(TargetType::HomeManager.context_str(), "homemanager");
+        assert_eq!(
+            TargetType::NixOS {
+                machine: "test".to_string()
+            }
+            .context_str(),
+            "nixos"
+        );
+        assert_eq!(
+            TargetType::HomeManager {
+                username: "test".to_string()
+            }
+            .context_str(),
+            "homemanager"
+        );
+        assert_eq!(
+            TargetType::Shared {
+                nixos_targets: vec![],
+                home_targets: vec![]
+            }
+            .context_str(),
+            "shared"
+        );
     }
 
     #[test]
@@ -709,9 +755,28 @@ mod tests {
     }
 
     #[test]
-    fn test_log_step_labels() {
-        assert_eq!(LogStep::Check.label(), "Check");
-        assert_eq!(LogStep::Generate.label(), "Generate");
-        assert_eq!(LogStep::Serialize.label(), "Serialize");
+    fn test_target_type_context_str() {
+        assert_eq!(
+            TargetType::NixOS {
+                machine: "test".to_string()
+            }
+            .context_str(),
+            "nixos"
+        );
+        assert_eq!(
+            TargetType::HomeManager {
+                username: "test".to_string()
+            }
+            .context_str(),
+            "homemanager"
+        );
+        assert_eq!(
+            TargetType::Shared {
+                nixos_targets: vec![],
+                home_targets: vec![]
+            }
+            .context_str(),
+            "shared"
+        );
     }
 }

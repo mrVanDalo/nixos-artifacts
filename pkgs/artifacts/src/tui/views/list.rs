@@ -38,10 +38,12 @@ fn render_artifact_list_panel(frame: &mut Frame, model: &Model, area: Rect) {
             // Render based on entry type
             let content = match entry {
                 ListEntry::Single(single) => {
-                    let target_type_icon = match single.target_type {
-                        TargetType::Nixos => "N",
-                        TargetType::HomeManager => "H",
+                    let target_type_icon = match &single.target_type {
+                        TargetType::NixOS { .. } => "N",
+                        TargetType::HomeManager { .. } => "H",
+                        TargetType::Shared { .. } => "S",
                     };
+                    let target_name = single.target_type.target_name().unwrap_or("unknown");
                     let mut spans = vec![
                         Span::styled(icon, style),
                         Span::raw(" "),
@@ -50,7 +52,7 @@ fn render_artifact_list_panel(frame: &mut Frame, model: &Model, area: Rect) {
                             Style::default().fg(Color::DarkGray),
                         ),
                         Span::raw(" "),
-                        Span::raw(&single.target),
+                        Span::raw(target_name),
                         Span::styled("/", Style::default().fg(Color::DarkGray)),
                         Span::styled(
                             &single.artifact.name,
@@ -131,7 +133,7 @@ fn render_log_panel(frame: &mut Frame, model: &Model, area: Rect) {
     let selected_entry = model.entries.get(model.selected_index);
 
     let title = match selected_entry {
-        Some(ListEntry::Single(entry)) => format!("Logs: {}/{}", entry.target, entry.artifact.name),
+        Some(ListEntry::Single(entry)) => format!("Logs: {}/{}", entry.target_type.target_name().unwrap_or("unknown"), entry.artifact.name),
         Some(ListEntry::Shared(entry)) => format!("Logs: {}", entry.info.artifact_name),
         None => "Logs".to_string(),
     };

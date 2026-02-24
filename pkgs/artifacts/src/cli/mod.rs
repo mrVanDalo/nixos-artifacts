@@ -197,7 +197,8 @@ async fn run_tui(
                 .iter()
                 .filter_map(|a| match &a.status {
                     crate::app::model::ArtifactStatus::Failed { error, .. } => {
-                        Some(format!("{}/{}: {}", a.target, a.artifact.name, error))
+                        let target = a.target_type.target_name().unwrap_or("unknown");
+                        Some(format!("{}/{}: {}", target, a.artifact.name, error))
                     }
                     _ => None,
                 })

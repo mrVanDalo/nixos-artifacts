@@ -392,7 +392,7 @@ mod tests {
             artifact_index: 0,
             artifact_name: "test".to_string(),
             target: "machine".to_string(),
-            target_type: TargetType::Nixos,
+            target_type: TargetType::NixOS,
         };
 
         handler.run_effect(effect).await.unwrap();
@@ -450,7 +450,7 @@ mod tests {
             artifact_index: 0,
             artifact_name: "test".to_string(),
             target: "machine".to_string(),
-            target_type: TargetType::Nixos,
+            target_type: TargetType::NixOS,
         });
         assert!(matches!(
             cmd,
@@ -472,7 +472,7 @@ mod tests {
             artifact_index: 2,
             artifact_name: "test".to_string(),
             target: "machine".to_string(),
-            target_type: TargetType::Nixos,
+            target_type: TargetType::NixOS,
             out_dir: std::path::PathBuf::from("/tmp"),
         });
         assert!(matches!(cmd, Some(EffectCommand::Serialize { .. })));

@@ -23,8 +23,7 @@ pub fn build_model(make: &MakeConfiguration) -> Model {
         for artifact in machine_artifacts.values() {
             if !shared_names.contains(artifact.name.as_str()) {
                 let entry = ArtifactEntry {
-                    target: machine.clone(),
-                    target_type: TargetType::Nixos,
+                    target_type: TargetType::NixOS { machine: machine.clone() },
                     artifact: artifact.clone(),
                     status: ArtifactStatus::Pending,
                     step_logs: StepLogs::default(),
@@ -41,8 +40,7 @@ pub fn build_model(make: &MakeConfiguration) -> Model {
         for artifact in user_artifacts.values() {
             if !shared_names.contains(artifact.name.as_str()) {
                 let entry = ArtifactEntry {
-                    target: user.clone(),
-                    target_type: TargetType::HomeManager,
+                    target_type: TargetType::HomeManager { username: user.clone() },
                     artifact: artifact.clone(),
                     status: ArtifactStatus::Pending,
                     step_logs: StepLogs::default(),
@@ -68,6 +66,10 @@ pub fn build_model(make: &MakeConfiguration) -> Model {
         };
 
         entries.push(ListEntry::Shared(SharedEntry {
+            target_type: TargetType::Shared {
+                nixos_targets: shared_info.nixos_targets.clone(),
+                home_targets: shared_info.home_targets.clone(),
+            },
             info: shared_info,
             status,
             step_logs: StepLogs::default(),
@@ -77,7 +79,11 @@ pub fn build_model(make: &MakeConfiguration) -> Model {
     }
 
     // Sort artifacts by target then name for consistent ordering (legacy)
-    artifacts.sort_by(|a, b| (&a.target, &a.artifact.name).cmp(&(&b.target, &b.artifact.name)));
+    artifacts.sort_by(|a, b| {
+        let a_target = a.target_type.target_name().unwrap_or("shared");
+        let b_target = b.target_type.target_name().unwrap_or("shared");
+        (a_target, &a.artifact.name).cmp(&(b_target, &b.artifact.name))
+    });
 
     // Sort entries: shared first (by name), then single by target/name
     entries.sort_by(|a, b| match (a, b) {
@@ -87,7 +93,9 @@ pub fn build_model(make: &MakeConfiguration) -> Model {
         (ListEntry::Shared(_), ListEntry::Single(_)) => std::cmp::Ordering::Less,
         (ListEntry::Single(_), ListEntry::Shared(_)) => std::cmp::Ordering::Greater,
         (ListEntry::Single(ea), ListEntry::Single(eb)) => {
-            (&ea.target, &ea.artifact.name).cmp(&(&eb.target, &eb.artifact.name))
+            let a_target = ea.target_type.target_name().unwrap_or("shared");
+            let b_target = eb.target_type.target_name().unwrap_or("shared");
+            (a_target, &ea.artifact.name).cmp(&(b_target, &eb.artifact.name))
         }
     });
 
@@ -177,23 +185,24 @@ pub fn build_filtered_model(
     model.artifacts.retain(|entry| {
         // Target filtering: when a specific target type filter is provided,
         // only include entries of that type that match
-        let target_matches = match entry.target_type {
-            TargetType::Nixos => {
+        let target_matches = match &entry.target_type {
+            TargetType::NixOS { machine } => {
                 if !machines.is_empty() {
-                    machines.contains(&entry.target)
+                    machines.contains(machine)
                 } else {
                     // If only home_users is specified, exclude NixOS entries
                     home_users.is_empty()
                 }
             }
-            TargetType::HomeManager => {
+            TargetType::HomeManager { username } => {
                 if !home_users.is_empty() {
-                    home_users.contains(&entry.target)
+                    home_users.contains(username)
                 } else {
                     // If only machines is specified, exclude home entries
                     machines.is_empty()
                 }
             }
+            TargetType::Shared { .. } => false, // Shared artifacts not in legacy field
         };
 
         let artifact_matches =
@@ -206,21 +215,22 @@ pub fn build_filtered_model(
     model.entries.retain(|entry| match entry {
         ListEntry::Single(single) => {
             // Same filtering logic as artifacts above
-            let target_matches = match single.target_type {
-                TargetType::Nixos => {
+            let target_matches = match &single.target_type {
+                TargetType::NixOS { machine } => {
                     if !machines.is_empty() {
-                        machines.contains(&single.target)
+                        machines.contains(machine)
                     } else {
                         home_users.is_empty()
                     }
                 }
-                TargetType::HomeManager => {
+                TargetType::HomeManager { username } => {
                     if !home_users.is_empty() {
-                        home_users.contains(&single.target)
+                        home_users.contains(username)
                     } else {
                         machines.is_empty()
                     }
                 }
+                TargetType::Shared { .. } => false, // Handled separately
             };
 
             let artifact_matches =
@@ -380,9 +390,9 @@ mod tests {
         let model = build_model(&config);
 
         // Should be sorted: alice@desktop/gpg-key, machine-one/ssh-key, machine-two/api-token
-        assert_eq!(model.artifacts[0].target, "alice@desktop");
-        assert_eq!(model.artifacts[1].target, "machine-one");
-        assert_eq!(model.artifacts[2].target, "machine-two");
+        assert_eq!(model.artifacts[0].target_type.target_name().unwrap(), "alice@desktop");
+        assert_eq!(model.artifacts[1].target_type.target_name().unwrap(), "machine-one");
+        assert_eq!(model.artifacts[2].target_type.target_name().unwrap(), "machine-two");
     }
 
     #[test]
@@ -409,7 +419,7 @@ mod tests {
         let model = build_filtered_model(&config, &[], &[], &["ssh-key".to_string()]);
 
         assert_eq!(model.artifacts.len(), 1);
-        assert_eq!(model.artifacts[0].target, "machine-one");
+        assert_eq!(model.artifacts[0].target_type.target_name().unwrap(), "machine-one");
     }
 
     #[test]

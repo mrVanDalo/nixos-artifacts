@@ -50,7 +50,7 @@ fn make_test_artifact(name: &str, prompts: Vec<&str>) -> ArtifactDef {
 fn make_test_model_with_existing_artifact() -> Model {
     let entry = ArtifactEntry {
         target: "machine-one".to_string(),
-        target_type: TargetType::Nixos,
+        target_type: TargetType::NixOS,
         artifact: make_test_artifact("ssh-key", vec![]),
         status: ArtifactStatus::NeedsGeneration,
         step_logs: StepLogs::default(),
@@ -72,7 +72,7 @@ fn make_test_model_with_existing_artifact() -> Model {
 fn make_test_model_with_new_artifact() -> Model {
     let entry = ArtifactEntry {
         target: "machine-one".to_string(),
-        target_type: TargetType::Nixos,
+        target_type: TargetType::NixOS,
         artifact: make_test_artifact("ssh-key", vec![]),
         status: ArtifactStatus::NeedsGeneration,
         step_logs: StepLogs::default(),
@@ -448,7 +448,7 @@ fn test_dialog_regenerate_proceeds_to_prompts() {
     // Replace with artifact that has prompts
     let entry = ArtifactEntry {
         target: "machine-one".to_string(),
-        target_type: TargetType::Nixos,
+        target_type: TargetType::NixOS,
         artifact: make_test_artifact("ssh-key", vec!["passphrase"]),
         status: ArtifactStatus::NeedsGeneration,
         step_logs: StepLogs::default(),
@@ -587,7 +587,7 @@ fn test_entry_exists_used_for_dialog_decision() {
     // This test verifies the core logic that determines when to show the dialog
     let entry_with_exists = ArtifactEntry {
         target: "test".to_string(),
-        target_type: TargetType::Nixos,
+        target_type: TargetType::NixOS,
         artifact: make_test_artifact("test", vec![]),
         status: ArtifactStatus::NeedsGeneration,
         step_logs: StepLogs::default(),
@@ -605,7 +605,7 @@ fn test_entry_exists_used_for_dialog_decision() {
 
     let entry_without_exists = ArtifactEntry {
         target: "test".to_string(),
-        target_type: TargetType::Nixos,
+        target_type: TargetType::NixOS,
         artifact: make_test_artifact("test", vec![]),
         status: ArtifactStatus::NeedsGeneration,
         step_logs: StepLogs::default(),
@@ -756,7 +756,7 @@ fn test_dialog_appears_only_for_needs_generation() {
     // Given: Existing artifact that is UpToDate (not NeedsGeneration)
     let entry = ArtifactEntry {
         target: "machine-one".to_string(),
-        target_type: TargetType::Nixos,
+        target_type: TargetType::NixOS,
         artifact: make_test_artifact("ssh-key", vec![]),
         status: ArtifactStatus::UpToDate,
         step_logs: StepLogs::default(),

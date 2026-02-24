@@ -763,7 +763,7 @@ mod tests {
     fn make_test_model() -> Model {
         let entry1 = ArtifactEntry {
             target: "machine-one".to_string(),
-            target_type: TargetType::Nixos,
+            target_type: TargetType::NixOS,
             artifact: make_test_artifact("ssh-key", vec!["passphrase"]),
             status: ArtifactStatus::Pending,
             step_logs: StepLogs::default(),
@@ -771,7 +771,7 @@ mod tests {
         };
         let entry2 = ArtifactEntry {
             target: "machine-two".to_string(),
-            target_type: TargetType::Nixos,
+            target_type: TargetType::NixOS,
             artifact: make_test_artifact("api-token", vec![]),
             status: ArtifactStatus::Pending,
             step_logs: StepLogs::default(),
@@ -959,7 +959,7 @@ mod tests {
             artifact_index: 0,
             artifact_name: "test".to_string(),
             target: "machine".to_string(),
-            target_type: TargetType::Nixos,
+            target_type: TargetType::NixOS,
         });
         assert_eq!(cmd.len(), 1);
         assert!(matches!(cmd[0], EffectCommand::CheckSerialization { .. }));
@@ -969,7 +969,7 @@ mod tests {
             artifact_index: 0,
             artifact_name: "test".to_string(),
             target: "machine".to_string(),
-            target_type: TargetType::Nixos,
+            target_type: TargetType::NixOS,
             prompts: HashMap::new(),
         });
         assert_eq!(cmd.len(), 1);

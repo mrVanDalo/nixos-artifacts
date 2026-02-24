@@ -85,7 +85,7 @@ impl ArtifactListState {
                 .map(|a| ArtifactSnapshot {
                     target: a.target.clone(),
                     target_type: match a.target_type {
-                        TargetType::Nixos => "nixos",
+                        TargetType::NixOS => "nixos",
                         TargetType::HomeManager => "homemanager",
                     },
                     name: a.artifact.name.clone(),
@@ -211,7 +211,7 @@ impl GeneratorSelectionSnapshot {
                         .map(|s| SourceSnapshot {
                             target: s.target.clone(),
                             target_type: match s.target_type {
-                                ConfigTargetType::Nixos => "nixos",
+                                ConfigTargetType::NixOS => "nixos",
                                 ConfigTargetType::HomeManager => "homemanager",
                             },
                         })
@@ -269,7 +269,7 @@ fn make_test_artifact(name: &str, prompts: Vec<&str>) -> ArtifactDef {
 fn make_test_model() -> Model {
     let entry1 = ArtifactEntry {
         target: "machine-one".to_string(),
-        target_type: TargetType::Nixos,
+        target_type: TargetType::NixOS,
         artifact: make_test_artifact("ssh-key", vec!["passphrase"]),
         status: ArtifactStatus::Pending,
         step_logs: StepLogs::default(),
@@ -277,7 +277,7 @@ fn make_test_model() -> Model {
     };
     let entry2 = ArtifactEntry {
         target: "machine-two".to_string(),
-        target_type: TargetType::Nixos,
+        target_type: TargetType::NixOS,
         artifact: make_test_artifact("api-token", vec![]),
         status: ArtifactStatus::UpToDate,
         step_logs: StepLogs::default(),
@@ -718,7 +718,7 @@ fn make_multiple_machines_artifact(name: &str) -> ArtifactDef {
 fn test_multiple_machines_before_generate_all() {
     let entry1 = ArtifactEntry {
         target: "machine-one".to_string(),
-        target_type: TargetType::Nixos,
+        target_type: TargetType::NixOS,
         artifact: make_multiple_machines_artifact("artifact-one"),
         status: ArtifactStatus::Pending,
         step_logs: StepLogs::default(),
@@ -726,7 +726,7 @@ fn test_multiple_machines_before_generate_all() {
     };
     let entry2 = ArtifactEntry {
         target: "machine-one".to_string(),
-        target_type: TargetType::Nixos,
+        target_type: TargetType::NixOS,
         artifact: make_multiple_machines_artifact("artifact-two"),
         status: ArtifactStatus::Pending,
         step_logs: StepLogs::default(),
@@ -734,7 +734,7 @@ fn test_multiple_machines_before_generate_all() {
     };
     let entry3 = ArtifactEntry {
         target: "machine-two".to_string(),
-        target_type: TargetType::Nixos,
+        target_type: TargetType::NixOS,
         artifact: make_multiple_machines_artifact("artifact-one"),
         status: ArtifactStatus::Pending,
         step_logs: StepLogs::default(),
@@ -742,7 +742,7 @@ fn test_multiple_machines_before_generate_all() {
     };
     let entry4 = ArtifactEntry {
         target: "machine-two".to_string(),
-        target_type: TargetType::Nixos,
+        target_type: TargetType::NixOS,
         artifact: make_multiple_machines_artifact("artifact-two"),
         status: ArtifactStatus::Pending,
         step_logs: StepLogs::default(),
@@ -789,7 +789,7 @@ fn test_multiple_machines_before_generate_all() {
 fn test_multiple_machines_after_generate_all() {
     let entry1 = ArtifactEntry {
         target: "machine-one".to_string(),
-        target_type: TargetType::Nixos,
+        target_type: TargetType::NixOS,
         artifact: make_multiple_machines_artifact("artifact-one"),
         status: ArtifactStatus::NeedsGeneration,
         step_logs: StepLogs::default(),
@@ -797,7 +797,7 @@ fn test_multiple_machines_after_generate_all() {
     };
     let entry2 = ArtifactEntry {
         target: "machine-one".to_string(),
-        target_type: TargetType::Nixos,
+        target_type: TargetType::NixOS,
         artifact: make_multiple_machines_artifact("artifact-two"),
         status: ArtifactStatus::UpToDate,
         step_logs: StepLogs::default(),
@@ -805,7 +805,7 @@ fn test_multiple_machines_after_generate_all() {
     };
     let entry3 = ArtifactEntry {
         target: "machine-two".to_string(),
-        target_type: TargetType::Nixos,
+        target_type: TargetType::NixOS,
         artifact: make_multiple_machines_artifact("artifact-one"),
         status: ArtifactStatus::NeedsGeneration,
         step_logs: StepLogs::default(),
@@ -813,7 +813,7 @@ fn test_multiple_machines_after_generate_all() {
     };
     let entry4 = ArtifactEntry {
         target: "machine-two".to_string(),
-        target_type: TargetType::Nixos,
+        target_type: TargetType::NixOS,
         artifact: make_multiple_machines_artifact("artifact-two"),
         status: ArtifactStatus::NeedsGeneration,
         step_logs: StepLogs::default(),
@@ -862,7 +862,7 @@ fn test_artifact_list_with_shared_artifacts() {
 
     let single_entry = ArtifactEntry {
         target: "machine-one".to_string(),
-        target_type: TargetType::Nixos,
+        target_type: TargetType::NixOS,
         artifact: make_test_artifact("local-secret", vec![]),
         status: ArtifactStatus::Pending,
         step_logs: StepLogs::default(),
@@ -1129,11 +1129,11 @@ fn test_generator_selection_single_generator() {
             sources: vec![
                 GeneratorSource {
                     target: "machine-one".to_string(),
-                    target_type: ConfigTargetType::Nixos,
+                    target_type: ConfigTargetType::NixOS,
                 },
                 GeneratorSource {
                     target: "machine-two".to_string(),
-                    target_type: ConfigTargetType::Nixos,
+                    target_type: ConfigTargetType::NixOS,
                 },
             ],
         }],
@@ -1169,7 +1169,7 @@ fn test_generator_selection_multiple_generators() {
                 path: "/nix/store/xxx-gen-prod".to_string(),
                 sources: vec![GeneratorSource {
                     target: "prod-server".to_string(),
-                    target_type: ConfigTargetType::Nixos,
+                    target_type: ConfigTargetType::NixOS,
                 }],
             },
             GeneratorInfo {
@@ -1177,7 +1177,7 @@ fn test_generator_selection_multiple_generators() {
                 sources: vec![
                     GeneratorSource {
                         target: "dev-machine".to_string(),
-                        target_type: ConfigTargetType::Nixos,
+                        target_type: ConfigTargetType::NixOS,
                     },
                     GeneratorSource {
                         target: "alice@workstation".to_string(),
@@ -1218,14 +1218,14 @@ fn test_generator_selection_second_selected() {
                 path: "/nix/store/xxx-gen-prod".to_string(),
                 sources: vec![GeneratorSource {
                     target: "prod-server".to_string(),
-                    target_type: ConfigTargetType::Nixos,
+                    target_type: ConfigTargetType::NixOS,
                 }],
             },
             GeneratorInfo {
                 path: "/nix/store/yyy-gen-dev".to_string(),
                 sources: vec![GeneratorSource {
                     target: "dev-machine".to_string(),
-                    target_type: ConfigTargetType::Nixos,
+                    target_type: ConfigTargetType::NixOS,
                 }],
             },
         ],
@@ -1262,11 +1262,11 @@ fn test_generator_selection_mixed_source_types() {
             sources: vec![
                 GeneratorSource {
                     target: "server-1".to_string(),
-                    target_type: ConfigTargetType::Nixos,
+                    target_type: ConfigTargetType::NixOS,
                 },
                 GeneratorSource {
                     target: "server-2".to_string(),
-                    target_type: ConfigTargetType::Nixos,
+                    target_type: ConfigTargetType::NixOS,
                 },
                 GeneratorSource {
                     target: "alice@laptop".to_string(),
@@ -1311,7 +1311,7 @@ fn test_generator_selection_singular_vs_plural() {
                 path: "/nix/store/single-nixos".to_string(),
                 sources: vec![GeneratorSource {
                     target: "server-1".to_string(),
-                    target_type: ConfigTargetType::Nixos,
+                    target_type: ConfigTargetType::NixOS,
                 }],
             },
             GeneratorInfo {
@@ -1355,23 +1355,23 @@ fn test_generator_selection_many_sources() {
             sources: vec![
                 GeneratorSource {
                     target: "server-1".to_string(),
-                    target_type: ConfigTargetType::Nixos,
+                    target_type: ConfigTargetType::NixOS,
                 },
                 GeneratorSource {
                     target: "server-2".to_string(),
-                    target_type: ConfigTargetType::Nixos,
+                    target_type: ConfigTargetType::NixOS,
                 },
                 GeneratorSource {
                     target: "server-3".to_string(),
-                    target_type: ConfigTargetType::Nixos,
+                    target_type: ConfigTargetType::NixOS,
                 },
                 GeneratorSource {
                     target: "server-4".to_string(),
-                    target_type: ConfigTargetType::Nixos,
+                    target_type: ConfigTargetType::NixOS,
                 },
                 GeneratorSource {
                     target: "server-5".to_string(),
-                    target_type: ConfigTargetType::Nixos,
+                    target_type: ConfigTargetType::NixOS,
                 },
             ],
         }],
@@ -1415,11 +1415,11 @@ fn test_generator_selection_multiple_with_mixed_sources() {
                 sources: vec![
                     GeneratorSource {
                         target: "prod-1".to_string(),
-                        target_type: ConfigTargetType::Nixos,
+                        target_type: ConfigTargetType::NixOS,
                     },
                     GeneratorSource {
                         target: "prod-2".to_string(),
-                        target_type: ConfigTargetType::Nixos,
+                        target_type: ConfigTargetType::NixOS,
                     },
                 ],
             },
@@ -1428,7 +1428,7 @@ fn test_generator_selection_multiple_with_mixed_sources() {
                 sources: vec![
                     GeneratorSource {
                         target: "dev-1".to_string(),
-                        target_type: ConfigTargetType::Nixos,
+                        target_type: ConfigTargetType::NixOS,
                     },
                     GeneratorSource {
                         target: "alice@dev".to_string(),
@@ -1544,7 +1544,7 @@ mod model_tests {
             .map(|(i, status)| {
                 ListEntry::Single(ArtifactEntry {
                     target: format!("machine-{}", i + 1),
-                    target_type: TargetType::Nixos,
+                    target_type: TargetType::NixOS,
                     artifact: make_test_artifact(&format!("artifact-{}", i + 1), vec![]),
                     status,
                     step_logs: StepLogs::default(),

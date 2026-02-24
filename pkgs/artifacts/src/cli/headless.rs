@@ -258,9 +258,11 @@ pub fn generate_single_artifact(
     }
 
     // Run generator using the artifact's generator script
+    let target_type = TargetType::NixOS {
+        machine: target.to_string(),
+    };
     let artifact_entry = ArtifactEntry {
-        target: target.to_string(),
-        target_type: TargetType::Nixos,
+        target_type: target_type.clone(),
         artifact: artifact.clone(),
         status: ArtifactStatus::Pending,
         step_logs: StepLogs::default(),
@@ -269,11 +271,10 @@ pub fn generate_single_artifact(
 
     let _ = run_generator_script(
         &artifact_entry.artifact,
-        target,
+        &target_type,
         &make_config.make_base,
         &prompts_dir,
         &out_dir,
-        "nixos", // context - assume nixos for now
     )
     .with_context(|| format!("Generator failed for artifact '{}'", artifact.name))?;
 
@@ -306,14 +307,7 @@ pub fn generate_single_artifact(
     }
 
     // Run serialize - this stores the artifact in the backend
-    let serialize_result = run_serialize(
-        artifact,
-        backend,
-        &out_dir,
-        target,
-        make_config,
-        "nixos", // context - assume nixos for now
-    );
+    let serialize_result = run_serialize(artifact, backend, &out_dir, &target_type, make_config);
 
     let success = serialize_result.is_ok();
     let error = serialize_result.err().map(|e| e.to_string());
@@ -435,9 +429,11 @@ pub fn generate_single_artifact_with_diagnostics(
     }
 
     // Run generator script with output capture
+    let target_type = TargetType::NixOS {
+        machine: target.to_string(),
+    };
     let artifact_entry = ArtifactEntry {
-        target: target.to_string(),
-        target_type: TargetType::Nixos,
+        target_type: target_type.clone(),
         artifact: artifact.clone(),
         status: ArtifactStatus::Pending,
         step_logs: StepLogs::default(),
@@ -446,11 +442,10 @@ pub fn generate_single_artifact_with_diagnostics(
 
     let generator_result = run_generator_script(
         &artifact_entry.artifact,
-        target,
+        &target_type,
         &make_config.make_base,
         &prompts_dir,
         &out_dir,
-        "nixos",
     );
 
     // Note: run_generator_script currently doesn't capture output, so we
@@ -504,7 +499,7 @@ pub fn generate_single_artifact_with_diagnostics(
     }
 
     // Run serialize
-    let serialize_result = run_serialize(artifact, backend, &out_dir, target, make_config, "nixos");
+    let serialize_result = run_serialize(artifact, backend, &out_dir, &target_type, make_config);
 
     // Note: run_serialize doesn't currently capture stdout/stderr, but we
     // could enhance it in the future to return CapturedOutput

@@ -90,7 +90,7 @@ fn create_test_model(artifact_name: &str, has_prompts: bool) -> Model {
     let artifact = create_test_artifact(artifact_name, has_prompts);
     let entry = ArtifactEntry {
         target: "machine-one".to_string(),
-        target_type: TargetType::Nixos,
+        target_type: TargetType::NixOS,
         artifact: artifact.clone(),
         status: ArtifactStatus::Pending,
         step_logs: StepLogs::default(),
@@ -300,7 +300,7 @@ fn test_check_serialization_flow_needs_generation() {
         artifact_index: 0,
         artifact_name: "test-artifact".to_string(),
         target: "machine-one".to_string(),
-        target_type: TargetType::Nixos,
+        target_type: TargetType::NixOS,
     };
 
     process_effects_and_track(&mut model, check_effect, &mut tracker);
@@ -352,7 +352,7 @@ fn test_check_serialization_flow_up_to_date() {
         artifact_index: 0,
         artifact_name: "test-artifact".to_string(),
         target: "machine-one".to_string(),
-        target_type: TargetType::Nixos,
+        target_type: TargetType::NixOS,
     };
 
     process_effects_and_track(&mut model, check_effect, &mut tracker);
@@ -408,7 +408,7 @@ fn test_generator_flow_success() {
         artifact_index: 0,
         artifact_name: "test-artifact".to_string(),
         target: "machine-one".to_string(),
-        target_type: TargetType::Nixos,
+        target_type: TargetType::NixOS,
         prompts: HashMap::new(),
     };
 
@@ -503,7 +503,7 @@ fn test_generator_flow_failure() {
         artifact_index: 0,
         artifact_name: "test-artifact".to_string(),
         target: "machine-one".to_string(),
-        target_type: TargetType::Nixos,
+        target_type: TargetType::NixOS,
         prompts: HashMap::new(),
     };
 
@@ -574,7 +574,7 @@ fn test_serialize_flow_failure() {
         artifact_index: 0,
         artifact_name: "test-artifact".to_string(),
         target: "machine-one".to_string(),
-        target_type: TargetType::Nixos,
+        target_type: TargetType::NixOS,
         out_dir: std::path::PathBuf::from("/tmp"),
     };
 
@@ -624,7 +624,7 @@ fn test_check_serialization_failure() {
         artifact_index: 0,
         artifact_name: "test-artifact".to_string(),
         target: "machine-one".to_string(),
-        target_type: TargetType::Nixos,
+        target_type: TargetType::NixOS,
     };
 
     process_effects_and_track(&mut model.clone(), check_effect, &mut tracker);
@@ -667,7 +667,7 @@ fn test_batch_effect_processing() {
 
     let entry1 = ArtifactEntry {
         target: "machine-one".to_string(),
-        target_type: TargetType::Nixos,
+        target_type: TargetType::NixOS,
         artifact: artifact1.clone(),
         status: ArtifactStatus::Pending,
         step_logs: StepLogs::default(),
@@ -675,7 +675,7 @@ fn test_batch_effect_processing() {
     };
     let entry2 = ArtifactEntry {
         target: "machine-two".to_string(),
-        target_type: TargetType::Nixos,
+        target_type: TargetType::NixOS,
         artifact: artifact2.clone(),
         status: ArtifactStatus::Pending,
         step_logs: StepLogs::default(),
@@ -701,13 +701,13 @@ fn test_batch_effect_processing() {
             artifact_index: 0,
             artifact_name: "artifact-1".to_string(),
             target: "machine-one".to_string(),
-            target_type: TargetType::Nixos,
+            target_type: TargetType::NixOS,
         },
         Effect::CheckSerialization {
             artifact_index: 1,
             artifact_name: "artifact-2".to_string(),
             target: "machine-two".to_string(),
-            target_type: TargetType::Nixos,
+            target_type: TargetType::NixOS,
         },
     ]);
 
@@ -735,7 +735,7 @@ fn test_artifact_index_preservation() {
             artifact_index: idx,
             artifact_name: "test".to_string(),
             target: "machine".to_string(),
-            target_type: TargetType::Nixos,
+            target_type: TargetType::NixOS,
         };
 
         process_effects_and_track(&mut model.clone(), effect, &mut tracker);
@@ -765,7 +765,7 @@ fn test_complete_lifecycle_success() {
         artifact_index: 0,
         artifact_name: "test-artifact".to_string(),
         target: "machine-one".to_string(),
-        target_type: TargetType::Nixos,
+        target_type: TargetType::NixOS,
     };
     process_effects_and_track(&mut model, check_effect, &mut tracker);
 
@@ -796,7 +796,7 @@ fn test_complete_lifecycle_success() {
         artifact_index: 0,
         artifact_name: "test-artifact".to_string(),
         target: "machine-one".to_string(),
-        target_type: TargetType::Nixos,
+        target_type: TargetType::NixOS,
         prompts: HashMap::new(),
     };
     process_effects_and_track(&mut model.clone(), gen_effect, &mut tracker);
@@ -893,20 +893,20 @@ fn test_multiple_command_types_tracked() {
             artifact_index: 0,
             artifact_name: "check".to_string(),
             target: "m1".to_string(),
-            target_type: TargetType::Nixos,
+            target_type: TargetType::NixOS,
         },
         Effect::RunGenerator {
             artifact_index: 0,
             artifact_name: "gen".to_string(),
             target: "m2".to_string(),
-            target_type: TargetType::Nixos,
+            target_type: TargetType::NixOS,
             prompts: HashMap::new(),
         },
         Effect::Serialize {
             artifact_index: 0,
             artifact_name: "ser".to_string(),
             target: "m3".to_string(),
-            target_type: TargetType::Nixos,
+            target_type: TargetType::NixOS,
             out_dir: std::path::PathBuf::from("/tmp"),
         },
     ];
@@ -950,14 +950,14 @@ fn test_batch_filters_none_effects() {
             artifact_index: 0,
             artifact_name: "test".to_string(),
             target: "m1".to_string(),
-            target_type: TargetType::Nixos,
+            target_type: TargetType::NixOS,
         },
         Effect::None,
         Effect::RunGenerator {
             artifact_index: 0,
             artifact_name: "test".to_string(),
             target: "m2".to_string(),
-            target_type: TargetType::Nixos,
+            target_type: TargetType::NixOS,
             prompts: HashMap::new(),
         },
     ]);
@@ -977,7 +977,7 @@ fn test_all_command_variants_extractable() {
         artifact_index: 42,
         artifact_name: "test-check".to_string(),
         target: "machine-test".to_string(),
-        target_type: TargetType::Nixos,
+        target_type: TargetType::NixOS,
     };
 
     let cmd = effect_to_command(&test_effect);
@@ -1017,7 +1017,7 @@ fn test_dual_assertion_strategy_demonstration() {
         artifact_index: 0,
         artifact_name: "demo-artifact".to_string(),
         target: "machine-one".to_string(),
-        target_type: TargetType::Nixos,
+        target_type: TargetType::NixOS,
     };
 
     process_effects_and_track(&mut model.clone(), check_effect, &mut tracker);
