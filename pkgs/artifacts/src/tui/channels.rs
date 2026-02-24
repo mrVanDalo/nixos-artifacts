@@ -119,8 +119,6 @@ pub enum EffectCommand {
     RunSharedGenerator {
         artifact_index: usize,
         artifact_name: String,
-        machine_targets: Vec<String>,
-        user_targets: Vec<String>,
         prompts: HashMap<String, String>,
     },
 
@@ -271,8 +269,6 @@ mod tests {
             EffectCommand::RunSharedGenerator {
                 artifact_index: 4,
                 artifact_name: "test".to_string(),
-                machine_targets: vec!["machine1".to_string()],
-                user_targets: vec![],
                 prompts: HashMap::new(),
             },
             EffectCommand::SharedSerialize {

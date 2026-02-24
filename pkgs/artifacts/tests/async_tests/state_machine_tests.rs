@@ -12,7 +12,8 @@
 use std::collections::{BTreeMap, HashMap};
 
 use artifacts::app::effect::Effect;
-use artifacts::app::message::{CheckOutput, GeneratorOutput, Message, SerializeOutput};
+use artifacts::app::message::Message;
+use artifacts::app::message::{CheckOutput, GeneratorOutput, SerializeOutput};
 use artifacts::app::model::{
     ArtifactEntry, ArtifactStatus, GeneratingState, GenerationStep, ListEntry, Model, Screen,
     StepLogs, TargetType,
@@ -219,14 +220,9 @@ fn effect_to_command(effect: &Effect) -> Option<EffectCommand> {
             artifact_index,
             artifact_name,
             prompts,
-            nixos_targets,
-            home_targets,
-            ..
         } => Some(EffectCommand::RunSharedGenerator {
             artifact_index: *artifact_index,
             artifact_name: artifact_name.clone(),
-            machine_targets: nixos_targets.clone(),
-            user_targets: home_targets.clone(),
             prompts: prompts.clone(),
         }),
         Effect::SharedSerialize {

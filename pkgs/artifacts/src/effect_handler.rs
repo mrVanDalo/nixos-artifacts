@@ -196,16 +196,10 @@ impl EffectHandler {
             Effect::RunSharedGenerator {
                 artifact_index,
                 artifact_name,
-                generator_path: _,
                 prompts,
-                nixos_targets,
-                home_targets,
-                files: _,
             } => Some(EffectCommand::RunSharedGenerator {
                 artifact_index,
                 artifact_name,
-                machine_targets: nixos_targets,
-                user_targets: home_targets,
                 prompts,
             }),
 

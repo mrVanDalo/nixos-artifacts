@@ -523,16 +523,10 @@ pub fn effect_to_command(effect: Effect) -> Vec<EffectCommand> {
         Effect::RunSharedGenerator {
             artifact_index,
             artifact_name,
-            generator_path: _,
             prompts,
-            nixos_targets,
-            home_targets,
-            files: _,
         } => vec![EffectCommand::RunSharedGenerator {
             artifact_index,
             artifact_name,
-            machine_targets: nixos_targets,
-            user_targets: home_targets,
             prompts,
         }],
 

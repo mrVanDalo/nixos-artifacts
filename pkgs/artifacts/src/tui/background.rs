@@ -618,8 +618,6 @@ impl BackgroundEffectHandler {
         &mut self,
         artifact_index: usize,
         artifact_name: String,
-        _machine_targets: Vec<String>,
-        _user_targets: Vec<String>,
         prompts: HashMap<String, String>,
     ) -> EffectResult {
         let shared_info = match self.make.get_shared_artifacts().get(&artifact_name).cloned() {
@@ -945,11 +943,9 @@ impl BackgroundEffectHandler {
             EffectCommand::RunSharedGenerator {
                 artifact_index,
                 artifact_name,
-                machine_targets,
-                user_targets,
                 prompts,
             } => {
-                self.execute_run_shared_generator(artifact_index, artifact_name, machine_targets, user_targets, prompts)
+                self.execute_run_shared_generator(artifact_index, artifact_name, prompts)
                     .await
             }
             EffectCommand::SharedSerialize {

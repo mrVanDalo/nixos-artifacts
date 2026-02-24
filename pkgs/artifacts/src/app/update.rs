@@ -423,20 +423,11 @@ fn finish_prompts_and_start_generation(mut model: Model) -> (Model, Effect) {
             target_type: single.target_type.clone(),
             prompts,
         },
-        ListEntry::Shared(shared) => {
-            // For shared artifacts, need to use the selected generator
-            let generator_path = shared.selected_generator.clone().unwrap_or_default();
-            let files: Vec<_> = shared.info.files.keys().cloned().collect();
-            Effect::RunSharedGenerator {
-                artifact_index,
-                artifact_name,
-                generator_path,
-                prompts,
-                nixos_targets: shared.info.nixos_targets.clone(),
-                home_targets: shared.info.home_targets.clone(),
-                files,
-            }
-        }
+        ListEntry::Shared(_) => Effect::RunSharedGenerator {
+            artifact_index,
+            artifact_name,
+            prompts,
+        },
     };
 
     (model, effect)
@@ -737,15 +728,10 @@ fn update_generator_selection(mut model: Model, key: KeyEvent) -> (Model, Effect
 
                 if prompts.is_empty() {
                     // No prompts needed, go straight to generating
-                    let files: Vec<_> = shared.info.files.keys().cloned().collect();
                     let effect = Effect::RunSharedGenerator {
                         artifact_index,
                         artifact_name: shared.info.artifact_name.clone(),
-                        generator_path: selected_path,
                         prompts: Default::default(),
-                        nixos_targets: shared.info.nixos_targets.clone(),
-                        home_targets: shared.info.home_targets.clone(),
-                        files,
                     };
                     model.screen = Screen::Generating(GeneratingState {
                         artifact_index,
@@ -970,9 +956,6 @@ fn start_generation_for_selected_internal(
             if shared.info.generators.len() == 1 {
                 // Smart selection: skip dialog, use the only generator
                 let generator_path = shared.info.generators[0].path.clone();
-                let files: Vec<_> = shared.info.files.keys().cloned().collect();
-                let nixos_targets = shared.info.nixos_targets.clone();
-                let home_targets = shared.info.home_targets.clone();
                 let prompts: Vec<PromptEntry> = shared
                     .info
                     .prompts
@@ -987,7 +970,7 @@ fn start_generation_for_selected_internal(
                 let shared_exists = if let Some(ListEntry::Shared(shared)) =
                     model.entries.get_mut(artifact_index)
                 {
-                    shared.selected_generator = Some(generator_path.clone());
+                    shared.selected_generator = Some(generator_path);
                     shared.exists
                 } else {
                     false
@@ -998,11 +981,7 @@ fn start_generation_for_selected_internal(
                     let effect = Effect::RunSharedGenerator {
                         artifact_index,
                         artifact_name: artifact_name.clone(),
-                        generator_path,
                         prompts: Default::default(),
-                        nixos_targets,
-                        home_targets,
-                        files,
                     };
                     model.screen = Screen::Generating(GeneratingState {
                         artifact_index,
@@ -1931,29 +1910,6 @@ mod tests {
             "Expected RunSharedGenerator effect, got {:?}",
             effect
         );
-
-        // Verify the effect contains the correct generator path and targets
-        if let Effect::RunSharedGenerator {
-            generator_path,
-            nixos_targets,
-            home_targets,
-            ..
-        } = effect
-        {
-            assert_eq!(
-                generator_path, "/nix/store/abc123/generator.sh",
-                "Generator path should be preserved"
-            );
-            assert_eq!(
-                nixos_targets,
-                vec!["machine-one".to_string()],
-                "NixOS targets should be preserved"
-            );
-            assert!(
-                home_targets.is_empty(),
-                "Home targets should be preserved as empty"
-            );
-        }
     }
 
     /// Test that multiple generators shows selection dialog

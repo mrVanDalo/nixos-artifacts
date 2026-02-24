@@ -80,11 +80,7 @@ pub enum Effect {
     RunSharedGenerator {
         artifact_index: usize,
         artifact_name: String,
-        generator_path: String,
         prompts: HashMap<String, String>,
-        nixos_targets: Vec<String>,
-        home_targets: Vec<String>,
-        files: Vec<String>,
     },
 
     /// Serialize the generated files for a shared artifact
