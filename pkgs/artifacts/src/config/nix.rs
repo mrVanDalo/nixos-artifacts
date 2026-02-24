@@ -32,6 +32,7 @@
 //! - The output path is not a valid file
 
 use crate::backend::helpers::pretty_print_shell_escape;
+use crate::log_debug;
 
 /// Build the make.json file from a flake.nix by running `nix build`.
 ///
@@ -90,8 +91,8 @@ pub fn build_make_from_flake(flake_path: &std::path::Path) -> anyhow::Result<std
         )
         .collect::<Vec<_>>()
         .join(" ");
-    crate::log_debug!("Running nix build on {}", flake_path.display());
-    crate::log_debug!("{}", _pretty);
+    log_debug!("Running nix build on {}", flake_path.display());
+    log_debug!("{}", _pretty);
 
     command.args(&arguments);
     let output = command

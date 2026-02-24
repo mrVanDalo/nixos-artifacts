@@ -55,6 +55,8 @@
 //! - **Per-user artifacts**: Defined in `home` array, scoped to home-manager users
 //! - **Shared artifacts**: Marked with `"shared": true`, shared across multiple targets
 
+#[cfg(feature = "logging")]
+use crate::log_debug;
 use anyhow::Context;
 use serde::de::{self, Deserializer};
 use serde::{Deserialize, Serialize};
@@ -302,7 +304,7 @@ impl MakeConfiguration {
                 Ok(v) => to_string_pretty(&v).unwrap_or_else(|_| make_text.clone()),
                 Err(_) => make_text.clone(),
             };
-            crate::log_debug!("make config (pretty):\n{}", pretty);
+            log_debug!("make config (pretty):\n{}", pretty);
         }
 
         let root: MakeRoot = json_from_str(&make_text)

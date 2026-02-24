@@ -25,6 +25,7 @@ use tokio::sync::mpsc::UnboundedSender;
 
 use crate::app::effect::Effect;
 use crate::app::message::Message;
+use crate::log_debug;
 use crate::tui::channels::{EffectCommand, EffectResult};
 
 /// Handler that routes effects to the background task.
@@ -71,7 +72,7 @@ impl EffectHandler {
     /// to the background task for execution. Returns an error if the channel
     /// is closed (background task exited).
     pub async fn run_effect(&mut self, effect: Effect) -> anyhow::Result<()> {
-        crate::log_debug!("Sending effect to background: {:?}", effect);
+        log_debug!("Sending effect to background: {:?}", effect);
         if let Some(cmd) = self.effect_to_command(effect) {
             self.command_tx
                 .send(cmd)

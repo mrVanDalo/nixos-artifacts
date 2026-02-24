@@ -8,6 +8,13 @@ ArtifactListState {
     selected_log_step: "Check",
     artifacts: [
         ArtifactSnapshot {
+            target: "shared",
+            target_type: "shared",
+            name: "shared-secret",
+            status: "NeedsGeneration",
+            has_logs: false,
+        },
+        ArtifactSnapshot {
             target: "machine-one",
             target_type: "nixos",
             name: "local-secret",

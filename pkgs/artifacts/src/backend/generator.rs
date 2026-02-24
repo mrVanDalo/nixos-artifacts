@@ -31,6 +31,7 @@ use crate::app::model::TargetType;
 use crate::backend::helpers::{escape_single_quoted, fnv1a64, resolve_path};
 use crate::backend::output_capture::{run_with_captured_output, CapturedOutput};
 use crate::config::make::ArtifactDef;
+use crate::log_debug;
 use crate::string_vec;
 use anyhow::{bail, Context, Result};
 use std::collections::HashSet;
@@ -186,7 +187,7 @@ fn log_bwrap_command(arguments: &[String]) {
             result.push_str(argument);
         }
     }
-    crate::log_debug!("{}", result);
+    log_debug!("{}", result);
 }
 
 /// Log the bwrap command (no-op when logging is disabled).
@@ -297,7 +298,7 @@ pub fn run_generator_script(
     let temp_passwd = create_temp_passwd(out)?;
     let arguments = build_bwrap_arguments(&generator_path, prompts, out, &temp_passwd);
 
-    crate::log_debug!("run bwrap with command {}", generator_path.display());
+    log_debug!("run bwrap with command {}", generator_path.display());
     log_bwrap_command(&arguments);
 
     let env_exports = build_env_exports(out, prompts, target_type, &artifact.name);
@@ -364,7 +365,7 @@ pub fn run_generator_script_with_path(
     let temp_passwd = create_temp_passwd(out)?;
     let arguments = build_bwrap_arguments(&resolved_generator_path, prompts, out, &temp_passwd);
 
-    crate::log_debug!(
+    log_debug!(
         "run shared generator bwrap with command {}",
         resolved_generator_path.display()
     );

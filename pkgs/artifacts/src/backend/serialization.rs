@@ -37,6 +37,7 @@ use crate::backend::output_capture::{
 use crate::backend::tempfile::TempFile;
 use crate::config::backend::{BackendConfiguration, BackendEntry};
 use crate::config::make::{ArtifactDef, MakeConfiguration};
+use crate::log_debug;
 use anyhow::{bail, Context, Result};
 use serde_json::{json, to_string_pretty, Map, Value};
 use std::fs;
@@ -84,9 +85,9 @@ fn handle_check_output(
         Ok(out) => {
             let needs_generation = !out.exit_success;
             if out.exit_success {
-                crate::log_debug!("OK -> skipping generation");
+                log_debug!("OK -> skipping generation");
             } else {
-                crate::log_debug!("needs generation");
+                log_debug!("needs generation");
             }
             Ok(CheckResult {
                 needs_generation,
@@ -97,7 +98,7 @@ fn handle_check_output(
             script_name: name,
             timeout_secs,
         }) => {
-            crate::log_debug!(
+            log_debug!(
                 "{} timed out after {}s for {}",
                 name,
                 timeout_secs,
@@ -566,7 +567,7 @@ pub fn run_shared_serialize(
     let (_, machines_file) = build_machines_json(make, nixos_targets, backend_name)?;
     let (_, users_file) = build_users_json(make, home_targets, backend_name)?;
 
-    crate::log_debug!(
+    log_debug!(
         "running shared_serialize: artifact=\"{}\" out=\"{}\" machines=\"{}\" users=\"{}\"",
         artifact_name,
         out.display(),
@@ -654,7 +655,7 @@ pub fn run_check_serialization(
         script_path,
     )?;
 
-    crate::log_debug!(
+    log_debug!(
         "running {}: env inputs=\"{}\" {}=\"{}\" artifact=\"{}\" {}",
         script_info.script_name,
         inputs.display(),
@@ -744,7 +745,7 @@ pub fn run_shared_check_serialization(
     let (_, machines_file) = build_machines_json(make, nixos_targets, backend_name)?;
     let (_, users_file) = build_users_json(make, home_targets, backend_name)?;
 
-    crate::log_debug!(
+    log_debug!(
         "running shared_check_serialization: artifact=\"{}\" machines=\"{}\" users=\"{}\"",
         artifact_name,
         machines_file.display(),

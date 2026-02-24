@@ -32,6 +32,7 @@ use crate::tui::{
     TerminalEventSource, TerminalGuard, build_filtered_model, install_panic_hook, run_async,
     validate_model_capabilities,
 };
+use crate::log_info;
 use anyhow::{Context, Result};
 use clap::Parser;
 use std::path::{Path, PathBuf};
@@ -158,8 +159,7 @@ async fn run_tui(
         let log_file_enabled = cli.is_logging_enabled();
 
         if log_file_enabled {
-            // When --log-file provided, message goes to log file only via log_info! macro
-            crate::log_info!("No artifacts found matching the specified filters");
+            log_info!("No artifacts found matching the specified filters");
             // No stdout output when logging to file
         } else {
             // No log file, print to stdout
@@ -175,10 +175,9 @@ async fn run_tui(
     let mut terminal_guard = TerminalGuard::new().context("Failed to initialize terminal")?;
 
     // Log TUI startup with entry count
-    crate::log_info!("Starting run_tui with {} entries", model.entries.len());
+    log_info!("Starting run_tui with {} entries", model.entries.len());
 
-    // Log before running async TUI
-    crate::log_info!("About to call run_async");
+    log_info!("About to call run_async");
 
     // Run the TUI asynchronously with terminal event source
     let mut events = TerminalEventSource::default();
