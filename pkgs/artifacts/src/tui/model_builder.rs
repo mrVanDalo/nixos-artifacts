@@ -8,7 +8,6 @@ use crate::config::make::MakeConfiguration;
 /// Build the initial Model from a MakeConfiguration.
 /// This extracts all artifacts from both nixos and home configurations.
 pub fn build_model(make: &MakeConfiguration) -> Model {
-    let mut artifacts = Vec::new();
     let mut entries = Vec::new();
 
     // Get shared artifacts - these will be represented once in the list
@@ -29,7 +28,6 @@ pub fn build_model(make: &MakeConfiguration) -> Model {
                     step_logs: StepLogs::default(),
                     exists: false,
                 };
-                artifacts.push(entry.clone());
                 entries.push(ListEntry::Single(entry));
             }
         }
@@ -46,7 +44,6 @@ pub fn build_model(make: &MakeConfiguration) -> Model {
                     step_logs: StepLogs::default(),
                     exists: false,
                 };
-                artifacts.push(entry.clone());
                 entries.push(ListEntry::Single(entry));
             }
         }
@@ -78,13 +75,6 @@ pub fn build_model(make: &MakeConfiguration) -> Model {
         }));
     }
 
-    // Sort artifacts by target then name for consistent ordering (legacy)
-    artifacts.sort_by(|a, b| {
-        let a_target = a.target_type.target_name().unwrap_or("shared");
-        let b_target = b.target_type.target_name().unwrap_or("shared");
-        (a_target, &a.artifact.name).cmp(&(b_target, &b.artifact.name))
-    });
-
     // Sort entries: shared first (by name), then single by target/name
     entries.sort_by(|a, b| match (a, b) {
         (ListEntry::Shared(sa), ListEntry::Shared(sb)) => {
@@ -101,7 +91,6 @@ pub fn build_model(make: &MakeConfiguration) -> Model {
 
     Model {
         screen: Screen::ArtifactList,
-        artifacts,
         entries,
         selected_index: 0,
         selected_log_step: LogStep::default(),
@@ -181,40 +170,9 @@ pub fn build_filtered_model(
         return model;
     }
 
-    // Filter artifacts (legacy field)
-    model.artifacts.retain(|entry| {
-        // Target filtering: when a specific target type filter is provided,
-        // only include entries of that type that match
-        let target_matches = match &entry.target_type {
-            TargetType::NixOS { machine } => {
-                if !machines.is_empty() {
-                    machines.contains(machine)
-                } else {
-                    // If only home_users is specified, exclude NixOS entries
-                    home_users.is_empty()
-                }
-            }
-            TargetType::HomeManager { username } => {
-                if !home_users.is_empty() {
-                    home_users.contains(username)
-                } else {
-                    // If only machines is specified, exclude home entries
-                    machines.is_empty()
-                }
-            }
-            TargetType::Shared { .. } => false, // Shared artifacts not in legacy field
-        };
-
-        let artifact_matches =
-            artifact_names.is_empty() || artifact_names.contains(&entry.artifact.name);
-
-        target_matches && artifact_matches
-    });
-
-    // Filter entries (unified field)
+    // Filter entries
     model.entries.retain(|entry| match entry {
         ListEntry::Single(single) => {
-            // Same filtering logic as artifacts above
             let target_matches = match &single.target_type {
                 TargetType::NixOS { machine } => {
                     if !machines.is_empty() {
@@ -379,7 +337,7 @@ mod tests {
         let config = make_test_config();
         let model = build_model(&config);
 
-        assert_eq!(model.artifacts.len(), 3);
+        assert_eq!(model.entries.len(), 3);
         assert_eq!(model.selected_index, 0);
         assert!(matches!(model.screen, Screen::ArtifactList));
     }
@@ -390,9 +348,9 @@ mod tests {
         let model = build_model(&config);
 
         // Should be sorted: alice@desktop/gpg-key, machine-one/ssh-key, machine-two/api-token
-        assert_eq!(model.artifacts[0].target_type.target_name().unwrap(), "alice@desktop");
-        assert_eq!(model.artifacts[1].target_type.target_name().unwrap(), "machine-one");
-        assert_eq!(model.artifacts[2].target_type.target_name().unwrap(), "machine-two");
+        assert_eq!(model.entries[0].target_type().target_name().unwrap(), "alice@desktop");
+        assert_eq!(model.entries[1].target_type().target_name().unwrap(), "machine-one");
+        assert_eq!(model.entries[2].target_type().target_name().unwrap(), "machine-two");
     }
 
     #[test]
@@ -400,8 +358,11 @@ mod tests {
         let config = make_test_config();
         let model = build_filtered_model(&config, &["machine-one".to_string()], &[], &[]);
 
-        assert_eq!(model.artifacts.len(), 1);
-        assert_eq!(model.artifacts[0].artifact.name, "ssh-key");
+        assert_eq!(model.entries.len(), 1);
+        match &model.entries[0] {
+            ListEntry::Single(entry) => assert_eq!(entry.artifact.name, "ssh-key"),
+            _ => panic!("Expected Single entry"),
+        }
     }
 
     #[test]
@@ -409,8 +370,11 @@ mod tests {
         let config = make_test_config();
         let model = build_filtered_model(&config, &[], &["alice@desktop".to_string()], &[]);
 
-        assert_eq!(model.artifacts.len(), 1);
-        assert_eq!(model.artifacts[0].artifact.name, "gpg-key");
+        assert_eq!(model.entries.len(), 1);
+        match &model.entries[0] {
+            ListEntry::Single(entry) => assert_eq!(entry.artifact.name, "gpg-key"),
+            _ => panic!("Expected Single entry"),
+        }
     }
 
     #[test]
@@ -418,8 +382,8 @@ mod tests {
         let config = make_test_config();
         let model = build_filtered_model(&config, &[], &[], &["ssh-key".to_string()]);
 
-        assert_eq!(model.artifacts.len(), 1);
-        assert_eq!(model.artifacts[0].target_type.target_name().unwrap(), "machine-one");
+        assert_eq!(model.entries.len(), 1);
+        assert_eq!(model.entries[0].target_type().target_name().unwrap(), "machine-one");
     }
 
     #[test]
@@ -427,7 +391,7 @@ mod tests {
         let config = make_test_config();
         let model = build_filtered_model(&config, &[], &[], &[]);
 
-        assert_eq!(model.artifacts.len(), 3);
+        assert_eq!(model.entries.len(), 3);
     }
 
     fn make_shared_artifact(name: &str) -> ArtifactDef {
@@ -508,10 +472,6 @@ mod tests {
     fn test_build_model_with_shared_artifacts() {
         let config = make_test_config_with_shared();
         let model = build_model(&config);
-
-        // Should have 2 non-shared artifacts (unique-one, unique-two)
-        // Shared artifacts are excluded from the legacy `artifacts` field
-        assert_eq!(model.artifacts.len(), 2);
 
         // entries should have 3 items: 1 shared + 2 unique
         assert_eq!(model.entries.len(), 3);

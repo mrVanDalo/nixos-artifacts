@@ -60,7 +60,6 @@ fn make_test_model_with_existing_artifact() -> Model {
 
     Model {
         screen: Screen::ArtifactList,
-        artifacts: vec![entry.clone()],
         entries: vec![ListEntry::Single(entry)],
         selected_index: 0,
         selected_log_step: Default::default(),
@@ -83,7 +82,6 @@ fn make_test_model_with_new_artifact() -> Model {
 
     Model {
         screen: Screen::ArtifactList,
-        artifacts: vec![entry.clone()],
         entries: vec![ListEntry::Single(entry)],
         selected_index: 0,
         selected_log_step: Default::default(),
@@ -122,7 +120,6 @@ fn make_test_model_with_shared_artifact(exists: bool) -> Model {
 
     Model {
         screen: Screen::ArtifactList,
-        artifacts: vec![],
         entries: vec![ListEntry::Shared(shared_entry)],
         selected_index: 0,
         selected_log_step: Default::default(),
@@ -468,7 +465,6 @@ fn test_dialog_regenerate_proceeds_to_prompts() {
             affected_targets: vec!["machine-one".to_string()],
             leave_selected: false,
         }),
-        artifacts: vec![entry.clone()],
         entries: vec![ListEntry::Single(entry)],
         selected_index: 0,
         selected_log_step: Default::default(),
@@ -775,7 +771,6 @@ fn test_dialog_appears_only_for_needs_generation() {
 
     let model = Model {
         screen: Screen::ArtifactList,
-        artifacts: vec![entry.clone()],
         entries: vec![ListEntry::Single(entry)],
         selected_index: 0,
         selected_log_step: Default::default(),
@@ -823,7 +818,6 @@ fn test_dialog_with_many_targets_truncation() {
     let shared = make_shared_entry(true);
     let model = Model {
         screen: Screen::ArtifactList,
-        artifacts: vec![],
         entries: vec![ListEntry::Shared(shared)],
         selected_index: 0,
         selected_log_step: Default::default(),

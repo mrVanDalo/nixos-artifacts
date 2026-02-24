@@ -100,7 +100,6 @@ fn create_test_model(artifact_name: &str, has_prompts: bool) -> Model {
 
     Model {
         screen: Screen::ArtifactList,
-        artifacts: vec![entry.clone()],
         entries: vec![ListEntry::Single(entry)],
         selected_index: 0,
         selected_log_step: Default::default(),
@@ -690,7 +689,6 @@ fn test_batch_effect_processing() {
 
     let mut model = Model {
         screen: Screen::ArtifactList,
-        artifacts: vec![entry1.clone(), entry2.clone()],
         entries: vec![ListEntry::Single(entry1), ListEntry::Single(entry2)],
         selected_index: 0,
         selected_log_step: Default::default(),

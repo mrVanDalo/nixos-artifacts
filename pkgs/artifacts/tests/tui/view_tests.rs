@@ -80,16 +80,20 @@ impl ArtifactListState {
             selected_index: model.selected_index,
             selected_log_step: model.selected_log_step.label(),
             artifacts: model
-                .artifacts
+                .entries
                 .iter()
-                .map(|a| ArtifactSnapshot {
-                    target: a.target_type.target_name().unwrap_or("shared").to_string(),
-                    target_type: a.target_type.context_str(),
-                    name: a.artifact.name.clone(),
-                    status: format!("{:?}", a.status),
-                    has_logs: !a.step_logs.check.is_empty()
-                        || !a.step_logs.generate.is_empty()
-                        || !a.step_logs.serialize.is_empty(),
+                .map(|e| ArtifactSnapshot {
+                    target: e
+                        .target_type()
+                        .target_name()
+                        .unwrap_or("shared")
+                        .to_string(),
+                    target_type: e.target_type().context_str(),
+                    name: e.artifact_name().to_string(),
+                    status: format!("{:?}", e.status()),
+                    has_logs: !e.step_logs().check.is_empty()
+                        || !e.step_logs().generate.is_empty()
+                        || !e.step_logs().serialize.is_empty(),
                 })
                 .collect(),
             error: model.error.clone(),
@@ -294,7 +298,6 @@ fn make_test_model() -> Model {
 
     Model {
         screen: Screen::ArtifactList,
-        artifacts: vec![entry1.clone(), entry2.clone(), entry3.clone()],
         entries: vec![
             ListEntry::Single(entry1),
             ListEntry::Single(entry2),
@@ -308,13 +311,16 @@ fn make_test_model() -> Model {
     }
 }
 
-// Helper to sync changes from artifacts to entries (for tests that modify artifacts directly)
-fn sync_artifacts_to_entries(model: &mut Model) {
-    for (i, artifact) in model.artifacts.iter().enumerate() {
-        if let Some(ListEntry::Single(entry)) = model.entries.get_mut(i) {
-            entry.status = artifact.status.clone();
-            entry.step_logs = artifact.step_logs.clone();
-        }
+// Helper to update entry status and logs (for tests that modify entries directly)
+fn set_entry_status(entries: &mut [ListEntry], index: usize, status: ArtifactStatus) {
+    if let Some(entry) = entries.get_mut(index) {
+        *entry.status_mut() = status;
+    }
+}
+
+fn add_log_entry(entries: &mut [ListEntry], index: usize, step: LogStep, entry: LogEntry) {
+    if let Some(entry_logs) = entries.get_mut(index) {
+        entry_logs.step_logs_mut().get_mut(step).push(entry);
     }
 }
 
@@ -348,31 +354,51 @@ fn test_artifact_list_with_selection() {
     model.selected_log_step = LogStep::Generate;
 
     // Add realistic logs for the selected artifact (api-token)
-    model.artifacts[1].step_logs.check = vec![LogEntry {
-        level: LogLevel::Success,
-        message: "Already up to date".to_string(),
-    }];
-    model.artifacts[1].step_logs.generate = vec![
+    add_log_entry(
+        &mut model.entries,
+        1,
+        LogStep::Check,
+        LogEntry {
+            level: LogLevel::Success,
+            message: "Already up to date".to_string(),
+        },
+    );
+    add_log_entry(
+        &mut model.entries,
+        1,
+        LogStep::Generate,
         LogEntry {
             level: LogLevel::Output,
             message: "Generating API token...".to_string(),
         },
+    );
+    add_log_entry(
+        &mut model.entries,
+        1,
+        LogStep::Generate,
         LogEntry {
             level: LogLevel::Output,
             message: "Token generated successfully".to_string(),
         },
+    );
+    add_log_entry(
+        &mut model.entries,
+        1,
+        LogStep::Generate,
         LogEntry {
             level: LogLevel::Success,
             message: "Generated 1 file(s)".to_string(),
         },
-    ];
-    model.artifacts[1].step_logs.serialize = vec![LogEntry {
-        level: LogLevel::Success,
-        message: "Serialized to backend".to_string(),
-    }];
-
-    // Sync changes to entries (used for rendering)
-    sync_artifacts_to_entries(&mut model);
+    );
+    add_log_entry(
+        &mut model.entries,
+        1,
+        LogStep::Serialize,
+        LogEntry {
+            level: LogLevel::Success,
+            message: "Serialized to backend".to_string(),
+        },
+    );
 
     let backend = TestBackend::new(70, 10);
     let mut terminal = Terminal::new(backend).unwrap();
@@ -393,33 +419,7 @@ fn test_artifact_list_with_selection() {
 fn test_artifact_list_with_failed_status() {
     let mut model = make_test_model();
 
-    // Update artifacts (legacy field)
-    model.artifacts[0].status = ArtifactStatus::Failed {
-        error: "Generator script exited with code 1".to_string(),
-        output: String::new(),
-        retry_available: true,
-    };
-    model.selected_log_step = LogStep::Generate;
-    model.artifacts[0].step_logs.check = vec![LogEntry {
-        level: LogLevel::Info,
-        message: "Artifact needs regeneration".to_string(),
-    }];
-    model.artifacts[0].step_logs.generate = vec![
-        LogEntry {
-            level: LogLevel::Output,
-            message: "Generating SSH key pair...".to_string(),
-        },
-        LogEntry {
-            level: LogLevel::Error,
-            message: "ssh-keygen: permission denied".to_string(),
-        },
-        LogEntry {
-            level: LogLevel::Error,
-            message: "Generator failed: exit code 1".to_string(),
-        },
-    ];
-
-    // Update entries (current field used for rendering)
+    // Update entries (field used for rendering)
     if let ListEntry::Single(ref mut entry) = model.entries[0] {
         entry.status = ArtifactStatus::Failed {
             error: "Generator script exited with code 1".to_string(),
@@ -445,6 +445,7 @@ fn test_artifact_list_with_failed_status() {
             },
         ];
     }
+    model.selected_log_step = LogStep::Generate;
 
     let backend = TestBackend::new(70, 10);
     let mut terminal = Terminal::new(backend).unwrap();
@@ -755,12 +756,6 @@ fn test_multiple_machines_before_generate_all() {
 
     let model = Model {
         screen: Screen::ArtifactList,
-        artifacts: vec![
-            entry1.clone(),
-            entry2.clone(),
-            entry3.clone(),
-            entry4.clone(),
-        ],
         entries: vec![
             ListEntry::Single(entry1),
             ListEntry::Single(entry2),
@@ -830,12 +825,6 @@ fn test_multiple_machines_after_generate_all() {
 
     let model = Model {
         screen: Screen::ArtifactList,
-        artifacts: vec![
-            entry1.clone(),
-            entry2.clone(),
-            entry3.clone(),
-            entry4.clone(),
-        ],
         entries: vec![
             ListEntry::Single(entry1),
             ListEntry::Single(entry2),
@@ -902,7 +891,7 @@ fn test_artifact_list_with_shared_artifacts() {
 
     let model = Model {
         screen: Screen::ArtifactList,
-        artifacts: vec![single_entry.clone()],
+
         entries: vec![
             ListEntry::Shared(shared_entry), // Shared artifacts sorted first
             ListEntry::Single(single_entry),
@@ -962,7 +951,7 @@ fn test_shared_artifact_pending_status() {
 
     let model = Model {
         screen: Screen::ArtifactList,
-        artifacts: vec![],
+
         entries: vec![ListEntry::Shared(shared_entry)],
         selected_index: 0,
         selected_log_step: LogStep::default(),
@@ -992,7 +981,7 @@ fn test_shared_artifact_needs_generation_status() {
 
     let model = Model {
         screen: Screen::ArtifactList,
-        artifacts: vec![],
+
         entries: vec![ListEntry::Shared(shared_entry)],
         selected_index: 0,
         selected_log_step: LogStep::default(),
@@ -1022,7 +1011,7 @@ fn test_shared_artifact_up_to_date_status() {
 
     let model = Model {
         screen: Screen::ArtifactList,
-        artifacts: vec![],
+
         entries: vec![ListEntry::Shared(shared_entry)],
         selected_index: 0,
         selected_log_step: LogStep::default(),
@@ -1067,7 +1056,7 @@ fn test_shared_artifact_failed_runtime_error() {
 
     let model = Model {
         screen: Screen::ArtifactList,
-        artifacts: vec![],
+
         entries: vec![ListEntry::Shared(shared_entry)],
         selected_index: 0,
         selected_log_step: LogStep::Check,
@@ -1107,7 +1096,7 @@ fn test_shared_artifact_failed_config_error() {
 
     let model = Model {
         screen: Screen::ArtifactList,
-        artifacts: vec![],
+
         entries: vec![ListEntry::Shared(shared_entry)],
         selected_index: 0,
         selected_log_step: LogStep::Check,
@@ -1574,7 +1563,6 @@ mod model_tests {
 
         Model {
             screen: Screen::ArtifactList,
-            artifacts: vec![], // legacy field
             entries,
             selected_index: 0,
             selected_log_step: LogStep::default(),
@@ -1621,13 +1609,49 @@ mod model_tests {
     }
 
     #[test]
-    fn test_tab_cycles_log_step() {
-        let model = make_test_model();
-        let events = vec![
-            Message::Key(KeyEvent::tab()),
-            Message::Key(KeyEvent::tab()),
-            Message::Key(KeyEvent::tab()),
-        ];
+    fn test_artifact_list_with_failed_status() {
+        let mut model = make_test_model();
+        set_entry_status(
+            &mut model.entries,
+            0,
+            ArtifactStatus::Failed {
+                error: "Generator failed with exit code 1".to_string(),
+                output: "Error: Missing required prompt value".to_string(),
+                retry_available: true,
+            },
+        );
+
+        // Add logs for the failed artifact
+        add_log_entry(
+            &mut model.entries,
+            0,
+            LogStep::Check,
+            LogEntry {
+                level: LogLevel::Success,
+                message: "Needs generation".to_string(),
+            },
+        );
+        add_log_entry(
+            &mut model.entries,
+            0,
+            LogStep::Generate,
+            LogEntry {
+                level: LogLevel::Output,
+                message: "Starting generator...".to_string(),
+            },
+        );
+        add_log_entry(
+            &mut model.entries,
+            0,
+            LogStep::Generate,
+            LogEntry {
+                level: LogLevel::Error,
+                message: "Error: Missing required prompt value".to_string(),
+            },
+        );
+
+        // Navigate to see logs
+        let events = vec![Message::Key(KeyEvent::enter())];
 
         let captures = run_event_sequence(model, events);
 

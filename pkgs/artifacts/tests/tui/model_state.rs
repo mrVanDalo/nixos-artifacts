@@ -128,7 +128,6 @@ mod tests {
     fn test_model_state_from_empty_model() {
         let model = Model {
             screen: Screen::ArtifactList,
-            artifacts: vec![],
             entries: vec![],
             selected_index: 0,
             selected_log_step: LogStep::default(),
@@ -167,7 +166,6 @@ mod tests {
                 log_lines: vec![],
                 exists: false,
             }),
-            artifacts: vec![entry.clone()],
             entries: vec![ListEntry::Single(entry)],
             selected_index: 0,
             selected_log_step: LogStep::Generate,

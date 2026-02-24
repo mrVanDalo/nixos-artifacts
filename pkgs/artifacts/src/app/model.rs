@@ -26,8 +26,6 @@ use std::collections::{HashMap, HashSet};
 pub struct Model {
     /// Current screen being displayed (determines what view renders)
     pub screen: Screen,
-    /// Legacy field - list of per-target artifacts (kept for backward compatibility)
-    pub artifacts: Vec<ArtifactEntry>,
     /// Unified list of entries displayed in the artifact list
     /// Contains both single artifacts and shared artifacts
     pub entries: Vec<ListEntry>,

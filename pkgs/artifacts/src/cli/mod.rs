@@ -193,14 +193,22 @@ async fn run_tui(
         Ok(run_result) => {
             let failed: Vec<_> = run_result
                 .final_model
-                .artifacts
+                .entries
                 .iter()
-                .filter_map(|a| match &a.status {
-                    crate::app::model::ArtifactStatus::Failed { error, .. } => {
-                        let target = a.target_type.target_name().unwrap_or("unknown");
-                        Some(format!("{}/{}: {}", target, a.artifact.name, error))
-                    }
-                    _ => None,
+                .filter_map(|entry| match entry {
+                    crate::app::model::ListEntry::Single(a) => match &a.status {
+                        crate::app::model::ArtifactStatus::Failed { error, .. } => {
+                            let target = a.target_type.target_name().unwrap_or("unknown");
+                            Some(format!("{}/{}: {}", target, a.artifact.name, error))
+                        }
+                        _ => None,
+                    },
+                    crate::app::model::ListEntry::Shared(s) => match &s.status {
+                        crate::app::model::ArtifactStatus::Failed { error, .. } => {
+                            Some(format!("shared/{}: {}", s.info.artifact_name, error))
+                        }
+                        _ => None,
+                    },
                 })
                 .collect();
 

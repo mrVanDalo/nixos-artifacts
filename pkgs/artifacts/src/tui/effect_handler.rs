@@ -1,5 +1,5 @@
 use crate::app::message::{CheckOutput, GeneratorOutput, Message, SerializeOutput};
-use crate::app::model::{ArtifactEntry, Model, TargetType};
+use crate::app::model::{ArtifactEntry, ListEntry, Model, TargetType};
 use crate::app::Effect;
 use crate::backend::generator::{run_generator_script, verify_generated_files};
 use crate::backend::output_capture::{CapturedOutput, OutputStream};
@@ -187,9 +187,22 @@ impl EffectHandler for BackendEffectHandler {
                 target,
                 target_type,
             } => {
-                let entry = &model.artifacts[artifact_index];
+                let entry = match &model.entries[artifact_index] {
+                    ListEntry::Single(entry) => entry.clone(),
+                    ListEntry::Shared(_) => {
+                        return Ok(vec![Message::CheckSerializationResult {
+                            artifact_index,
+                            needs_generation: false,
+                            exists: false,
+                            result: Err(
+                                "CheckSerialization effect called on shared artifact".to_string()
+                            ),
+                            output: None,
+                        }]);
+                    }
+                };
                 let (needs_generation, exists, result, output) =
-                    self.check_if_artifact_needs_generation(entry, &target, target_type);
+                    self.check_if_artifact_needs_generation(&entry, &target, target_type);
 
                 Ok(vec![Message::CheckSerializationResult {
                     artifact_index,
@@ -207,9 +220,17 @@ impl EffectHandler for BackendEffectHandler {
                 target_type,
                 prompts,
             } => {
-                let entry = &model.artifacts[artifact_index];
+                let entry = match &model.entries[artifact_index] {
+                    ListEntry::Single(entry) => entry.clone(),
+                    ListEntry::Shared(_) => {
+                        return Ok(vec![Message::GeneratorFinished {
+                            artifact_index,
+                            result: Err("RunGenerator effect called on shared artifact".to_string()),
+                        }]);
+                    }
+                };
                 let result = self.run_generator_and_store_output(
-                    entry,
+                    &entry,
                     &artifact_name,
                     &target,
                     target_type,
@@ -229,9 +250,17 @@ impl EffectHandler for BackendEffectHandler {
                 target_type,
                 out_dir: _,
             } => {
-                let entry = &model.artifacts[artifact_index];
+                let entry = match &model.entries[artifact_index] {
+                    ListEntry::Single(entry) => entry.clone(),
+                    ListEntry::Shared(_) => {
+                        return Ok(vec![Message::SerializeFinished {
+                            artifact_index,
+                            result: Err("Serialize effect called on shared artifact".to_string()),
+                        }]);
+                    }
+                };
                 let result =
-                    self.serialize_generated_output_to_backend(entry, &target, target_type);
+                    self.serialize_generated_output_to_backend(&entry, &target, target_type);
 
                 Ok(vec![Message::SerializeFinished {
                     artifact_index,

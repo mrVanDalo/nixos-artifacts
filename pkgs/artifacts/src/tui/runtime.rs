@@ -803,7 +803,6 @@ mod tests {
 
         Model {
             screen: Screen::ArtifactList,
-            artifacts: vec![entry1.clone(), entry2.clone()],
             entries: vec![ListEntry::Single(entry1), ListEntry::Single(entry2)],
             selected_index: 0,
             selected_log_step: LogStep::default(),
