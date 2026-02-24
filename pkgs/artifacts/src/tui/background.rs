@@ -35,6 +35,22 @@ use crate::tui::channels::{EffectCommand, EffectResult, OutputStream, ScriptOutp
 /// Allows 30s for script execution + 5s buffer for cleanup
 pub const BACKGROUND_TASK_TIMEOUT: Duration = Duration::from_secs(35);
 
+/// Result of running a blocking operation with timeout.
+///
+/// This enum represents all possible outcomes of a spawn_blocking operation
+/// wrapped with a timeout, capturing success, operation failure, task panic,
+/// or timeout scenarios.
+enum TimeoutResult<T> {
+    /// Operation completed successfully
+    Success(T),
+    /// Operation returned an error
+    OperationFailed(String),
+    /// The spawned task panicked
+    TaskPanic(String),
+    /// The operation timed out
+    Timeout,
+}
+
 /// Handler that executes effects in the background task.
 ///
 /// This struct is created once and lives in the background task.
@@ -86,6 +102,802 @@ impl BackgroundEffectHandler {
         }
     }
 
+    // -------------------------------------------------------------------------
+    // Utility Methods
+    // -------------------------------------------------------------------------
+
+    /// Parse target type string into TargetType enum.
+    fn target_type_from_str(target_type: &str, target: &str) -> TargetType {
+        if target_type == "home" {
+            TargetType::HomeManager { username: target.to_string() }
+        } else {
+            TargetType::NixOS { machine: target.to_string() }
+        }
+    }
+
+    /// Look up an artifact definition in either nixos_map or home_map.
+    fn lookup_artifact(&self, target: &str, artifact_name: &str) -> Option<ArtifactDef> {
+        self.make
+            .nixos_map
+            .get(target)
+            .and_then(|m| m.get(artifact_name))
+            .or_else(|| {
+                self.make
+                    .home_map
+                    .get(target)
+                    .and_then(|m| m.get(artifact_name))
+            })
+            .cloned()
+    }
+
+    /// Create a temporary directory with a descriptive error message on failure.
+    fn create_temp_dir(purpose: &str) -> Result<tempfile::TempDir, String> {
+        tempfile::TempDir::new()
+            .map_err(|e| format!("Failed to create {} directory: {}", purpose, e))
+    }
+
+    /// Write prompt values to files in the specified directory.
+    ///
+    /// Each prompt is written to a file named after the prompt key.
+    fn write_prompts_to_dir(prompts: &HashMap<String, String>, dir: &std::path::Path) -> Result<(), String> {
+        for (name, value) in prompts {
+            let prompt_file = dir.join(name);
+            std::fs::write(&prompt_file, value)
+                .map_err(|e| format!("Failed to write prompt file '{}': {}", name, e))?;
+        }
+        Ok(())
+    }
+
+    /// Run a blocking operation with a timeout and proper error handling.
+    ///
+    /// This wraps spawn_blocking with a timeout and converts all error cases
+    /// (operation failure, task panic, timeout) into TimeoutResult variants.
+    async fn run_with_timeout<F, T>(
+        artifact_name: &str,
+        operation_name: &str,
+        operation: F,
+    ) -> TimeoutResult<T>
+    where
+        F: FnOnce() -> anyhow::Result<T> + Send + 'static,
+        T: Send + 'static,
+    {
+        let result = timeout(
+            BACKGROUND_TASK_TIMEOUT,
+            tokio::task::spawn_blocking(operation),
+        )
+        .await;
+
+        match result {
+            Ok(Ok(Ok(value))) => TimeoutResult::Success(value),
+            Ok(Ok(Err(e))) => {
+                log(&format!(
+                    "[ERROR] {} failed for {}: {}",
+                    operation_name, artifact_name, e
+                ));
+                TimeoutResult::OperationFailed(e.to_string())
+            }
+            Ok(Err(e)) => {
+                log(&format!(
+                    "[ERROR] {} task panicked for {}: {}",
+                    operation_name, artifact_name, e
+                ));
+                TimeoutResult::TaskPanic(e.to_string())
+            }
+            Err(_) => {
+                log(&format!(
+                    "[ERROR] {} timed out for {} after {} seconds",
+                    operation_name,
+                    artifact_name,
+                    BACKGROUND_TASK_TIMEOUT.as_secs()
+                ));
+                TimeoutResult::Timeout
+            }
+        }
+    }
+
+    /// Create a ScriptOutput for a timeout error.
+    fn timeout_output() -> ScriptOutput {
+        ScriptOutput::from_message(&format!(
+            "Timed out after {} seconds",
+            BACKGROUND_TASK_TIMEOUT.as_secs()
+        ))
+    }
+
+    // -------------------------------------------------------------------------
+    // Effect Handler Methods
+    // -------------------------------------------------------------------------
+
+    /// Handle CheckSerialization command.
+    async fn execute_check_serialization(
+        &self,
+        artifact_index: usize,
+        artifact_name: String,
+        target: String,
+        target_type: String,
+    ) -> EffectResult {
+        let artifact = match self.lookup_artifact(&target, &artifact_name) {
+            Some(a) => a,
+            None => {
+                return EffectResult::CheckSerialization {
+                    artifact_index,
+                    needs_generation: true,
+                    exists: false,
+                    output: ScriptOutput::from_message(&format!(
+                        "Artifact '{}' not found for target '{}'",
+                        artifact_name, target
+                    )),
+                };
+            }
+        };
+
+        let backend = self.backend.clone();
+        let make = self.make.clone();
+        let target_type_enum = Self::target_type_from_str(&target_type, &target);
+
+        let result = Self::run_with_timeout(
+            &artifact_name,
+            "CheckSerialization",
+            move || {
+                backend::serialization::run_check_serialization(
+                    &artifact, &target_type_enum, &backend, &make,
+                )
+            },
+        )
+        .await;
+
+        match result {
+            TimeoutResult::Success(check_result) => EffectResult::CheckSerialization {
+                artifact_index,
+                needs_generation: check_result.needs_generation,
+                exists: if check_result.output.exit_success {
+                    true
+                } else {
+                    check_result.output.lines.iter().any(|line| line.content.contains("EXISTS"))
+                },
+                output: ScriptOutput::from_captured(&check_result.output),
+            },
+            TimeoutResult::OperationFailed(e) => EffectResult::CheckSerialization {
+                artifact_index,
+                needs_generation: true,
+                exists: false,
+                output: ScriptOutput::from_message(&format!("Check failed: {}", e)),
+            },
+            TimeoutResult::TaskPanic(e) => EffectResult::CheckSerialization {
+                artifact_index,
+                needs_generation: true,
+                exists: false,
+                output: ScriptOutput::from_message(&format!("Task panicked: {}", e)),
+            },
+            TimeoutResult::Timeout => EffectResult::CheckSerialization {
+                artifact_index,
+                needs_generation: true,
+                exists: false,
+                output: Self::timeout_output(),
+            },
+        }
+    }
+
+    /// Handle RunGenerator command.
+    async fn execute_run_generator(
+        &mut self,
+        artifact_index: usize,
+        artifact_name: String,
+        target: String,
+        target_type: String,
+        prompts: HashMap<String, String>,
+    ) -> EffectResult {
+        let artifact = match self.lookup_artifact(&target, &artifact_name) {
+            Some(a) => a,
+            None => {
+                return EffectResult::GeneratorFinished {
+                    artifact_index,
+                    success: false,
+                    output: ScriptOutput::default(),
+                    error: Some(format!(
+                        "Artifact '{}' not found for target '{}'",
+                        artifact_name, target
+                    )),
+                };
+            }
+        };
+
+        let temp_dir = match Self::create_temp_dir("output") {
+            Ok(dir) => dir,
+            Err(e) => {
+                return EffectResult::GeneratorFinished {
+                    artifact_index,
+                    success: false,
+                    output: ScriptOutput::default(),
+                    error: Some(e),
+                };
+            }
+        };
+        let output_path = temp_dir.path().to_path_buf();
+
+        let prompts_dir = match Self::create_temp_dir("prompts") {
+            Ok(dir) => dir,
+            Err(e) => {
+                return EffectResult::GeneratorFinished {
+                    artifact_index,
+                    success: false,
+                    output: ScriptOutput::default(),
+                    error: Some(e),
+                };
+            }
+        };
+
+        if let Err(e) = Self::write_prompts_to_dir(&prompts, prompts_dir.path()) {
+            return EffectResult::GeneratorFinished {
+                artifact_index,
+                success: false,
+                output: ScriptOutput::default(),
+                error: Some(e),
+            };
+        }
+
+        let target_type_enum = Self::target_type_from_str(&target_type, &target);
+        let prompts_path = prompts_dir.path().to_path_buf();
+        let make_base = self.make.make_base.clone();
+        let artifact_for_verify = artifact.clone();
+        let output_path_for_verify = output_path.clone();
+
+        let result = Self::run_with_timeout(
+            &artifact_name,
+            "Generator",
+            move || {
+                backend::generator::run_generator_script(
+                    &artifact,
+                    &target_type_enum,
+                    &make_base,
+                    &prompts_path,
+                    &output_path,
+                )
+            },
+        )
+        .await;
+
+        match result {
+            TimeoutResult::Success(output) => {
+                let verify_result = backend::generator::verify_generated_files(
+                    &artifact_for_verify,
+                    &output_path_for_verify,
+                );
+                match verify_result {
+                    Ok(()) => {
+                        self.current_output_dir = Some(temp_dir);
+                        self.current_prompts = Some(prompts);
+                        std::mem::forget(prompts_dir);
+                        EffectResult::GeneratorFinished {
+                            artifact_index,
+                            success: true,
+                            output: ScriptOutput::from_captured(&output),
+                            error: None,
+                        }
+                    }
+                    Err(e) => {
+                        log(&format!(
+                            "[ERROR] Generator output verification failed for {}: {}",
+                            artifact_name, e
+                        ));
+                        EffectResult::GeneratorFinished {
+                            artifact_index,
+                            success: false,
+                            output: ScriptOutput::from_captured(&output),
+                            error: Some(format!("Verification failed: {}", e)),
+                        }
+                    }
+                }
+            }
+            TimeoutResult::OperationFailed(e) => EffectResult::GeneratorFinished {
+                artifact_index,
+                success: false,
+                output: ScriptOutput::default(),
+                error: Some(format!("Generator failed: {}", e)),
+            },
+            TimeoutResult::TaskPanic(e) => EffectResult::GeneratorFinished {
+                artifact_index,
+                success: false,
+                output: ScriptOutput::default(),
+                error: Some(format!("Task panicked: {}", e)),
+            },
+            TimeoutResult::Timeout => EffectResult::GeneratorFinished {
+                artifact_index,
+                success: false,
+                output: ScriptOutput::default(),
+                error: Some(format!(
+                    "Timed out after {} seconds",
+                    BACKGROUND_TASK_TIMEOUT.as_secs()
+                )),
+            },
+        }
+    }
+
+    /// Handle Serialize command.
+    async fn execute_serialize(
+        &mut self,
+        artifact_index: usize,
+        artifact_name: String,
+        target: String,
+        target_type: String,
+    ) -> EffectResult {
+        let output_dir = match self.current_output_dir.take() {
+            Some(dir) => dir,
+            None => {
+                return EffectResult::SerializeFinished {
+                    artifact_index,
+                    success: false,
+                    output: ScriptOutput::from_message(
+                        "No output directory from generator - RunGenerator must be called before Serialize",
+                    ),
+                    error: Some("No output directory from generator - RunGenerator must be called before Serialize".to_string()),
+                };
+            }
+        };
+
+        let artifact = match self.lookup_artifact(&target, &artifact_name) {
+            Some(a) => a,
+            None => {
+                return EffectResult::SerializeFinished {
+                    artifact_index,
+                    success: false,
+                    output: ScriptOutput::from_message(&format!(
+                        "Artifact '{}' not found for target '{}'",
+                        artifact_name, target
+                    )),
+                    error: Some(format!(
+                        "Artifact '{}' not found for target '{}'",
+                        artifact_name, target
+                    )),
+                };
+            }
+        };
+
+        let output_path = output_dir.path().to_path_buf();
+        let target_type_enum = Self::target_type_from_str(&target_type, &target);
+        let backend = self.backend.clone();
+        let make = self.make.clone();
+
+        let result = Self::run_with_timeout(
+            &artifact_name,
+            "Serialize",
+            move || {
+                backend::serialization::run_serialize(
+                    &artifact,
+                    &backend,
+                    &output_path,
+                    &target_type_enum,
+                    &make,
+                )
+            },
+        )
+        .await;
+
+        match result {
+            TimeoutResult::Success(output) => EffectResult::SerializeFinished {
+                artifact_index,
+                success: true,
+                output: ScriptOutput::from_captured(&output),
+                error: None,
+            },
+            TimeoutResult::OperationFailed(e) => EffectResult::SerializeFinished {
+                artifact_index,
+                success: false,
+                output: ScriptOutput::from_message(&format!("Serialize failed: {}", e)),
+                error: Some(format!("Serialize failed: {}", e)),
+            },
+            TimeoutResult::TaskPanic(e) => EffectResult::SerializeFinished {
+                artifact_index,
+                success: false,
+                output: ScriptOutput::from_message(&format!("Task panicked: {}", e)),
+                error: Some(format!("Task panicked: {}", e)),
+            },
+            TimeoutResult::Timeout => EffectResult::SerializeFinished {
+                artifact_index,
+                success: false,
+                output: Self::timeout_output(),
+                error: Some(format!(
+                    "Timed out after {} seconds",
+                    BACKGROUND_TASK_TIMEOUT.as_secs()
+                )),
+            },
+        }
+    }
+
+    /// Handle SharedCheckSerialization command.
+    async fn execute_shared_check_serialization(
+        &self,
+        artifact_index: usize,
+        artifact_name: String,
+        targets: Vec<String>,
+        target_types: Vec<String>,
+    ) -> EffectResult {
+        let backend = self.backend.clone();
+        let make = self.make.clone();
+
+        let mut nixos_targets = Vec::new();
+        let mut home_targets = Vec::new();
+        for (i, target) in targets.iter().enumerate() {
+            let target_type = target_types.get(i).map(|s| s.as_str()).unwrap_or("nixos");
+            if target_type == "home" {
+                home_targets.push(target.clone());
+            } else {
+                nixos_targets.push(target.clone());
+            }
+        }
+
+        let backend_name = match self.make.get_shared_artifacts().get(&artifact_name) {
+            Some(info) => info.backend_name.clone(),
+            None => {
+                let count = targets.len();
+                return EffectResult::SharedCheckSerialization {
+                    artifact_index,
+                    needs_generation: vec![true; count],
+                    exists: vec![false; count],
+                    outputs: vec![ScriptOutput::from_message(&format!(
+                        "Shared artifact '{}' not found",
+                        artifact_name
+                    )); count],
+                };
+            }
+        };
+
+        let artifact_name_for_closure = artifact_name.clone();
+        let result = Self::run_with_timeout(
+            &artifact_name,
+            "SharedCheckSerialization",
+            move || {
+                backend::serialization::run_shared_check_serialization(
+                    &artifact_name_for_closure,
+                    &backend_name,
+                    &backend,
+                    &make,
+                    &nixos_targets,
+                    &home_targets,
+                )
+            },
+        )
+        .await;
+
+        let count = targets.len();
+        match result {
+            TimeoutResult::Success(check_result) => {
+                let needs_gen = check_result.needs_generation;
+                let needs_generation = vec![needs_gen; count];
+                let exists_val = if check_result.output.exit_success {
+                    true
+                } else {
+                    check_result.output.lines.iter().any(|line| line.content.contains("EXISTS"))
+                };
+                let exists = vec![exists_val; count];
+                let outputs = vec![ScriptOutput::from_captured(&check_result.output); count];
+                EffectResult::SharedCheckSerialization {
+                    artifact_index,
+                    needs_generation,
+                    exists,
+                    outputs,
+                }
+            }
+            TimeoutResult::OperationFailed(e) => {
+                let needs_generation = vec![true; count];
+                let exists = vec![false; count];
+                let outputs = vec![ScriptOutput::from_message(&format!("Check failed: {}", e)); count];
+                EffectResult::SharedCheckSerialization {
+                    artifact_index,
+                    needs_generation,
+                    exists,
+                    outputs,
+                }
+            }
+            TimeoutResult::TaskPanic(e) => {
+                let needs_generation = vec![true; count];
+                let exists = vec![false; count];
+                let outputs = vec![ScriptOutput::from_message(&format!("Task panicked: {}", e)); count];
+                EffectResult::SharedCheckSerialization {
+                    artifact_index,
+                    needs_generation,
+                    exists,
+                    outputs,
+                }
+            }
+            TimeoutResult::Timeout => {
+                let needs_generation = vec![true; count];
+                let exists = vec![false; count];
+                let outputs = vec![Self::timeout_output(); count];
+                EffectResult::SharedCheckSerialization {
+                    artifact_index,
+                    needs_generation,
+                    exists,
+                    outputs,
+                }
+            }
+        }
+    }
+
+    /// Handle RunSharedGenerator command.
+    async fn execute_run_shared_generator(
+        &mut self,
+        artifact_index: usize,
+        artifact_name: String,
+        _machine_targets: Vec<String>,
+        _user_targets: Vec<String>,
+        prompts: HashMap<String, String>,
+    ) -> EffectResult {
+        let shared_info = match self.make.get_shared_artifacts().get(&artifact_name).cloned() {
+            Some(info) => info,
+            None => {
+                return EffectResult::SharedGeneratorFinished {
+                    artifact_index,
+                    success: false,
+                    output: ScriptOutput::default(),
+                    error: Some(format!("Shared artifact '{}' not found", artifact_name)),
+                };
+            }
+        };
+
+        let generator_path = match shared_info.generators.first() {
+            Some(gen_info) => gen_info.path.clone(),
+            None => {
+                return EffectResult::SharedGeneratorFinished {
+                    artifact_index,
+                    success: false,
+                    output: ScriptOutput::default(),
+                    error: Some(format!(
+                        "No generators defined for shared artifact '{}'",
+                        artifact_name
+                    )),
+                };
+            }
+        };
+
+        let files_for_verify = shared_info.files.clone();
+        let prompts_for_verify = shared_info.prompts.clone();
+        let backend_name_for_verify = shared_info.backend_name.clone();
+
+        let prompts_dir = match Self::create_temp_dir("prompts") {
+            Ok(dir) => dir,
+            Err(e) => {
+                return EffectResult::SharedGeneratorFinished {
+                    artifact_index,
+                    success: false,
+                    output: ScriptOutput::default(),
+                    error: Some(e),
+                };
+            }
+        };
+
+        if let Err(e) = Self::write_prompts_to_dir(&prompts, prompts_dir.path()) {
+            return EffectResult::SharedGeneratorFinished {
+                artifact_index,
+                success: false,
+                output: ScriptOutput::default(),
+                error: Some(e),
+            };
+        }
+
+        let out_dir = match Self::create_temp_dir("output") {
+            Ok(dir) => dir,
+            Err(e) => {
+                return EffectResult::SharedGeneratorFinished {
+                    artifact_index,
+                    success: false,
+                    output: ScriptOutput::default(),
+                    error: Some(e),
+                };
+            }
+        };
+        let out_path = out_dir.path().to_path_buf();
+
+        let make_base = self.make.make_base.clone();
+        let prompts_path = prompts_dir.path().to_path_buf();
+        let generator_path_clone = generator_path.clone();
+        let artifact_name_for_verify = artifact_name.clone();
+        let out_path_for_verify = out_path.clone();
+
+        let result = Self::run_with_timeout(
+            &artifact_name,
+            "SharedGenerator",
+            move || {
+                backend::generator::run_generator_script_with_path(
+                    &generator_path_clone,
+                    &make_base,
+                    &prompts_path,
+                    &out_path,
+                )
+            },
+        )
+        .await;
+
+        match result {
+            TimeoutResult::Success(output) => {
+                let verify_result = backend::generator::verify_generated_files(
+                    &ArtifactDef {
+                        name: artifact_name_for_verify.clone(),
+                        description: None,
+                        files: files_for_verify,
+                        prompts: prompts_for_verify,
+                        shared: true,
+                        serialization: backend_name_for_verify,
+                        generator: generator_path,
+                    },
+                    &out_path_for_verify,
+                );
+                match verify_result {
+                    Ok(()) => {
+                        self.current_output_dir = Some(out_dir);
+                        self.current_prompts = Some(prompts);
+                        std::mem::forget(prompts_dir);
+                        EffectResult::SharedGeneratorFinished {
+                            artifact_index,
+                            success: true,
+                            output: ScriptOutput::from_captured(&output),
+                            error: None,
+                        }
+                    }
+                    Err(e) => {
+                        log(&format!(
+                            "[ERROR] Generator output verification failed for {}: {}",
+                            artifact_name, e
+                        ));
+                        EffectResult::SharedGeneratorFinished {
+                            artifact_index,
+                            success: false,
+                            output: ScriptOutput::from_captured(&output),
+                            error: Some(format!("Verification failed: {}", e)),
+                        }
+                    }
+                }
+            }
+            TimeoutResult::OperationFailed(e) => EffectResult::SharedGeneratorFinished {
+                artifact_index,
+                success: false,
+                output: ScriptOutput::default(),
+                error: Some(format!("Generator failed: {}", e)),
+            },
+            TimeoutResult::TaskPanic(e) => EffectResult::SharedGeneratorFinished {
+                artifact_index,
+                success: false,
+                output: ScriptOutput::default(),
+                error: Some(format!("Task panicked: {}", e)),
+            },
+            TimeoutResult::Timeout => EffectResult::SharedGeneratorFinished {
+                artifact_index,
+                success: false,
+                output: ScriptOutput::default(),
+                error: Some(format!(
+                    "Timed out after {} seconds",
+                    BACKGROUND_TASK_TIMEOUT.as_secs()
+                )),
+            },
+        }
+    }
+
+    /// Handle SharedSerialize command.
+    async fn execute_shared_serialize(
+        &mut self,
+        artifact_index: usize,
+        artifact_name: String,
+        machine_targets: Vec<String>,
+        user_targets: Vec<String>,
+    ) -> EffectResult {
+        let output_dir = match self.current_output_dir.take() {
+            Some(dir) => dir,
+            None => {
+                let mut results = Vec::new();
+                let msg = "No output directory from generator";
+                for target in &machine_targets {
+                    results.push((target.clone(), false, ScriptOutput::from_message(msg)));
+                }
+                for target in &user_targets {
+                    results.push((target.clone(), false, ScriptOutput::from_message(msg)));
+                }
+                return EffectResult::SharedSerializeFinished {
+                    artifact_index,
+                    results,
+                };
+            }
+        };
+        let out_path = output_dir.path().to_path_buf();
+
+        let shared_info = match self.make.get_shared_artifacts().get(&artifact_name).cloned() {
+            Some(info) => info,
+            None => {
+                let mut results = Vec::new();
+                let msg = format!("Shared artifact '{}' not found", artifact_name);
+                for target in &machine_targets {
+                    results.push((target.clone(), false, ScriptOutput::from_message(&msg)));
+                }
+                for target in &user_targets {
+                    results.push((target.clone(), false, ScriptOutput::from_message(&msg)));
+                }
+                return EffectResult::SharedSerializeFinished {
+                    artifact_index,
+                    results,
+                };
+            }
+        };
+
+        let backend = self.backend.clone();
+        let make = self.make.clone();
+        let backend_name = shared_info.backend_name.clone();
+        let artifact_name_clone = artifact_name.clone();
+        let nixos_targets = machine_targets.clone();
+        let home_targets = user_targets.clone();
+
+        let result = Self::run_with_timeout(
+            &artifact_name,
+            "SharedSerialize",
+            move || {
+                backend::serialization::run_shared_serialize(
+                    &artifact_name_clone,
+                    &backend_name,
+                    &backend,
+                    &out_path,
+                    &make,
+                    &nixos_targets,
+                    &home_targets,
+                )
+            },
+        )
+        .await;
+
+        match result {
+            TimeoutResult::Success(output) => {
+                let mut results = Vec::new();
+                for target in machine_targets {
+                    results.push((target, true, ScriptOutput::from_captured(&output)));
+                }
+                for target in user_targets {
+                    results.push((target, true, ScriptOutput::from_captured(&output)));
+                }
+                EffectResult::SharedSerializeFinished {
+                    artifact_index,
+                    results,
+                }
+            }
+            TimeoutResult::OperationFailed(e) => {
+                let msg = format!("Serialize failed: {}", e);
+                let mut results = Vec::new();
+                for target in machine_targets {
+                    results.push((target, false, ScriptOutput::from_message(&msg)));
+                }
+                for target in user_targets {
+                    results.push((target, false, ScriptOutput::from_message(&msg)));
+                }
+                EffectResult::SharedSerializeFinished {
+                    artifact_index,
+                    results,
+                }
+            }
+            TimeoutResult::TaskPanic(e) => {
+                let msg = format!("Task panicked: {}", e);
+                let mut results = Vec::new();
+                for target in machine_targets {
+                    results.push((target, false, ScriptOutput::from_message(&msg)));
+                }
+                for target in user_targets {
+                    results.push((target, false, ScriptOutput::from_message(&msg)));
+                }
+                EffectResult::SharedSerializeFinished {
+                    artifact_index,
+                    results,
+                }
+            }
+            TimeoutResult::Timeout => {
+                let mut results = Vec::new();
+                for target in machine_targets {
+                    results.push((target, false, Self::timeout_output()));
+                }
+                for target in user_targets {
+                    results.push((target, false, Self::timeout_output()));
+                }
+                EffectResult::SharedSerializeFinished {
+                    artifact_index,
+                    results,
+                }
+            }
+        }
+    }
+
     /// Execute a single effect command and return the result.
     ///
     /// This is the core effect execution logic that runs in the background.
@@ -99,111 +911,9 @@ impl BackgroundEffectHandler {
                 target,
                 target_type,
             } => {
-                // Clone configuration for use in spawn_blocking
-                let backend = self.backend.clone();
-                let make = self.make.clone();
-                let artifact_name_for_error = artifact_name.clone();
-                let _target_for_error = target.clone();
-
-                // Clone values for timeout error handling
-                let artifact_name_for_timeout = artifact_name.clone();
-
-                // Build TargetType from the command
-                let target_type_enum = if target_type == "home" {
-                    TargetType::HomeManager { username: target.clone() }
-                } else {
-                    TargetType::NixOS { machine: target.clone() }
-                };
-
-                // Spawn blocking task to execute check_serialization with timeout
-                let result = timeout(
-                    BACKGROUND_TASK_TIMEOUT,
-                    tokio::task::spawn_blocking(move || {
-                        // Look up the artifact definition
-                        let artifact = make
-                            .nixos_map
-                            .get(&target)
-                            .and_then(|m| m.get(&artifact_name))
-                            .or_else(|| {
-                                make.home_map
-                                    .get(&target)
-                                    .and_then(|m| m.get(&artifact_name))
-                            })
-                            .cloned()
-                            .ok_or_else(|| {
-                                anyhow::anyhow!(
-                                    "Artifact '{}' not found for target '{}'",
-                                    artifact_name,
-                                    target
-                                )
-                            })?;
-
-                        backend::serialization::run_check_serialization(
-                            &artifact, &target_type_enum, &backend, &make,
-                        )
-                    }),
-                )
-                .await;
-
-                match result {
-                    Ok(Ok(Ok(check_result))) => EffectResult::CheckSerialization {
-                        artifact_index,
-                        needs_generation: check_result.needs_generation,
-                        exists: if check_result.output.exit_success {
-                            true
-                        } else {
-                            check_result.output.lines.iter().any(|line| {
-                                line.content.contains("EXISTS")
-                            })
-                        },
-                        output: ScriptOutput::from_captured(&check_result.output),
-                    },
-                    Ok(Ok(Err(e))) => {
-                        // Fail open - assume generation needed on error
-                        log(&format!(
-                            "[WARN] CheckSerialization failed for {}: {}",
-                            artifact_name_for_error, e
-                        ));
-                        EffectResult::CheckSerialization {
-                            artifact_index,
-                            needs_generation: true,
-                            exists: false,
-                            output: ScriptOutput::from_message(&format!("Check failed: {}", e)),
-                        }
-                    }
-                    Ok(Err(e)) => {
-                        // Task panicked
-                        log(&format!(
-                            "[ERROR] CheckSerialization task panicked for {}: {}",
-                            artifact_name_for_error, e
-                        ));
-                        EffectResult::CheckSerialization {
-                            artifact_index,
-                            needs_generation: true,
-                            exists: false,
-                            output: ScriptOutput::from_message(&format!("Task panicked: {}", e)),
-                        }
-                    }
-                    Err(_) => {
-                        // Timeout occurred
-                        log(&format!(
-                            "[ERROR] CheckSerialization timed out for {} after {} seconds",
-                            artifact_name_for_timeout,
-                            BACKGROUND_TASK_TIMEOUT.as_secs()
-                        ));
-                        EffectResult::CheckSerialization {
-                            artifact_index,
-                            needs_generation: true,
-                            exists: false,
-                            output: ScriptOutput::from_message(&format!(
-                                "Timed out after {} seconds",
-                                BACKGROUND_TASK_TIMEOUT.as_secs()
-                            )),
-                        }
-                    }
-                }
+                self.execute_check_serialization(artifact_index, artifact_name, target, target_type)
+                    .await
             }
-
             EffectCommand::RunGenerator {
                 artifact_index,
                 artifact_name,
@@ -211,845 +921,45 @@ impl BackgroundEffectHandler {
                 target_type,
                 prompts,
             } => {
-                // Clone data for use in spawn_blocking
-                let make = self.make.clone();
-                let artifact_name_clone = artifact_name.clone();
-                let target_clone = target.clone();
-
-                // Create temporary directory for generator output
-                let temp_dir = match tempfile::TempDir::new() {
-                    Ok(dir) => dir,
-                    Err(e) => {
-                        return EffectResult::GeneratorFinished {
-                            artifact_index,
-                            success: false,
-                            output: ScriptOutput::default(),
-                            error: Some(format!("Failed to create temp directory: {}", e)),
-                        };
-                    }
-                };
-                let output_path = temp_dir.path().to_path_buf();
-
-                // Look up artifact definition
-                let artifact = match make
-                    .nixos_map
-                    .get(&target)
-                    .and_then(|m| m.get(&artifact_name))
-                    .or_else(|| {
-                        make.home_map
-                            .get(&target)
-                            .and_then(|m| m.get(&artifact_name))
-                    })
-                    .cloned()
-                {
-                    Some(art) => art,
-                    None => {
-                        return EffectResult::GeneratorFinished {
-                            artifact_index,
-                            success: false,
-                            output: ScriptOutput::default(),
-                            error: Some(format!(
-                                "Artifact '{}' not found for target '{}'",
-                                artifact_name, target
-                            )),
-                        };
-                    }
-                };
-
-                // Create prompts directory
-                let prompts_dir = match tempfile::TempDir::new() {
-                    Ok(dir) => dir,
-                    Err(e) => {
-                        return EffectResult::GeneratorFinished {
-                            artifact_index,
-                            success: false,
-                            output: ScriptOutput::default(),
-                            error: Some(format!("Failed to create prompts directory: {}", e)),
-                        };
-                    }
-                };
-
-                // Write prompts to files
-                for (name, value) in &prompts {
-                    let prompt_file = prompts_dir.path().join(name);
-                    if let Err(e) = std::fs::write(&prompt_file, value) {
-                        return EffectResult::GeneratorFinished {
-                            artifact_index,
-                            success: false,
-                            output: ScriptOutput::default(),
-                            error: Some(format!("Failed to write prompt file: {}", e)),
-                        };
-                    }
-                }
-
-                let target_type_enum = if target_type == "home" {
-                    TargetType::HomeManager { username: target.clone() }
-                } else {
-                    TargetType::NixOS { machine: target.clone() }
-                };
-                let prompts_path = prompts_dir.path().to_path_buf();
-                let make_base = make.make_base.clone();
-
-                // Clone values for use in spawn_blocking
-                let artifact_for_spawn = artifact.clone();
-                let output_path_for_verify = output_path.clone();
-
-                // Clone values for timeout error handling
-                let artifact_name_for_timeout = artifact_name_clone.clone();
-
-                // Spawn blocking task to execute generator with timeout
-                let result = timeout(
-                    BACKGROUND_TASK_TIMEOUT,
-                    tokio::task::spawn_blocking(move || {
-                        backend::generator::run_generator_script(
-                            &artifact_for_spawn,
-                            &target_type_enum,
-                            &make_base,
-                            &prompts_path,
-                            &output_path,
-                        )
-                    }),
-                )
-                .await;
-
-                match result {
-                    Ok(Ok(Ok(output))) => {
-                        // Verify generated files
-                        let verify_result = backend::generator::verify_generated_files(
-                            &artifact,
-                            &output_path_for_verify,
-                        );
-                        match verify_result {
-                            Ok(()) => {
-                                // Store temp directory to keep it alive for Serialize
-                                self.current_output_dir = Some(temp_dir);
-                                self.current_prompts = Some(prompts);
-                                EffectResult::GeneratorFinished {
-                                    artifact_index,
-                                    success: true,
-                                    output: ScriptOutput::from_captured(&output),
-                                    error: None,
-                                }
-                            }
-                            Err(e) => {
-                                log(&format!(
-                                    "[ERROR] Generator output verification failed for {}: {}",
-                                    artifact_name_clone, e
-                                ));
-                                EffectResult::GeneratorFinished {
-                                    artifact_index,
-                                    success: false,
-                                    output: ScriptOutput::from_captured(&output),
-                                    error: Some(format!("Verification failed: {}", e)),
-                                }
-                            }
-                        }
-                    }
-                    Ok(Ok(Err(e))) => {
-                        log(&format!(
-                            "[ERROR] Generator failed for {}: {}",
-                            artifact_name_clone, e
-                        ));
-                        EffectResult::GeneratorFinished {
-                            artifact_index,
-                            success: false,
-                            output: ScriptOutput::default(),
-                            error: Some(format!("Generator failed: {}", e)),
-                        }
-                    }
-                    Ok(Err(e)) => {
-                        log(&format!(
-                            "[ERROR] Generator task panicked for {}: {}",
-                            target_clone, e
-                        ));
-                        EffectResult::GeneratorFinished {
-                            artifact_index,
-                            success: false,
-                            output: ScriptOutput::default(),
-                            error: Some(format!("Task panicked: {}", e)),
-                        }
-                    }
-                    Err(_) => {
-                        // Timeout occurred
-                        log(&format!(
-                            "[ERROR] Generator timed out for {} after {} seconds",
-                            artifact_name_for_timeout,
-                            BACKGROUND_TASK_TIMEOUT.as_secs()
-                        ));
-                        EffectResult::GeneratorFinished {
-                            artifact_index,
-                            success: false,
-                            output: ScriptOutput::default(),
-                            error: Some(format!(
-                                "Timed out after {} seconds",
-                                BACKGROUND_TASK_TIMEOUT.as_secs()
-                            )),
-                        }
-                    }
-                }
+                self.execute_run_generator(artifact_index, artifact_name, target, target_type, prompts)
+                    .await
             }
-
             EffectCommand::Serialize {
                 artifact_index,
                 artifact_name,
                 target,
                 target_type,
             } => {
-                // Get the output directory from the previous RunGenerator
-                let output_dir = match self.current_output_dir.take() {
-                    Some(dir) => dir,
-                    None => {
-                        return EffectResult::SerializeFinished {
-                            artifact_index,
-                            success: false,
-                            output: ScriptOutput::from_message(
-                                "No output directory from generator - RunGenerator must be called before Serialize"
-                            ),
-                            error: Some("No output directory from generator - RunGenerator must be called before Serialize".to_string()),
-                        };
-                    }
-                };
-
-                // Look up artifact definition to get files and backend name
-                let artifact = match self
-                    .make
-                    .nixos_map
-                    .get(&target)
-                    .and_then(|m| m.get(&artifact_name))
-                    .or_else(|| {
-                        self.make
-                            .home_map
-                            .get(&target)
-                            .and_then(|m| m.get(&artifact_name))
-                    })
-                    .cloned()
-                {
-                    Some(art) => art,
-                    None => {
-                        return EffectResult::SerializeFinished {
-                            artifact_index,
-                            success: false,
-                            output: ScriptOutput::from_message(&format!(
-                                "Artifact '{}' not found for target '{}'",
-                                artifact_name, target
-                            )),
-                            error: Some(format!(
-                                "Artifact '{}' not found for target '{}'",
-                                artifact_name, target
-                            )),
-                        };
-                    }
-                };
-
-                // Extract files from artifact (for future use if needed)
-                let _files: Vec<(String, crate::config::make::FileDef)> = artifact
-                    .files
-                    .iter()
-                    .map(|(name, def)| (name.clone(), def.clone()))
-                    .collect();
-
-                let _backend_name = artifact.serialization.clone();
-                let target_type_enum = if target_type == "home" {
-                    TargetType::HomeManager { username: target.clone() }
-                } else {
-                    TargetType::NixOS { machine: target.clone() }
-                };
-                let backend = self.backend.clone();
-                let make = self.make.clone();
-                let artifact_name_for_error = artifact_name.clone();
-                let output_path = output_dir.path().to_path_buf();
-
-                // Clone values for timeout error handling
-                let artifact_name_for_timeout = artifact_name.clone();
-
-                // Spawn blocking task to execute serialization with timeout
-                let result = timeout(
-                    BACKGROUND_TASK_TIMEOUT,
-                    tokio::task::spawn_blocking(move || {
-                        backend::serialization::run_serialize(
-                            &artifact,
-                            &backend,
-                            &output_path,
-                            &target_type_enum,
-                            &make,
-                        )
-                    }),
-                )
-                .await;
-
-                match result {
-                    Ok(Ok(Ok(output))) => {
-                        // Temp directory will be automatically cleaned up when dropped
-                        EffectResult::SerializeFinished {
-                            artifact_index,
-                            success: true,
-                            output: ScriptOutput::from_captured(&output),
-                            error: None,
-                        }
-                    }
-                    Ok(Ok(Err(e))) => {
-                        log(&format!(
-                            "[ERROR] Serialize failed for {}: {}",
-                            artifact_name_for_error, e
-                        ));
-                        EffectResult::SerializeFinished {
-                            artifact_index,
-                            success: false,
-                            output: ScriptOutput::from_message(&format!("Serialize failed: {}", e)),
-                            error: Some(format!("Serialize failed: {}", e)),
-                        }
-                    }
-                    Ok(Err(e)) => {
-                        log(&format!(
-                            "[ERROR] Serialize task panicked for {}: {}",
-                            artifact_name_for_error, e
-                        ));
-                        EffectResult::SerializeFinished {
-                            artifact_index,
-                            success: false,
-                            output: ScriptOutput::from_message(&format!("Task panicked: {}", e)),
-                            error: Some(format!("Task panicked: {}", e)),
-                        }
-                    }
-                    Err(_) => {
-                        // Timeout occurred
-                        log(&format!(
-                            "[ERROR] Serialize timed out for {} after {} seconds",
-                            artifact_name_for_timeout,
-                            BACKGROUND_TASK_TIMEOUT.as_secs()
-                        ));
-                        EffectResult::SerializeFinished {
-                            artifact_index,
-                            success: false,
-                            output: ScriptOutput::from_message(&format!(
-                                "Timed out after {} seconds",
-                                BACKGROUND_TASK_TIMEOUT.as_secs()
-                            )),
-                            error: Some(format!(
-                                "Timed out after {} seconds",
-                                BACKGROUND_TASK_TIMEOUT.as_secs()
-                            )),
-                        }
-                    }
-                }
+                self.execute_serialize(artifact_index, artifact_name, target, target_type)
+                    .await
             }
-
             EffectCommand::SharedCheckSerialization {
                 artifact_index,
                 artifact_name,
                 targets,
                 target_types,
             } => {
-                // Implement actual shared check_serialization
-                let backend = self.backend.clone();
-                let make = self.make.clone();
-                let artifact_name_for_error = artifact_name.clone();
-
-                // Split targets into nixos and home based on target_types
-                let mut nixos_targets = Vec::new();
-                let mut home_targets = Vec::new();
-                for (i, target) in targets.iter().enumerate() {
-                    let target_type = target_types.get(i).map(|s| s.as_str()).unwrap_or("nixos");
-                    if target_type == "home" {
-                        home_targets.push(target.clone());
-                    } else {
-                        nixos_targets.push(target.clone());
-                    }
-                }
-
-                // Get backend name from shared artifacts
-                let backend_name = match self.make.get_shared_artifacts().get(&artifact_name) {
-                    Some(info) => info.backend_name.clone(),
-                    None => {
-                        return EffectResult::SharedCheckSerialization {
-                            artifact_index,
-                            needs_generation: vec![true; targets.len()],
-                            exists: vec![false; targets.len()],
-                            outputs: vec![ScriptOutput::from_message(
-                                &format!("Shared artifact '{}' not found", artifact_name)
-                            )],
-                        };
-                    }
-                };
-
-                // Clone values for timeout error handling
-                let artifact_name_for_timeout = artifact_name.clone();
-
-                // Spawn blocking task to execute shared check_serialization with timeout
-                let result = timeout(
-                    BACKGROUND_TASK_TIMEOUT,
-                    tokio::task::spawn_blocking(move || {
-                        backend::serialization::run_shared_check_serialization(
-                            &artifact_name,
-                            &backend_name,
-                            &backend,
-                            &make,
-                            &nixos_targets,
-                            &home_targets,
-                        )
-                    }),
-                )
-                .await;
-
-                match result {
-                    Ok(Ok(Ok(check_result))) => {
-                        // Shared artifacts are all-or-nothing - if any target needs generation, all do
-                        let needs_gen = check_result.needs_generation;
-                        // All targets get the same result (shared artifacts are atomic)
-                        let needs_generation = vec![needs_gen; targets.len()];
-                        let exists_val = if check_result.output.exit_success {
-                            true
-                        } else {
-                            check_result.output.lines.iter().any(|line| line.content.contains("EXISTS"))
-                        };
-                        let exists = vec![exists_val; targets.len()];
-                        let outputs: Vec<ScriptOutput> =
-                            vec![ScriptOutput::from_captured(&check_result.output); targets.len()];
-                        EffectResult::SharedCheckSerialization {
-                            artifact_index,
-                            needs_generation,
-                            exists,
-                            outputs,
-                        }
-                    }
-                    Ok(Ok(Err(e))) => {
-                        // Fail open - assume generation needed on error
-                        log(&format!(
-                            "[WARN] SharedCheckSerialization failed for {}: {}",
-                            artifact_name_for_error, e
-                        ));
-                        let needs_generation = vec![true; targets.len()];
-                        let exists = vec![false; targets.len()];
-                        let outputs: Vec<ScriptOutput> =
-                            vec![ScriptOutput::from_message(&format!("Check failed: {}", e)); targets.len()];
-                        EffectResult::SharedCheckSerialization {
-                            artifact_index,
-                            needs_generation,
-                            exists,
-                            outputs,
-                        }
-                    }
-                    Ok(Err(e)) => {
-                        log(&format!(
-                            "[ERROR] SharedCheckSerialization task panicked for {}: {}",
-                            artifact_name_for_error, e
-                        ));
-                        let needs_generation = vec![true; targets.len()];
-                        let exists = vec![false; targets.len()];
-                        let outputs: Vec<ScriptOutput> =
-                            vec![ScriptOutput::from_message(&format!("Task panicked: {}", e)); targets.len()];
-                        EffectResult::SharedCheckSerialization {
-                            artifact_index,
-                            needs_generation,
-                            exists,
-                            outputs,
-                        }
-                    }
-                    Err(_) => {
-                        // Timeout occurred
-                        log(&format!(
-                            "[ERROR] SharedCheckSerialization timed out for {} after {} seconds",
-                            artifact_name_for_timeout,
-                            BACKGROUND_TASK_TIMEOUT.as_secs()
-                        ));
-                        let needs_generation = vec![true; targets.len()];
-                        let exists = vec![false; targets.len()];
-                        let outputs: Vec<ScriptOutput> = vec![
-                            ScriptOutput::from_message(&format!(
-                                "Timed out after {} seconds",
-                                BACKGROUND_TASK_TIMEOUT.as_secs()
-                            ));
-                            targets.len()
-                        ];
-                        EffectResult::SharedCheckSerialization {
-                            artifact_index,
-                            needs_generation,
-                            exists,
-                            outputs,
-                        }
-                    }
-                }
+                self.execute_shared_check_serialization(artifact_index, artifact_name, targets, target_types)
+                    .await
             }
-
             EffectCommand::RunSharedGenerator {
                 artifact_index,
                 artifact_name,
-                machine_targets: _machine_targets,
-                user_targets: _,
+                machine_targets,
+                user_targets,
                 prompts,
             } => {
-                // Implement actual shared generator execution
-                let make = self.make.clone();
-                let artifact_name_clone = artifact_name.clone();
-
-                // Get shared artifact info to find generator path - must clone to avoid borrow issues
-                let shared_info = match self
-                    .make
-                    .get_shared_artifacts()
-                    .get(&artifact_name)
-                    .cloned()
-                {
-                    Some(info) => info,
-                    None => {
-                        return EffectResult::SharedGeneratorFinished {
-                            artifact_index,
-                            success: false,
-                            output: ScriptOutput::default(),
-                            error: Some(format!("Shared artifact '{}' not found", artifact_name)),
-                        };
-                    }
-                };
-
-                // Get generator path - use the first generator's path
-                let generator_path = match shared_info.generators.first() {
-                    Some(r#gen) => r#gen.path.clone(),
-                    None => {
-                        return EffectResult::SharedGeneratorFinished {
-                            artifact_index,
-                            success: false,
-                            output: ScriptOutput::default(),
-                            error: Some(format!(
-                                "No generators defined for shared artifact '{}'",
-                                artifact_name
-                            )),
-                        };
-                    }
-                };
-
-                // Get files for verification (clone to avoid borrow issues)
-                let files_for_verify = shared_info.files.clone();
-                let prompts_for_verify = shared_info.prompts.clone();
-                let backend_name_for_verify = shared_info.backend_name.clone();
-
-                // Create temporary directory for prompts
-                let prompts_dir = match tempfile::TempDir::new() {
-                    Ok(dir) => dir,
-                    Err(e) => {
-                        return EffectResult::SharedGeneratorFinished {
-                            artifact_index,
-                            success: false,
-                            output: ScriptOutput::default(),
-                            error: Some(format!("Failed to create prompts directory: {}", e)),
-                        };
-                    }
-                };
-
-                // Write prompts to files
-                for (name, value) in &prompts {
-                    let prompt_file = prompts_dir.path().join(name);
-                    if let Err(e) = std::fs::write(&prompt_file, value) {
-                        return EffectResult::SharedGeneratorFinished {
-                            artifact_index,
-                            success: false,
-                            output: ScriptOutput::default(),
-                            error: Some(format!("Failed to write prompt file: {}", e)),
-                        };
-                    }
-                }
-
-                // Create temporary output directory
-                let out_dir = match tempfile::TempDir::new() {
-                    Ok(dir) => dir,
-                    Err(e) => {
-                        return EffectResult::SharedGeneratorFinished {
-                            artifact_index,
-                            success: false,
-                            output: ScriptOutput::default(),
-                            error: Some(format!("Failed to create output directory: {}", e)),
-                        };
-                    }
-                };
-                let out_path = out_dir.path().to_path_buf();
-
-                let make_base = make.make_base.clone();
-                let prompts_path = prompts_dir.path().to_path_buf();
-                let generator_path_clone = generator_path.clone();
-                let out_path_clone = out_path.clone();
-
-                // Clone values for timeout error handling
-                let artifact_name_for_timeout = artifact_name_clone.clone();
-
-                // Spawn blocking task to execute generator with timeout
-                let result = timeout(
-                    BACKGROUND_TASK_TIMEOUT,
-                    tokio::task::spawn_blocking(move || {
-                        backend::generator::run_generator_script_with_path(
-                            &generator_path_clone,
-                            &make_base,
-                            &prompts_path,
-                            &out_path_clone,
-                        )
-                    }),
-                )
-                .await;
-
-                match result {
-                    Ok(Ok(Ok(output))) => {
-                        // Verify generated files using the artifact's file definitions
-                        let verify_result = backend::generator::verify_generated_files(
-                            &ArtifactDef {
-                                name: artifact_name_clone.clone(),
-                                description: None, // Shared artifact description not needed for verification
-                                files: files_for_verify,
-                                prompts: prompts_for_verify,
-                                shared: true,
-                                serialization: backend_name_for_verify,
-                                generator: generator_path,
-                            },
-                            &out_path,
-                        );
-                        match verify_result {
-                            Ok(()) => {
-                                // Store output directory to keep it alive for Serialize phase
-                                self.current_output_dir = Some(out_dir);
-                                self.current_prompts = Some(prompts);
-                                // Keep prompts dir alive too
-                                std::mem::forget(prompts_dir);
-                                EffectResult::SharedGeneratorFinished {
-                                    artifact_index,
-                                    success: true,
-                                    output: ScriptOutput::from_captured(&output),
-                                    error: None,
-                                }
-                            }
-                            Err(e) => {
-                                log(&format!(
-                                    "[ERROR] Generator output verification failed for {}: {}",
-                                    artifact_name_clone, e
-                                ));
-                                EffectResult::SharedGeneratorFinished {
-                                    artifact_index,
-                                    success: false,
-                                    output: ScriptOutput::from_captured(&output),
-                                    error: Some(format!("Verification failed: {}", e)),
-                                }
-                            }
-                        }
-                    }
-                    Ok(Ok(Err(e))) => {
-                        log(&format!(
-                            "[ERROR] Shared generator failed for {}: {}",
-                            artifact_name_clone, e
-                        ));
-                        EffectResult::SharedGeneratorFinished {
-                            artifact_index,
-                            success: false,
-                            output: ScriptOutput::default(),
-                            error: Some(format!("Generator failed: {}", e)),
-                        }
-                    }
-                    Ok(Err(e)) => {
-                        log(&format!(
-                            "[ERROR] Shared generator task panicked for {}: {}",
-                            artifact_name_clone, e
-                        ));
-                        EffectResult::SharedGeneratorFinished {
-                            artifact_index,
-                            success: false,
-                            output: ScriptOutput::default(),
-                            error: Some(format!("Task panicked: {}", e)),
-                        }
-                    }
-                    Err(_) => {
-                        // Timeout occurred
-                        log(&format!(
-                            "[ERROR] Shared generator timed out for {} after {} seconds",
-                            artifact_name_for_timeout,
-                            BACKGROUND_TASK_TIMEOUT.as_secs()
-                        ));
-                        EffectResult::SharedGeneratorFinished {
-                            artifact_index,
-                            success: false,
-                            output: ScriptOutput::default(),
-                            error: Some(format!(
-                                "Timed out after {} seconds",
-                                BACKGROUND_TASK_TIMEOUT.as_secs()
-                            )),
-                        }
-                    }
-                }
+                self.execute_run_shared_generator(artifact_index, artifact_name, machine_targets, user_targets, prompts)
+                    .await
             }
-
             EffectCommand::SharedSerialize {
                 artifact_index,
                 artifact_name,
                 machine_targets,
                 user_targets,
             } => {
-                // Implement actual shared serialization
-                // Get output directory from previous generator run
-                let output_dir = match self.current_output_dir.take() {
-                    Some(dir) => dir,
-                    None => {
-                        let mut results = Vec::new();
-                        for target in &machine_targets {
-                            results.push((
-                                target.clone(),
-                                false,
-                                ScriptOutput::from_message("No output directory from generator"),
-                            ));
-                        }
-                        for target in &user_targets {
-                            results.push((
-                                target.clone(),
-                                false,
-                                ScriptOutput::from_message("No output directory from generator"),
-                            ));
-                        }
-                        return EffectResult::SharedSerializeFinished {
-                            artifact_index,
-                            results,
-                        };
-                    }
-                };
-                let out_path = output_dir.path().to_path_buf();
-
-                // Get shared artifact info for backend name
-                let shared_info = match self
-                    .make
-                    .get_shared_artifacts()
-                    .get(&artifact_name)
-                    .cloned()
-                {
-                    Some(info) => info,
-                    None => {
-                        let mut results = Vec::new();
-                        for target in &machine_targets {
-                            results.push((
-                                target.clone(),
-                                false,
-                                ScriptOutput::from_message(&format!("Shared artifact '{}' not found", artifact_name)),
-                            ));
-                        }
-                        for target in &user_targets {
-                            results.push((
-                                target.clone(),
-                                false,
-                                ScriptOutput::from_message(&format!("Shared artifact '{}' not found", artifact_name)),
-                            ));
-                        }
-                        return EffectResult::SharedSerializeFinished {
-                            artifact_index,
-                            results,
-                        };
-                    }
-                };
-
-                let backend = self.backend.clone();
-                let make = self.make.clone();
-                let backend_name = shared_info.backend_name.clone();
-                let artifact_name_clone = artifact_name.clone();
-
-                let nixos_targets = machine_targets.clone();
-                let home_targets = user_targets.clone();
-
-                // Clone values for timeout error handling
-                let artifact_name_for_timeout = artifact_name.clone();
-
-                // Spawn blocking task to execute shared serialization with timeout
-                let result = timeout(
-                    BACKGROUND_TASK_TIMEOUT,
-                    tokio::task::spawn_blocking(move || {
-                        backend::serialization::run_shared_serialize(
-                            &artifact_name_clone,
-                            &backend_name,
-                            &backend,
-                            &out_path,
-                            &make,
-                            &nixos_targets,
-                            &home_targets,
-                        )
-                    }),
-                )
-                .await;
-
-                match result {
-                    Ok(Ok(Ok(output))) => {
-                        // Shared serialization is atomic - all succeed or all fail
-                        let mut results = Vec::new();
-                        for target in machine_targets {
-                            results.push((target, true, ScriptOutput::from_captured(&output)));
-                        }
-                        for target in user_targets {
-                            results.push((target, true, ScriptOutput::from_captured(&output)));
-                        }
-                        EffectResult::SharedSerializeFinished {
-                            artifact_index,
-                            results,
-                        }
-                    }
-                    Ok(Ok(Err(e))) => {
-                        log(&format!(
-                            "[ERROR] SharedSerialize failed for {}: {}",
-                            artifact_name, e
-                        ));
-                        let mut results = Vec::new();
-                        for target in machine_targets {
-                            results.push((target, false, ScriptOutput::from_message(&format!("Serialize failed: {}", e))));
-                        }
-                        for target in user_targets {
-                            results.push((target, false, ScriptOutput::from_message(&format!("Serialize failed: {}", e))));
-                        }
-                        EffectResult::SharedSerializeFinished {
-                            artifact_index,
-                            results,
-                        }
-                    }
-                    Ok(Err(e)) => {
-                        log(&format!(
-                            "[ERROR] SharedSerialize task panicked for {}: {}",
-                            artifact_name, e
-                        ));
-                        let mut results = Vec::new();
-                        for target in machine_targets {
-                            results.push((target, false, ScriptOutput::from_message(&format!("Task panicked: {}", e))));
-                        }
-                        for target in user_targets {
-                            results.push((target, false, ScriptOutput::from_message(&format!("Task panicked: {}", e))));
-                        }
-                        EffectResult::SharedSerializeFinished {
-                            artifact_index,
-                            results,
-                        }
-                    }
-                    Err(_) => {
-                        // Timeout occurred
-                        log(&format!(
-                            "[ERROR] SharedSerialize timed out for {} after {} seconds",
-                            artifact_name_for_timeout,
-                            BACKGROUND_TASK_TIMEOUT.as_secs()
-                        ));
-                        let mut results = Vec::new();
-                        for target in machine_targets {
-                            results.push((
-                                target,
-                                false,
-                                ScriptOutput::from_message(
-                                    &format!(
-                                        "Timed out after {} seconds",
-                                        BACKGROUND_TASK_TIMEOUT.as_secs()
-                                    )
-                                ),
-                            ));
-                        }
-                        for target in user_targets {
-                            results.push((
-                                target,
-                                false,
-                                ScriptOutput::from_message(
-                                    &format!(
-                                        "Timed out after {} seconds",
-                                        BACKGROUND_TASK_TIMEOUT.as_secs()
-                                    )
-                                ),
-                            ));
-                        }
-                        EffectResult::SharedSerializeFinished {
-                            artifact_index,
-                            results,
-                        }
-                    }
-                }
+                self.execute_shared_serialize(artifact_index, artifact_name, machine_targets, user_targets)
+                    .await
             }
         }
     }
