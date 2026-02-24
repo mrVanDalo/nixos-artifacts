@@ -27,12 +27,10 @@
 //! - [`serialization`]: Backend script execution for check/serialize/deserialize operations
 //! - [`helpers`]: Utility functions for path resolution, escaping, and validation
 //! - [`output_capture`]: Process execution with output capture and timeout support
-//! - [`prompt`]: User prompt handling with interactive and non-interactive modes
 //! - [`tempfile`]: Temporary file and directory management
 
 pub mod generator;
 pub mod helpers;
 pub mod output_capture;
-pub mod prompt;
 pub mod serialization;
 pub mod tempfile;
