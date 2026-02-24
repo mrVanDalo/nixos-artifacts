@@ -23,11 +23,12 @@
 //! ## Usage
 //!
 //! ```rust
+//! use artifacts::tui::background::spawn_background_task;
+//!
 //! // Spawn background task
 //! let (tx_cmd, rx_cmd) = tokio::sync::mpsc::unbounded_channel();
 //! let (tx_res, rx_res) = tokio::sync::mpsc::unbounded_channel();
-//!
-//! spawn_background_task(rx_cmd, tx_res);
+//! spawn_background_task(backend, make, shutdown); // from background.rs
 //!
 //! // Send command from foreground
 //! tx_cmd.send(EffectCommand::CheckSerialization { ... });
@@ -198,129 +199,6 @@ pub enum EffectResult {
         stream: OutputStream,
         content: String,
     },
-}
-
-/// Spawn the background task that processes effect commands.
-///
-/// This function spawns a tokio task that:
-/// 1. Receives `EffectCommand` messages from the foreground
-/// 2. Executes the corresponding effect (running scripts, etc.)
-/// 3. Sends `EffectResult` messages back to the foreground
-///
-/// Effects are processed sequentially (FIFO) in the order received.
-///
-/// # Arguments
-///
-/// * `rx_cmd` - Receiver for commands from foreground
-/// * `tx_res` - Sender for results back to foreground
-///
-/// # Example
-///
-/// ```rust
-/// let (tx_cmd, rx_cmd) = tokio::sync::mpsc::unbounded_channel();
-/// let (tx_res, rx_res) = tokio::sync::mpsc::unbounded_channel();
-///
-/// spawn_background_task(rx_cmd, tx_res);
-/// ```
-pub fn spawn_background_task(
-    mut rx_cmd: tokio::sync::mpsc::UnboundedReceiver<EffectCommand>,
-    tx_res: tokio::sync::mpsc::UnboundedSender<EffectResult>,
-) -> tokio::task::JoinHandle<()> {
-    tokio::spawn(async move {
-        // Process commands sequentially in FIFO order
-        while let Some(cmd) = rx_cmd.recv().await {
-            // Execute the effect and send result
-            let result = execute_effect(cmd).await;
-            if tx_res.send(result).is_err() {
-                // Foreground dropped the receiver, shut down
-                break;
-            }
-        }
-    })
-}
-
-/// Execute a single effect command and return the result.
-///
-/// This is the core effect execution logic that runs in the background task.
-/// It dispatches to the appropriate backend operations based on command type.
-async fn execute_effect(cmd: EffectCommand) -> EffectResult {
-    match cmd {
-        EffectCommand::CheckSerialization { artifact_index, .. } => {
-            // TODO: Implement actual check_serialization logic
-            // For now, return placeholder result
-            EffectResult::CheckSerialization {
-                artifact_index,
-                needs_generation: true,
-                exists: false,
-                output: ScriptOutput::default(),
-            }
-        }
-
-        EffectCommand::RunGenerator { artifact_index, .. } => {
-            // TODO: Implement actual generator execution logic
-            EffectResult::GeneratorFinished {
-                artifact_index,
-                success: true,
-                output: ScriptOutput::default(),
-                error: None,
-            }
-        }
-
-        EffectCommand::Serialize { artifact_index, .. } => {
-            // TODO: Implement actual serialization logic
-            EffectResult::SerializeFinished {
-                artifact_index,
-                success: true,
-                output: ScriptOutput::default(),
-                error: None,
-            }
-        }
-
-        EffectCommand::SharedCheckSerialization {
-            artifact_index,
-            targets,
-            ..
-        } => {
-            // TODO: Implement actual shared check_serialization logic
-            let needs_generation = vec![true; targets.len()];
-            let exists = vec![false; targets.len()];
-            let outputs = vec![ScriptOutput::default(); targets.len()];
-            EffectResult::SharedCheckSerialization {
-                artifact_index,
-                needs_generation,
-                exists,
-                outputs,
-            }
-        }
-
-        EffectCommand::RunSharedGenerator { artifact_index, .. } => {
-            // TODO: Implement actual shared generator execution logic
-            EffectResult::SharedGeneratorFinished {
-                artifact_index,
-                success: true,
-                output: ScriptOutput::default(),
-                error: None,
-            }
-        }
-
-        EffectCommand::SharedSerialize {
-            artifact_index,
-            machine_targets,
-            user_targets,
-            ..
-        } => {
-            // TODO: Implement actual shared serialization logic
-            let results: Vec<_> = machine_targets
-                .into_iter()
-                .chain(user_targets.into_iter())
-                .map(|t| (t, true, ScriptOutput::default()))
-                .collect();
-            EffectResult::SharedSerializeFinished {
-                artifact_index,
-                results,
-            }
-        }
-    }
 }
 
 #[cfg(test)]
