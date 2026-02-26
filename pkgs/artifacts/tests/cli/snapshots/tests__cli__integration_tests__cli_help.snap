@@ -26,9 +26,6 @@ Options:
       --artifact <ARTIFACT>
           Filter by artifact name (repeatable)
 
-      --no-emoji
-          Disable emoji output
-
       --log-file <PATH>
           Path to log file for debug output
 

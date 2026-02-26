@@ -24,9 +24,6 @@
 //!
 //! # Specify flake directory
 //! artifacts /path/to/flake
-//!
-//! # Disable emoji output
-//! artifacts --no-emoji
 //! ```
 
 use clap::{Parser, ValueEnum};
@@ -70,10 +67,6 @@ pub struct Cli {
     /// Filter by artifact name (repeatable)
     #[arg(long = "artifact")]
     pub artifact: Vec<String>,
-
-    /// Disable emoji output
-    #[arg(long = "no-emoji")]
-    pub no_emoji: bool,
 
     /// Path to log file for debug output
     #[arg(long = "log-file", value_name = "PATH")]

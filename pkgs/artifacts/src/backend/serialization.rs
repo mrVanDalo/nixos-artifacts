@@ -655,11 +655,15 @@ pub fn run_check_serialization(
         script_path,
     )?;
 
+    let target_label = match target_type {
+        TargetType::HomeManager { .. } => "username",
+        TargetType::NixOS { .. } | TargetType::Shared { .. } => "machine",
+    };
     log_debug!(
         "running {}: env inputs=\"{}\" {}=\"{}\" artifact=\"{}\" {}",
         script_info.script_name,
         inputs.display(),
-        get_target_label(target_type),
+        target_label,
         target,
         artifact.name,
         script_abs.display()

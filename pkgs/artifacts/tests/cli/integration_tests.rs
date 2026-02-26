@@ -55,17 +55,6 @@ fn cli_with_log_level() {
     });
 }
 
-/// CLI with --no-emoji flag.
-#[test]
-#[serial]
-fn cli_with_no_emoji() {
-    insta::with_settings!({
-        filters => [(r"flake directory: [^\n]+", "flake directory: <REDACTED_PATH>")]
-    }, {
-        assert_cmd_snapshot!(cli().arg("--no-emoji"));
-    });
-}
-
 /// CLI with machine filter.
 #[test]
 #[serial]
