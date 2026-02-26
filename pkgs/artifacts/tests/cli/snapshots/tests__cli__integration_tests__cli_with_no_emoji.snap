@@ -10,4 +10,4 @@ exit_code: 1
 ----- stdout -----
 
 ----- stderr -----
-backend.toml not found. Set NIXOS_ARTIFACTS_BACKEND_CONFIG or place backend.toml in the flake directory: /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts/backend.toml
+backend.toml not found. Set NIXOS_ARTIFACTS_BACKEND_CONFIG or place backend.toml in the flake directory: <REDACTED_PATH>

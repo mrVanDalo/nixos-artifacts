@@ -341,7 +341,7 @@ pub fn generate_single_artifact(
 /// - diagnostics: `DiagnosticInfo` - Captured diagnostic information (always populated)
 ///
 /// # Example
-/// ```rust
+/// ```rust,ignore
 /// let (result, diagnostics) = generate_single_artifact_with_diagnostics(
 ///     "machine-name",
 ///     &artifact_def,

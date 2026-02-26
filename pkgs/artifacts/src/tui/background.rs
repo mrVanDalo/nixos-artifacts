@@ -987,8 +987,8 @@ impl BackgroundEffectHandler {
 ///
 /// # Example
 ///
-/// ```rust
-/// let (tx_cmd, rx_res) = spawn_background_task(backend, make);
+/// ```rust,ignore
+/// let (tx_cmd, rx_res) = spawn_background_task(backend, make, shutdown_token);
 ///
 /// // Send a command
 /// tx_cmd.send(EffectCommand::CheckSerialization { ... });

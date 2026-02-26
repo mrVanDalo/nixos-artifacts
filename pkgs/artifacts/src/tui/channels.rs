@@ -22,7 +22,7 @@
 //!
 //! ## Usage
 //!
-//! ```rust
+//! ```rust,ignore
 //! use artifacts::tui::background::spawn_background_task;
 //!
 //! // Spawn background task

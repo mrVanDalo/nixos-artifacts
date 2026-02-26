@@ -16,7 +16,11 @@ fn cli() -> Command {
 #[test]
 #[serial]
 fn cli_no_args_shows_error() {
-    assert_cmd_snapshot!(cli());
+    insta::with_settings!({
+        filters => [(r"flake directory: [^\n]+", "flake directory: <REDACTED_PATH>")]
+    }, {
+        assert_cmd_snapshot!(cli());
+    });
 }
 
 /// CLI help output.
@@ -44,19 +48,31 @@ fn cli_invalid_flake_path() {
 #[test]
 #[serial]
 fn cli_with_log_level() {
-    assert_cmd_snapshot!(cli().args(["--log-level", "debug"]));
+    insta::with_settings!({
+        filters => [(r"flake directory: [^\n]+", "flake directory: <REDACTED_PATH>")]
+    }, {
+        assert_cmd_snapshot!(cli().args(["--log-level", "debug"]));
+    });
 }
 
 /// CLI with --no-emoji flag.
 #[test]
 #[serial]
 fn cli_with_no_emoji() {
-    assert_cmd_snapshot!(cli().arg("--no-emoji"));
+    insta::with_settings!({
+        filters => [(r"flake directory: [^\n]+", "flake directory: <REDACTED_PATH>")]
+    }, {
+        assert_cmd_snapshot!(cli().arg("--no-emoji"));
+    });
 }
 
 /// CLI with machine filter.
 #[test]
 #[serial]
 fn cli_with_machine_filter() {
-    assert_cmd_snapshot!(cli().args(["--machine", "test-machine"]));
+    insta::with_settings!({
+        filters => [(r"flake directory: [^\n]+", "flake directory: <REDACTED_PATH>")]
+    }, {
+        assert_cmd_snapshot!(cli().args(["--machine", "test-machine"]));
+    });
 }
