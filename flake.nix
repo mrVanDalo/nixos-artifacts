@@ -31,6 +31,21 @@
           lib,
           ...
         }:
+        let
+          mkBackend = import ./backends/default.nix { inherit lib pkgs; };
+          testBackend = mkBackend "test" {
+            nixos_check_serialization = ./backends/test/check.sh;
+            nixos_serialize = ./backends/test/serialize.sh;
+            home_check_serialization = ./backends/test/check.sh;
+            home_serialize = ./backends/test/serialize.sh;
+            shared_check_serialization = ./backends/test/check.sh;
+            shared_serialize = ./backends/test/shared-serialize.sh;
+            capabilities = {
+              shared = true;
+              serializes = true;
+            };
+          };
+        in
         {
 
           packages.default = self'.packages.artifacts;
@@ -63,30 +78,25 @@
 
               echo "Documentation installed to $out/share/doc/artifacts-rust/"
             '';
-            checkPhase = "true"; # Disable the regular test phase
+            checkPhase = "true";
           });
 
           packages.artifacts =
-            pkgs.callPackage
-              (
-                {
-                  backends ? { },
-                }:
-                let
-                  backendsFile = (pkgs.formats.toml { }).generate "backends.toml" backends;
-                in
-                pkgs.writers.writeBashBin "artifacts" ''
-                  set -e
-                  set -o pipefail
-                  export NIXOS_ARTIFACTS_BACKEND_CONFIG=${backendsFile}
-                  ${self'.packages.artifacts-bin}/bin/artifacts "$@"
-                ''
-              )
-              {
-                # No default backends - users must configure their own
-              };
+            let
+              mergeBackends = backendPaths:
+                pkgs.runCommand "merged-backends.toml" { } ''
+                  cat ${lib.concatStringsSep " " (map (p: "${p}/backend.toml") backendPaths)} > $out
+                '';
+              backendsFile = mergeBackends [ testBackend ];
+            in
+            pkgs.writers.writeBashBin "artifacts" ''
+              set -e
+              set -o pipefail
+              export NIXOS_ARTIFACTS_BACKEND_CONFIG=${backendsFile}
+              ${self'.packages.artifacts-bin}/bin/artifacts "$@"
+            '';
 
-          packages.artifacts-test = pkgs.callPackage ./backends/test { inherit self'; };
+          packages.artifacts-test = self'.packages.artifacts;
         };
       systems = [
         "x86_64-linux"
@@ -94,6 +104,7 @@
       ];
 
       flake = {
+        lib.mkBackend = import ./backends/default.nix;
 
         nixosConfigurations =
           let
@@ -109,7 +120,6 @@
                     networking.hostName = name;
                     artifacts.default.backend.serialization = "test";
 
-                    # Minimal configuration for flake check
                     system.stateVersion = "25.05";
                     boot.loader.grub.enable = false;
                     fileSystems."/" = {
