@@ -11,7 +11,7 @@ use artifacts::tui::views::{
     render_artifact_list, render_generator_selection, render_progress, render_prompt,
 };
 use insta::assert_snapshot;
-use ratatui::{backend::TestBackend, Terminal};
+use ratatui::{Terminal, backend::TestBackend};
 use std::collections::BTreeMap;
 use std::fmt;
 

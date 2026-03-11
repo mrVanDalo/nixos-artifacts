@@ -1,6 +1,9 @@
 <purpose>
 
-Archive accumulated phase directories from completed milestones into `.planning/milestones/v{X.Y}-phases/`. Identifies which phases belong to each completed milestone, shows a dry-run summary, and moves directories on confirmation.
+Archive accumulated phase directories from completed milestones into
+`.planning/milestones/v{X.Y}-phases/`. Identifies which phases belong to each
+completed milestone, shows a dry-run summary, and moves directories on
+confirmation.
 
 </purpose>
 
@@ -16,7 +19,8 @@ Archive accumulated phase directories from completed milestones into `.planning/
 
 <step name="identify_completed_milestones">
 
-Read `.planning/MILESTONES.md` to identify completed milestones and their versions.
+Read `.planning/MILESTONES.md` to identify completed milestones and their
+versions.
 
 ```bash
 cat .planning/MILESTONES.md
@@ -44,13 +48,15 @@ Stop here.
 
 <step name="determine_phase_membership">
 
-For each completed milestone without a `-phases` archive, read the archived ROADMAP snapshot to determine which phases belong to it:
+For each completed milestone without a `-phases` archive, read the archived
+ROADMAP snapshot to determine which phases belong to it:
 
 ```bash
 cat .planning/milestones/v{X.Y}-ROADMAP.md
 ```
 
-Extract phase numbers and names from the archived roadmap (e.g., Phase 1: Foundation, Phase 2: Auth).
+Extract phase numbers and names from the archived roadmap (e.g., Phase 1:
+Foundation, Phase 2: Auth).
 
 Check which of those phase directories still exist in `.planning/phases/`:
 
@@ -58,7 +64,8 @@ Check which of those phase directories still exist in `.planning/phases/`:
 ls -d .planning/phases/*/ 2>/dev/null
 ```
 
-Match phase directories to milestone membership. Only include directories that still exist in `.planning/phases/`.
+Match phase directories to milestone membership. Only include directories that
+still exist in `.planning/phases/`.
 
 </step>
 
@@ -93,7 +100,8 @@ No phase directories found to archive. Phases may have been removed or archived 
 
 Stop here.
 
-AskUserQuestion: "Proceed with archiving?" with options: "Yes — archive listed phases" | "Cancel"
+AskUserQuestion: "Proceed with archiving?" with options: "Yes — archive listed
+phases" | "Cancel"
 
 If "Cancel": Stop.
 

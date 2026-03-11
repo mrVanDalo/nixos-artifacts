@@ -2,9 +2,8 @@
 Insert a decimal phase for urgent work discovered mid-milestone between existing integer phases. Uses decimal numbering (72.1, 72.2, etc.) to preserve the logical sequence of planned phases while accommodating urgent insertions without renumbering the entire roadmap.
 </purpose>
 
-<required_reading>
-Read all files referenced by the invoking prompt's execution_context before starting.
-</required_reading>
+<required_reading> Read all files referenced by the invoking prompt's
+execution_context before starting. </required_reading>
 
 <process>
 
@@ -13,9 +12,8 @@ Parse the command arguments:
 - First argument: integer phase number to insert after
 - Remaining arguments: phase description
 
-Example: `/gsd:insert-phase 72 Fix critical auth bug`
--> after = 72
--> description = "Fix critical auth bug"
+Example: `/gsd:insert-phase 72 Fix critical auth bug` -> after = 72 ->
+description = "Fix critical auth bug"
 
 If arguments missing:
 
@@ -38,9 +36,11 @@ INIT=$(node ./.claude/get-shit-done/bin/gsd-tools.cjs init phase-op "${after_pha
 ```
 
 Check `roadmap_exists` from init JSON. If false:
+
 ```
 ERROR: No roadmap found (.planning/ROADMAP.md)
 ```
+
 Exit.
 </step>
 
@@ -52,11 +52,13 @@ RESULT=$(node ./.claude/get-shit-done/bin/gsd-tools.cjs phase insert "${after_ph
 ```
 
 The CLI handles:
+
 - Verifying target phase exists in ROADMAP.md
 - Calculating next decimal phase number (checking existing decimals on disk)
 - Generating slug from description
 - Creating the phase directory (`.planning/phases/{N.M}-{slug}/`)
-- Inserting the phase entry into ROADMAP.md after the target phase with (INSERTED) marker
+- Inserting the phase entry into ROADMAP.md after the target phase with
+  (INSERTED) marker
 
 Extract from result: `phase_number`, `after_phase`, `name`, `slug`, `directory`.
 </step>
@@ -104,6 +106,7 @@ Project state updated: .planning/STATE.md
 
 ---
 ```
+
 </step>
 
 </process>
@@ -115,15 +118,13 @@ Project state updated: .planning/STATE.md
 - Don't renumber existing phases
 - Don't modify the target phase content
 - Don't create plans yet (that's /gsd:plan-phase)
-- Don't commit changes (user decides when to commit)
-</anti_patterns>
+- Don't commit changes (user decides when to commit) </anti_patterns>
 
-<success_criteria>
-Phase insertion is complete when:
+<success_criteria> Phase insertion is complete when:
 
 - [ ] `gsd-tools phase insert` executed successfully
 - [ ] Phase directory created
 - [ ] Roadmap updated with new phase entry (includes "(INSERTED)" marker)
 - [ ] STATE.md updated with roadmap evolution note
 - [ ] User informed of next steps and dependency implications
-</success_criteria>
+      </success_criteria>

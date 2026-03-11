@@ -1,11 +1,11 @@
 use crate::app::model::SelectGeneratorState;
 use crate::config::make::TargetType;
 use ratatui::{
+    Frame,
     layout::Rect,
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, ListState},
-    Frame,
 };
 
 /// Truncate a Nix store path with ellipsis in the middle

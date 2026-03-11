@@ -53,7 +53,8 @@ completed: 2026-02-19
 
 # Phase 14 Plan 02: Regeneration Confirmation Dialog Summary
 
-**Confirmation dialog for regenerating existing artifacts with safe defaults and intuitive keyboard navigation**
+**Confirmation dialog for regenerating existing artifacts with safe defaults and
+intuitive keyboard navigation**
 
 ## Performance
 
@@ -65,11 +66,15 @@ completed: 2026-02-19
 
 ## Accomplishments
 
-- Added ConfirmRegenerateState struct with artifact_index, artifact_name, affected_targets, leave_selected fields
+- Added ConfirmRegenerateState struct with artifact_index, artifact_name,
+  affected_targets, leave_selected fields
 - Created regenerate_dialog.rs view module with centered modal dialog
-- Implemented side-by-side Leave (green) and Regenerate (red) buttons with visual selection
-- Wired dialog into update.rs with keyboard navigation (Left/Right, Tab, Enter, Space, Esc)
-- Modified artifact list Enter handler to show dialog when exists=true AND status=NeedsGeneration
+- Implemented side-by-side Leave (green) and Regenerate (red) buttons with
+  visual selection
+- Wired dialog into update.rs with keyboard navigation (Left/Right, Tab, Enter,
+  Space, Esc)
+- Modified artifact list Enter handler to show dialog when exists=true AND
+  status=NeedsGeneration
 - Added dialog case to main view dispatcher in views/mod.rs
 
 ## Task Commits
@@ -87,18 +92,27 @@ _Note: TDD tasks may have multiple commits (test → feat → refactor)_
 
 ## Files Created/Modified
 
-- `pkgs/artifacts/src/app/model.rs` - Added ConfirmRegenerateState struct and Screen::ConfirmRegenerate variant
-- `pkgs/artifacts/src/app/update.rs` - Added update_confirm_regenerate handler and modified start_generation_for_selected
-- `pkgs/artifacts/src/tui/views/regenerate_dialog.rs` - New dialog view with side-by-side buttons (CREATED)
-- `pkgs/artifacts/src/tui/views/mod.rs` - Added module declaration and view dispatch case
+- `pkgs/artifacts/src/app/model.rs` - Added ConfirmRegenerateState struct and
+  Screen::ConfirmRegenerate variant
+- `pkgs/artifacts/src/app/update.rs` - Added update_confirm_regenerate handler
+  and modified start_generation_for_selected
+- `pkgs/artifacts/src/tui/views/regenerate_dialog.rs` - New dialog view with
+  side-by-side buttons (CREATED)
+- `pkgs/artifacts/src/tui/views/mod.rs` - Added module declaration and view
+  dispatch case
 
 ## Decisions Made
 
-- **Leave is default selection**: Following safe defaults principle, the non-destructive option (Leave) is pre-selected
-- **Dialog appears only when needed**: Only shown when artifact exists AND needs generation - new artifacts skip the dialog
-- **Side-by-side buttons**: Leave on left, Regenerate on right - more intuitive than stacked layout
-- **Visual selection indicator**: Selected button shows `> Button <` with accent color background
-- **Target display format**: `nixos: name` and `home: name` prefixes for clarity, truncated to 5+ with ellipsis
+- **Leave is default selection**: Following safe defaults principle, the
+  non-destructive option (Leave) is pre-selected
+- **Dialog appears only when needed**: Only shown when artifact exists AND needs
+  generation - new artifacts skip the dialog
+- **Side-by-side buttons**: Leave on left, Regenerate on right - more intuitive
+  than stacked layout
+- **Visual selection indicator**: Selected button shows `> Button <` with accent
+  color background
+- **Target display format**: `nixos: name` and `home: name` prefixes for
+  clarity, truncated to 5+ with ellipsis
 
 ## Deviations from Plan
 
@@ -106,8 +120,11 @@ None - plan executed exactly as written.
 
 ## Issues Encountered
 
-- **Borrow checker issues**: Had to restructure `start_generation_for_selected` to avoid borrow of `model.entries` when extracting data for dialog state. Used nested block scope pattern to release borrow before modifying model.screen.
-- **Similar issue in update_confirm_regenerate**: Needed to clone artifact_index before match arm to avoid borrow of state during effect creation.
+- **Borrow checker issues**: Had to restructure `start_generation_for_selected`
+  to avoid borrow of `model.entries` when extracting data for dialog state. Used
+  nested block scope pattern to release borrow before modifying model.screen.
+- **Similar issue in update_confirm_regenerate**: Needed to clone artifact_index
+  before match arm to avoid borrow of state during effect creation.
 
 ## Next Phase Readiness
 
@@ -119,14 +136,18 @@ None - plan executed exactly as written.
 ## Self-Check: PASSED
 
 ### File Existence
+
 All key files verified on disk:
+
 - model.rs - ConfirmRegenerateState struct and Screen variant present
 - update.rs - ConfirmRegenerate handler and navigation logic present
 - regenerate_dialog.rs - Dialog view with side-by-side buttons created
 - views/mod.rs - Module import and view dispatch added
 
-### Commits Existence  
+### Commits Existence
+
 All task commits verified in git history:
+
 - Task 1 (6ee3b59): ConfirmRegenerateState and Screen variant
 - Task 2 (937f506): regenerate_dialog.rs view module
 - Task 3 (c5a6107): Dialog wired into update.rs
@@ -134,11 +155,14 @@ All task commits verified in git history:
 - Metadata (a5dcd74): Plan completion commit
 
 ### Implementation Verification
-- ConfirmRegenerateState struct exists with all required fields (artifact_index, artifact_name, affected_targets, leave_selected)
+
+- ConfirmRegenerateState struct exists with all required fields (artifact_index,
+  artifact_name, affected_targets, leave_selected)
 - Screen::ConfirmRegenerate variant exists in Screen enum
 - Side-by-side button layout (Leave | Regenerate) implemented
 - Leave is default selection (leave_selected: true - safe choice)
-- Keyboard navigation: Left/Right arrows, h/l vim keys, Tab toggle, Enter/Space select, Esc cancel
+- Keyboard navigation: Left/Right arrows, h/l vim keys, Tab toggle, Enter/Space
+  select, Esc cancel
 - Dialog appears when exists=true AND status=NeedsGeneration
 - Dialog wired into main view dispatcher via Screen::ConfirmRegenerate case
 

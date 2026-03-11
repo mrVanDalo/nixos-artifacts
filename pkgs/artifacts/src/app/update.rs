@@ -213,11 +213,13 @@ fn start_generation_for_selected(mut model: Model) -> (Model, Effect) {
             // Extract info needed for the dialog
             let artifact_name = entry.artifact_name().to_string();
             let affected_targets = match entry {
-                ListEntry::Single(single) => vec![single
-                    .target_type
-                    .target_name()
-                    .unwrap_or("unknown")
-                    .to_string()],
+                ListEntry::Single(single) => vec![
+                    single
+                        .target_type
+                        .target_name()
+                        .unwrap_or("unknown")
+                        .to_string(),
+                ],
                 ListEntry::Shared(shared) => {
                     let mut targets: Vec<String> = shared
                         .info
@@ -452,7 +454,7 @@ fn handle_check_result(
 
                 // Set status from check result
                 *entry.status_mut() = status.clone();
-                
+
                 // Add status summary log entry
                 let (level, message) = match status {
                     ArtifactStatus::NeedsGeneration => {
@@ -463,7 +465,10 @@ fn handle_check_result(
                     }
                     _ => (LogLevel::Info, "Unknown status".to_string()),
                 };
-                entry.step_logs_mut().check.push(LogEntry { level, message });
+                entry
+                    .step_logs_mut()
+                    .check
+                    .push(LogEntry { level, message });
             }
             Err(e) => {
                 *entry.status_mut() = ArtifactStatus::Failed {
@@ -531,9 +536,7 @@ fn handle_generator_success(
             artifact_name: single.artifact.name.clone(),
             target_type: single.target_type.clone(),
         },
-        ListEntry::Shared(_) => {
-            Effect::None
-        }
+        ListEntry::Shared(_) => Effect::None,
     };
     (model, effect)
 }
@@ -881,7 +884,16 @@ fn start_generation_for_selected_internal(
     artifact_index: usize,
 ) -> (Model, Effect) {
     // Extract all needed data before any mutable borrow
-    let entry_data: Option<(bool, Option<String>, String, Option<String>, Vec<crate::config::make::PromptDef>, Vec<String>, Vec<String>, Vec<crate::config::make::GeneratorInfo>)> = {
+    let entry_data: Option<(
+        bool,
+        Option<String>,
+        String,
+        Option<String>,
+        Vec<crate::config::make::PromptDef>,
+        Vec<String>,
+        Vec<String>,
+        Vec<crate::config::make::GeneratorInfo>,
+    )> = {
         let Some(entry) = model.entries.get(artifact_index) else {
             return (model, Effect::None);
         };
@@ -893,7 +905,16 @@ fn start_generation_for_selected_internal(
                 let exists_before = matches!(single.status, ArtifactStatus::UpToDate);
                 let prompts_empty = prompt_state.prompts.is_empty();
                 // Store what we need for the branches
-                Some((exists_before, None, artifact_name, None, vec![], vec![], vec![], vec![]))
+                Some((
+                    exists_before,
+                    None,
+                    artifact_name,
+                    None,
+                    vec![],
+                    vec![],
+                    vec![],
+                    vec![],
+                ))
             }
             ListEntry::Shared(shared) => {
                 if shared.info.error.is_some() {
@@ -907,12 +928,31 @@ fn start_generation_for_selected_internal(
                 let nixos_targets = shared.info.nixos_targets.clone();
                 let home_targets = shared.info.home_targets.clone();
                 let generators = shared.info.generators.clone();
-                Some((exists_before, generator_path, artifact_name, description, prompts, nixos_targets, home_targets, generators))
+                Some((
+                    exists_before,
+                    generator_path,
+                    artifact_name,
+                    description,
+                    prompts,
+                    nixos_targets,
+                    home_targets,
+                    generators,
+                ))
             }
         }
     };
 
-    let Some((exists_before, generator_path, artifact_name, description, prompts, nixos_targets, home_targets, generators)) = entry_data else {
+    let Some((
+        exists_before,
+        generator_path,
+        artifact_name,
+        description,
+        prompts,
+        nixos_targets,
+        home_targets,
+        generators,
+    )) = entry_data
+    else {
         return (model, Effect::None);
     };
 
@@ -974,10 +1014,13 @@ fn start_generation_for_selected_internal(
                         artifact_index,
                         artifact_name,
                         description,
-                        prompts: prompts.iter().map(|p| PromptEntry {
-                            name: p.name.clone(),
-                            description: p.description.clone(),
-                        }).collect(),
+                        prompts: prompts
+                            .iter()
+                            .map(|p| PromptEntry {
+                                name: p.name.clone(),
+                                description: p.description.clone(),
+                            })
+                            .collect(),
                         current_prompt_index: 0,
                         input_mode: InputMode::Line,
                         buffer: String::new(),
@@ -1011,8 +1054,10 @@ fn handle_shared_check_result(
     outputs: Vec<ScriptOutput>,
 ) -> (Model, Effect) {
     // Aggregate results: needs_generation if any needs it, exists if any is UpToDate
-    let any_needs_gen = statuses.iter().any(|s| matches!(s, ArtifactStatus::NeedsGeneration));
-    
+    let any_needs_gen = statuses
+        .iter()
+        .any(|s| matches!(s, ArtifactStatus::NeedsGeneration));
+
     if let Some(entry) = model.entries.get_mut(artifact_index) {
         // Add captured script output to logs using first output if available
         if let Some(check_output) = outputs.first() {
@@ -1134,12 +1179,13 @@ fn handle_shared_serialize_finished(
 ) -> (Model, Effect) {
     // Check if all succeeded
     let all_success = results.iter().all(|(_, success, _)| *success);
-    
+
     if all_success {
         handle_shared_serialize_success(model, artifact_index, results)
     } else {
         // Find first error
-        let error_msg = results.iter()
+        let error_msg = results
+            .iter()
             .filter(|(_, success, _)| !*success)
             .map(|(_, _, output)| {
                 if output.stderr_lines.is_empty() {
@@ -1991,11 +2037,7 @@ mod tests {
         );
 
         // Effect should be None (screen transition is handled in update)
-        assert!(
-            effect.is_none(),
-            "Expected None effect, got {:?}",
-            effect
-        );
+        assert!(effect.is_none(), "Expected None effect, got {:?}", effect);
 
         // Verify generators are in the screen state
         if let Screen::SelectGenerator(state) = new_model.screen {

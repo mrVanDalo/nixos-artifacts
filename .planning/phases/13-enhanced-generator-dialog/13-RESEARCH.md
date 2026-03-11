@@ -1,41 +1,57 @@
 # Phase 13: Enhanced Generator Dialog - Research
 
-**Researched:** 2026-02-18  
-**Domain:** Rust TUI (ratatui), Terminal UI Layout  
+**Researched:** 2026-02-18\
+**Domain:** Rust TUI (ratatui), Terminal UI Layout\
 **Confidence:** HIGH
 
 ## Summary
 
-The Enhanced Generator Dialog phase focuses on improving the presentation of the existing generator selection dialog in the TUI. The dialog currently shows basic generator paths and their associated machines/users. This phase adds rich context: artifact descriptions, prompt descriptions, shared vs per-machine indicators, and comprehensive machine/user listings.
+The Enhanced Generator Dialog phase focuses on improving the presentation of the
+existing generator selection dialog in the TUI. The dialog currently shows basic
+generator paths and their associated machines/users. This phase adds rich
+context: artifact descriptions, prompt descriptions, shared vs per-machine
+indicators, and comprehensive machine/user listings.
 
-**Primary recommendation:** Extend `SelectGeneratorState` with artifact metadata, restructure `render_generator_selection()` to use a multi-section layout with clear visual hierarchy, maintain existing list navigation behavior, and add comprehensive snapshot tests for the new layout variations.
+**Primary recommendation:** Extend `SelectGeneratorState` with artifact
+metadata, restructure `render_generator_selection()` to use a multi-section
+layout with clear visual hierarchy, maintain existing list navigation behavior,
+and add comprehensive snapshot tests for the new layout variations.
 
 ## User Constraints (from CONTEXT.md)
 
 ### Locked Decisions
 
 **Layout and information hierarchy:**
+
 - Artifact type indicator (shared vs per-machine) appears at the very top
 - Artifact name appears in the dialog title/header itself
 - Artifact description appears above the generator list (if available)
-- Prompt descriptions appear in a dedicated section with clear labels, displayed before the generator selection
+- Prompt descriptions appear in a dedicated section with clear labels, displayed
+  before the generator selection
 - Machine/user info appears at the bottom of the dialog
 - Sections are visually separated by line separators
 - Machines/users are alphabetically sorted
 
 **Visual presentation style:**
+
 - Shared vs per-machine status indicated with text labels only (no color-coding)
-- NixOS machines vs home-manager distinguished by type prefix: `nixos:` and `home:`
+- NixOS machines vs home-manager distinguished by type prefix: `nixos:` and
+  `home:`
 - Long generator paths (Nix store paths) are truncated with ellipsis
 - Currently selected generator indicated with arrow `>` symbol
-- Prompt descriptions displayed as labeled list items (e.g., "Prompt 1: Description")
+- Prompt descriptions displayed as labeled list items (e.g., "Prompt 1:
+  Description")
 
 **Content display:**
+
 - Long prompt descriptions show full text (no truncation)
-- If artifact has no description defined: show fallback text "No description provided"
-- Generator context (machine/user info) formatted consistently showing full identifier (machine name for NixOS, user@host for home-manager)
+- If artifact has no description defined: show fallback text "No description
+  provided"
+- Generator context (machine/user info) formatted consistently showing full
+  identifier (machine name for NixOS, user@host for home-manager)
 
 **Machine/user listing format:**
+
 - Each machine/user displayed on its own line (vertical list)
 - If more than 10 machines: show first 10 with "+N more" indicator
 
@@ -56,21 +72,21 @@ The Enhanced Generator Dialog phase focuses on improving the presentation of the
 
 ### Core
 
-| Library | Version | Purpose | Why Standard |
-|---------|---------|---------|--------------|
-| ratatui | 0.29 | Terminal UI framework | Established Rust TUI library with widgets, layout, styling |
-| crossterm | 0.28 | Terminal manipulation | Cross-platform terminal handling, works with ratatui |
-| insta | 1.43.1 | Snapshot testing | Used throughout codebase for view tests |
+| Library   | Version | Purpose               | Why Standard                                               |
+| --------- | ------- | --------------------- | ---------------------------------------------------------- |
+| ratatui   | 0.29    | Terminal UI framework | Established Rust TUI library with widgets, layout, styling |
+| crossterm | 0.28    | Terminal manipulation | Cross-platform terminal handling, works with ratatui       |
+| insta     | 1.43.1  | Snapshot testing      | Used throughout codebase for view tests                    |
 
 ### Widgets Used in Current Dialog
 
-| Widget | Purpose |
-|--------|---------|
-| `Block` | Container with borders and title |
-| `List` | Generator selection with highlighting |
-| `ListItem` | Individual generator entries |
-| `Line` / `Span` | Text styling and composition |
-| `Paragraph` | Multi-line text display |
+| Widget          | Purpose                               |
+| --------------- | ------------------------------------- |
+| `Block`         | Container with borders and title      |
+| `List`          | Generator selection with highlighting |
+| `ListItem`      | Individual generator entries          |
+| `Line` / `Span` | Text styling and composition          |
+| `Paragraph`     | Multi-line text display               |
 
 ### Layout System
 
@@ -262,13 +278,13 @@ fn truncate_path_middle(path: &str, max_len: usize) -> String {
 
 ## Don't Hand-Roll
 
-| Problem | Don't Build | Use Instead | Why |
-|---------|-------------|-------------|-----|
-| Terminal UI framework | Custom ANSI escape sequences | ratatui | Event handling, widgets, layout, async support all built-in |
-| Text wrapping | Manual string splitting | ratatui `Paragraph` with `Wrap` | Handles Unicode, terminal width, edge cases |
-| Terminal backend detection | Direct termios calls | crossterm | Cross-platform (Windows, macOS, Linux) |
-| Snapshot testing | File-based comparison | insta crate | Structured diff, inline snapshots, review workflow |
-| Layout calculation | Manual coordinate math | ratatui `Layout` with `Constraint` | Responsive to terminal resize, percentage/flex support |
+| Problem                    | Don't Build                  | Use Instead                        | Why                                                         |
+| -------------------------- | ---------------------------- | ---------------------------------- | ----------------------------------------------------------- |
+| Terminal UI framework      | Custom ANSI escape sequences | ratatui                            | Event handling, widgets, layout, async support all built-in |
+| Text wrapping              | Manual string splitting      | ratatui `Paragraph` with `Wrap`    | Handles Unicode, terminal width, edge cases                 |
+| Terminal backend detection | Direct termios calls         | crossterm                          | Cross-platform (Windows, macOS, Linux)                      |
+| Snapshot testing           | File-based comparison        | insta crate                        | Structured diff, inline snapshots, review workflow          |
+| Layout calculation         | Manual coordinate math       | ratatui `Layout` with `Constraint` | Responsive to terminal resize, percentage/flex support      |
 
 ---
 
@@ -276,14 +292,20 @@ fn truncate_path_middle(path: &str, max_len: usize) -> String {
 
 ### Pitfall 1: Breaking Existing Navigation
 
-**What goes wrong:** Restructuring the layout breaks the visual index calculation for list navigation.
+**What goes wrong:** Restructuring the layout breaks the visual index
+calculation for list navigation.
 
-**Why it happens:** The current `calculate_visual_index()` function assumes a specific structure (generator lines + source lines + blank separators).
+**Why it happens:** The current `calculate_visual_index()` function assumes a
+specific structure (generator lines + source lines + blank separators).
 
 **How to avoid:**
-- Keep generator list as a contiguous `List` widget for proper selection handling
-- Move static context sections (description, prompts, targets) outside the `List`
-- Use nested layouts: outer vertical split separates context from interactive list
+
+- Keep generator list as a contiguous `List` widget for proper selection
+  handling
+- Move static context sections (description, prompts, targets) outside the
+  `List`
+- Use nested layouts: outer vertical split separates context from interactive
+  list
 
 ```rust
 // Safe layout structure
@@ -299,11 +321,13 @@ render_generator_list(frame, state, main_chunks[1]);
 
 ### Pitfall 2: Overflow with Many Targets
 
-**What goes wrong:** Dialog exceeds terminal height when an artifact is used by many machines.
+**What goes wrong:** Dialog exceeds terminal height when an artifact is used by
+many machines.
 
 **Why it happens:** No limit on displayed targets; list grows indefinitely.
 
 **How to avoid:**
+
 - Implement the "+N more" truncation as specified
 - Use `area.height` to dynamically adjust visible content
 - Consider scrollable sections for extreme cases (>20 targets)
@@ -312,25 +336,31 @@ render_generator_list(frame, state, main_chunks[1]);
 
 **What goes wrong:** `ArtifactDef` has no `description` field currently.
 
-**Why it happens:** The field needs to be added to both the Nix module and Rust config parsing.
+**Why it happens:** The field needs to be added to both the Nix module and Rust
+config parsing.
 
 **How to avoid:**
+
 - Phase 13 includes adding the description field to data models
-- Must update: `modules/store.nix` → `ArtifactDef` in Rust → `SelectGeneratorState`
+- Must update: `modules/store.nix` → `ArtifactDef` in Rust →
+  `SelectGeneratorState`
 - Default to "No description provided" when absent
 
 ### Pitfall 4: Inconsistent Styling
 
 **What goes wrong:** New sections use different color schemes than existing UI.
 
-**Why it happens:** No established style guide in codebase; developers use personal preference.
+**Why it happens:** No established style guide in codebase; developers use
+personal preference.
 
 **How to avoid:**
+
 - Follow existing patterns from `generator_selection.rs`:
   - Labels: `Color::DarkGray` with optional `Modifier::BOLD`
   - Values: `Color::White` or `Color::Cyan` for emphasis
   - Type indicators: `Color::Blue` for NixOS, `Color::Magenta` for home-manager
-  - Selected items: `Color::Cyan` + `Modifier::BOLD` with `Color::DarkGray` background
+  - Selected items: `Color::Cyan` + `Modifier::BOLD` with `Color::DarkGray`
+    background
 
 ### Pitfall 5: Test Snapshot Drift
 
@@ -339,10 +369,12 @@ render_generator_list(frame, state, main_chunks[1]);
 **Why it happens:** Snapshots capture exact terminal output including spacing.
 
 **Warning signs:**
+
 - Many snapshot files updated in single commit
 - Test failures on unchanged functionality
 
 **How to avoid:**
+
 - Run `cargo insta review` (NEVER `cargo insta accept`)
 - Review each diff carefully
 - Use `TestBackend::new(width, height)` with consistent dimensions
@@ -594,12 +626,12 @@ fn test_enhanced_generator_selection_with_description() {
 
 ## State of the Art
 
-| Old Approach | Current Approach | When Changed | Impact |
-|--------------|------------------|--------------|--------|
-| Custom ANSI sequences | ratatui widgets | Phase 1-2 | Standardized TUI, easier testing |
-| Manual layout math | ratatui Layout constraints | Phase 1-2 | Responsive to terminal resize |
-| Integration tests only | Unit tests + snapshot tests | Phase 6-7 | Fast feedback, visual regression catching |
-| No visual distinction for shared artifacts | `[S]` marker and target counts | Phase 10 | Users can identify shared vs single artifacts |
+| Old Approach                               | Current Approach               | When Changed | Impact                                        |
+| ------------------------------------------ | ------------------------------ | ------------ | --------------------------------------------- |
+| Custom ANSI sequences                      | ratatui widgets                | Phase 1-2    | Standardized TUI, easier testing              |
+| Manual layout math                         | ratatui Layout constraints     | Phase 1-2    | Responsive to terminal resize                 |
+| Integration tests only                     | Unit tests + snapshot tests    | Phase 6-7    | Fast feedback, visual regression catching     |
+| No visual distinction for shared artifacts | `[S]` marker and target counts | Phase 10     | Users can identify shared vs single artifacts |
 
 ---
 
@@ -607,17 +639,22 @@ fn test_enhanced_generator_selection_with_description() {
 
 1. **Artifact Description Field**
    - What we know: Not currently in `ArtifactDef` or `SharedArtifactInfo`
-   - What's unclear: Should it be added to the Nix module options first, or just Rust models?
-   - Recommendation: Add to `modules/store.nix` artifact options, then propagate to Rust
+   - What's unclear: Should it be added to the Nix module options first, or just
+     Rust models?
+   - Recommendation: Add to `modules/store.nix` artifact options, then propagate
+     to Rust
 
 2. **Long Description Handling**
-   - What we know: User says "long prompt descriptions show full text (no truncation)"
+   - What we know: User says "long prompt descriptions show full text (no
+     truncation)"
    - What's unclear: What about very long artifact descriptions (paragraphs)?
-   - Recommendation: Implement soft wrapping with `Paragraph::wrap(Wrap { trim: false })`
+   - Recommendation: Implement soft wrapping with
+     `Paragraph::wrap(Wrap { trim: false })`
 
 3. **Minimum Terminal Size**
    - What we know: Current tests use 70x15, 70x20, 80x25
-   - What's unclear: What's the minimum size we should support for the enhanced dialog?
+   - What's unclear: What's the minimum size we should support for the enhanced
+     dialog?
    - Recommendation: Maintain support down to 70x20, test edge cases at 60x15
 
 ---
@@ -626,16 +663,21 @@ fn test_enhanced_generator_selection_with_description() {
 
 ### Primary (HIGH confidence)
 
-- `pkgs/artifacts/src/tui/views/generator_selection.rs` - Current dialog implementation
-- `pkgs/artifacts/src/app/model.rs` - State structures (SelectGeneratorState, PromptEntry)
-- `pkgs/artifacts/src/config/make.rs` - Config structures (ArtifactDef, SharedArtifactInfo, PromptDef)
-- `pkgs/artifacts/src/tui/views/prompt.rs` - Reference for prompt description display pattern
+- `pkgs/artifacts/src/tui/views/generator_selection.rs` - Current dialog
+  implementation
+- `pkgs/artifacts/src/app/model.rs` - State structures (SelectGeneratorState,
+  PromptEntry)
+- `pkgs/artifacts/src/config/make.rs` - Config structures (ArtifactDef,
+  SharedArtifactInfo, PromptDef)
+- `pkgs/artifacts/src/tui/views/prompt.rs` - Reference for prompt description
+  display pattern
 - `pkgs/artifacts/tests/tui/view_tests.rs` - Snapshot testing patterns
 
 ### Secondary (MEDIUM confidence)
 
 - ratatui 0.29 documentation patterns (from code usage)
-- Existing snapshots in `pkgs/artifacts/tests/tui/snapshots/` - Visual reference for current output
+- Existing snapshots in `pkgs/artifacts/tests/tui/snapshots/` - Visual reference
+  for current output
 
 ### Tertiary (LOW confidence)
 
@@ -650,9 +692,10 @@ fn test_enhanced_generator_selection_with_description() {
 - Standard stack: HIGH - ratatui 0.29 is locked, code patterns are established
 - Architecture patterns: HIGH - Based on direct code inspection
 - Pitfalls: HIGH - Derived from existing implementation constraints
-- Data model changes: MEDIUM - Requires adding description field (straightforward but needs verification)
+- Data model changes: MEDIUM - Requires adding description field
+  (straightforward but needs verification)
 
-**Research date:** 2026-02-18  
+**Research date:** 2026-02-18\
 **Valid until:** 2026-03-18 (30 days — stable codebase)
 
 ---
@@ -671,14 +714,17 @@ Based on research, the implementation tasks should include:
    - Add `description` option to `modules/store.nix` artifact definition
 
 3. **View Implementation**
-   - Refactor `render_generator_selection()` in `src/tui/views/generator_selection.rs`
-   - Add helper functions: `render_type_indicator()`, `render_description()`, `render_prompts_section()`, `render_all_targets()`
+   - Refactor `render_generator_selection()` in
+     `src/tui/views/generator_selection.rs`
+   - Add helper functions: `render_type_indicator()`, `render_description()`,
+     `render_prompts_section()`, `render_all_targets()`
    - Implement path truncation utility
    - Implement target sorting (alphabetical)
    - Implement "+N more" truncation for >10 targets
 
 4. **State Construction Updates**
-   - Update `SelectGeneratorState` construction in `src/tui/model_builder.rs` or relevant location
+   - Update `SelectGeneratorState` construction in `src/tui/model_builder.rs` or
+     relevant location
 
 5. **Testing**
    - Add snapshot tests for enhanced dialog with description

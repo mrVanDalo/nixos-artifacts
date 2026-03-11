@@ -14,29 +14,33 @@ allowed-tools:
 <objective>
 Analyze existing codebase using parallel gsd-codebase-mapper agents to produce structured codebase documents.
 
-Each mapper agent explores a focus area and **writes documents directly** to `.planning/codebase/`. The orchestrator only receives confirmations, keeping context usage minimal.
+Each mapper agent explores a focus area and **writes documents directly** to
+`.planning/codebase/`. The orchestrator only receives confirmations, keeping
+context usage minimal.
 
-Output: .planning/codebase/ folder with 7 structured documents about the codebase state.
+Output: .planning/codebase/ folder with 7 structured documents about the
+codebase state.
 </objective>
 
-<execution_context>
-@./.claude/get-shit-done/workflows/map-codebase.md
+<execution_context> @./.claude/get-shit-done/workflows/map-codebase.md
 </execution_context>
 
 <context>
 Focus area: $ARGUMENTS (optional - if provided, tells agents to focus on specific subsystem)
 
-**Load project state if exists:**
-Check for .planning/STATE.md - loads context if project already initialized
+**Load project state if exists:** Check for .planning/STATE.md - loads context
+if project already initialized
 
 **This command can run:**
-- Before /gsd:new-project (brownfield codebases) - creates codebase map first
-- After /gsd:new-project (greenfield codebases) - updates codebase map as code evolves
-- Anytime to refresh codebase understanding
-</context>
 
-<when_to_use>
-**Use map-codebase for:**
+- Before /gsd:new-project (brownfield codebases) - creates codebase map first
+- After /gsd:new-project (greenfield codebases) - updates codebase map as code
+  evolves
+- Anytime to refresh codebase understanding
+  </context>
+
+<when_to_use> **Use map-codebase for:**
+
 - Brownfield projects before initialization (understand existing code first)
 - Refreshing codebase map after significant changes
 - Onboarding to an unfamiliar codebase
@@ -44,9 +48,9 @@ Check for .planning/STATE.md - loads context if project already initialized
 - When STATE.md references outdated codebase info
 
 **Skip map-codebase for:**
+
 - Greenfield projects with no code yet (nothing to map)
-- Trivial codebases (<5 files)
-</when_to_use>
+- Trivial codebases (<5 files) </when_to_use>
 
 <process>
 1. Check if .planning/codebase/ already exists (offer to refresh or skip)
@@ -63,9 +67,9 @@ Check for .planning/STATE.md - loads context if project already initialized
 </process>
 
 <success_criteria>
+
 - [ ] .planning/codebase/ directory created
 - [ ] All 7 codebase documents written by mapper agents
 - [ ] Documents follow template structure
 - [ ] Parallel agents completed without errors
-- [ ] User knows next steps
-</success_criteria>
+- [ ] User knows next steps </success_criteria>

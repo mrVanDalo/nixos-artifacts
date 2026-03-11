@@ -1,9 +1,12 @@
 <purpose>
 Orchestrate parallel codebase mapper agents to analyze codebase and produce structured documents in .planning/codebase/
 
-Each agent has fresh context, explores a specific focus area, and **writes documents directly**. The orchestrator only receives confirmation + line counts, then writes a summary.
+Each agent has fresh context, explores a specific focus area, and **writes
+documents directly**. The orchestrator only receives confirmation + line counts,
+then writes a summary.
 
-Output: .planning/codebase/ folder with 7 structured documents about the codebase state.
+Output: .planning/codebase/ folder with 7 structured documents about the
+codebase state.
 </purpose>
 
 <philosophy>
@@ -13,11 +16,13 @@ Output: .planning/codebase/ folder with 7 structured documents about the codebas
 - Orchestrator only summarizes what was created (minimal context usage)
 - Faster execution (agents run simultaneously)
 
-**Document quality over length:**
-Include enough detail to be useful as reference. Prioritize practical examples (especially code patterns) over arbitrary brevity.
+**Document quality over length:** Include enough detail to be useful as
+reference. Prioritize practical examples (especially code patterns) over
+arbitrary brevity.
 
-**Always include file paths:**
-Documents are reference material for Claude when planning/executing. Always include actual file paths formatted with backticks: `src/services/user.ts`.
+**Always include file paths:** Documents are reference material for Claude when
+planning/executing. Always include actual file paths formatted with backticks:
+`src/services/user.ts`.
 </philosophy>
 
 <process>
@@ -29,13 +34,15 @@ Load codebase mapping context:
 INIT=$(node ./.claude/get-shit-done/bin/gsd-tools.cjs init map-codebase)
 ```
 
-Extract from init JSON: `mapper_model`, `commit_docs`, `codebase_dir`, `existing_maps`, `has_maps`, `codebase_dir_exists`.
+Extract from init JSON: `mapper_model`, `commit_docs`, `codebase_dir`,
+`existing_maps`, `has_maps`, `codebase_dir_exists`.
 </step>
 
 <step name="check_existing">
 Check if .planning/codebase/ already exists using `has_maps` from init context.
 
 If `codebase_dir_exists` is true:
+
 ```bash
 ls -la .planning/codebase/
 ```
@@ -54,12 +61,11 @@ What's next?
 
 Wait for user response.
 
-If "Refresh": Delete .planning/codebase/, continue to create_structure
-If "Update": Ask which documents to update, continue to spawn_agents (filtered)
-If "Skip": Exit workflow
+If "Refresh": Delete .planning/codebase/, continue to create_structure If
+"Update": Ask which documents to update, continue to spawn_agents (filtered) If
+"Skip": Exit workflow
 
-**If doesn't exist:**
-Continue to create_structure.
+**If doesn't exist:** Continue to create_structure.
 </step>
 
 <step name="create_structure">
@@ -70,6 +76,7 @@ mkdir -p .planning/codebase
 ```
 
 **Expected output files:**
+
 - STACK.md (from tech mapper)
 - INTEGRATIONS.md (from tech mapper)
 - ARCHITECTURE.md (from arch mapper)
@@ -84,9 +91,11 @@ Continue to spawn_agents.
 <step name="spawn_agents">
 Spawn 4 parallel gsd-codebase-mapper agents.
 
-Use Task tool with `subagent_type="gsd-codebase-mapper"`, `model="{mapper_model}"`, and `run_in_background=true` for parallel execution.
+Use Task tool with `subagent_type="gsd-codebase-mapper"`,
+`model="{mapper_model}"`, and `run_in_background=true` for parallel execution.
 
-**CRITICAL:** Use the dedicated `gsd-codebase-mapper` agent, NOT `Explore`. The mapper agent writes documents directly.
+**CRITICAL:** Use the dedicated `gsd-codebase-mapper` agent, NOT `Explore`. The
+mapper agent writes documents directly.
 
 **Agent 1: Tech Focus**
 
@@ -176,6 +185,7 @@ Wait for all 4 agents to complete.
 Read each agent's output file to collect confirmations.
 
 **Expected confirmation format from each agent:**
+
 ```
 ## Mapping Complete
 
@@ -203,6 +213,7 @@ wc -l .planning/codebase/*.md
 ```
 
 **Verification checklist:**
+
 - All 7 documents exist
 - No empty documents (each should have >20 lines)
 
@@ -260,6 +271,7 @@ Continue to offer_next.
 Present completion summary and next steps.
 
 **Get line counts:**
+
 ```bash
 wc -l .planning/codebase/*.md
 ```
@@ -305,11 +317,12 @@ End workflow.
 </process>
 
 <success_criteria>
+
 - .planning/codebase/ directory created
 - 4 parallel gsd-codebase-mapper agents spawned with run_in_background=true
-- Agents write documents directly (orchestrator doesn't receive document contents)
+- Agents write documents directly (orchestrator doesn't receive document
+  contents)
 - Read agent output files to collect confirmations
 - All 7 codebase documents exist
 - Clear completion summary with line counts
-- User offered clear next steps in GSD style
-</success_criteria>
+- User offered clear next steps in GSD style </success_criteria>

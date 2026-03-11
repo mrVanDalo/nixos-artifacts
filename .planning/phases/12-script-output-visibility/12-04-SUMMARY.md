@@ -51,7 +51,8 @@ completed: 2026-02-18
 
 # Phase 12 Plan 04: Real-time Streaming Output Summary
 
-**Async streaming infrastructure enabling real-time script output display during TUI execution**
+**Async streaming infrastructure enabling real-time script output display during
+TUI execution**
 
 ## Performance
 
@@ -63,7 +64,8 @@ completed: 2026-02-18
 
 ## Accomplishments
 
-- Added streaming output message types (EffectResult::OutputLine, Msg::OutputLine)
+- Added streaming output message types (EffectResult::OutputLine,
+  Msg::OutputLine)
 - Implemented real-time output routing through the message pipeline
 - Created handle_output_line() handler that appends lines to current step logs
 - Added async streaming infrastructure in background.rs with result_tx channel
@@ -91,20 +93,28 @@ completed: 2026-02-18
 
 ## Files Created/Modified
 
-- `pkgs/artifacts/src/tui/channels.rs` - OutputStream enum, EffectResult::OutputLine variant
+- `pkgs/artifacts/src/tui/channels.rs` - OutputStream enum,
+  EffectResult::OutputLine variant
 - `pkgs/artifacts/src/app/message.rs` - Msg::OutputLine variant
 - `pkgs/artifacts/src/app/model.rs` - OutputStream enum with From conversion
-- `pkgs/artifacts/src/tui/runtime.rs` - OutputLine routing in result_to_message()
+- `pkgs/artifacts/src/tui/runtime.rs` - OutputLine routing in
+  result_to_message()
 - `pkgs/artifacts/src/app/update.rs` - handle_output_line() handler
-- `pkgs/artifacts/src/tui/background.rs` - Streaming infrastructure with result_tx
+- `pkgs/artifacts/src/tui/background.rs` - Streaming infrastructure with
+  result_tx
 - `pkgs/artifacts/src/effect_handler.rs` - OutputLine result handling
 
 ## Decisions Made
 
-- **Separate OutputStream enums**: Used different enums in channels.rs and model.rs with a From conversion, maintaining clean separation between backend and app layers
-- **Current step tracking**: Streaming output appends to currently selected_log_step, ensuring output appears in the step being viewed
-- **Level mapping**: Stdout streams as LogLevel::Output ("|"), stderr as LogLevel::Error ("!")
-- **Channel-based streaming**: UnboundedSender enables real-time output without blocking during script execution
+- **Separate OutputStream enums**: Used different enums in channels.rs and
+  model.rs with a From conversion, maintaining clean separation between backend
+  and app layers
+- **Current step tracking**: Streaming output appends to currently
+  selected_log_step, ensuring output appears in the step being viewed
+- **Level mapping**: Stdout streams as LogLevel::Output ("|"), stderr as
+  LogLevel::Error ("!")
+- **Channel-based streaming**: UnboundedSender enables real-time output without
+  blocking during script execution
 
 ## Deviations from Plan
 
@@ -113,15 +123,18 @@ completed: 2026-02-18
 **1. [Rule 1 - Bug] Fixed OutputStream name collision**
 
 - **Found during:** Task 1
-- **Issue:** OutputStream already defined in backend/output_capture.rs, causing name collision
-- **Fix:** Renamed imported type to BackendOutputStream in channels.rs and created separate OutputStream in channels.rs for the TUI layer
+- **Issue:** OutputStream already defined in backend/output_capture.rs, causing
+  name collision
+- **Fix:** Renamed imported type to BackendOutputStream in channels.rs and
+  created separate OutputStream in channels.rs for the TUI layer
 - **Files modified:** pkgs/artifacts/src/tui/channels.rs
 - **Committed in:** 32505a0 (Task 1 commit)
 
 **2. [Rule 1 - Bug] Added missing match arm for OutputLine in channels test**
 
 - **Found during:** Task 1
-- **Issue:** test_all_effect_result_variants_have_artifact_index didn't cover OutputLine variant
+- **Issue:** test_all_effect_result_variants_have_artifact_index didn't cover
+  OutputLine variant
 - **Fix:** Added OutputLine match arm to the test
 - **Files modified:** pkgs/artifacts/src/tui/channels.rs
 - **Committed in:** 32505a0 (Task 1 commit)
@@ -129,15 +142,17 @@ completed: 2026-02-18
 **3. [Rule 1 - Bug] Fixed ArtifactStatus::Checking not found**
 
 - **Found during:** Task 4
-- **Issue:** handle_output_line() referenced ArtifactStatus::Checking variant which doesn't exist
-- **Fix:** Simplified to use model.selected_log_step directly instead of deriving from status
+- **Issue:** handle_output_line() referenced ArtifactStatus::Checking variant
+  which doesn't exist
+- **Fix:** Simplified to use model.selected_log_step directly instead of
+  deriving from status
 - **Files modified:** pkgs/artifacts/src/app/update.rs
 - **Committed in:** 78681ec (Task 3-4 commit)
 
 ---
 
-**Total deviations:** 3 auto-fixed (all Rule 1 - bugs)
-**Impact on plan:** All fixes were minor code corrections. No architectural changes.
+**Total deviations:** 3 auto-fixed (all Rule 1 - bugs) **Impact on plan:** All
+fixes were minor code corrections. No architectural changes.
 
 ## Issues Encountered
 
@@ -152,5 +167,4 @@ completed: 2026-02-18
 
 ---
 
-_Phase: 12-script-output-visibility_
-_Completed: 2026-02-18_
+_Phase: 12-script-output-visibility_ _Completed: 2026-02-18_

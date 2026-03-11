@@ -54,7 +54,9 @@ completed: 2026-02-22
 
 # Phase 18 Plan 05: Pedantic and Nursery Clippy Lints Summary
 
-**Balanced approach applied: Fixed key pedantic warnings (~45), added comprehensive allow attributes with justifications for ~540 overly strict lints**
+**Balanced approach applied: Fixed key pedantic warnings (~45), added
+comprehensive allow attributes with justifications for ~540 overly strict
+lints**
 
 ## Performance
 
@@ -66,8 +68,10 @@ completed: 2026-02-22
 
 ## Accomplishments
 
-- Fixed critical pedantic warnings in key files (unnested_or_patterns, doc_markdown, use_self, unreadable_literal)
-- Added comprehensive allow attributes to src/lib.rs with detailed justifications for each
+- Fixed critical pedantic warnings in key files (unnested_or_patterns,
+  doc_markdown, use_self, unreadable_literal)
+- Added comprehensive allow attributes to src/lib.rs with detailed
+  justifications for each
 - Reduced pedantic warnings from 590 to 55 (90% reduction)
 - Maintained zero warnings for default clippy
 - Documented intentional lint allowances with clear reasoning
@@ -82,10 +86,13 @@ completed: 2026-02-22
 
 ## Files Created/Modified
 
-- `pkgs/artifacts/src/lib.rs` - Added comprehensive lint configuration with justifications
+- `pkgs/artifacts/src/lib.rs` - Added comprehensive lint configuration with
+  justifications
 - `pkgs/artifacts/src/app/update.rs` - Fixed unnested_or_patterns (line 761)
-- `pkgs/artifacts/src/backend/prompt.rs` - Fixed unnested_or_patterns (lines 178-180)
-- `pkgs/artifacts/src/backend/helpers.rs` - Fixed unreadable_literal (lines 51-52)
+- `pkgs/artifacts/src/backend/prompt.rs` - Fixed unnested_or_patterns (lines
+  178-180)
+- `pkgs/artifacts/src/backend/helpers.rs` - Fixed unreadable_literal (lines
+  51-52)
 - `pkgs/artifacts/src/app/effect.rs` - Fixed doc_markdown and use_self warnings
 - `pkgs/artifacts/src/app/message.rs` - Fixed doc_markdown warnings
 - `pkgs/artifacts/src/app/model.rs` - Fixed use_self in OutputStream::from
@@ -95,12 +102,16 @@ completed: 2026-02-22
 ### Balanced Approach Selected
 
 Applied the "balanced approach" as decided in the checkpoint:
-1. **Fixed (~45 warnings):** unnested_or_patterns, unreadable_literal, doc_markdown, use_self
-2. **Allowed (~540 warnings):** Added comprehensive allow attributes with justifications
+
+1. **Fixed (~45 warnings):** unnested_or_patterns, unreadable_literal,
+   doc_markdown, use_self
+2. **Allowed (~540 warnings):** Added comprehensive allow attributes with
+   justifications
 
 ### Key Allow Decisions
 
 Documented justifications for each allowed lint:
+
 - `must_use_candidate`: Too noisy for internal APIs
 - `module_name_repetitions`: Naming convention choice
 - `similar_names`: Too strict on variable naming
@@ -117,8 +128,10 @@ Documented justifications for each allowed lint:
 **1. [Rule 3 - Blocking] Fixed invalid lint names**
 
 - **Found during:** Task 3
-- **Issue:** `clippy::borrowed_as_ptr` and `clippy::debug_non_exhaustive` don't exist in current clippy
-- **Fix:** Replaced with correct lint names: `clippy::borrow_as_ptr` and `clippy::manual_non_exhaustive`
+- **Issue:** `clippy::borrowed_as_ptr` and `clippy::debug_non_exhaustive` don't
+  exist in current clippy
+- **Fix:** Replaced with correct lint names: `clippy::borrow_as_ptr` and
+  `clippy::manual_non_exhaustive`
 - **Files modified:** src/lib.rs
 - **Committed in:** 51d114b
 
@@ -132,20 +145,25 @@ Documented justifications for each allowed lint:
 
 ---
 
-**Total deviations:** 2 auto-fixed (Rule 3 - blocking)  
+**Total deviations:** 2 auto-fixed (Rule 3 - blocking)\
 **Impact on plan:** Both fixes necessary for clean compilation. No scope creep.
 
 ## Issues Encountered
 
-1. **Unknown lint names**: Some clippy lint names from documentation didn't match current clippy version
-   - Resolution: Fixed to use correct names (`borrow_as_ptr` vs `borrowed_as_ptr`)
+1. **Unknown lint names**: Some clippy lint names from documentation didn't
+   match current clippy version
+   - Resolution: Fixed to use correct names (`borrow_as_ptr` vs
+     `borrowed_as_ptr`)
 
-2. **Many remaining pedantic warnings**: Even after allowing major categories, 55 warnings remained
-   - Resolution: These are acceptable as they don't break default clippy; they represent edge-case pedantic suggestions
+2. **Many remaining pedantic warnings**: Even after allowing major categories,
+   55 warnings remained
+   - Resolution: These are acceptable as they don't break default clippy; they
+     represent edge-case pedantic suggestions
 
 ## Verification Results
 
 ### Default Clippy (Requirements LINT-01 through LINT-04)
+
 ```bash
 cargo clippy
 # Result: 0 warnings ✓
@@ -155,6 +173,7 @@ cargo clippy --tests
 ```
 
 ### Pedantic + Nursery (Requirement LINT-05)
+
 ```bash
 cargo clippy -- -W clippy::pedantic -W clippy::nursery
 # Result: 55 warnings (90% reduction from 590)
@@ -170,7 +189,7 @@ cargo clippy -- -W clippy::pedantic -W clippy::nursery
 
 ---
 
-_Phase: 18-fix-compiler-clippy-warnings_  
+_Phase: 18-fix-compiler-clippy-warnings_\
 _Completed: 2026-02-22_
 
 ## Self-Check: PASSED
@@ -180,4 +199,5 @@ _Completed: 2026-02-22_
 - [x] Pedantic warnings reduced by 90%
 - [x] All modified files exist on disk
 - [x] lib.rs contains documented lint configuration
-- [x] Key fixes applied: unnested_or_patterns, doc_markdown, use_self, unreadable_literal
+- [x] Key fixes applied: unnested_or_patterns, doc_markdown, use_self,
+      unreadable_literal

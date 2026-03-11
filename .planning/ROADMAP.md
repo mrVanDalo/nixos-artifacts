@@ -15,7 +15,8 @@
 <details>
 <summary>✅ v4.1 Code Quality & Documentation (Phases 18-22) — SHIPPED 2026-02-23</summary>
 
-- [x] Phase 18: Fix Compiler & Clippy Warnings (5/5 plans) — completed 2026-02-22
+- [x] Phase 18: Fix Compiler & Clippy Warnings (5/5 plans) — completed
+      2026-02-22
 - [x] Phase 19: Dead Code Elimination (1/1 plan) — completed 2026-02-23
 - [x] Phase 20: Unused File Cleanup (1/1 plan) — completed 2026-02-23
 - [x] Phase 21: Rust Documentation (5/5 plans) — completed 2026-02-23
@@ -78,30 +79,30 @@ See [v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md) for full details.
 
 ## Progress
 
-| Phase             | Milestone | Plans Complete | Status      | Completed  |
-| ----------------- | --------- | -------------- | ----------- | ---------- |
-| 1. Foundation     | v1.0      | 3/3            | Complete    | 2026-02-10 |
-| 2. Single Artifacts | v1.0    | 3/3            | Complete    | 2026-02-10 |
-| 3. Shared Artifacts | v1.0    | 6/6            | Complete    | 2026-02-10 |
-| 4. Robustness     | v1.0      | 3/3            | Complete    | 2026-02-10 |
-| 5. Validation     | v2.0      | 3/3            | Complete    | 2026-02-17 |
-| 6. Integration Testing | v2.0 | 5/5            | Complete    | 2026-02-17 |
-| 7. Code Quality   | v2.0      | 3/3            | Complete    | 2026-02-17 |
-| 8. Smart Logging  | v2.0      | 3/3            | Complete    | 2026-02-17 |
-| 9. Shared Artifact Status | v3.0 | 4/4      | Complete    | 2026-02-18 |
-| 10. Smart Generator Selection | v3.0 | 2/2 | Complete    | 2026-02-18 |
-| 11. TUI Error Handling | v3.0 | 3/3      | Complete    | 2026-02-18 |
-| 12. Script Output Visibility | v3.0 | 4/4 | Complete    | 2026-02-18 |
-| 13. Enhanced Generator Dialog | v3.0 | 2/2 | Complete    | 2026-02-18 |
-| 14. Regeneration Confirmation | v4.0 | 4/4 | Complete    | 2026-02-22 |
-| 15. Chronological Log View | v4.0 | 3/3 | Complete    | 2026-02-22 |
-| 16. Backend Developer Docs | v4.0 | 3/3 | Complete    | 2026-02-22 |
-| 17. Model-Based Testing | v4.0 | 3/3 | Complete    | 2026-02-22 |
-| 18. Fix Compiler & Clippy Warnings | v4.1 | 5/5 | Complete | 2026-02-22 |
-| 19. Dead Code Elimination | v4.1 | 1/1 | Complete | 2026-02-23 |
-| 20. Unused File Cleanup | v4.1 | 1/1 | Complete | 2026-02-23 |
-| 21. Rust Documentation | v4.1 | 5/5 | Complete | 2026-02-23 |
-| 22. Dependency Audit | v4.1 | 1/1 | Complete | 2026-02-23 |
+| Phase                              | Milestone | Plans Complete | Status   | Completed  |
+| ---------------------------------- | --------- | -------------- | -------- | ---------- |
+| 1. Foundation                      | v1.0      | 3/3            | Complete | 2026-02-10 |
+| 2. Single Artifacts                | v1.0      | 3/3            | Complete | 2026-02-10 |
+| 3. Shared Artifacts                | v1.0      | 6/6            | Complete | 2026-02-10 |
+| 4. Robustness                      | v1.0      | 3/3            | Complete | 2026-02-10 |
+| 5. Validation                      | v2.0      | 3/3            | Complete | 2026-02-17 |
+| 6. Integration Testing             | v2.0      | 5/5            | Complete | 2026-02-17 |
+| 7. Code Quality                    | v2.0      | 3/3            | Complete | 2026-02-17 |
+| 8. Smart Logging                   | v2.0      | 3/3            | Complete | 2026-02-17 |
+| 9. Shared Artifact Status          | v3.0      | 4/4            | Complete | 2026-02-18 |
+| 10. Smart Generator Selection      | v3.0      | 2/2            | Complete | 2026-02-18 |
+| 11. TUI Error Handling             | v3.0      | 3/3            | Complete | 2026-02-18 |
+| 12. Script Output Visibility       | v3.0      | 4/4            | Complete | 2026-02-18 |
+| 13. Enhanced Generator Dialog      | v3.0      | 2/2            | Complete | 2026-02-18 |
+| 14. Regeneration Confirmation      | v4.0      | 4/4            | Complete | 2026-02-22 |
+| 15. Chronological Log View         | v4.0      | 3/3            | Complete | 2026-02-22 |
+| 16. Backend Developer Docs         | v4.0      | 3/3            | Complete | 2026-02-22 |
+| 17. Model-Based Testing            | v4.0      | 3/3            | Complete | 2026-02-22 |
+| 18. Fix Compiler & Clippy Warnings | v4.1      | 5/5            | Complete | 2026-02-22 |
+| 19. Dead Code Elimination          | v4.1      | 1/1            | Complete | 2026-02-23 |
+| 20. Unused File Cleanup            | v4.1      | 1/1            | Complete | 2026-02-23 |
+| 21. Rust Documentation             | v4.1      | 5/5            | Complete | 2026-02-23 |
+| 22. Dependency Audit               | v4.1      | 1/1            | Complete | 2026-02-23 |
 
 ---
 

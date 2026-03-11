@@ -6,20 +6,20 @@ Git integration for GSD framework.
 
 **Commit outcomes, not process.**
 
-The git log should read like a changelog of what shipped, not a diary of planning activity.
-</core_principle>
+The git log should read like a changelog of what shipped, not a diary of
+planning activity. </core_principle>
 
 <commit_points>
 
-| Event                   | Commit? | Why                                              |
-| ----------------------- | ------- | ------------------------------------------------ |
-| BRIEF + ROADMAP created | YES     | Project initialization                           |
-| PLAN.md created         | NO      | Intermediate - commit with plan completion       |
-| RESEARCH.md created     | NO      | Intermediate                                     |
-| DISCOVERY.md created    | NO      | Intermediate                                     |
-| **Task completed**      | YES     | Atomic unit of work (1 commit per task)         |
-| **Plan completed**      | YES     | Metadata commit (SUMMARY + STATE + ROADMAP)     |
-| Handoff created         | YES     | WIP state preserved                              |
+| Event                   | Commit? | Why                                         |
+| ----------------------- | ------- | ------------------------------------------- |
+| BRIEF + ROADMAP created | YES     | Project initialization                      |
+| PLAN.md created         | NO      | Intermediate - commit with plan completion  |
+| RESEARCH.md created     | NO      | Intermediate                                |
+| DISCOVERY.md created    | NO      | Intermediate                                |
+| **Task completed**      | YES     | Atomic unit of work (1 commit per task)     |
+| **Plan completed**      | YES     | Metadata commit (SUMMARY + STATE + ROADMAP) |
+| Handoff created         | YES     | WIP state preserved                         |
 
 </commit_points>
 
@@ -70,6 +70,7 @@ Each task gets its own commit immediately after completion.
 ```
 
 **Commit types:**
+
 - `feat` - New feature/functionality
 - `fix` - Bug fix
 - `test` - Test-only (TDD RED phase)
@@ -158,6 +159,7 @@ node ./.claude/get-shit-done/bin/gsd-tools.cjs commit "wip: [phase-name] paused 
 <example_log>
 
 **Old approach (per-plan commits):**
+
 ```
 a7f2d1 feat(checkout): Stripe payments with webhook verification
 3e9c4b feat(products): catalog with search, filters, and pagination
@@ -167,6 +169,7 @@ a7f2d1 feat(checkout): Stripe payments with webhook verification
 ```
 
 **New approach (per-task commits):**
+
 ```
 # Phase 04 - Checkout
 1a2b3c docs(04-01): complete checkout flow plan
@@ -205,6 +208,7 @@ Each plan produces 2-4 commits (tasks + metadata). Clear, granular, bisectable.
 <anti_patterns>
 
 **Still don't commit (intermediate artifacts):**
+
 - PLAN.md creation (commit with plan completion)
 - RESEARCH.md (intermediate)
 - DISCOVERY.md (intermediate)
@@ -212,11 +216,13 @@ Each plan produces 2-4 commits (tasks + metadata). Clear, granular, bisectable.
 - "Fixed typo in roadmap"
 
 **Do commit (outcomes):**
+
 - Each task completion (feat/fix/test/refactor)
 - Plan completion metadata (docs)
 - Project initialization (docs)
 
-**Key principle:** Commit working code and shipped outcomes, not planning process.
+**Key principle:** Commit working code and shipped outcomes, not planning
+process.
 
 </anti_patterns>
 
@@ -225,22 +231,26 @@ Each plan produces 2-4 commits (tasks + metadata). Clear, granular, bisectable.
 ## Why Per-Task Commits?
 
 **Context engineering for AI:**
+
 - Git history becomes primary context source for future Claude sessions
 - `git log --grep="{phase}-{plan}"` shows all work for a plan
 - `git diff <hash>^..<hash>` shows exact changes per task
 - Less reliance on parsing SUMMARY.md = more context for actual work
 
 **Failure recovery:**
+
 - Task 1 committed ✅, Task 2 failed ❌
 - Claude in next session: sees task 1 complete, can retry task 2
 - Can `git reset --hard` to last successful task
 
 **Debugging:**
+
 - `git bisect` finds exact failing task, not just failing plan
 - `git blame` traces line to specific task context
 - Each commit is independently revertable
 
 **Observability:**
+
 - Solo developer + Claude workflow benefits from granular attribution
 - Atomic commits are git best practice
 - "Commit noise" irrelevant when consumer is Claude, not humans

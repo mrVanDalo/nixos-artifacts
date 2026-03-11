@@ -1,10 +1,10 @@
 use crate::app::model::ConfirmRegenerateState;
 use ratatui::{
+    Frame,
     layout::{Alignment, Constraint, Flex, Layout, Margin, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Clear, Paragraph},
-    Frame,
 };
 
 /// Render the regeneration confirmation dialog with side-by-side Leave/Regenerate buttons

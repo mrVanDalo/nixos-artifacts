@@ -466,10 +466,12 @@ shared_serialize = "./shared_serialize.sh"
         let backend = config.get_backend(&"test".to_string()).unwrap();
         assert!(backend.shared_serialize.is_some());
         assert!(backend.shared_check_serialization.is_some());
-        assert!(backend
-            .shared_serialize
-            .unwrap()
-            .ends_with("shared_serialize.sh"));
+        assert!(
+            backend
+                .shared_serialize
+                .unwrap()
+                .ends_with("shared_serialize.sh")
+        );
     }
 
     #[test]

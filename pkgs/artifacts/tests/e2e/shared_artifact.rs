@@ -23,7 +23,7 @@
 //! - Shared artifact scenarios in examples/scenarios/shared-artifacts
 
 use anyhow::{Context, Result};
-use artifacts::cli::headless::{generate_single_artifact, PromptValues};
+use artifacts::cli::headless::{PromptValues, generate_single_artifact};
 use artifacts::config::make::ArtifactDef;
 use serial_test::serial;
 use std::collections::BTreeMap;
@@ -227,14 +227,18 @@ fn e2e_shared_artifact_generation() -> Result<()> {
     );
 
     // Verify the artifact was created in backend storage
-    let artifact_file =
-        verify_artifact_exists(&storage_path, &machine_one, "shared-secret", "shared-key")
-            .with_context(|| {
-                format!(
+    let artifact_file = verify_artifact_exists(
+        &storage_path,
+        &machine_one,
+        "shared-secret",
+        "shared-key",
+    )
+    .with_context(|| {
+        format!(
             "Shared artifact 'shared-secret' should exist in backend storage for machine '{}'",
             machine_one
         )
-            })?;
+    })?;
 
     // Verify the content
     let content = fs::read_to_string(&artifact_file)?;

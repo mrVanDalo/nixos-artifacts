@@ -1,6 +1,7 @@
 # Model Profile Resolution
 
-Resolve model profile once at the start of orchestration, then use it for all Task spawns.
+Resolve model profile once at the start of orchestration, then use it for all
+Task spawns.
 
 ## Resolution Pattern
 
@@ -14,7 +15,8 @@ Default: `balanced` if not set or config missing.
 
 @./.claude/get-shit-done/references/model-profiles.md
 
-Look up the agent in the table for the resolved profile. Pass the model parameter to Task calls:
+Look up the agent in the table for the resolved profile. Pass the model
+parameter to Task calls:
 
 ```
 Task(
@@ -24,11 +26,14 @@ Task(
 )
 ```
 
-**Note:** Opus-tier agents resolve to `"inherit"` (not `"opus"`). This causes the agent to use the parent session's model, avoiding conflicts with organization policies that may block specific opus versions.
+**Note:** Opus-tier agents resolve to `"inherit"` (not `"opus"`). This causes
+the agent to use the parent session's model, avoiding conflicts with
+organization policies that may block specific opus versions.
 
 ## Usage
 
 1. Resolve once at orchestration start
 2. Store the profile value
 3. Look up each agent's model from the table when spawning
-4. Pass model parameter to each Task call (values: `"inherit"`, `"sonnet"`, `"haiku"`)
+4. Pass model parameter to each Task call (values: `"inherit"`, `"sonnet"`,
+   `"haiku"`)

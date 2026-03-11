@@ -43,7 +43,8 @@ completed: 2026-02-23
 
 # Phase 22 Plan 01: Dependency Audit Summary
 
-**All dependencies verified via cargo-machete, feature flags confirmed active, and transitive duplicates documented**
+**All dependencies verified via cargo-machete, feature flags confirmed active,
+and transitive duplicates documented**
 
 ## Performance
 
@@ -66,7 +67,8 @@ completed: 2026-02-23
 Each task was committed atomically:
 
 1. **Task 1: Analyze dependency usage with cargo-machete** - `b7878e5` (chore)
-2. **Task 2: Verify feature flag usage** - `b7878e5` (chore - same commit as Task 1, empty commit)
+2. **Task 2: Verify feature flag usage** - `b7878e5` (chore - same commit as
+   Task 1, empty commit)
 3. **Task 3: Check for duplicate dependencies** - `cb5e9f1` (chore)
 
 **Plan metadata:** See above commits
@@ -84,26 +86,27 @@ Each task was committed atomically:
 
 All dependencies verified as used:
 
-| Dependency | Version | Usage |
-|------------|---------|-------|
-| clap | 4 | CLI argument parsing with derive feature |
-| anyhow | 1 | Error handling throughout codebase |
-| serde | 1 | Serialization with derive feature |
-| serde_json | 1 | JSON handling in config and backend |
-| toml | 0.8 | TOML parsing for backend configuration |
-| which | 6 | Finding nix and nix-shell binaries |
-| log | 0.4 | Optional logging infrastructure |
-| crossterm | 0.28 | Terminal input handling |
-| ratatui | 0.29 | TUI framework |
-| tokio | 1 | Async runtime with selective features |
-| tokio-util | 0.7 | CancellationToken for TUI |
-| tempfile | 3 | Temporary file/directory management |
+| Dependency | Version | Usage                                    |
+| ---------- | ------- | ---------------------------------------- |
+| clap       | 4       | CLI argument parsing with derive feature |
+| anyhow     | 1       | Error handling throughout codebase       |
+| serde      | 1       | Serialization with derive feature        |
+| serde_json | 1       | JSON handling in config and backend      |
+| toml       | 0.8     | TOML parsing for backend configuration   |
+| which      | 6       | Finding nix and nix-shell binaries       |
+| log        | 0.4     | Optional logging infrastructure          |
+| crossterm  | 0.28    | Terminal input handling                  |
+| ratatui    | 0.29    | TUI framework                            |
+| tokio      | 1       | Async runtime with selective features    |
+| tokio-util | 0.7     | CancellationToken for TUI                |
+| tempfile   | 3       | Temporary file/directory management      |
 
 ### Feature Flags
 
 **default:** [] (empty - no features by default)
 
 **logging:** ["dep:log"]
+
 - 63 `#[cfg(feature = "logging")]` sites found
 - Used in CLI, config, backend, and TUI modules
 - Properly feature-gated throughout
@@ -142,6 +145,7 @@ All dependencies verified as used:
 ## Deviations from Plan
 
 None - plan executed exactly as written. All tasks completed:
+
 - ✓ cargo-machete ran successfully - no unused deps
 - ✓ All feature flags verified as used
 - ✓ Duplicate analysis completed - all are unavoidable
@@ -149,6 +153,7 @@ None - plan executed exactly as written. All tasks completed:
 ## Issues Encountered
 
 None. The codebase has excellent dependency hygiene:
+
 - No unused dependencies detected
 - All features properly implemented
 - Duplicate dependencies are transitive (unavoidable)

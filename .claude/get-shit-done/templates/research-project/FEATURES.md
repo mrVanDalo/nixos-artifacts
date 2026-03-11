@@ -1,15 +1,15 @@
 # Features Research Template
 
-Template for `.planning/research/FEATURES.md` — feature landscape for the project domain.
+Template for `.planning/research/FEATURES.md` — feature landscape for the
+project domain.
 
 <template>
 
 ```markdown
 # Feature Research
 
-**Domain:** [domain type]
-**Researched:** [date]
-**Confidence:** [HIGH/MEDIUM/LOW]
+**Domain:** [domain type] **Researched:** [date] **Confidence:**
+[HIGH/MEDIUM/LOW]
 
 ## Feature Landscape
 
@@ -17,8 +17,8 @@ Template for `.planning/research/FEATURES.md` — feature landscape for the proj
 
 Features users assume exist. Missing these = product feels incomplete.
 
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
+| Feature   | Why Expected       | Complexity      | Notes                  |
+| --------- | ------------------ | --------------- | ---------------------- |
 | [feature] | [user expectation] | LOW/MEDIUM/HIGH | [implementation notes] |
 | [feature] | [user expectation] | LOW/MEDIUM/HIGH | [implementation notes] |
 | [feature] | [user expectation] | LOW/MEDIUM/HIGH | [implementation notes] |
@@ -27,33 +27,31 @@ Features users assume exist. Missing these = product feels incomplete.
 
 Features that set the product apart. Not required, but valuable.
 
-| Feature | Value Proposition | Complexity | Notes |
-|---------|-------------------|------------|-------|
-| [feature] | [why it matters] | LOW/MEDIUM/HIGH | [implementation notes] |
-| [feature] | [why it matters] | LOW/MEDIUM/HIGH | [implementation notes] |
-| [feature] | [why it matters] | LOW/MEDIUM/HIGH | [implementation notes] |
+| Feature   | Value Proposition | Complexity      | Notes                  |
+| --------- | ----------------- | --------------- | ---------------------- |
+| [feature] | [why it matters]  | LOW/MEDIUM/HIGH | [implementation notes] |
+| [feature] | [why it matters]  | LOW/MEDIUM/HIGH | [implementation notes] |
+| [feature] | [why it matters]  | LOW/MEDIUM/HIGH | [implementation notes] |
 
 ### Anti-Features (Commonly Requested, Often Problematic)
 
 Features that seem good but create problems.
 
-| Feature | Why Requested | Why Problematic | Alternative |
-|---------|---------------|-----------------|-------------|
+| Feature   | Why Requested    | Why Problematic   | Alternative       |
+| --------- | ---------------- | ----------------- | ----------------- |
 | [feature] | [surface appeal] | [actual problems] | [better approach] |
 | [feature] | [surface appeal] | [actual problems] | [better approach] |
 
 ## Feature Dependencies
-
 ```
-[Feature A]
-    └──requires──> [Feature B]
-                       └──requires──> [Feature C]
+
+[Feature A] └──requires──> [Feature B] └──requires──> [Feature C]
 
 [Feature D] ──enhances──> [Feature A]
 
 [Feature E] ──conflicts──> [Feature F]
-```
 
+```
 ### Dependency Notes
 
 - **[Feature A] requires [Feature B]:** [why the dependency exists]
@@ -120,26 +118,31 @@ Features to defer until product-market fit is established.
 <guidelines>
 
 **Table Stakes:**
+
 - These are non-negotiable for launch
 - Users don't give credit for having them, but penalize for missing them
 - Example: A community platform without user profiles is broken
 
 **Differentiators:**
+
 - These are where you compete
 - Should align with the Core Value from PROJECT.md
 - Don't try to differentiate on everything
 
 **Anti-Features:**
+
 - Prevent scope creep by documenting what seems good but isn't
 - Include the alternative approach
 - Example: "Real-time everything" often creates complexity without value
 
 **Feature Dependencies:**
+
 - Critical for roadmap phase ordering
 - If A requires B, B must be in an earlier phase
 - Conflicts inform what NOT to combine in same phase
 
 **MVP Definition:**
+
 - Be ruthless about what's truly minimum
 - "Nice to have" is not MVP
 - Launch with less, validate, then expand

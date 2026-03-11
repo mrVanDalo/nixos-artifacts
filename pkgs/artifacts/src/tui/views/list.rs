@@ -133,7 +133,11 @@ fn render_log_panel(frame: &mut Frame, model: &Model, area: Rect) {
     let selected_entry = model.entries.get(model.selected_index);
 
     let title = match selected_entry {
-        Some(ListEntry::Single(entry)) => format!("Logs: {}/{}", entry.target_type.target_name().unwrap_or("unknown"), entry.artifact.name),
+        Some(ListEntry::Single(entry)) => format!(
+            "Logs: {}/{}",
+            entry.target_type.target_name().unwrap_or("unknown"),
+            entry.artifact.name
+        ),
         Some(ListEntry::Shared(entry)) => format!("Logs: {}", entry.info.artifact_name),
         None => "Logs".to_string(),
     };
@@ -143,7 +147,12 @@ fn render_log_panel(frame: &mut Frame, model: &Model, area: Rect) {
     // Show error details if the artifact has failed status
     #[allow(clippy::collapsible_if)]
     if let Some(entry) = selected_entry {
-        if let ArtifactStatus::Failed { error, output, retry_available } = entry.status() {
+        if let ArtifactStatus::Failed {
+            error,
+            output,
+            retry_available,
+        } = entry.status()
+        {
             // Error header - distinguish between config errors and runtime failures
             if *retry_available {
                 // Runtime failure - can retry
@@ -162,11 +171,15 @@ fn render_log_panel(frame: &mut Frame, model: &Model, area: Rect) {
                 lines.push(Line::from(vec![
                     Span::styled(
                         "⚠ ",
-                        Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+                        Style::default()
+                            .fg(Color::Yellow)
+                            .add_modifier(Modifier::BOLD),
                     ),
                     Span::styled(
                         "CONFIGURATION ERROR",
-                        Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+                        Style::default()
+                            .fg(Color::Yellow)
+                            .add_modifier(Modifier::BOLD),
                     ),
                 ]));
             }

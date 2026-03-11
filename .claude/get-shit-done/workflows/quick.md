@@ -1,17 +1,18 @@
 <purpose>
 Execute small, ad-hoc tasks with GSD guarantees (atomic commits, STATE.md tracking). Quick mode spawns gsd-planner (quick mode) + gsd-executor(s), tracks tasks in `.planning/quick/`, and updates STATE.md's "Quick Tasks Completed" table.
 
-With `--full` flag: enables plan-checking (max 2 iterations) and post-execution verification for quality guarantees without full milestone ceremony.
+With `--full` flag: enables plan-checking (max 2 iterations) and post-execution
+verification for quality guarantees without full milestone ceremony.
 </purpose>
 
-<required_reading>
-Read all files referenced by the invoking prompt's execution_context before starting.
-</required_reading>
+<required_reading> Read all files referenced by the invoking prompt's
+execution_context before starting. </required_reading>
 
 <process>
 **Step 1: Parse arguments and get task description**
 
 Parse `$ARGUMENTS` for:
+
 - `--full` flag → store as `$FULL_MODE` (true/false)
 - Remaining text → use as `$DESCRIPTION` if non-empty
 
@@ -30,6 +31,7 @@ Store response as `$DESCRIPTION`.
 If still empty, re-prompt: "Please provide a task description."
 
 If `$FULL_MODE`:
+
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  GSD ► QUICK TASK (FULL MODE)
@@ -46,11 +48,15 @@ If `$FULL_MODE`:
 INIT=$(node ./.claude/get-shit-done/bin/gsd-tools.cjs init quick "$DESCRIPTION")
 ```
 
-Parse JSON for: `planner_model`, `executor_model`, `checker_model`, `verifier_model`, `commit_docs`, `next_num`, `slug`, `date`, `timestamp`, `quick_dir`, `task_dir`, `roadmap_exists`, `planning_exists`.
+Parse JSON for: `planner_model`, `executor_model`, `checker_model`,
+`verifier_model`, `commit_docs`, `next_num`, `slug`, `date`, `timestamp`,
+`quick_dir`, `task_dir`, `roadmap_exists`, `planning_exists`.
 
-**If `roadmap_exists` is false:** Error — Quick mode requires an active project with ROADMAP.md. Run `/gsd:new-project` first.
+**If `roadmap_exists` is false:** Error — Quick mode requires an active project
+with ROADMAP.md. Run `/gsd:new-project` first.
 
-Quick tasks can run mid-phase - validation only checks ROADMAP.md exists, not phase status.
+Quick tasks can run mid-phase - validation only checks ROADMAP.md exists, not
+phase status.
 
 ---
 
@@ -72,6 +78,7 @@ mkdir -p "$QUICK_DIR"
 ```
 
 Report to user:
+
 ```
 Creating quick task ${next_num}: ${DESCRIPTION}
 Directory: ${QUICK_DIR}
@@ -126,6 +133,7 @@ Return: ## PLANNING COMPLETE with plan path
 ```
 
 After planner returns:
+
 1. Verify plan exists at `${QUICK_DIR}/${next_num}-PLAN.md`
 2. Extract plan count (typically 1 for quick tasks)
 3. Report: "Plan created: ${QUICK_DIR}/${next_num}-PLAN.md"
@@ -139,6 +147,7 @@ If plan not found, error: "Planner failed to create ${next_num}-PLAN.md"
 Skip this step entirely if NOT `$FULL_MODE`.
 
 Display banner:
+
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  GSD ► CHECKING PLAN
@@ -150,30 +159,31 @@ Display banner:
 Checker prompt:
 
 ```markdown
-<verification_context>
-**Mode:** quick-full
-**Task Description:** ${DESCRIPTION}
+<verification_context> **Mode:** quick-full **Task Description:** ${DESCRIPTION}
 
 <files_to_read>
-- ${QUICK_DIR}/${next_num}-PLAN.md (Plan to verify)
-</files_to_read>
 
-**Scope:** This is a quick task, not a full phase. Skip checks that require a ROADMAP phase goal.
-</verification_context>
+- ${QUICK_DIR}/${next_num}-PLAN.md (Plan to verify) </files_to_read>
+
+**Scope:** This is a quick task, not a full phase. Skip checks that require a
+ROADMAP phase goal. </verification_context>
 
 <check_dimensions>
+
 - Requirement coverage: Does the plan address the task description?
 - Task completeness: Do tasks have files, action, verify, done fields?
 - Key links: Are referenced files real?
 - Scope sanity: Is this appropriately sized for a quick task (1-3 tasks)?
 - must_haves derivation: Are must_haves traceable to the task description?
 
-Skip: context compliance (no CONTEXT.md), cross-plan deps (single plan), ROADMAP alignment
-</check_dimensions>
+Skip: context compliance (no CONTEXT.md), cross-plan deps (single plan), ROADMAP
+alignment </check_dimensions>
 
 <expected_output>
+
 - ## VERIFICATION PASSED — all checks pass
 - ## ISSUES FOUND — structured issue list
+
 </expected_output>
 ```
 
@@ -189,7 +199,8 @@ Task(
 **Handle checker return:**
 
 - **`## VERIFICATION PASSED`:** Display confirmation, proceed to step 6.
-- **`## ISSUES FOUND`:** Display issues, check iteration count, enter revision loop.
+- **`## ISSUES FOUND`:** Display issues, check iteration count, enter revision
+  loop.
 
 **Revision loop (max 2 iterations):**
 
@@ -202,12 +213,11 @@ Display: `Sending back to planner for revision... (iteration ${N}/2)`
 Revision prompt:
 
 ```markdown
-<revision_context>
-**Mode:** quick-full (revision)
+<revision_context> **Mode:** quick-full (revision)
 
 <files_to_read>
-- ${QUICK_DIR}/${next_num}-PLAN.md (Existing plan)
-</files_to_read>
+
+- ${QUICK_DIR}/${next_num}-PLAN.md (Existing plan) </files_to_read>
 
 **Checker issues:** ${structured_issues_from_checker}
 
@@ -269,15 +279,20 @@ Execute quick task ${next_num}.
 ```
 
 After executor returns:
+
 1. Verify summary exists at `${QUICK_DIR}/${next_num}-SUMMARY.md`
 2. Extract commit hash from executor output
 3. Report completion status
 
-**Known Claude Code bug (classifyHandoffIfNeeded):** If executor reports "failed" with error `classifyHandoffIfNeeded is not defined`, this is a Claude Code runtime bug — not a real failure. Check if summary file exists and git log shows commits. If so, treat as successful.
+**Known Claude Code bug (classifyHandoffIfNeeded):** If executor reports
+"failed" with error `classifyHandoffIfNeeded is not defined`, this is a Claude
+Code runtime bug — not a real failure. Check if summary file exists and git log
+shows commits. If so, treat as successful.
 
 If summary not found, error: "Executor failed to create ${next_num}-SUMMARY.md"
 
-Note: For quick tasks producing multiple plans (rare), spawn executors in parallel waves per execute-phase patterns.
+Note: For quick tasks producing multiple plans (rare), spawn executors in
+parallel waves per execute-phase patterns.
 
 ---
 
@@ -286,6 +301,7 @@ Note: For quick tasks producing multiple plans (rare), spawn executors in parall
 Skip this step entirely if NOT `$FULL_MODE`.
 
 Display banner:
+
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  GSD ► VERIFYING RESULTS
@@ -312,17 +328,18 @@ Check must_haves against actual codebase. Create VERIFICATION.md at ${QUICK_DIR}
 ```
 
 Read verification status:
+
 ```bash
 grep "^status:" "${QUICK_DIR}/${next_num}-VERIFICATION.md" | cut -d: -f2 | tr -d ' '
 ```
 
 Store as `$VERIFICATION_STATUS`.
 
-| Status | Action |
-|--------|--------|
-| `passed` | Store `$VERIFICATION_STATUS = "Verified"`, continue to step 7 |
-| `human_needed` | Display items needing manual check, store `$VERIFICATION_STATUS = "Needs Review"`, continue |
-| `gaps_found` | Display gap summary, offer: 1) Re-run executor to fix gaps, 2) Accept as-is. Store `$VERIFICATION_STATUS = "Gaps"` |
+| Status         | Action                                                                                                             |
+| -------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `passed`       | Store `$VERIFICATION_STATUS = "Verified"`, continue to step 7                                                      |
+| `human_needed` | Display items needing manual check, store `$VERIFICATION_STATUS = "Needs Review"`, continue                        |
+| `gaps_found`   | Display gap summary, offer: 1) Re-run executor to fix gaps, 2) Accept as-is. Store `$VERIFICATION_STATUS = "Gaps"` |
 
 ---
 
@@ -339,40 +356,50 @@ Read STATE.md and check for `### Quick Tasks Completed` section.
 Insert after `### Blockers/Concerns` section:
 
 **If `$FULL_MODE`:**
+
 ```markdown
 ### Quick Tasks Completed
 
 | # | Description | Date | Commit | Status | Directory |
-|---|-------------|------|--------|--------|-----------|
+| - | ----------- | ---- | ------ | ------ | --------- |
 ```
 
 **If NOT `$FULL_MODE`:**
+
 ```markdown
 ### Quick Tasks Completed
 
 | # | Description | Date | Commit | Directory |
-|---|-------------|------|--------|-----------|
+| - | ----------- | ---- | ------ | --------- |
 ```
 
-**Note:** If the table already exists, match its existing column format. If adding `--full` to a project that already has quick tasks without a Status column, add the Status column to the header and separator rows, and leave Status empty for the new row's predecessors.
+**Note:** If the table already exists, match its existing column format. If
+adding `--full` to a project that already has quick tasks without a Status
+column, add the Status column to the header and separator rows, and leave Status
+empty for the new row's predecessors.
 
 **7c. Append new row to table:**
 
 Use `date` from init:
 
 **If `$FULL_MODE` (or table has Status column):**
+
 ```markdown
-| ${next_num} | ${DESCRIPTION} | ${date} | ${commit_hash} | ${VERIFICATION_STATUS} | [${next_num}-${slug}](./quick/${next_num}-${slug}/) |
+| ${next_num} | ${DESCRIPTION} | ${date} | ${commit_hash} |
+${VERIFICATION_STATUS} | [${next_num}-${slug}](./quick/${next_num}-${slug}/) |
 ```
 
 **If NOT `$FULL_MODE` (and table has no Status column):**
+
 ```markdown
-| ${next_num} | ${DESCRIPTION} | ${date} | ${commit_hash} | [${next_num}-${slug}](./quick/${next_num}-${slug}/) |
+| ${next_num} | ${DESCRIPTION} | ${date} |
+${commit_hash} | [${next_num}-${slug}](./quick/${next_num}-${slug}/) |
 ```
 
 **7d. Update "Last activity" line:**
 
 Use `date` from init:
+
 ```
 Last activity: ${date} - Completed quick task ${next_num}: ${DESCRIPTION}
 ```
@@ -386,16 +413,19 @@ Use Edit tool to make these changes atomically
 Stage and commit quick task artifacts:
 
 Build file list:
+
 - `${QUICK_DIR}/${next_num}-PLAN.md`
 - `${QUICK_DIR}/${next_num}-SUMMARY.md`
 - `.planning/STATE.md`
-- If `$FULL_MODE` and verification file exists: `${QUICK_DIR}/${next_num}-VERIFICATION.md`
+- If `$FULL_MODE` and verification file exists:
+  `${QUICK_DIR}/${next_num}-VERIFICATION.md`
 
 ```bash
 node ./.claude/get-shit-done/bin/gsd-tools.cjs commit "docs(quick-${next_num}): ${DESCRIPTION}" --files ${file_list}
 ```
 
 Get final commit hash:
+
 ```bash
 commit_hash=$(git rev-parse --short HEAD)
 ```
@@ -403,6 +433,7 @@ commit_hash=$(git rev-parse --short HEAD)
 Display completion output:
 
 **If `$FULL_MODE`:**
+
 ```
 ---
 
@@ -420,6 +451,7 @@ Ready for next task: /gsd:quick
 ```
 
 **If NOT `$FULL_MODE`:**
+
 ```
 ---
 
@@ -438,6 +470,7 @@ Ready for next task: /gsd:quick
 </process>
 
 <success_criteria>
+
 - [ ] ROADMAP.md validation passes
 - [ ] User provides task description
 - [ ] `--full` flag parsed from arguments when present
@@ -449,5 +482,4 @@ Ready for next task: /gsd:quick
 - [ ] `${next_num}-SUMMARY.md` created by executor
 - [ ] (--full) `${next_num}-VERIFICATION.md` created by verifier
 - [ ] STATE.md updated with quick task row (Status column when --full)
-- [ ] Artifacts committed
-</success_criteria>
+- [ ] Artifacts committed </success_criteria>

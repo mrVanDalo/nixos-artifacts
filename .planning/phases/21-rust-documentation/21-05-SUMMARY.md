@@ -54,7 +54,8 @@ completed: 2026-02-23T12:55:08Z
 
 # Phase 21 Plan 05: Rust Documentation Finalization Summary
 
-**Crate-level documentation added to lib.rs, macros fully documented with examples, main binary documented, and cargo doc produces exactly 0 warnings.**
+**Crate-level documentation added to lib.rs, macros fully documented with
+examples, main binary documented, and cargo doc produces exactly 0 warnings.**
 
 ## Performance
 
@@ -66,7 +67,8 @@ completed: 2026-02-23T12:55:08Z
 
 ## Accomplishments
 
-- Added comprehensive crate-level documentation to `src/lib.rs` with architecture overview
+- Added comprehensive crate-level documentation to `src/lib.rs` with
+  architecture overview
 - Documented all macros in `src/macros.rs` with usage examples
 - Added file-level and function documentation to `src/bin/artifacts.rs`
 - Fixed all intra-doc link warnings across the codebase
@@ -85,18 +87,28 @@ Each task was committed atomically:
 
 ## Files Created/Modified
 
-- `pkgs/artifacts/src/lib.rs` - Added crate-level documentation with architecture overview, feature flags, and module descriptions
-- `pkgs/artifacts/src/macros.rs` - Added module-level documentation and documented string_vec!, log_debug!, log_trace!, log_error! macros
-- `pkgs/artifacts/src/bin/artifacts.rs` - Added file-level documentation and main function documentation
-- `pkgs/artifacts/src/app/message.rs` - Fixed ambiguous function link (crate::app::update → crate::app::update())
+- `pkgs/artifacts/src/lib.rs` - Added crate-level documentation with
+  architecture overview, feature flags, and module descriptions
+- `pkgs/artifacts/src/macros.rs` - Added module-level documentation and
+  documented string_vec!, log_debug!, log_trace!, log_error! macros
+- `pkgs/artifacts/src/bin/artifacts.rs` - Added file-level documentation and
+  main function documentation
+- `pkgs/artifacts/src/app/message.rs` - Fixed ambiguous function link
+  (crate::app::update → crate::app::update())
 - `pkgs/artifacts/src/config/mod.rs` - Removed redundant explicit link targets
 
 ## Decisions Made
 
-- **Automatic link resolution preferred:** When linking to modules like `[app]`, Rust automatically resolves to `crate::app`. Explicit targets `[app](crate::app)` are redundant.
-- **Function links need parentheses:** To disambiguate between module and function, use `[crate::app::update()]` not `[crate::app::update]`.
-- **Plain text for out-of-scope macros:** The logging macros are defined in this module but not visible at module-level doc scope, so document as plain text, not links.
-- **Feature flags documented:** The `logging` feature is clearly explained with its zero-cost abstraction behavior.
+- **Automatic link resolution preferred:** When linking to modules like `[app]`,
+  Rust automatically resolves to `crate::app`. Explicit targets
+  `[app](crate::app)` are redundant.
+- **Function links need parentheses:** To disambiguate between module and
+  function, use `[crate::app::update()]` not `[crate::app::update]`.
+- **Plain text for out-of-scope macros:** The logging macros are defined in this
+  module but not visible at module-level doc scope, so document as plain text,
+  not links.
+- **Feature flags documented:** The `logging` feature is clearly explained with
+  its zero-cost abstraction behavior.
 
 ## Deviations from Plan
 
@@ -105,12 +117,16 @@ None - plan executed exactly as written.
 ## Issues Encountered
 
 **Intra-doc link warnings:** Initial run produced warnings about:
-1. Unresolved links to macros (log_debug!, log_trace!, log_error!, string_vec!) in module-level docs
+
+1. Unresolved links to macros (log_debug!, log_trace!, log_error!, string_vec!)
+   in module-level docs
 2. Redundant explicit link targets in lib.rs module references
 3. Ambiguous link to `crate::app::update` (could be module or function)
 
 **Resolution:**
-- Used plain text for macro references in module-level docs since macros aren't in scope at that level
+
+- Used plain text for macro references in module-level docs since macros aren't
+  in scope at that level
 - Removed redundant explicit targets, relying on automatic resolution
 - Added parentheses to function link to disambiguate
 

@@ -1,10 +1,10 @@
 use crate::app::model::{ChronologicalLogState, LogStep, StepLogs};
 use ratatui::{
+    Frame,
     layout::{Constraint, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph},
-    Frame,
 };
 
 /// Render the chronological log view with expandable sections

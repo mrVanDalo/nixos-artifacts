@@ -35,7 +35,9 @@ mod tests {
         let cmd = Effect::CheckSerialization {
             artifact_index: 5,
             artifact_name: "test".to_string(),
-            target_type: TargetType::NixOS { machine: "machine".to_string() },
+            target_type: TargetType::NixOS {
+                machine: "machine".to_string(),
+            },
         };
         match cmd {
             Effect::CheckSerialization { artifact_index, .. } => {
@@ -51,18 +53,24 @@ mod tests {
             Effect::CheckSerialization {
                 artifact_index: 0,
                 artifact_name: "test".to_string(),
-                target_type: TargetType::NixOS { machine: "machine".to_string() },
+                target_type: TargetType::NixOS {
+                    machine: "machine".to_string(),
+                },
             },
             Effect::RunGenerator {
                 artifact_index: 1,
                 artifact_name: "test".to_string(),
-                target_type: TargetType::NixOS { machine: "machine".to_string() },
+                target_type: TargetType::NixOS {
+                    machine: "machine".to_string(),
+                },
                 prompts: std::collections::HashMap::new(),
             },
             Effect::Serialize {
                 artifact_index: 2,
                 artifact_name: "test".to_string(),
-                target_type: TargetType::NixOS { machine: "machine".to_string() },
+                target_type: TargetType::NixOS {
+                    machine: "machine".to_string(),
+                },
             },
             Effect::SharedCheckSerialization {
                 artifact_index: 3,

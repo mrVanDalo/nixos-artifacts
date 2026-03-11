@@ -2,9 +2,8 @@
 Interactive configuration of GSD workflow agents (research, plan_check, verifier) and model profile selection via multi-question prompt. Updates .planning/config.json with user preferences. Optionally saves settings as global defaults (~/.gsd/defaults.json) for future projects.
 </purpose>
 
-<required_reading>
-Read all files referenced by the invoking prompt's execution_context before starting.
-</required_reading>
+<required_reading> Read all files referenced by the invoking prompt's
+execution_context before starting. </required_reading>
 
 <process>
 
@@ -16,7 +15,8 @@ node ./.claude/get-shit-done/bin/gsd-tools.cjs config-ensure-section
 INIT=$(node ./.claude/get-shit-done/bin/gsd-tools.cjs state load)
 ```
 
-Creates `.planning/config.json` with defaults if missing and loads current config values.
+Creates `.planning/config.json` with defaults if missing and loads current
+config values.
 </step>
 
 <step name="read_current">
@@ -25,12 +25,13 @@ cat .planning/config.json
 ```
 
 Parse current values (default to `true` if not present):
+
 - `workflow.research` — spawn researcher during plan-phase
 - `workflow.plan_check` — spawn plan checker during plan-phase
 - `workflow.verifier` — spawn verifier during execute-phase
 - `model_profile` — which model each agent uses (default: `balanced`)
 - `git.branching_strategy` — branching approach (default: `"none"`)
-</step>
+  </step>
 
 <step name="present_settings">
 Use AskUserQuestion with current values pre-selected:
@@ -95,6 +96,7 @@ AskUserQuestion([
   }
 ])
 ```
+
 </step>
 
 <step name="update_config">
@@ -136,13 +138,15 @@ AskUserQuestion([
 ])
 ```
 
-If "Yes": write the same config object (minus project-specific fields like `brave_search`) to `~/.gsd/defaults.json`:
+If "Yes": write the same config object (minus project-specific fields like
+`brave_search`) to `~/.gsd/defaults.json`:
 
 ```bash
 mkdir -p ~/.gsd
 ```
 
 Write `~/.gsd/defaults.json` with:
+
 ```json
 {
   "mode": <current>,
@@ -159,6 +163,7 @@ Write `~/.gsd/defaults.json` with:
   }
 }
 ```
+
 </step>
 
 <step name="confirm">
@@ -187,14 +192,16 @@ Quick commands:
 - /gsd:plan-phase --skip-research — skip research
 - /gsd:plan-phase --skip-verify — skip plan check
 ```
+
 </step>
 
 </process>
 
 <success_criteria>
+
 - [ ] Current config read
-- [ ] User presented with 6 settings (profile + 4 workflow toggles + git branching)
+- [ ] User presented with 6 settings (profile + 4 workflow toggles + git
+      branching)
 - [ ] Config updated with model_profile, workflow, and git sections
 - [ ] User offered to save as global defaults (~/.gsd/defaults.json)
-- [ ] Changes confirmed to user
-</success_criteria>
+- [ ] Changes confirmed to user </success_criteria>

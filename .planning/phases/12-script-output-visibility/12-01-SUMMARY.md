@@ -50,7 +50,9 @@ completed: 2026-02-18
 
 # Phase 12: Plan 01 - Script Output Visibility Data Flow Pipeline
 
-**Enhanced EffectResult types with structured ScriptOutput, complete result_to_message conversion, and full stdout/stderr preservation through channels**
+**Enhanced EffectResult types with structured ScriptOutput, complete
+result_to_message conversion, and full stdout/stderr preservation through
+channels**
 
 ## Performance
 
@@ -62,12 +64,18 @@ completed: 2026-02-18
 
 ## Accomplishments
 
-- Added `ScriptOutput` struct with `stdout_lines` and `stderr_lines` fields to preserve structured script output
-- Updated all `EffectResult` variants to use `ScriptOutput` instead of `Option<String>` for output fields
-- Implemented complete `result_to_message()` conversion in runtime.rs and effect_handler.rs
-- Added helper methods to ScriptOutput: `from_captured()`, `from_message()`, and `default()`
-- Updated background.rs to convert `CapturedOutput` from script execution to `ScriptOutput`
-- All message types (`CheckOutput`, `GeneratorOutput`, `SerializeOutput`) now properly receive output data
+- Added `ScriptOutput` struct with `stdout_lines` and `stderr_lines` fields to
+  preserve structured script output
+- Updated all `EffectResult` variants to use `ScriptOutput` instead of
+  `Option<String>` for output fields
+- Implemented complete `result_to_message()` conversion in runtime.rs and
+  effect_handler.rs
+- Added helper methods to ScriptOutput: `from_captured()`, `from_message()`, and
+  `default()`
+- Updated background.rs to convert `CapturedOutput` from script execution to
+  `ScriptOutput`
+- All message types (`CheckOutput`, `GeneratorOutput`, `SerializeOutput`) now
+  properly receive output data
 
 ## Task Commits
 
@@ -76,24 +84,33 @@ Each task was committed atomically:
 1. **Task 1: Add ScriptOutput struct to channels.rs** - `7c5f353` (feat)
 2. **Task 2: Update EffectResult variants with ScriptOutput** - `94f0100` (feat)
 3. **Task 3: Update runtime.rs result_to_message conversion** - `5f491dd` (feat)
-4. **Task 4: Verify message.rs types support full output** - `5f491dd` (feat) - verified as part of task 3
+4. **Task 4: Verify message.rs types support full output** - `5f491dd` (feat) -
+   verified as part of task 3
 
 **Plan metadata:** `5f491dd` (docs: complete plan)
 
 ## Files Created/Modified
 
-- `pkgs/artifacts/src/tui/channels.rs` - Added ScriptOutput struct, updated EffectResult variants
+- `pkgs/artifacts/src/tui/channels.rs` - Added ScriptOutput struct, updated
+  EffectResult variants
 - `pkgs/artifacts/src/tui/runtime.rs` - Complete result_to_message conversion
-- `pkgs/artifacts/src/tui/background.rs` - ScriptOutput creation from CapturedOutput
-- `pkgs/artifacts/src/effect_handler.rs` - Updated result_to_message for ScriptOutput
-- `pkgs/artifacts/src/app/message.rs` - Verified output types (no changes needed)
+- `pkgs/artifacts/src/tui/background.rs` - ScriptOutput creation from
+  CapturedOutput
+- `pkgs/artifacts/src/effect_handler.rs` - Updated result_to_message for
+  ScriptOutput
+- `pkgs/artifacts/src/app/message.rs` - Verified output types (no changes
+  needed)
 
 ## Decisions Made
 
-1. **ScriptOutput Structure**: Used simple Vec<String> fields for stdout/stderr to match the split_captured_output() return type from effect_handler.rs
-2. **Conversion Pattern**: Added `from_captured()` method to convert from CapturedOutput (lines with stream markers) to ScriptOutput (separate vectors)
-3. **Error Handling**: `from_message()` creates ScriptOutput with message in stdout_lines for error cases
-4. **Default Values**: Used `ScriptOutput::default()` for error paths where no actual output exists
+1. **ScriptOutput Structure**: Used simple Vec<String> fields for stdout/stderr
+   to match the split_captured_output() return type from effect_handler.rs
+2. **Conversion Pattern**: Added `from_captured()` method to convert from
+   CapturedOutput (lines with stream markers) to ScriptOutput (separate vectors)
+3. **Error Handling**: `from_message()` creates ScriptOutput with message in
+   stdout_lines for error cases
+4. **Default Values**: Used `ScriptOutput::default()` for error paths where no
+   actual output exists
 
 ## Deviations from Plan
 

@@ -9,12 +9,12 @@
 use std::collections::{BTreeMap, HashMap};
 use std::time::Duration;
 
+use artifacts::app::effect::Effect;
 use artifacts::app::message::Message;
 use artifacts::app::model::TargetType;
 use artifacts::config::backend::BackendConfiguration;
 use artifacts::config::make::MakeConfiguration;
 use artifacts::tui::background::spawn_background_task;
-use artifacts::app::effect::Effect;
 use tokio::time::timeout;
 use tokio_util::sync::CancellationToken;
 
@@ -56,7 +56,9 @@ async fn test_select_shutdown_branch() {
         .send(Effect::CheckSerialization {
             artifact_index: 0,
             artifact_name: "test".to_string(),
-            target_type: TargetType::NixOS { machine: "machine".to_string() },
+            target_type: TargetType::NixOS {
+                machine: "machine".to_string(),
+            },
         })
         .unwrap();
 
@@ -113,7 +115,9 @@ async fn test_select_command_branch() {
             .send(Effect::CheckSerialization {
                 artifact_index: i,
                 artifact_name: format!("artifact-{}", i),
-                target_type: TargetType::NixOS { machine: "machine".to_string() },
+                target_type: TargetType::NixOS {
+                    machine: "machine".to_string(),
+                },
             })
             .unwrap();
     }
@@ -161,7 +165,9 @@ async fn test_select_channel_closed_branch() {
         .send(Effect::CheckSerialization {
             artifact_index: 42,
             artifact_name: "test".to_string(),
-            target_type: TargetType::NixOS { machine: "machine".to_string() },
+            target_type: TargetType::NixOS {
+                machine: "machine".to_string(),
+            },
         })
         .unwrap();
 
@@ -226,7 +232,9 @@ async fn test_select_with_in_flight_command() {
             .send(Effect::CheckSerialization {
                 artifact_index: i,
                 artifact_name: format!("artifact-{}", i),
-                target_type: TargetType::NixOS { machine: "machine".to_string() },
+                target_type: TargetType::NixOS {
+                    machine: "machine".to_string(),
+                },
             })
             .unwrap();
     }

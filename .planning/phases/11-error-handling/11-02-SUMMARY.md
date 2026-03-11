@@ -46,7 +46,8 @@ completed: 2026-02-18
 
 # Phase 11 Plan 02: Enhanced Panic Handler and Terminal Restoration
 
-**Enhanced panic hook that restores terminal before printing errors to stderr, with per-step error reporting in TerminalGuard::restore()**
+**Enhanced panic hook that restores terminal before printing errors to stderr,
+with per-step error reporting in TerminalGuard::restore()**
 
 ## Performance
 
@@ -58,10 +59,14 @@ completed: 2026-02-18
 
 ## Accomplishments
 
-- Panic hook now prints formatted error messages to stderr before calling original hook
-- Panic hook restores terminal state FIRST (raw mode disabled, alternate screen exited) before any output
-- TerminalGuard::restore() prints specific error messages for each failing restoration step
-- TerminalGuard::restore() tries all three restoration steps even if some fail (ERR-02)
+- Panic hook now prints formatted error messages to stderr before calling
+  original hook
+- Panic hook restores terminal state FIRST (raw mode disabled, alternate screen
+  exited) before any output
+- TerminalGuard::restore() prints specific error messages for each failing
+  restoration step
+- TerminalGuard::restore() tries all three restoration steps even if some fail
+  (ERR-02)
 - Documented restore_terminal() as infallible and safe for panic hook use
 
 ## Task Commits
@@ -69,22 +74,32 @@ completed: 2026-02-18
 Each task was committed atomically:
 
 1. **Task 1: Enhance panic hook to print to stderr** - `9741eb9` (feat)
-2. **Task 2: Add error reporting to TerminalGuard::restore()** - `9d3f7fc` (feat)
+2. **Task 2: Add error reporting to TerminalGuard::restore()** - `9d3f7fc`
+   (feat)
 3. **Task 3: Make restore_terminal() infallible** - `23fd436` (docs)
 
-**Plan metadata:** `docs(11-02): complete panic handler and terminal restoration plan` (pending)
+**Plan metadata:**
+`docs(11-02): complete panic handler and terminal restoration plan` (pending)
 
 ## Files Created/Modified
 
-- `pkgs/artifacts/src/tui/terminal.rs` - Enhanced panic hook, error-reporting restore, and documentation
+- `pkgs/artifacts/src/tui/terminal.rs` - Enhanced panic hook, error-reporting
+  restore, and documentation
 
 ## Decisions Made
 
-- **Panic hook restoration order:** Terminal is restored FIRST (before any output), then error is printed to stderr, then original hook is called for backtrace. This ensures the terminal is usable for error output.
-- **Payload handling:** Support both `&str` and `String` panic payloads, with fallback to "Unknown panic occurred" for other types.
-- **Location reporting:** Include file and line number in panic message when available via `panic_info.location()`.
-- **Error accumulation:** TerminalGuard::restore() tries all three steps (raw mode, alternate screen, cursor) even if earlier steps fail, reporting each error separately before returning.
-- **Infallible cleanup:** restore_terminal() ignores all errors by design - it's meant for panic contexts where error handling isn't possible.
+- **Panic hook restoration order:** Terminal is restored FIRST (before any
+  output), then error is printed to stderr, then original hook is called for
+  backtrace. This ensures the terminal is usable for error output.
+- **Payload handling:** Support both `&str` and `String` panic payloads, with
+  fallback to "Unknown panic occurred" for other types.
+- **Location reporting:** Include file and line number in panic message when
+  available via `panic_info.location()`.
+- **Error accumulation:** TerminalGuard::restore() tries all three steps (raw
+  mode, alternate screen, cursor) even if earlier steps fail, reporting each
+  error separately before returning.
+- **Infallible cleanup:** restore_terminal() ignores all errors by design - it's
+  meant for panic contexts where error handling isn't possible.
 
 ## Deviations from Plan
 
@@ -93,7 +108,10 @@ None - plan executed exactly as written.
 ## Issues Encountered
 
 One unrelated test failure detected during verification:
-- `backend::tempfile::tests::test_temp_dir_creation` - File exists error (os error 17), appears to be a stale temp file collision not related to this plan's changes.
+
+- `backend::tempfile::tests::test_temp_dir_creation` - File exists error (os
+  error 17), appears to be a stale temp file collision not related to this
+  plan's changes.
 
 All TUI-specific tests (35 unit + 49 integration) pass successfully.
 
@@ -107,6 +125,6 @@ All TUI-specific tests (35 unit + 49 integration) pass successfully.
 
 ---
 
-_Phase: 11-error-handling_  
-_Plan: 02_  
+_Phase: 11-error-handling_\
+_Plan: 02_\
 _Completed: 2026-02-18_

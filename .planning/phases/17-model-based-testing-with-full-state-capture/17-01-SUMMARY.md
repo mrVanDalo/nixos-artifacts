@@ -50,7 +50,8 @@ completed: 2026-02-20
 
 # Phase 17 Plan 01: Model-based Testing with Full State Capture Summary
 
-**Shared ModelState infrastructure enabling view tests to capture full Model state alongside rendered output, documenting the Elm Architecture pattern**
+**Shared ModelState infrastructure enabling view tests to capture full Model
+state alongside rendered output, documenting the Elm Architecture pattern**
 
 ## Performance
 
@@ -62,11 +63,17 @@ completed: 2026-02-20
 
 ## Accomplishments
 
-1. **Created shared model_state.rs module** (183 lines) containing `ModelState` and `ArtifactState` structs with `#[derive(Debug)]` for automatic field capture, enabling comprehensive state snapshots in tests.
+1. **Created shared model_state.rs module** (183 lines) containing `ModelState`
+   and `ArtifactState` structs with `#[derive(Debug)]` for automatic field
+   capture, enabling comprehensive state snapshots in tests.
 
-2. **Exported model_state from tests/tui/mod.rs** allowing both integration tests and view tests to import the shared types via `use crate::tui::model_state::{ModelState, ArtifactState}`.
+2. **Exported model_state from tests/tui/mod.rs** allowing both integration
+   tests and view tests to import the shared types via
+   `use crate::tui::model_state::{ModelState, ArtifactState}`.
 
-3. **Refactored integration_tests.rs** to use the shared `ModelState`, removing 60 lines of duplicate local definitions and serving as proof-of-concept that the shared infrastructure works correctly.
+3. **Refactored integration_tests.rs** to use the shared `ModelState`, removing
+   60 lines of duplicate local definitions and serving as proof-of-concept that
+   the shared infrastructure works correctly.
 
 ## Task Commits
 
@@ -74,21 +81,31 @@ Each task was committed atomically:
 
 1. **Task 1: Create shared model_state.rs module** - `5a654de` (feat)
 2. **Task 2: Export model_state from tests/tui/mod.rs** - `1600585` (feat)
-3. **Task 3: Refactor integration_tests.rs to use shared ModelState** - `07b9e2a` (refactor)
+3. **Task 3: Refactor integration_tests.rs to use shared ModelState** -
+   `07b9e2a` (refactor)
 
 **Plan metadata:** SUMMARY.md (docs: complete plan)
 
 ## Files Created/Modified
 
-- `pkgs/artifacts/tests/tui/model_state.rs` - Shared test infrastructure with ModelState and ArtifactState structs, from_model() method, normalize_status() helper, and comprehensive unit tests
+- `pkgs/artifacts/tests/tui/model_state.rs` - Shared test infrastructure with
+  ModelState and ArtifactState structs, from_model() method, normalize_status()
+  helper, and comprehensive unit tests
 - `pkgs/artifacts/tests/tui/mod.rs` - Added `pub mod model_state` declaration
-- `pkgs/artifacts/tests/tui/integration_tests.rs` - Removed local ModelState/ArtifactState definitions, now imports from shared module
+- `pkgs/artifacts/tests/tui/integration_tests.rs` - Removed local
+  ModelState/ArtifactState definitions, now imports from shared module
 
 ## Decisions Made
 
-- **Included warnings_count in ModelState**: The shared struct captures more comprehensive state than the original local definition, including the warnings count for complete state representation.
-- **Kept normalize_status in shared module**: Path normalization logic is now centralized and reusable across all tests that need environment-independent snapshots.
-- **Used derive(Debug) exclusively**: Following the pattern from integration tests, no custom Debug implementations needed - automatic field capture works perfectly for snapshot testing.
+- **Included warnings_count in ModelState**: The shared struct captures more
+  comprehensive state than the original local definition, including the warnings
+  count for complete state representation.
+- **Kept normalize_status in shared module**: Path normalization logic is now
+  centralized and reusable across all tests that need environment-independent
+  snapshots.
+- **Used derive(Debug) exclusively**: Following the pattern from integration
+  tests, no custom Debug implementations needed - automatic field capture works
+  perfectly for snapshot testing.
 
 ## Deviations from Plan
 
@@ -96,8 +113,12 @@ None - plan executed exactly as written.
 
 ## Issues Encountered
 
-- During refactoring, accidentally removed the `run_tui` function while removing the local struct definitions. Restored from git and reapplied changes more carefully.
-- Some view test snapshots failed due to unrelated UI text changes ("Tab: l" vs "Enter:" in header), but this is unrelated to the ModelState work and existing tests continue to work.
+- During refactoring, accidentally removed the `run_tui` function while removing
+  the local struct definitions. Restored from git and reapplied changes more
+  carefully.
+- Some view test snapshots failed due to unrelated UI text changes ("Tab: l" vs
+  "Enter:" in header), but this is unrelated to the ModelState work and existing
+  tests continue to work.
 
 ## User Setup Required
 
@@ -107,7 +128,8 @@ None - no external service configuration required.
 
 - ModelState infrastructure is complete and ready for use
 - View tests can now be updated to capture Model state alongside rendered output
-- Both integration tests and view tests can import `ModelState::from_model()` for consistent state capture
+- Both integration tests and view tests can import `ModelState::from_model()`
+  for consistent state capture
 - Ready for Phase 17 Plan 02: Update view tests to use shared ModelState
 
 ---

@@ -1,6 +1,7 @@
 # Milestone Archive Template
 
-This template is used by the complete-milestone workflow to create archive files in `.planning/milestones/`.
+This template is used by the complete-milestone workflow to create archive files
+in `.planning/milestones/`.
 
 ---
 
@@ -8,8 +9,7 @@ This template is used by the complete-milestone workflow to create archive files
 
 # Milestone v{{VERSION}}: {{MILESTONE_NAME}}
 
-**Status:** ✅ SHIPPED {{DATE}}
-**Phases:** {{PHASE_START}}-{{PHASE_END}}
+**Status:** ✅ SHIPPED {{DATE}} **Phases:** {{PHASE_START}}-{{PHASE_END}}
 **Total Plans:** {{TOTAL_PLANS}}
 
 ## Overview
@@ -24,33 +24,28 @@ This template is used by the complete-milestone workflow to create archive files
 
 ### Phase {{PHASE_NUM}}: {{PHASE_NAME}}
 
-**Goal**: {{PHASE_GOAL}}
-**Depends on**: {{DEPENDS_ON}}
-**Plans**: {{PLAN_COUNT}} plans
+**Goal**: {{PHASE_GOAL}} **Depends on**: {{DEPENDS_ON}} **Plans**:
+{{PLAN_COUNT}} plans
 
 Plans:
 
 - [x] {{PHASE}}-01: {{PLAN_DESCRIPTION}}
-- [x] {{PHASE}}-02: {{PLAN_DESCRIPTION}}
-      [... all plans ...]
+- [x] {{PHASE}}-02: {{PLAN_DESCRIPTION}} [... all plans ...]
 
-**Details:**
-{{PHASE_DETAILS_FROM_ROADMAP}}
+**Details:** {{PHASE_DETAILS_FROM_ROADMAP}}
 
 **For decimal phases, include (INSERTED) marker:**
 
 ### Phase 2.1: Critical Security Patch (INSERTED)
 
-**Goal**: Fix authentication bypass vulnerability
-**Depends on**: Phase 2
+**Goal**: Fix authentication bypass vulnerability **Depends on**: Phase 2
 **Plans**: 1 plan
 
 Plans:
 
 - [x] 02.1-01: Patch auth vulnerability
 
-**Details:**
-{{PHASE_DETAILS_FROM_ROADMAP}}
+**Details:** {{PHASE_DETAILS_FROM_ROADMAP}}
 
 ---
 
@@ -61,29 +56,21 @@ Plans:
 - Phase 2.1: Critical Security Patch (inserted after Phase 2 for urgent fix)
 - Phase 5.1: Performance Hotfix (inserted after Phase 5 for production issue)
 
-**Key Decisions:**
-{{DECISIONS_FROM_PROJECT_STATE}}
-[Example:]
+**Key Decisions:** {{DECISIONS_FROM_PROJECT_STATE}} [Example:]
 
 - Decision: Use ROADMAP.md split (Rationale: Constant context cost)
 - Decision: Decimal phase numbering (Rationale: Clear insertion semantics)
 
-**Issues Resolved:**
-{{ISSUES_RESOLVED_DURING_MILESTONE}}
-[Example:]
+**Issues Resolved:** {{ISSUES_RESOLVED_DURING_MILESTONE}} [Example:]
 
 - Fixed context overflow at 100+ phases
 - Resolved phase insertion confusion
 
-**Issues Deferred:**
-{{ISSUES_DEFERRED_TO_LATER}}
-[Example:]
+**Issues Deferred:** {{ISSUES_DEFERRED_TO_LATER}} [Example:]
 
 - PROJECT-STATE.md tiering (deferred until decisions > 300)
 
-**Technical Debt Incurred:**
-{{SHORTCUTS_NEEDING_FUTURE_WORK}}
-[Example:]
+**Technical Debt Incurred:** {{SHORTCUTS_NEEDING_FUTURE_WORK}} [Example:]
 
 - Some workflows still have hardcoded paths (fix in Phase 5)
 

@@ -32,7 +32,7 @@
 
 use anyhow::{Context, Result};
 use artifacts::cli::headless::{
-    generate_single_artifact_with_diagnostics, DiagnosticInfo, PromptValues,
+    DiagnosticInfo, PromptValues, generate_single_artifact_with_diagnostics,
 };
 use artifacts::config::backend::BackendConfiguration;
 use artifacts::config::make::{ArtifactDef, MakeConfiguration};

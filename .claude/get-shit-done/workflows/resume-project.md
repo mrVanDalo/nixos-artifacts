@@ -10,8 +10,7 @@ Use this workflow when:
 Instantly restore full project context so "Where were we?" has an immediate, complete answer.
 </purpose>
 
-<required_reading>
-@./.claude/get-shit-done/references/continuation-format.md
+<required_reading> @./.claude/get-shit-done/references/continuation-format.md
 </required_reading>
 
 <process>
@@ -23,11 +22,14 @@ Load all context in one call:
 INIT=$(node ./.claude/get-shit-done/bin/gsd-tools.cjs init resume)
 ```
 
-Parse JSON for: `state_exists`, `roadmap_exists`, `project_exists`, `planning_exists`, `has_interrupted_agent`, `interrupted_agent_id`, `commit_docs`.
+Parse JSON for: `state_exists`, `roadmap_exists`, `project_exists`,
+`planning_exists`, `has_interrupted_agent`, `interrupted_agent_id`,
+`commit_docs`.
 
-**If `state_exists` is true:** Proceed to load_state
-**If `state_exists` is false but `roadmap_exists` or `project_exists` is true:** Offer to reconstruct STATE.md
-**If `planning_exists` is false:** This is a new project - route to /gsd:new-project
+**If `state_exists` is true:** Proceed to load_state **If `state_exists` is
+false but `roadmap_exists` or `project_exists` is true:** Offer to reconstruct
+STATE.md **If `planning_exists` is false:** This is a new project - route to
+/gsd:new-project
 </step>
 
 <step name="load_state">
@@ -140,35 +142,26 @@ Present complete project status to user:
 <step name="determine_next_action">
 Based on project state, determine the most logical next action:
 
-**If interrupted agent exists:**
-→ Primary: Resume interrupted agent (Task tool with resume parameter)
-→ Option: Start fresh (abandon agent work)
+**If interrupted agent exists:** → Primary: Resume interrupted agent (Task tool
+with resume parameter) → Option: Start fresh (abandon agent work)
 
-**If .continue-here file exists:**
-→ Primary: Resume from checkpoint
-→ Option: Start fresh on current plan
+**If .continue-here file exists:** → Primary: Resume from checkpoint → Option:
+Start fresh on current plan
 
-**If incomplete plan (PLAN without SUMMARY):**
-→ Primary: Complete the incomplete plan
-→ Option: Abandon and move on
+**If incomplete plan (PLAN without SUMMARY):** → Primary: Complete the
+incomplete plan → Option: Abandon and move on
 
-**If phase in progress, all plans complete:**
-→ Primary: Transition to next phase
-→ Option: Review completed work
+**If phase in progress, all plans complete:** → Primary: Transition to next
+phase → Option: Review completed work
 
-**If phase ready to plan:**
-→ Check if CONTEXT.md exists for this phase:
+**If phase ready to plan:** → Check if CONTEXT.md exists for this phase:
 
-- If CONTEXT.md missing:
-  → Primary: Discuss phase vision (how user imagines it working)
-  → Secondary: Plan directly (skip context gathering)
-- If CONTEXT.md exists:
-  → Primary: Plan the phase
-  → Option: Review roadmap
+- If CONTEXT.md missing: → Primary: Discuss phase vision (how user imagines it
+  working) → Secondary: Plan directly (skip context gathering)
+- If CONTEXT.md exists: → Primary: Plan the phase → Option: Review roadmap
 
-**If phase ready to execute:**
-→ Primary: Execute next plan
-→ Option: Review the plan first
+**If phase ready to execute:** → Primary: Execute next plan → Option: Review the
+plan first
 </step>
 
 <step name="offer_options">
@@ -245,7 +238,7 @@ Based on user selection, route to appropriate workflow:
 - **Check todos** → Read .planning/todos/pending/, present summary
 - **Review alignment** → Read PROJECT.md, compare to current state
 - **Something else** → Ask what they need
-</step>
+  </step>
 
 <step name="update_session">
 Before proceeding to routed workflow, update session continuity:
@@ -255,9 +248,8 @@ Update STATE.md:
 ```markdown
 ## Session Continuity
 
-Last session: [now]
-Stopped at: Session resumed, proceeding to [action]
-Resume file: [updated if applicable]
+Last session: [now] Stopped at: Session resumed, proceeding to [action] Resume
+file: [updated if applicable]
 ```
 
 This ensures if session ends unexpectedly, next resume knows the state.
@@ -285,22 +277,19 @@ This handles cases where:
 - Cloning repo without full .planning/ state
   </reconstruction>
 
-<quick_resume>
-If user says "continue" or "go":
+<quick_resume> If user says "continue" or "go":
+
 - Load state silently
 - Determine primary action
 - Execute immediately without presenting options
 
-"Continuing from [state]... [action]"
-</quick_resume>
+"Continuing from [state]... [action]" </quick_resume>
 
-<success_criteria>
-Resume is complete when:
+<success_criteria> Resume is complete when:
 
 - [ ] STATE.md loaded (or reconstructed)
 - [ ] Incomplete work detected and flagged
 - [ ] Clear status presented to user
 - [ ] Contextual next actions offered
 - [ ] User knows exactly where project stands
-- [ ] Session continuity updated
-      </success_criteria>
+- [ ] Session continuity updated </success_criteria>

@@ -1,38 +1,38 @@
 # Stack Research Template
 
-Template for `.planning/research/STACK.md` — recommended technologies for the project domain.
+Template for `.planning/research/STACK.md` — recommended technologies for the
+project domain.
 
 <template>
 
-```markdown
+````markdown
 # Stack Research
 
-**Domain:** [domain type]
-**Researched:** [date]
-**Confidence:** [HIGH/MEDIUM/LOW]
+**Domain:** [domain type] **Researched:** [date] **Confidence:**
+[HIGH/MEDIUM/LOW]
 
 ## Recommended Stack
 
 ### Core Technologies
 
-| Technology | Version | Purpose | Why Recommended |
-|------------|---------|---------|-----------------|
-| [name] | [version] | [what it does] | [why experts use it for this domain] |
-| [name] | [version] | [what it does] | [why experts use it for this domain] |
-| [name] | [version] | [what it does] | [why experts use it for this domain] |
+| Technology | Version   | Purpose        | Why Recommended                      |
+| ---------- | --------- | -------------- | ------------------------------------ |
+| [name]     | [version] | [what it does] | [why experts use it for this domain] |
+| [name]     | [version] | [what it does] | [why experts use it for this domain] |
+| [name]     | [version] | [what it does] | [why experts use it for this domain] |
 
 ### Supporting Libraries
 
-| Library | Version | Purpose | When to Use |
-|---------|---------|---------|-------------|
-| [name] | [version] | [what it does] | [specific use case] |
-| [name] | [version] | [what it does] | [specific use case] |
-| [name] | [version] | [what it does] | [specific use case] |
+| Library | Version   | Purpose        | When to Use         |
+| ------- | --------- | -------------- | ------------------- |
+| [name]  | [version] | [what it does] | [specific use case] |
+| [name]  | [version] | [what it does] | [specific use case] |
+| [name]  | [version] | [what it does] | [specific use case] |
 
 ### Development Tools
 
-| Tool | Purpose | Notes |
-|------|---------|-------|
+| Tool   | Purpose        | Notes                |
+| ------ | -------------- | -------------------- |
 | [name] | [what it does] | [configuration tips] |
 | [name] | [what it does] | [configuration tips] |
 
@@ -48,35 +48,38 @@ npm install [packages]
 # Dev dependencies
 npm install -D [packages]
 ```
+````
 
 ## Alternatives Considered
 
-| Recommended | Alternative | When to Use Alternative |
-|-------------|-------------|-------------------------|
+| Recommended  | Alternative    | When to Use Alternative                  |
+| ------------ | -------------- | ---------------------------------------- |
 | [our choice] | [other option] | [conditions where alternative is better] |
 | [our choice] | [other option] | [conditions where alternative is better] |
 
 ## What NOT to Use
 
-| Avoid | Why | Use Instead |
-|-------|-----|-------------|
+| Avoid        | Why                | Use Instead               |
+| ------------ | ------------------ | ------------------------- |
 | [technology] | [specific problem] | [recommended alternative] |
 | [technology] | [specific problem] | [recommended alternative] |
 
 ## Stack Patterns by Variant
 
 **If [condition]:**
+
 - Use [variation]
 - Because [reason]
 
 **If [condition]:**
+
 - Use [variation]
 - Because [reason]
 
 ## Version Compatibility
 
-| Package A | Compatible With | Notes |
-|-----------|-----------------|-------|
+| Package A         | Compatible With   | Notes                 |
+| ----------------- | ----------------- | --------------------- |
 | [package@version] | [package@version] | [compatibility notes] |
 
 ## Sources
@@ -86,10 +89,10 @@ npm install -D [packages]
 - [Other source] — [confidence level]
 
 ---
-*Stack research for: [domain]*
-*Researched: [date]*
-```
 
+_Stack research for: [domain]_ _Researched: [date]_
+
+```
 </template>
 
 <guidelines>
@@ -118,3 +121,4 @@ npm install -D [packages]
 - Critical for avoiding debugging time later
 
 </guidelines>
+```

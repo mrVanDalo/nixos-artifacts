@@ -1,6 +1,7 @@
 # Continuation Format
 
-Standard format for presenting next steps after completing a command or workflow.
+Standard format for presenting next steps after completing a command or
+workflow.
 
 ## Core Structure
 
@@ -27,8 +28,10 @@ Standard format for presenting next steps after completing a command or workflow
 ## Format Rules
 
 1. **Always show what it is** — name + description, never just a command path
-2. **Pull context from source** — ROADMAP.md for phases, PLAN.md `<objective>` for plans
-3. **Command in inline code** — backticks, easy to copy-paste, renders as clickable link
+2. **Pull context from source** — ROADMAP.md for phases, PLAN.md `<objective>`
+   for plans
+3. **Command in inline code** — backticks, easy to copy-paste, renders as
+   clickable link
 4. **`/clear` explanation** — always include, keeps it concise but explains why
 5. **"Also available" not "Other options"** — sounds more app-like
 6. **Visual separators** — `---` above and below to make it stand out
@@ -182,6 +185,7 @@ All 4 phases shipped
 
 ```markdown
 ### Phase 2: Authentication
+
 **Goal**: JWT login flow with refresh tokens
 ```
 
@@ -191,6 +195,7 @@ Extract: `**Phase 2: Authentication** — JWT login flow with refresh tokens`
 
 ```markdown
 Plans:
+
 - [ ] 02-03: Add refresh token rotation
 ```
 
@@ -204,7 +209,8 @@ Purpose: Extend session lifetime without compromising security.
 </objective>
 ```
 
-Extract: `**02-03: Refresh Token Rotation** — Add /api/auth/refresh with sliding expiry`
+Extract:
+`**02-03: Refresh Token Rotation** — Add /api/auth/refresh with sliding expiry`
 
 ## Anti-Patterns
 
@@ -242,8 +248,11 @@ Sounds like an afterthought. Use "Also available:" instead.
 
 ```
 ```
+
 /gsd:plan-phase 3
+
 ```
 ```
 
-Fenced blocks inside templates create nesting ambiguity. Use inline backticks instead.
+Fenced blocks inside templates create nesting ambiguity. Use inline backticks
+instead.

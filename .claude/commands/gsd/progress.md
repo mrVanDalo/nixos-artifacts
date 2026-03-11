@@ -8,14 +8,14 @@ allowed-tools:
   - Glob
   - SlashCommand
 ---
+
 <objective>
 Check project progress, summarize recent work and what's ahead, then intelligently route to the next action - either executing an existing plan or creating the next one.
 
 Provides situational awareness before continuing work.
 </objective>
 
-<execution_context>
-@./.claude/get-shit-done/workflows/progress.md
+<execution_context> @./.claude/get-shit-done/workflows/progress.md
 </execution_context>
 
 <process>

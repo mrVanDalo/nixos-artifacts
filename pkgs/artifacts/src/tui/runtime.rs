@@ -13,10 +13,7 @@ use std::time::{Duration, Instant};
 use tokio_util::sync::CancellationToken;
 
 /// Helper to send effect to background if it needs execution.
-fn send_effect(
-    effect: Effect,
-    tx: &tokio::sync::mpsc::UnboundedSender<Effect>,
-) -> bool {
+fn send_effect(effect: Effect, tx: &tokio::sync::mpsc::UnboundedSender<Effect>) -> bool {
     match effect {
         Effect::None | Effect::Quit => true,
         Effect::Batch(effects) => {
@@ -219,8 +216,7 @@ where
                     log_component("RUNTIME", &format!("Sending command: {:?}", cmd));
                     if cmd_tx.send(cmd).is_err() {
                         log_component("RUNTIME", "Background task closed, exiting");
-                        model.error =
-                            Some("Connection to background task lost".to_string());
+                        model.error = Some("Connection to background task lost".to_string());
                         return Ok(RunResult {
                             final_model: model,
                             frames_rendered,
@@ -330,10 +326,7 @@ where
                             &format!("Executing {} follow-up commands", cmds.len()),
                         );
                         for cmd in cmds {
-                            log_component(
-                                "RUNTIME",
-                                &format!("Sending command: {:?}", cmd),
-                            );
+                            log_component("RUNTIME", &format!("Sending command: {:?}", cmd));
                             if cmd_tx.send(cmd).is_err() {
                                 log_component("RUNTIME", "Background task closed, exiting");
                                 model.error =
@@ -357,7 +350,10 @@ where
             // No events ready - check if we should wait or exit
             // First, check if the event source is permanently exhausted
             if events.is_exhausted() {
-                log_component("RUNTIME", "Event source exhausted, initiating graceful shutdown");
+                log_component(
+                    "RUNTIME",
+                    "Event source exhausted, initiating graceful shutdown",
+                );
 
                 // Signal background to shut down
                 shutdown_token.cancel();
@@ -445,7 +441,10 @@ async fn execute_initial_effect(
     if send_effect(effect, cmd_tx) {
         log_component("RUNTIME", "Initial effect sent successfully");
     } else {
-        log_component("RUNTIME", "Failed to send initial effect or effect was None/Quit");
+        log_component(
+            "RUNTIME",
+            "Failed to send initial effect or effect was None/Quit",
+        );
     }
     Ok(model)
 }
@@ -547,13 +546,17 @@ mod tests {
 
     fn make_test_model() -> Model {
         let entry1 = ArtifactEntry {
-            target_type: TargetType::NixOS { machine: "machine-one".to_string() },
+            target_type: TargetType::NixOS {
+                machine: "machine-one".to_string(),
+            },
             artifact: make_test_artifact("ssh-key", vec!["passphrase"]),
             status: ArtifactStatus::Pending,
             step_logs: StepLogs::default(),
         };
         let entry2 = ArtifactEntry {
-            target_type: TargetType::NixOS { machine: "machine-two".to_string() },
+            target_type: TargetType::NixOS {
+                machine: "machine-two".to_string(),
+            },
             artifact: make_test_artifact("api-token", vec![]),
             status: ArtifactStatus::Pending,
             step_logs: StepLogs::default(),
@@ -738,7 +741,9 @@ mod tests {
         let cmd = effect_to_command(Effect::CheckSerialization {
             artifact_index: 0,
             artifact_name: "test".to_string(),
-            target_type: TargetType::NixOS { machine: "machine".to_string() },
+            target_type: TargetType::NixOS {
+                machine: "machine".to_string(),
+            },
         });
         assert_eq!(cmd.len(), 1);
         assert!(matches!(cmd[0], Effect::CheckSerialization { .. }));
@@ -747,7 +752,9 @@ mod tests {
         let cmd = effect_to_command(Effect::RunGenerator {
             artifact_index: 0,
             artifact_name: "test".to_string(),
-            target_type: TargetType::NixOS { machine: "machine".to_string() },
+            target_type: TargetType::NixOS {
+                machine: "machine".to_string(),
+            },
             prompts: HashMap::new(),
         });
         assert_eq!(cmd.len(), 1);
@@ -790,7 +797,9 @@ mod tests {
         let cmd = Effect::CheckSerialization {
             artifact_index: 0,
             artifact_name: "test".to_string(),
-            target_type: TargetType::NixOS { machine: "machine".to_string() },
+            target_type: TargetType::NixOS {
+                machine: "machine".to_string(),
+            },
         };
 
         cmd_tx.send(cmd).expect("Should be able to send command");
@@ -887,7 +896,9 @@ mod tests {
             let cmd = Effect::CheckSerialization {
                 artifact_index: i,
                 artifact_name: format!("artifact{}", i),
-                target_type: TargetType::NixOS { machine: "machine".to_string() },
+                target_type: TargetType::NixOS {
+                    machine: "machine".to_string(),
+                },
             };
             cmd_tx.send(cmd).expect("Should send command");
         }

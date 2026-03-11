@@ -2,18 +2,25 @@
 
 ## Current State
 
-**Shipped:** v4.1 Code Quality & Documentation Cleanup — 2026-02-23  
-**Status:** Production-ready with zero compiler warnings, comprehensive documentation, and audited dependencies  
-**Tests:** 131 passing tests (up from 122 at v4.0)  
-**Requirements:** 24/24 v4.1 requirements complete (all LINT, DEAD, FILE, DOC, DEPS)
+**Shipped:** v4.1 Code Quality & Documentation Cleanup — 2026-02-23\
+**Status:** Production-ready with zero compiler warnings, comprehensive
+documentation, and audited dependencies\
+**Tests:** 131 passing tests (up from 122 at v4.0)\
+**Requirements:** 24/24 v4.1 requirements complete (all LINT, DEAD, FILE, DOC,
+DEPS)
 
 **Key Achievements:**
 
-- **Zero compiler warnings** — Main code and tests compile with zero rustc and clippy warnings
-- **Zero cargo doc warnings** — Comprehensive Rust documentation with clean intra-doc links
-- **Dead code eliminated** — All unused imports, variables removed; all `#[allow(dead_code)]` justified
-- **File cleanup** — Removed 2 orphaned documentation files, verified all CLAUDE.md and README.md current
-- **Dependency audit** — All 11 dependencies verified actively used (cargo-machete), no unused features
+- **Zero compiler warnings** — Main code and tests compile with zero rustc and
+  clippy warnings
+- **Zero cargo doc warnings** — Comprehensive Rust documentation with clean
+  intra-doc links
+- **Dead code eliminated** — All unused imports, variables removed; all
+  `#[allow(dead_code)]` justified
+- **File cleanup** — Removed 2 orphaned documentation files, verified all
+  CLAUDE.md and README.md current
+- **Dependency audit** — All 11 dependencies verified actively used
+  (cargo-machete), no unused features
 
 ---
 
@@ -21,8 +28,8 @@
 
 A system that unifies handling of artifacts (secrets and generated files) in
 NixOS flakes through a common abstraction over multiple backends. The Rust CLI
-uses a fully async background job architecture with tokio channels, ensuring
-the TUI remains responsive during all script execution while maintaining the Elm
+uses a fully async background job architecture with tokio channels, ensuring the
+TUI remains responsive during all script execution while maintaining the Elm
 Architecture pattern.
 
 ---
@@ -38,17 +45,22 @@ effect execution runs in a background job while the TUI remains interactive.
 
 ### Validated (Shipped in v4.1)
 
-- ✓ **Zero rustc warnings** — Main code compiles with zero compiler warnings — v4.1
+- ✓ **Zero rustc warnings** — Main code compiles with zero compiler warnings —
+  v4.1
 - ✓ **Zero clippy warnings** — Main code passes clippy with zero warnings — v4.1
-- ✓ **Zero test rustc warnings** — Tests compile with zero compiler warnings — v4.1
+- ✓ **Zero test rustc warnings** — Tests compile with zero compiler warnings —
+  v4.1
 - ✓ **Zero test clippy warnings** — Tests pass clippy with zero warnings — v4.1
-- ✓ **Pedantic lints addressed** — 90% reduction with documented justifications — v4.1
+- ✓ **Pedantic lints addressed** — 90% reduction with documented justifications
+  — v4.1
 - ✓ **No unused functions** — All functions called or justified — v4.1
 - ✓ **No unused variables** — All variables used or prefixed — v4.1
 - ✓ **No unused imports** — All imports referenced — v4.1
 - ✓ **No unreachable code** — All paths reachable or justified — v4.1
-- ✓ **Justified dead_code attributes** — All attributes have explanatory comments — v4.1
-- ✓ **Orphaned files removed** — options.adoc and backend-implementation-guide.md removed — v4.1
+- ✓ **Justified dead_code attributes** — All attributes have explanatory
+  comments — v4.1
+- ✓ **Orphaned files removed** — options.adoc and
+  backend-implementation-guide.md removed — v4.1
 - ✓ **No empty files** — All files contain content — v4.1
 - ✓ **CLAUDE.md files current** — All 3 CLAUDE.md files verified — v4.1
 - ✓ **README.md files current** — All 2 README.md files verified — v4.1
@@ -62,29 +74,43 @@ effect execution runs in a background job while the TUI remains interactive.
 - ✓ **Safety sections** — Panics/Errors/Safety documented — v4.1
 - ✓ **Dependencies verified** — All 11 deps actively used — v4.1
 - ✓ **Features verified** — All features exercised — v4.1
-- ✓ **Duplicate deps documented** — Unavoidable transitive duplicates noted — v4.1
+- ✓ **Duplicate deps documented** — Unavoidable transitive duplicates noted —
+  v4.1
 
 ### Validated (Shipped in v4.0)
 
-- ✓ **Regeneration confirmation dialog** — "Leave" default prevents accidental overwrites — v4.0
-- ✓ **Regeneration explicit opt-in** — "Regenerate" button for explicit confirmation — v4.0
-- ✓ **Clear overwrite warning** — Dialog warns that old artifact will be overwritten — v4.0
-- ✓ **Regenerating status text** — Shows "Regenerating" not "Generating" for existing artifacts — v4.0
-- ✓ **Chronological log view** — Expandable Check/Generate/Serialize sections — v4.0
-- ✓ **Backend developer documentation** — Comprehensive guide with lifecycle diagrams — v4.0
-- ✓ **Model-based testing** — Elm Architecture tests with state transitions — v4.0
+- ✓ **Regeneration confirmation dialog** — "Leave" default prevents accidental
+  overwrites — v4.0
+- ✓ **Regeneration explicit opt-in** — "Regenerate" button for explicit
+  confirmation — v4.0
+- ✓ **Clear overwrite warning** — Dialog warns that old artifact will be
+  overwritten — v4.0
+- ✓ **Regenerating status text** — Shows "Regenerating" not "Generating" for
+  existing artifacts — v4.0
+- ✓ **Chronological log view** — Expandable Check/Generate/Serialize sections —
+  v4.0
+- ✓ **Backend developer documentation** — Comprehensive guide with lifecycle
+  diagrams — v4.0
+- ✓ **Model-based testing** — Elm Architecture tests with state transitions —
+  v4.0
 
 ### Validated (Shipped in v3.0)
 
-- ✓ **Fix shared artifact status icons** — Show correct status (needs-generation/up-to-date) instead of pending — v3.0
-- ✓ **Smart generator selection** — Skip dialog when only one unique generator (same Nix store path) — v3.0
-- ✓ **TUI error display** — Show errors when TUI fails, without stdout/stderr pollution — v3.0
-- ✓ **Script output visibility** — Display stdout/stderr from scripts in TUI — v3.0
-- ✓ **Enhanced generator dialog** — Show machine/user/home-manager context, shared status, artifact name, prompt descriptions — v3.0
+- ✓ **Fix shared artifact status icons** — Show correct status
+  (needs-generation/up-to-date) instead of pending — v3.0
+- ✓ **Smart generator selection** — Skip dialog when only one unique generator
+  (same Nix store path) — v3.0
+- ✓ **TUI error display** — Show errors when TUI fails, without stdout/stderr
+  pollution — v3.0
+- ✓ **Script output visibility** — Display stdout/stderr from scripts in TUI —
+  v3.0
+- ✓ **Enhanced generator dialog** — Show machine/user/home-manager context,
+  shared status, artifact name, prompt descriptions — v3.0
 
 ### Validated (Shipped in v2.0)
 
-- ✓ **End-to-end integration tests** — 33+ tests verifying artifact creation — v2.0 (Phases 5-8)
+- ✓ **End-to-end integration tests** — 33+ tests verifying artifact creation —
+  v2.0 (Phases 5-8)
 - ✓ **Headless API** — Programmatic generation without TUI — v2.0
 - ✓ **Backend verification** — Tests confirm artifacts exist in storage — v2.0
 - ✓ **Code quality** — Flattened call chains, no abbreviations — v2.0
@@ -119,7 +145,8 @@ effect execution runs in a background job while the TUI remains interactive.
 - Cancellation of in-flight effects via user input — No current requirement
 - Effect queuing with priority support — No current requirement
 - Concurrent execution of independent effects — No current requirement
-- Multi-threaded script execution for independent artifacts — No current requirement
+- Multi-threaded script execution for independent artifacts — No current
+  requirement
 
 ---
 
@@ -144,9 +171,12 @@ All v4.1 code quality requirements delivered:
 
 1. ✓ **Zero rustc warnings:** `cargo build` completes with zero warnings
 2. ✓ **Zero clippy warnings:** `cargo clippy` completes with zero warnings
-3. ✓ **Dead code eliminated:** All unused imports/variables removed, all `#[allow(dead_code)]` justified
-4. ✓ **File cleanup:** Removed 2 orphaned docs files, verified all CLAUDE.md/README.md current
-5. ✓ **Documentation:** 100+ doc comments added, `cargo doc` produces zero warnings
+3. ✓ **Dead code eliminated:** All unused imports/variables removed, all
+   `#[allow(dead_code)]` justified
+4. ✓ **File cleanup:** Removed 2 orphaned docs files, verified all
+   CLAUDE.md/README.md current
+5. ✓ **Documentation:** 100+ doc comments added, `cargo doc` produces zero
+   warnings
 6. ✓ **Dependencies:** All 11 deps verified actively used with cargo-machete
 
 **v4.0 Achievements:**
@@ -198,26 +228,26 @@ All v4.1 code quality requirements delivered:
 
 ## Key Decisions
 
-| Decision                          | Rationale                         | Outcome                              |
-| --------------------------------- | --------------------------------- | ------------------------------------ |
-| **Unbounded channels**            | TUI must never block on send      | ✓ Good — no backpressure issues      |
-| **Sequential processing**         | Avoid race conditions             | ✓ Good — FIFO order correct          |
-| **spawn_blocking for I/O**        | Required for subprocess in async  | ✓ Good — scripts don't block runtime |
-| **CancellationToken**               | Clean shutdown integration        | ✓ Good — graceful exit works         |
-| **Two-level timeout**               | Script-level 30s + task-level 35s | ✓ Good — comprehensive coverage      |
-| **Feature-gated logging**         | Zero cost when disabled           | ✓ Good — no runtime overhead         |
-| **Fail-open check_serialization** | Assume generation on error        | ✓ Good — safe default                |
-| **Option<String> for description**| Backward compatibility            | ✓ Good — optional field pattern      |
-| **Description from first artifact**| Consistent with prompts/files    | ✓ Good — shared aggregation works    |
-| **exists flag pattern**           | Separate existence from generation | ✓ Good — precise regeneration control |
-| **Leave as default**              | Prevents accidental overwrites    | ✓ Good — safety-first UX             |
-| **StateCapture struct**           | Documents Elm Architecture chain  | ✓ Good — living documentation        |
-| **Standalone BACKEND_GUIDE.md**   | Copy-paste ready for other repos | ✓ Good — portable documentation      |
-| **Pedantic warnings documented**  | 90% fixed, rest justified          | ✓ Good — maintainable codebase       |
-| **cargo-machete for deps**        | Automated unused dep detection    | ✓ Good — verified all 11 deps used |
-| **Intra-doc links**               | Automatic navigation in docs      | ✓ Good — clean cargo doc output      |
+| Decision                            | Rationale                          | Outcome                               |
+| ----------------------------------- | ---------------------------------- | ------------------------------------- |
+| **Unbounded channels**              | TUI must never block on send       | ✓ Good — no backpressure issues       |
+| **Sequential processing**           | Avoid race conditions              | ✓ Good — FIFO order correct           |
+| **spawn_blocking for I/O**          | Required for subprocess in async   | ✓ Good — scripts don't block runtime  |
+| **CancellationToken**               | Clean shutdown integration         | ✓ Good — graceful exit works          |
+| **Two-level timeout**               | Script-level 30s + task-level 35s  | ✓ Good — comprehensive coverage       |
+| **Feature-gated logging**           | Zero cost when disabled            | ✓ Good — no runtime overhead          |
+| **Fail-open check_serialization**   | Assume generation on error         | ✓ Good — safe default                 |
+| **Option<String> for description**  | Backward compatibility             | ✓ Good — optional field pattern       |
+| **Description from first artifact** | Consistent with prompts/files      | ✓ Good — shared aggregation works     |
+| **exists flag pattern**             | Separate existence from generation | ✓ Good — precise regeneration control |
+| **Leave as default**                | Prevents accidental overwrites     | ✓ Good — safety-first UX              |
+| **StateCapture struct**             | Documents Elm Architecture chain   | ✓ Good — living documentation         |
+| **Standalone BACKEND_GUIDE.md**     | Copy-paste ready for other repos   | ✓ Good — portable documentation       |
+| **Pedantic warnings documented**    | 90% fixed, rest justified          | ✓ Good — maintainable codebase        |
+| **cargo-machete for deps**          | Automated unused dep detection     | ✓ Good — verified all 11 deps used    |
+| **Intra-doc links**                 | Automatic navigation in docs       | ✓ Good — clean cargo doc output       |
 
 ---
 
-_Project: NixOS Artifacts Store_  
+_Project: NixOS Artifacts Store_\
 _Last updated: 2026-02-23 after v4.1 milestone complete_

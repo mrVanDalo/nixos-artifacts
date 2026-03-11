@@ -17,7 +17,7 @@
 //! - Scenarios in examples/scenarios/ directory
 
 use anyhow::{Context, Result};
-use artifacts::cli::headless::{generate_single_artifact, PromptValues};
+use artifacts::cli::headless::{PromptValues, generate_single_artifact};
 use serial_test::serial;
 use std::collections::BTreeMap;
 use std::fs;

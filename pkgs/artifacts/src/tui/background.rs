@@ -24,9 +24,9 @@ use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel};
 use tokio::time::timeout;
 use tokio_util::sync::CancellationToken;
 
+use crate::app::effect::Effect;
 use crate::app::message::{Message, ScriptOutput};
 use crate::app::model::{ArtifactStatus, OutputStream, TargetType};
-use crate::app::effect::Effect;
 use crate::backend;
 use crate::config::backend::BackendConfiguration;
 use crate::config::make::{ArtifactDef, MakeConfiguration};
@@ -91,13 +91,19 @@ impl BackgroundEffectHandler {
     /// Kept for future use - currently output is batched at end of script execution
     /// but we may switch to streaming output in a future phase (see Phase 20: Output Streaming)
     #[allow(dead_code)]
-    fn send_output_line(&self, artifact_index: usize, stream: OutputStream, content: String) -> bool {
+    fn send_output_line(
+        &self,
+        artifact_index: usize,
+        stream: OutputStream,
+        content: String,
+    ) -> bool {
         if let Some(ref tx) = self.result_tx {
             tx.send(Message::OutputLine {
                 artifact_index,
                 stream,
                 content,
-            }).is_ok()
+            })
+            .is_ok()
         } else {
             false
         }
@@ -110,9 +116,13 @@ impl BackgroundEffectHandler {
     /// Parse target type string into TargetType enum.
     fn target_type_from_str(target_type: &str, target: &str) -> TargetType {
         if target_type == "home" {
-            TargetType::HomeManager { username: target.to_string() }
+            TargetType::HomeManager {
+                username: target.to_string(),
+            }
         } else {
-            TargetType::NixOS { machine: target.to_string() }
+            TargetType::NixOS {
+                machine: target.to_string(),
+            }
         }
     }
 
@@ -140,7 +150,10 @@ impl BackgroundEffectHandler {
     /// Write prompt values to files in the specified directory.
     ///
     /// Each prompt is written to a file named after the prompt key.
-    fn write_prompts_to_dir(prompts: &HashMap<String, String>, dir: &std::path::Path) -> Result<(), String> {
+    fn write_prompts_to_dir(
+        prompts: &HashMap<String, String>,
+        dir: &std::path::Path,
+    ) -> Result<(), String> {
         for (name, value) in prompts {
             let prompt_file = dir.join(name);
             std::fs::write(&prompt_file, value)
@@ -241,15 +254,14 @@ impl BackgroundEffectHandler {
         let make = self.make.clone();
         let target_type_enum = Self::target_type_from_str(&target_type, &target);
 
-        let result = Self::run_with_timeout(
-            &artifact_name,
-            "CheckSerialization",
-            move || {
-                backend::serialization::run_check_serialization(
-                    &artifact, &target_type_enum, &backend, &make,
-                )
-            },
-        )
+        let result = Self::run_with_timeout(&artifact_name, "CheckSerialization", move || {
+            backend::serialization::run_check_serialization(
+                &artifact,
+                &target_type_enum,
+                &backend,
+                &make,
+            )
+        })
         .await;
 
         match result {
@@ -357,19 +369,15 @@ impl BackgroundEffectHandler {
         let artifact_for_verify = artifact.clone();
         let output_path_for_verify = output_path.clone();
 
-        let result = Self::run_with_timeout(
-            &artifact_name,
-            "Generator",
-            move || {
-                backend::generator::run_generator_script(
-                    &artifact,
-                    &target_type_enum,
-                    &make_base,
-                    &prompts_path,
-                    &output_path,
-                )
-            },
-        )
+        let result = Self::run_with_timeout(&artifact_name, "Generator", move || {
+            backend::generator::run_generator_script(
+                &artifact,
+                &target_type_enum,
+                &make_base,
+                &prompts_path,
+                &output_path,
+            )
+        })
         .await;
 
         match result {
@@ -454,19 +462,15 @@ impl BackgroundEffectHandler {
         let backend = self.backend.clone();
         let make = self.make.clone();
 
-        let result = Self::run_with_timeout(
-            &artifact_name,
-            "Serialize",
-            move || {
-                backend::serialization::run_serialize(
-                    &artifact,
-                    &backend,
-                    &output_path,
-                    &target_type_enum,
-                    &make,
-                )
-            },
-        )
+        let result = Self::run_with_timeout(&artifact_name, "Serialize", move || {
+            backend::serialization::run_serialize(
+                &artifact,
+                &backend,
+                &output_path,
+                &target_type_enum,
+                &make,
+            )
+        })
         .await;
 
         match result {
@@ -526,19 +530,20 @@ impl BackgroundEffectHandler {
                 return Message::SharedCheckSerializationResult {
                     artifact_index,
                     statuses: vec![status; count],
-                    outputs: vec![ScriptOutput::from_message(&format!(
-                        "Shared artifact '{}' not found",
-                        artifact_name
-                    )); count],
+                    outputs: vec![
+                        ScriptOutput::from_message(&format!(
+                            "Shared artifact '{}' not found",
+                            artifact_name
+                        ));
+                        count
+                    ],
                 };
             }
         };
 
         let artifact_name_for_closure = artifact_name.clone();
-        let result = Self::run_with_timeout(
-            &artifact_name,
-            "SharedCheckSerialization",
-            move || {
+        let result =
+            Self::run_with_timeout(&artifact_name, "SharedCheckSerialization", move || {
                 backend::serialization::run_shared_check_serialization(
                     &artifact_name_for_closure,
                     &backend_name,
@@ -547,9 +552,8 @@ impl BackgroundEffectHandler {
                     &nixos_targets,
                     &home_targets,
                 )
-            },
-        )
-        .await;
+            })
+            .await;
 
         let count = targets.len();
         match result {
@@ -575,7 +579,8 @@ impl BackgroundEffectHandler {
                     retry_available: true,
                 };
                 let statuses = vec![status; count];
-                let outputs = vec![ScriptOutput::from_message(&format!("Check failed: {}", e)); count];
+                let outputs =
+                    vec![ScriptOutput::from_message(&format!("Check failed: {}", e)); count];
                 Message::SharedCheckSerializationResult {
                     artifact_index,
                     statuses,
@@ -589,7 +594,8 @@ impl BackgroundEffectHandler {
                     retry_available: true,
                 };
                 let statuses = vec![status; count];
-                let outputs = vec![ScriptOutput::from_message(&format!("Task panicked: {}", e)); count];
+                let outputs =
+                    vec![ScriptOutput::from_message(&format!("Task panicked: {}", e)); count];
                 Message::SharedCheckSerializationResult {
                     artifact_index,
                     statuses,
@@ -598,7 +604,10 @@ impl BackgroundEffectHandler {
             }
             TimeoutResult::Timeout => {
                 let status = ArtifactStatus::Failed {
-                    error: format!("Timed out after {} seconds", BACKGROUND_TASK_TIMEOUT.as_secs()),
+                    error: format!(
+                        "Timed out after {} seconds",
+                        BACKGROUND_TASK_TIMEOUT.as_secs()
+                    ),
                     output: String::new(),
                     retry_available: true,
                 };
@@ -620,7 +629,12 @@ impl BackgroundEffectHandler {
         artifact_name: String,
         prompts: HashMap<String, String>,
     ) -> Message {
-        let shared_info = match self.make.get_shared_artifacts().get(&artifact_name).cloned() {
+        let shared_info = match self
+            .make
+            .get_shared_artifacts()
+            .get(&artifact_name)
+            .cloned()
+        {
             Some(info) => info,
             None => {
                 return Message::SharedGeneratorFinished {
@@ -681,18 +695,14 @@ impl BackgroundEffectHandler {
         let artifact_name_for_verify = artifact_name.clone();
         let out_path_for_verify = out_path.clone();
 
-        let result = Self::run_with_timeout(
-            &artifact_name,
-            "SharedGenerator",
-            move || {
-                backend::generator::run_generator_script_with_path(
-                    &generator_path_clone,
-                    &make_base,
-                    &prompts_path,
-                    &out_path,
-                )
-            },
-        )
+        let result = Self::run_with_timeout(&artifact_name, "SharedGenerator", move || {
+            backend::generator::run_generator_script_with_path(
+                &generator_path_clone,
+                &make_base,
+                &prompts_path,
+                &out_path,
+            )
+        })
         .await;
 
         match result {
@@ -776,7 +786,12 @@ impl BackgroundEffectHandler {
         };
         let out_path = output_dir.path().to_path_buf();
 
-        let shared_info = match self.make.get_shared_artifacts().get(&artifact_name).cloned() {
+        let shared_info = match self
+            .make
+            .get_shared_artifacts()
+            .get(&artifact_name)
+            .cloned()
+        {
             Some(info) => info,
             None => {
                 let mut results = Vec::new();
@@ -801,21 +816,17 @@ impl BackgroundEffectHandler {
         let nixos_targets = machine_targets.clone();
         let home_targets = user_targets.clone();
 
-        let result = Self::run_with_timeout(
-            &artifact_name,
-            "SharedSerialize",
-            move || {
-                backend::serialization::run_shared_serialize(
-                    &artifact_name_clone,
-                    &backend_name,
-                    &backend,
-                    &out_path,
-                    &make,
-                    &nixos_targets,
-                    &home_targets,
-                )
-            },
-        )
+        let result = Self::run_with_timeout(&artifact_name, "SharedSerialize", move || {
+            backend::serialization::run_shared_serialize(
+                &artifact_name_clone,
+                &backend_name,
+                &backend,
+                &out_path,
+                &make,
+                &nixos_targets,
+                &home_targets,
+            )
+        })
         .await;
 
         match result {
@@ -883,14 +894,12 @@ impl BackgroundEffectHandler {
     pub async fn execute(&mut self, effect: Effect) -> Message {
         log_component("BACKGROUND", "Starting execution of effect");
         match effect {
-            Effect::None | Effect::Quit => {
-                Message::CheckSerializationResult {
-                    artifact_index: 0,
-                    status: ArtifactStatus::Pending,
-                    result: Ok(ScriptOutput::default()),
-                }
-            }
-            
+            Effect::None | Effect::Quit => Message::CheckSerializationResult {
+                artifact_index: 0,
+                status: ArtifactStatus::Pending,
+                result: Ok(ScriptOutput::default()),
+            },
+
             Effect::CheckSerialization {
                 artifact_index,
                 artifact_name,
@@ -898,10 +907,15 @@ impl BackgroundEffectHandler {
             } => {
                 let target = target_type.target_name().unwrap_or("shared").to_string();
                 let target_type_str = target_type.to_string();
-                self.execute_check_serialization(artifact_index, artifact_name, target, target_type_str)
-                    .await
+                self.execute_check_serialization(
+                    artifact_index,
+                    artifact_name,
+                    target,
+                    target_type_str,
+                )
+                .await
             }
-            
+
             Effect::RunGenerator {
                 artifact_index,
                 artifact_name,
@@ -910,10 +924,16 @@ impl BackgroundEffectHandler {
             } => {
                 let target = target_type.target_name().unwrap_or("shared").to_string();
                 let target_type_str = target_type.to_string();
-                self.execute_run_generator(artifact_index, artifact_name, target, target_type_str, prompts)
-                    .await
+                self.execute_run_generator(
+                    artifact_index,
+                    artifact_name,
+                    target,
+                    target_type_str,
+                    prompts,
+                )
+                .await
             }
-            
+
             Effect::Serialize {
                 artifact_index,
                 artifact_name,
@@ -924,20 +944,32 @@ impl BackgroundEffectHandler {
                 self.execute_serialize(artifact_index, artifact_name, target, target_type_str)
                     .await
             }
-            
+
             Effect::SharedCheckSerialization {
                 artifact_index,
                 artifact_name,
                 nixos_targets,
                 home_targets,
             } => {
-                let targets: Vec<String> = nixos_targets.iter().chain(home_targets.iter()).cloned().collect();
-                let target_types: Vec<String> = nixos_targets.iter().map(|_| "nixos".to_string())
-                    .chain(home_targets.iter().map(|_| "home".to_string())).collect();
-                self.execute_shared_check_serialization(artifact_index, artifact_name, targets, target_types)
-                    .await
+                let targets: Vec<String> = nixos_targets
+                    .iter()
+                    .chain(home_targets.iter())
+                    .cloned()
+                    .collect();
+                let target_types: Vec<String> = nixos_targets
+                    .iter()
+                    .map(|_| "nixos".to_string())
+                    .chain(home_targets.iter().map(|_| "home".to_string()))
+                    .collect();
+                self.execute_shared_check_serialization(
+                    artifact_index,
+                    artifact_name,
+                    targets,
+                    target_types,
+                )
+                .await
             }
-            
+
             Effect::RunSharedGenerator {
                 artifact_index,
                 artifact_name,
@@ -946,17 +978,22 @@ impl BackgroundEffectHandler {
                 self.execute_run_shared_generator(artifact_index, artifact_name, prompts)
                     .await
             }
-            
+
             Effect::SharedSerialize {
                 artifact_index,
                 artifact_name,
                 nixos_targets,
                 home_targets,
             } => {
-                self.execute_shared_serialize(artifact_index, artifact_name, nixos_targets, home_targets)
-                    .await
+                self.execute_shared_serialize(
+                    artifact_index,
+                    artifact_name,
+                    nixos_targets,
+                    home_targets,
+                )
+                .await
             }
-            
+
             Effect::Batch(effects) => {
                 // Execute first effect in batch
                 if let Some(first) = effects.into_iter().next() {
@@ -1000,10 +1037,7 @@ pub fn spawn_background_task(
     backend: BackendConfiguration,
     make: MakeConfiguration,
     shutdown_token: CancellationToken,
-) -> (
-    UnboundedSender<Effect>,
-    UnboundedReceiver<Message>,
-) {
+) -> (UnboundedSender<Effect>, UnboundedReceiver<Message>) {
     let (tx_cmd, mut rx_cmd) = unbounded_channel::<Effect>();
     let (tx_res, rx_res) = unbounded_channel::<Message>();
 
@@ -1095,7 +1129,9 @@ mod tests {
         let cmd = Effect::CheckSerialization {
             artifact_index: 0,
             artifact_name: "test".to_string(),
-            target_type: crate::app::model::TargetType::NixOS { machine: "machine".to_string() },
+            target_type: crate::app::model::TargetType::NixOS {
+                machine: "machine".to_string(),
+            },
         };
 
         tx.send(cmd).unwrap();
@@ -1139,7 +1175,9 @@ mod tests {
             tx.send(Effect::CheckSerialization {
                 artifact_index: i,
                 artifact_name: format!("artifact{}", i),
-                target_type: crate::app::model::TargetType::NixOS { machine: "machine".to_string() },
+                target_type: crate::app::model::TargetType::NixOS {
+                    machine: "machine".to_string(),
+                },
             })
             .unwrap();
         }
@@ -1185,7 +1223,9 @@ mod tests {
         let _ = tx.send(Effect::CheckSerialization {
             artifact_index: 0,
             artifact_name: "test".to_string(),
-            target_type: crate::app::model::TargetType::NixOS { machine: "machine".to_string() },
+            target_type: crate::app::model::TargetType::NixOS {
+                machine: "machine".to_string(),
+            },
         });
 
         // If we get here without panicking, the test passes

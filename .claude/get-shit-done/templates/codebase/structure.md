@@ -1,8 +1,10 @@
 # Structure Template
 
-Template for `.planning/codebase/STRUCTURE.md` - captures physical file organization.
+Template for `.planning/codebase/STRUCTURE.md` - captures physical file
+organization.
 
-**Purpose:** Document where things physically live in the codebase. Answers "where do I put X?"
+**Purpose:** Document where things physically live in the codebase. Answers
+"where do I put X?"
 
 ---
 
@@ -15,16 +17,14 @@ Template for `.planning/codebase/STRUCTURE.md` - captures physical file organiza
 
 ## Directory Layout
 
-[ASCII box-drawing tree of top-level directories with purpose - use ├── └── │ characters for tree structure only]
-
-```
-[project-root]/
-├── [dir]/          # [Purpose]
-├── [dir]/          # [Purpose]
-├── [dir]/          # [Purpose]
-└── [file]          # [Purpose]
+[ASCII box-drawing tree of top-level directories with purpose - use ├── └── │
+characters for tree structure only]
 ```
 
+[project-root]/ ├── [dir]/ # [Purpose] ├── [dir]/ # [Purpose] ├── [dir]/ #
+[Purpose] └── [file] # [Purpose]
+
+```
 ## Directory Purposes
 
 **[Directory Name]:**
@@ -115,28 +115,23 @@ Template for `.planning/codebase/STRUCTURE.md` - captures physical file organiza
 ```
 
 <good_examples>
+
 ```markdown
 # Codebase Structure
 
 **Analysis Date:** 2025-01-20
 
 ## Directory Layout
-
-```
-get-shit-done/
-├── bin/                # Executable entry points
-├── commands/           # Slash command definitions
-│   └── gsd/           # GSD-specific commands
-├── get-shit-done/     # Skill resources
-│   ├── references/    # Principle documents
-│   ├── templates/     # File templates
-│   └── workflows/     # Multi-step procedures
-├── src/               # Source code (if applicable)
-├── tests/             # Test files
-├── package.json       # Project manifest
-└── README.md          # User documentation
 ```
 
+get-shit-done/ ├── bin/ # Executable entry points ├── commands/ # Slash command
+definitions │ └── gsd/ # GSD-specific commands ├── get-shit-done/ # Skill
+resources │ ├── references/ # Principle documents │ ├── templates/ # File
+templates │ └── workflows/ # Multi-step procedures ├── src/ # Source code (if
+applicable) ├── tests/ # Test files ├── package.json # Project manifest └──
+README.md # User documentation
+
+```
 ## Directory Purposes
 
 **bin/**
@@ -243,6 +238,7 @@ get-shit-done/
 *Structure analysis: 2025-01-20*
 *Update when directory structure changes*
 ```
+
 </good_examples>
 
 <guidelines>
@@ -255,12 +251,14 @@ get-shit-done/
 - Special/generated directories
 
 **What does NOT belong here:**
+
 - Conceptual architecture (that's ARCHITECTURE.md)
 - Technology stack (that's STACK.md)
 - Code implementation details (defer to code reading)
 - Every single file (focus on directories and key files)
 
 **When filling this template:**
+
 - Use `tree -L 2` or similar to visualize structure
 - Identify top-level directories and their purposes
 - Note naming patterns by observing existing files
@@ -268,6 +266,7 @@ get-shit-done/
 - Keep directory tree concise (max 2-3 levels)
 
 **Tree format (ASCII box-drawing characters for structure only):**
+
 ```
 root/
 ├── dir1/           # Purpose
@@ -278,8 +277,9 @@ root/
 ```
 
 **Useful for phase planning when:**
+
 - Adding new features (where should files go?)
 - Understanding project organization
 - Finding where specific logic lives
 - Following existing conventions
-</guidelines>
+  </guidelines>

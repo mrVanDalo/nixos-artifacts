@@ -22,7 +22,9 @@ pub fn build_model(make: &MakeConfiguration) -> Model {
         for artifact in machine_artifacts.values() {
             if !shared_names.contains(artifact.name.as_str()) {
                 let entry = ArtifactEntry {
-                    target_type: TargetType::NixOS { machine: machine.clone() },
+                    target_type: TargetType::NixOS {
+                        machine: machine.clone(),
+                    },
                     artifact: artifact.clone(),
                     status: ArtifactStatus::Pending,
                     step_logs: StepLogs::default(),
@@ -37,7 +39,9 @@ pub fn build_model(make: &MakeConfiguration) -> Model {
         for artifact in user_artifacts.values() {
             if !shared_names.contains(artifact.name.as_str()) {
                 let entry = ArtifactEntry {
-                    target_type: TargetType::HomeManager { username: user.clone() },
+                    target_type: TargetType::HomeManager {
+                        username: user.clone(),
+                    },
                     artifact: artifact.clone(),
                     status: ArtifactStatus::Pending,
                     step_logs: StepLogs::default(),
@@ -345,9 +349,18 @@ mod tests {
         let model = build_model(&config);
 
         // Should be sorted: alice@desktop/gpg-key, machine-one/ssh-key, machine-two/api-token
-        assert_eq!(model.entries[0].target_type().target_name().unwrap(), "alice@desktop");
-        assert_eq!(model.entries[1].target_type().target_name().unwrap(), "machine-one");
-        assert_eq!(model.entries[2].target_type().target_name().unwrap(), "machine-two");
+        assert_eq!(
+            model.entries[0].target_type().target_name().unwrap(),
+            "alice@desktop"
+        );
+        assert_eq!(
+            model.entries[1].target_type().target_name().unwrap(),
+            "machine-one"
+        );
+        assert_eq!(
+            model.entries[2].target_type().target_name().unwrap(),
+            "machine-two"
+        );
     }
 
     #[test]
@@ -380,7 +393,10 @@ mod tests {
         let model = build_filtered_model(&config, &[], &[], &["ssh-key".to_string()]);
 
         assert_eq!(model.entries.len(), 1);
-        assert_eq!(model.entries[0].target_type().target_name().unwrap(), "machine-one");
+        assert_eq!(
+            model.entries[0].target_type().target_name().unwrap(),
+            "machine-one"
+        );
     }
 
     #[test]
@@ -620,10 +636,7 @@ mod tests {
                         "Validation errors should have retry_available: false"
                     );
                 }
-                other => panic!(
-                    "Expected Failed status, got {:?}",
-                    other
-                ),
+                other => panic!("Expected Failed status, got {:?}", other),
             }
         } else {
             panic!("Expected SharedEntry");

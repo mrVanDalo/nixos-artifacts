@@ -1,14 +1,22 @@
 # Phase Context Template
 
-Template for `.planning/phases/XX-name/{phase_num}-CONTEXT.md` - captures implementation decisions for a phase.
+Template for `.planning/phases/XX-name/{phase_num}-CONTEXT.md` - captures
+implementation decisions for a phase.
 
-**Purpose:** Document decisions that downstream agents need. Researcher uses this to know WHAT to investigate. Planner uses this to know WHAT choices are locked vs flexible.
+**Purpose:** Document decisions that downstream agents need. Researcher uses
+this to know WHAT to investigate. Planner uses this to know WHAT choices are
+locked vs flexible.
 
-**Key principle:** Categories are NOT predefined. They emerge from what was actually discussed for THIS phase. A CLI phase has CLI-relevant sections, a UI phase has UI-relevant sections.
+**Key principle:** Categories are NOT predefined. They emerge from what was
+actually discussed for THIS phase. A CLI phase has CLI-relevant sections, a UI
+phase has UI-relevant sections.
 
 **Downstream consumers:**
-- `gsd-phase-researcher` — Reads decisions to focus research (e.g., "card layout" → research card component patterns)
-- `gsd-planner` — Reads decisions to create specific tasks (e.g., "infinite scroll" → task includes virtualization)
+
+- `gsd-phase-researcher` — Reads decisions to focus research (e.g., "card
+  layout" → research card component patterns)
+- `gsd-planner` — Reads decisions to create specific tasks (e.g., "infinite
+  scroll" → task includes virtualization)
 
 ---
 
@@ -17,13 +25,14 @@ Template for `.planning/phases/XX-name/{phase_num}-CONTEXT.md` - captures implem
 ```markdown
 # Phase [X]: [Name] - Context
 
-**Gathered:** [date]
-**Status:** Ready for planning
+**Gathered:** [date] **Status:** Ready for planning
 
 <domain>
 ## Phase Boundary
 
-[Clear statement of what this phase delivers — the scope anchor. This comes from ROADMAP.md and is fixed. Discussion clarifies implementation within this boundary.]
+[Clear statement of what this phase delivers — the scope anchor. This comes from
+ROADMAP.md and is fixed. Discussion clarifies implementation within this
+boundary.]
 
 </domain>
 
@@ -31,24 +40,30 @@ Template for `.planning/phases/XX-name/{phase_num}-CONTEXT.md` - captures implem
 ## Implementation Decisions
 
 ### [Area 1 that was discussed]
+
 - [Specific decision made]
 - [Another decision if applicable]
 
 ### [Area 2 that was discussed]
+
 - [Specific decision made]
 
 ### [Area 3 that was discussed]
+
 - [Specific decision made]
 
 ### Claude's Discretion
-[Areas where user explicitly said "you decide" — Claude has flexibility here during planning/implementation]
+
+[Areas where user explicitly said "you decide" — Claude has flexibility here
+during planning/implementation]
 
 </decisions>
 
 <specifics>
 ## Specific Ideas
 
-[Any particular references, examples, or "I want it like X" moments from discussion. Product references, specific behaviors, interaction patterns.]
+[Any particular references, examples, or "I want it like X" moments from
+discussion. Product references, specific behaviors, interaction patterns.]
 
 [If none: "No specific requirements — open to standard approaches"]
 
@@ -57,7 +72,8 @@ Template for `.planning/phases/XX-name/{phase_num}-CONTEXT.md` - captures implem
 <deferred>
 ## Deferred Ideas
 
-[Ideas that came up during discussion but belong in other phases. Captured here so they're not lost, but explicitly out of scope for this phase.]
+[Ideas that came up during discussion but belong in other phases. Captured here
+so they're not lost, but explicitly out of scope for this phase.]
 
 [If none: "None — discussion stayed within phase scope"]
 
@@ -65,8 +81,7 @@ Template for `.planning/phases/XX-name/{phase_num}-CONTEXT.md` - captures implem
 
 ---
 
-*Phase: XX-name*
-*Context gathered: [date]*
+_Phase: XX-name_ _Context gathered: [date]_
 ```
 
 <good_examples>
@@ -76,13 +91,13 @@ Template for `.planning/phases/XX-name/{phase_num}-CONTEXT.md` - captures implem
 ```markdown
 # Phase 3: Post Feed - Context
 
-**Gathered:** 2025-01-20
-**Status:** Ready for planning
+**Gathered:** 2025-01-20 **Status:** Ready for planning
 
 <domain>
 ## Phase Boundary
 
-Display posts from followed users in a scrollable feed. Users can view posts and see engagement counts. Creating posts and interactions are separate phases.
+Display posts from followed users in a scrollable feed. Users can view posts and
+see engagement counts. Creating posts and interactions are separate phases.
 
 </domain>
 
@@ -90,20 +105,25 @@ Display posts from followed users in a scrollable feed. Users can view posts and
 ## Implementation Decisions
 
 ### Layout style
+
 - Card-based layout, not timeline or list
-- Each card shows: author avatar, name, timestamp, full post content, reaction counts
+- Each card shows: author avatar, name, timestamp, full post content, reaction
+  counts
 - Cards have subtle shadows, rounded corners — modern feel
 
 ### Loading behavior
+
 - Infinite scroll, not pagination
 - Pull-to-refresh on mobile
 - New posts indicator at top ("3 new posts") rather than auto-inserting
 
 ### Empty state
+
 - Friendly illustration + "Follow people to see posts here"
 - Suggest 3-5 accounts to follow based on interests
 
 ### Claude's Discretion
+
 - Loading skeleton design
 - Exact spacing and typography
 - Error state handling
@@ -113,7 +133,8 @@ Display posts from followed users in a scrollable feed. Users can view posts and
 <specifics>
 ## Specific Ideas
 
-- "I like how Twitter shows the new posts indicator without disrupting your scroll position"
+- "I like how Twitter shows the new posts indicator without disrupting your
+  scroll position"
 - Cards should feel like Linear's issue cards — clean, not cluttered
 
 </specifics>
@@ -128,8 +149,7 @@ Display posts from followed users in a scrollable feed. Users can view posts and
 
 ---
 
-*Phase: 03-post-feed*
-*Context gathered: 2025-01-20*
+_Phase: 03-post-feed_ _Context gathered: 2025-01-20_
 ```
 
 **Example 2: CLI tool (Database backup)**
@@ -137,13 +157,13 @@ Display posts from followed users in a scrollable feed. Users can view posts and
 ```markdown
 # Phase 2: Backup Command - Context
 
-**Gathered:** 2025-01-20
-**Status:** Ready for planning
+**Gathered:** 2025-01-20 **Status:** Ready for planning
 
 <domain>
 ## Phase Boundary
 
-CLI command to backup database to local file or S3. Supports full and incremental backups. Restore command is a separate phase.
+CLI command to backup database to local file or S3. Supports full and
+incremental backups. Restore command is a separate phase.
 
 </domain>
 
@@ -151,21 +171,25 @@ CLI command to backup database to local file or S3. Supports full and incrementa
 ## Implementation Decisions
 
 ### Output format
+
 - JSON for programmatic use, table format for humans
 - Default to table, --json flag for JSON
 - Verbose mode (-v) shows progress, silent by default
 
 ### Flag design
+
 - Short flags for common options: -o (output), -v (verbose), -f (force)
 - Long flags for clarity: --incremental, --compress, --encrypt
 - Required: database connection string (positional or --db)
 
 ### Error recovery
+
 - Retry 3 times on network failure, then fail with clear message
 - --no-retry flag to fail fast
 - Partial backups are deleted on failure (no corrupt files)
 
 ### Claude's Discretion
+
 - Exact progress bar implementation
 - Compression algorithm choice
 - Temp file handling
@@ -190,8 +214,7 @@ CLI command to backup database to local file or S3. Supports full and incrementa
 
 ---
 
-*Phase: 02-backup-command*
-*Context gathered: 2025-01-20*
+_Phase: 02-backup-command_ _Context gathered: 2025-01-20_
 ```
 
 **Example 3: Organization task (Photo library)**
@@ -199,13 +222,13 @@ CLI command to backup database to local file or S3. Supports full and incrementa
 ```markdown
 # Phase 1: Photo Organization - Context
 
-**Gathered:** 2025-01-20
-**Status:** Ready for planning
+**Gathered:** 2025-01-20 **Status:** Ready for planning
 
 <domain>
 ## Phase Boundary
 
-Organize existing photo library into structured folders. Handle duplicates and apply consistent naming. Tagging and search are separate phases.
+Organize existing photo library into structured folders. Handle duplicates and
+apply consistent naming. Tagging and search are separate phases.
 
 </domain>
 
@@ -213,21 +236,25 @@ Organize existing photo library into structured folders. Handle duplicates and a
 ## Implementation Decisions
 
 ### Grouping criteria
+
 - Primary grouping by year, then by month
 - Events detected by time clustering (photos within 2 hours = same event)
 - Event folders named by date + location if available
 
 ### Duplicate handling
+
 - Keep highest resolution version
 - Move duplicates to _duplicates folder (don't delete)
 - Log all duplicate decisions for review
 
 ### Naming convention
+
 - Format: YYYY-MM-DD_HH-MM-SS_originalname.ext
 - Preserve original filename as suffix for searchability
 - Handle name collisions with incrementing suffix
 
 ### Claude's Discretion
+
 - Exact clustering algorithm
 - How to handle photos with no EXIF data
 - Folder emoji usage
@@ -252,8 +279,7 @@ Organize existing photo library into structured folders. Handle duplicates and a
 
 ---
 
-*Phase: 01-photo-organization*
-*Context gathered: 2025-01-20*
+_Phase: 01-photo-organization_ _Context gathered: 2025-01-20_
 ```
 
 </good_examples>
@@ -261,23 +287,29 @@ Organize existing photo library into structured folders. Handle duplicates and a
 <guidelines>
 **This template captures DECISIONS for downstream agents.**
 
-The output should answer: "What does the researcher need to investigate? What choices are locked for the planner?"
+The output should answer: "What does the researcher need to investigate? What
+choices are locked for the planner?"
 
 **Good content (concrete decisions):**
+
 - "Card-based layout, not timeline"
 - "Retry 3 times on network failure, then fail"
 - "Group by year, then by month"
 - "JSON for programmatic use, table for humans"
 
 **Bad content (too vague):**
+
 - "Should feel modern and clean"
 - "Good user experience"
 - "Fast and responsive"
 - "Easy to use"
 
 **After creation:**
-- File lives in phase directory: `.planning/phases/XX-name/{phase_num}-CONTEXT.md`
+
+- File lives in phase directory:
+  `.planning/phases/XX-name/{phase_num}-CONTEXT.md`
 - `gsd-phase-researcher` uses decisions to focus investigation
 - `gsd-planner` uses decisions + research to create executable tasks
-- Downstream agents should NOT need to ask the user again about captured decisions
-</guidelines>
+- Downstream agents should NOT need to ask the user again about captured
+  decisions
+  </guidelines>

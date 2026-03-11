@@ -2,9 +2,8 @@
 Remove an unstarted future phase from the project roadmap, delete its directory, renumber all subsequent phases to maintain a clean linear sequence, and commit the change. The git commit serves as the historical record of removal.
 </purpose>
 
-<required_reading>
-Read all files referenced by the invoking prompt's execution_context before starting.
-</required_reading>
+<required_reading> Read all files referenced by the invoking prompt's
+execution_context before starting. </required_reading>
 
 <process>
 
@@ -32,7 +31,8 @@ Load phase operation context:
 INIT=$(node ./.claude/get-shit-done/bin/gsd-tools.cjs init phase-op "${target}")
 ```
 
-Extract: `phase_found`, `phase_dir`, `phase_number`, `commit_docs`, `roadmap_exists`.
+Extract: `phase_found`, `phase_dir`, `phase_number`, `commit_docs`,
+`roadmap_exists`.
 
 Also read STATE.md and ROADMAP.md content for parsing current position.
 </step>
@@ -82,20 +82,24 @@ Wait for confirmation.
 RESULT=$(node ./.claude/get-shit-done/bin/gsd-tools.cjs phase remove "${target}")
 ```
 
-If the phase has executed plans (SUMMARY.md files), gsd-tools will error. Use `--force` only if the user confirms:
+If the phase has executed plans (SUMMARY.md files), gsd-tools will error. Use
+`--force` only if the user confirms:
 
 ```bash
 RESULT=$(node ./.claude/get-shit-done/bin/gsd-tools.cjs phase remove "${target}" --force)
 ```
 
 The CLI handles:
+
 - Deleting the phase directory
 - Renumbering all subsequent directories (in reverse order to avoid conflicts)
 - Renaming all files inside renumbered directories (PLAN.md, SUMMARY.md, etc.)
-- Updating ROADMAP.md (removing section, renumbering all phase references, updating dependencies)
+- Updating ROADMAP.md (removing section, renumbering all phase references,
+  updating dependencies)
 - Updating STATE.md (decrementing phase count)
 
-Extract from result: `removed`, `directory_deleted`, `renamed_directories`, `renamed_files`, `roadmap_updated`, `state_updated`.
+Extract from result: `removed`, `directory_deleted`, `renamed_directories`,
+`renamed_files`, `roadmap_updated`, `state_updated`.
 </step>
 
 <step name="commit">
@@ -131,6 +135,7 @@ Would you like to:
 
 ---
 ```
+
 </step>
 
 </process>
@@ -139,16 +144,14 @@ Would you like to:
 
 - Don't remove completed phases (have SUMMARY.md files) without --force
 - Don't remove current or past phases
-- Don't manually renumber — use `gsd-tools phase remove` which handles all renumbering
+- Don't manually renumber — use `gsd-tools phase remove` which handles all
+  renumbering
 - Don't add "removed phase" notes to STATE.md — git commit is the record
-- Don't modify completed phase directories
-</anti_patterns>
+- Don't modify completed phase directories </anti_patterns>
 
-<success_criteria>
-Phase removal is complete when:
+<success_criteria> Phase removal is complete when:
 
 - [ ] Target phase validated as future/unstarted
 - [ ] `gsd-tools phase remove` executed successfully
 - [ ] Changes committed with descriptive message
-- [ ] User informed of changes
-</success_criteria>
+- [ ] User informed of changes </success_criteria>

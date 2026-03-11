@@ -38,7 +38,9 @@ pub fn render(frame: &mut Frame, model: &Model) {
         Screen::Prompt(state) => render_prompt(frame, state, content_area),
         Screen::Generating(state) => render_progress(frame, state, content_area),
         Screen::Done(state) => render_done(frame, state, content_area),
-        Screen::ChronologicalLog(state) => render_chronological_log(frame, model, state, content_area),
+        Screen::ChronologicalLog(state) => {
+            render_chronological_log(frame, model, state, content_area)
+        }
     }
 
     // Render warning banner if there are warnings

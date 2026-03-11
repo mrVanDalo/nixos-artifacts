@@ -8,8 +8,8 @@ use artifacts::config::make::{ArtifactDef, FileDef, PromptDef, SharedArtifactInf
 use artifacts::tui::views::render_confirm_regenerate;
 use crossterm::event::KeyCode;
 use insta::assert_snapshot;
-use ratatui::backend::TestBackend;
 use ratatui::Terminal;
+use ratatui::backend::TestBackend;
 use std::collections::BTreeMap;
 use std::fmt;
 
@@ -585,7 +585,7 @@ fn test_generating_state_exists_flows_from_entry() {
 fn test_entry_exists_used_for_dialog_decision() {
     // This test verifies the core logic that determines when to show the dialog
     // exists is derived from status: UpToDate = true, NeedsGeneration = false
-    
+
     let entry_up_to_date = ArtifactEntry {
         target_type: TargetType::NixOS {
             machine: "test".to_string(),
@@ -597,7 +597,7 @@ fn test_entry_exists_used_for_dialog_decision() {
 
     // The exists_before flag for GeneratingState comes from checking status == UpToDate
     let exists_from_status = matches!(entry_up_to_date.status, ArtifactStatus::UpToDate);
-    
+
     assert!(
         exists_from_status,
         "UpToDate status should mean artifact exists"

@@ -29,11 +29,11 @@
 
 use crate::app::model::TargetType;
 use crate::backend::helpers::{escape_single_quoted, fnv1a64, resolve_path};
-use crate::backend::output_capture::{run_with_captured_output, CapturedOutput};
+use crate::backend::output_capture::{CapturedOutput, run_with_captured_output};
 use crate::config::make::ArtifactDef;
 use crate::log_debug;
 use crate::string_vec;
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};

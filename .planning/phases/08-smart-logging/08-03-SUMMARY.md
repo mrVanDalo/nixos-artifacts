@@ -42,7 +42,8 @@ completed: 2026-02-17
 
 # Phase 08 Plan 03: Replace Hardcoded Logging with Macro System
 
-**Removed /tmp/artifacts_debug.log hardcoded path, initialized Logger at startup, added strategic logging to effect execution**
+**Removed /tmp/artifacts_debug.log hardcoded path, initialized Logger at
+startup, added strategic logging to effect execution**
 
 ## Performance
 
@@ -54,36 +55,49 @@ completed: 2026-02-17
 
 ## Accomplishments
 
-- **Removed hardcoded debug logging** - Deleted File::create("/tmp/artifacts_debug.log") calls from cli/mod.rs
-- **Logger initialization at startup** - logging::init_from_args() called at CLI entry point
-- **Strategic effect logging** - Added debug! macro to run_effect for tracking effect execution
-- **Old logging module removed** - Deleted src/cli/logging.rs (replaced by src/logging.rs)
-- **Feature-gated variants** - run_effect has #[cfg(feature = "logging")] and #[cfg(not(feature = "logging"))] variants
+- **Removed hardcoded debug logging** - Deleted
+  File::create("/tmp/artifacts_debug.log") calls from cli/mod.rs
+- **Logger initialization at startup** - logging::init_from_args() called at CLI
+  entry point
+- **Strategic effect logging** - Added debug! macro to run_effect for tracking
+  effect execution
+- **Old logging module removed** - Deleted src/cli/logging.rs (replaced by
+  src/logging.rs)
+- **Feature-gated variants** - run_effect has #[cfg(feature = "logging")] and
+  #[cfg(not(feature = "logging"))] variants
 - **Zero-cost when disabled** - Logging compiles away when feature disabled
 
 ## Task Commits
 
 1. **Task 1: Remove hardcoded /tmp/artifacts_debug.log** - `918897d` (feat)
 2. **Task 2: Initialize Logger at application startup** - `364a246` (feat)
-3. **Task 3+4: Remove old logging module, add strategic logging** - `0256058` (refactor) + `1024946` (feat)
+3. **Task 3+4: Remove old logging module, add strategic logging** - `0256058`
+   (refactor) + `1024946` (feat)
 
 ## Files Created/Modified
 
-- `pkgs/artifacts/src/cli/mod.rs` - Logger initialization, removed hardcoded debug logging
-  - Replaced manual File::create("/tmp/artifacts_debug.log") with info! macro calls
+- `pkgs/artifacts/src/cli/mod.rs` - Logger initialization, removed hardcoded
+  debug logging
+  - Replaced manual File::create("/tmp/artifacts_debug.log") with info! macro
+    calls
   - Added logging::init_from_args() call at startup
   - Removed unused LevelFilter import
-- `pkgs/artifacts/src/cli/logging.rs` - **DELETED** (old logging module, replaced by crate::logging)
+- `pkgs/artifacts/src/cli/logging.rs` - **DELETED** (old logging module,
+  replaced by crate::logging)
 - `pkgs/artifacts/src/effect_handler.rs` - Added strategic logging
   - Added debug!("Sending effect to background: {:?}", effect) logging
   - Split run_effect into two variants (with/without logging feature)
 
 ## Decisions Made
 
-1. **Removed old logging module entirely** - The src/cli/logging.rs was replaced by the new macro-based system in src/logging.rs
-2. **Kept eprintln warnings in tempfile.rs** - These are legitimate cleanup warnings, not debug logging
-3. **Preserved user-facing println! in prompt.rs** - These are intentional UI output, not debug statements
-4. **Added feature-gated run_effect variants** - Maintains zero-cost when logging disabled
+1. **Removed old logging module entirely** - The src/cli/logging.rs was replaced
+   by the new macro-based system in src/logging.rs
+2. **Kept eprintln warnings in tempfile.rs** - These are legitimate cleanup
+   warnings, not debug logging
+3. **Preserved user-facing println! in prompt.rs** - These are intentional UI
+   output, not debug statements
+4. **Added feature-gated run_effect variants** - Maintains zero-cost when
+   logging disabled
 
 ## Deviations from Plan
 
@@ -92,23 +106,27 @@ completed: 2026-02-17
 **1. [Rule 3 - Blocking] Removed conflicting old logging module**
 
 - **Found during:** Task 2 (initializing Logger)
-- **Issue:** Compilation error - src/cli/logging.rs existed with same module name
-- **Fix:** Deleted old src/cli/logging.rs and removed `mod logging` from cli/mod.rs
-- **Files modified:** pkgs/artifacts/src/cli/logging.rs (deleted), pkgs/artifacts/src/cli/mod.rs
+- **Issue:** Compilation error - src/cli/logging.rs existed with same module
+  name
+- **Fix:** Deleted old src/cli/logging.rs and removed `mod logging` from
+  cli/mod.rs
+- **Files modified:** pkgs/artifacts/src/cli/logging.rs (deleted),
+  pkgs/artifacts/src/cli/mod.rs
 - **Committed in:** 0256058 (Task 3 commit)
 
 **2. [Rule 3 - Blocking] Split run_effect into feature-gated variants**
 
 - **Found during:** Task 4 (adding strategic logging)
-- **Issue:** Compiler requires different implementations when feature is enabled/disabled
+- **Issue:** Compiler requires different implementations when feature is
+  enabled/disabled
 - **Fix:** Created two run_effect implementations with cfg attributes
 - **Files modified:** pkgs/artifacts/src/effect_handler.rs
 - **Committed in:** 1024946 (Task 4 commit)
 
 ---
 
-**Total deviations:** 2 auto-fixed (both Rule 3 - Blocking)
-**Impact on plan:** All auto-fixes were necessary for compilation. No scope creep.
+**Total deviations:** 2 auto-fixed (both Rule 3 - Blocking) **Impact on plan:**
+All auto-fixes were necessary for compilation. No scope creep.
 
 ## Issues Encountered
 
@@ -117,13 +135,12 @@ completed: 2026-02-17
 
 ## Verification Results
 
-✅ `grep -r "artifacts_debug" src/` returns nothing
-✅ `grep -r "/tmp/artifacts" src/` returns nothing
-✅ `cargo check` passes (no features) - macros are no-ops
-✅ `cargo check --features logging` passes - full logging enabled
-✅ `cargo test --lib --features logging logging::tests` - 11 logging tests pass
-✅ Logger initialized at application startup via init_from_args()
-✅ Effect logging added to run_effect (debug! macro)
+✅ `grep -r "artifacts_debug" src/` returns nothing ✅
+`grep -r "/tmp/artifacts" src/` returns nothing ✅ `cargo check` passes (no
+features) - macros are no-ops ✅ `cargo check --features logging` passes - full
+logging enabled ✅ `cargo test --lib --features logging logging::tests` - 11
+logging tests pass ✅ Logger initialized at application startup via
+init_from_args() ✅ Effect logging added to run_effect (debug! macro)
 
 ## User Setup Required
 

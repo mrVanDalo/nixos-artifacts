@@ -52,7 +52,8 @@ completed: 2026-02-18T11:48:00Z
 
 # Phase 11 Error Handling: Plan 01 - Pre-terminal Error Handling
 
-**Pre-terminal error handling with contextual messages and conditional output based on --log-file flag**
+**Pre-terminal error handling with contextual messages and conditional output
+based on --log-file flag**
 
 ## Performance
 
@@ -73,7 +74,8 @@ completed: 2026-02-18T11:48:00Z
 
 Each task was committed atomically:
 
-1. **Task 1: Move config loading before terminal setup with error context** - `30c0144` (feat)
+1. **Task 1: Move config loading before terminal setup with error context** -
+   `30c0144` (feat)
 
 **Plan metadata:** `30c0144` (docs: complete plan)
 
@@ -81,19 +83,27 @@ Each task was committed atomically:
 
 - `pkgs/artifacts/src/cli/mod.rs` - Restructured run_tui() function:
   - Added `cli: &args::Cli` parameter for accessing CLI flags
-  - Moved `BackendConfiguration::read_backend_config()` before terminal setup with `with_context()` error messages
-  - Moved `MakeConfiguration::read_make_config()` before terminal setup with `with_context()` error messages
+  - Moved `BackendConfiguration::read_backend_config()` before terminal setup
+    with `with_context()` error messages
+  - Moved `MakeConfiguration::read_make_config()` before terminal setup with
+    `with_context()` error messages
   - Empty artifacts check now uses conditional output (logging vs stdout)
   - Panic hook installed before terminal initialization (ERR-04)
   - Moved logging startup message after terminal initialization
 
 ## Decisions Made
 
-1. **Config loading before terminal setup:** Config loading happens before `TerminalGuard::new()` to ensure errors are printed to stderr in plain text before any TUI initialization. This satisfies ERR-01 requirement.
+1. **Config loading before terminal setup:** Config loading happens before
+   `TerminalGuard::new()` to ensure errors are printed to stderr in plain text
+   before any TUI initialization. This satisfies ERR-01 requirement.
 
-2. **Conditional output for UI-03:** When `--log-file` is provided, normal messages like "No artifacts found" go to the log file via `info!()` macro, not stdout. When no log file is provided, messages print to stdout.
+2. **Conditional output for UI-03:** When `--log-file` is provided, normal
+   messages like "No artifacts found" go to the log file via `info!()` macro,
+   not stdout. When no log file is provided, messages print to stdout.
 
-3. **Error context with with_context():** Used `anyhow::Context::with_context()` to provide clear error messages indicating what failed (backend.toml vs nix evaluation).
+3. **Error context with with_context():** Used `anyhow::Context::with_context()`
+   to provide clear error messages indicating what failed (backend.toml vs nix
+   evaluation).
 
 ## Deviations from Plan
 
@@ -110,14 +120,16 @@ None - no external service configuration required.
 ## Next Phase Readiness
 
 - Phase 11, Plan 02 ready to implement
-- Phase 12 (Script output visibility) can build on this error handling foundation
+- Phase 12 (Script output visibility) can build on this error handling
+  foundation
 - Phase 13 (Enhanced generator dialog) can leverage the logging infrastructure
 
 ## Verification Summary
 
-✅ **ERR-01 Verification:** Config loading happens before terminal setup with clear error context
-✅ **UI-03 Verification:** Empty artifacts message conditionally outputs to stdout vs log file
-✅ **ERR-04 Verification:** Panic hook installed before terminal initialization
+✅ **ERR-01 Verification:** Config loading happens before terminal setup with
+clear error context ✅ **UI-03 Verification:** Empty artifacts message
+conditionally outputs to stdout vs log file ✅ **ERR-04 Verification:** Panic
+hook installed before terminal initialization
 
 ---
 

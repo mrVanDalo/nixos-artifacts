@@ -28,11 +28,11 @@ pub mod headless;
 use crate::config::backend::BackendConfiguration;
 use crate::config::make::MakeConfiguration;
 use crate::config::nix::build_make_from_flake;
+use crate::log_info;
 use crate::tui::{
     TerminalEventSource, TerminalGuard, build_filtered_model, install_panic_hook, run_async,
     validate_model_capabilities,
 };
-use crate::log_info;
 use anyhow::{Context, Result};
 use clap::Parser;
 use std::path::{Path, PathBuf};
@@ -134,18 +134,15 @@ async fn run_tui(
 ) -> Result<()> {
     // STEP 1: Load all configurations BEFORE terminal setup (ERR-01)
     // Errors here print to stderr and exit non-zero
-    let backend = BackendConfiguration::read_backend_config(backend_path)
-        .with_context(|| {
-            format!(
-                "Failed to load backend configuration from '{}'",
-                backend_path.display()
-            )
-        })?;
+    let backend = BackendConfiguration::read_backend_config(backend_path).with_context(|| {
+        format!(
+            "Failed to load backend configuration from '{}'",
+            backend_path.display()
+        )
+    })?;
 
     let make = MakeConfiguration::read_make_config(make_path)
-        .with_context(|| {
-            "Failed to load artifact definitions from nix evaluation".to_string()
-        })?;
+        .with_context(|| "Failed to load artifact definitions from nix evaluation".to_string())?;
 
     // Build the initial model
     let mut model = build_filtered_model(&make, machines, home_users, artifacts);

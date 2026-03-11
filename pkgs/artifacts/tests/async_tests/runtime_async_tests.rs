@@ -13,13 +13,13 @@ use std::time::Duration;
 
 use artifacts::app::effect::Effect;
 use artifacts::app::message::Message;
+use artifacts::app::message::ScriptOutput;
 use artifacts::app::model::{
     ArtifactEntry, ArtifactStatus, ListEntry, Model, Screen, StepLogs, TargetType,
 };
 use artifacts::config::backend::BackendConfiguration;
 use artifacts::config::make::{ArtifactDef, FileDef, MakeConfiguration, PromptDef};
 use artifacts::tui::background::spawn_background_task;
-use artifacts::app::message::ScriptOutput;
 use artifacts::tui::events::EventSource;
 use artifacts::tui::runtime::{effect_to_command, run_async};
 use ratatui::Terminal;
@@ -65,13 +65,17 @@ fn make_test_artifact(name: &str, prompts: Vec<&str>) -> ArtifactDef {
 /// Create a test model with artifact entries
 fn make_test_model() -> Model {
     let entry1 = ArtifactEntry {
-        target_type: TargetType::NixOS { machine: "machine-one".to_string() },
+        target_type: TargetType::NixOS {
+            machine: "machine-one".to_string(),
+        },
         artifact: make_test_artifact("ssh-key", vec!["passphrase"]),
         status: ArtifactStatus::Pending,
         step_logs: StepLogs::default(),
     };
     let entry2 = ArtifactEntry {
-        target_type: TargetType::NixOS { machine: "machine-two".to_string() },
+        target_type: TargetType::NixOS {
+            machine: "machine-two".to_string(),
+        },
         artifact: make_test_artifact("api-token", vec![]),
         status: ArtifactStatus::Pending,
         step_logs: StepLogs::default(),
@@ -287,7 +291,9 @@ async fn test_run_async_sends_effects_to_background() {
     let cmd = Effect::CheckSerialization {
         artifact_index: 0,
         artifact_name: "test".to_string(),
-        target_type: TargetType::NixOS { machine: "machine".to_string() },
+        target_type: TargetType::NixOS {
+            machine: "machine".to_string(),
+        },
     };
 
     cmd_tx.send(cmd).unwrap();
@@ -325,7 +331,9 @@ async fn test_run_async_handles_results() {
         .send(Effect::CheckSerialization {
             artifact_index: 0,
             artifact_name: "test".to_string(),
-            target_type: TargetType::NixOS { machine: "machine".to_string() },
+            target_type: TargetType::NixOS {
+                machine: "machine".to_string(),
+            },
         })
         .unwrap();
 
@@ -346,7 +354,10 @@ async fn test_run_async_handles_results() {
             // For empty config, artifact not found -> status is Failed (error case)
             // The actual behavior depends on backend implementation
             assert!(
-                matches!(status, ArtifactStatus::NeedsGeneration | ArtifactStatus::Failed { .. }),
+                matches!(
+                    status,
+                    ArtifactStatus::NeedsGeneration | ArtifactStatus::Failed { .. }
+                ),
                 "Status should be NeedsGeneration or Failed for missing artifact"
             );
         }
@@ -404,7 +415,9 @@ async fn test_select_shutdown_branch() {
         .send(Effect::CheckSerialization {
             artifact_index: 0,
             artifact_name: "test".to_string(),
-            target_type: TargetType::NixOS { machine: "machine".to_string() },
+            target_type: TargetType::NixOS {
+                machine: "machine".to_string(),
+            },
         })
         .unwrap();
 
@@ -447,7 +460,9 @@ async fn test_select_result_branch() {
             .send(Effect::CheckSerialization {
                 artifact_index: i,
                 artifact_name: format!("artifact{}", i),
-                target_type: TargetType::NixOS { machine: "machine".to_string() },
+                target_type: TargetType::NixOS {
+                    machine: "machine".to_string(),
+                },
             })
             .unwrap();
     }
@@ -486,7 +501,9 @@ async fn test_select_command_branch() {
         .send(Effect::CheckSerialization {
             artifact_index: 42,
             artifact_name: "test".to_string(),
-            target_type: TargetType::NixOS { machine: "machine".to_string() },
+            target_type: TargetType::NixOS {
+                machine: "machine".to_string(),
+            },
         })
         .unwrap();
 
@@ -522,7 +539,9 @@ async fn test_select_channel_closed() {
         .send(Effect::CheckSerialization {
             artifact_index: 0,
             artifact_name: "test".to_string(),
-            target_type: TargetType::NixOS { machine: "machine".to_string() },
+            target_type: TargetType::NixOS {
+                machine: "machine".to_string(),
+            },
         })
         .unwrap();
 
@@ -568,7 +587,9 @@ async fn test_channel_disconnect_graceful() {
             .send(Effect::CheckSerialization {
                 artifact_index: i,
                 artifact_name: format!("artifact{}", i),
-                target_type: TargetType::NixOS { machine: "machine".to_string() },
+                target_type: TargetType::NixOS {
+                    machine: "machine".to_string(),
+                },
             })
             .unwrap();
     }
@@ -616,7 +637,9 @@ async fn test_result_channel_disconnect() {
         .send(Effect::CheckSerialization {
             artifact_index: 0,
             artifact_name: "test".to_string(),
-            target_type: TargetType::NixOS { machine: "machine".to_string() },
+            target_type: TargetType::NixOS {
+                machine: "machine".to_string(),
+            },
         })
         .unwrap();
 
@@ -644,7 +667,9 @@ async fn test_graceful_shutdown_with_in_flight_commands() {
             .send(Effect::CheckSerialization {
                 artifact_index: i,
                 artifact_name: format!("artifact{}", i),
-                target_type: TargetType::NixOS { machine: "machine".to_string() },
+                target_type: TargetType::NixOS {
+                    machine: "machine".to_string(),
+                },
             })
             .unwrap();
     }
@@ -719,7 +744,9 @@ async fn test_shutdown_drain_timeout() {
             .send(Effect::CheckSerialization {
                 artifact_index: i,
                 artifact_name: format!("artifact{}", i),
-                target_type: TargetType::NixOS { machine: "machine".to_string() },
+                target_type: TargetType::NixOS {
+                    machine: "machine".to_string(),
+                },
             })
             .unwrap();
     }
@@ -758,7 +785,9 @@ async fn test_effect_to_command_conversion() {
     let effect = Effect::CheckSerialization {
         artifact_index: 0,
         artifact_name: "test".to_string(),
-        target_type: TargetType::NixOS { machine: "machine-one".to_string() },
+        target_type: TargetType::NixOS {
+            machine: "machine-one".to_string(),
+        },
     };
     let cmds = effect_to_command(effect);
     assert_eq!(cmds.len(), 1);

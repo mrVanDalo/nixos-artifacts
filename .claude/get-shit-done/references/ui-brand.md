@@ -13,6 +13,7 @@ Use for major workflow transitions.
 ```
 
 **Stage names (uppercase):**
+
 - `QUESTIONING`
 - `RESEARCHING`
 - `DEFINING REQUIREMENTS`
@@ -42,6 +43,7 @@ User action required. 62-character width.
 ```
 
 **Types:**
+
 - `CHECKPOINT: Verification Required` → `→ Type "approved" or describe issues`
 - `CHECKPOINT: Decision Required` → `→ Select: option-a / option-b`
 - `CHECKPOINT: Action Required` → `→ Type "done" when complete`
@@ -65,16 +67,19 @@ User action required. 62-character width.
 ## Progress Display
 
 **Phase/milestone level:**
+
 ```
 Progress: ████████░░ 80%
 ```
 
 **Task level:**
+
 ```
 Tasks: 2/4 complete
 ```
 
 **Plan level:**
+
 ```
 Plans: 3/5 complete
 ```

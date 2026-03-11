@@ -1,6 +1,8 @@
 <purpose>
 
-Mark a shipped version (v1.0, v1.1, v2.0) as complete. Creates historical record in MILESTONES.md, performs full PROJECT.md evolution review, reorganizes ROADMAP.md with milestone groupings, and tags the release in git.
+Mark a shipped version (v1.0, v1.1, v2.0) as complete. Creates historical record
+in MILESTONES.md, performs full PROJECT.md evolution review, reorganizes
+ROADMAP.md with milestone groupings, and tags the release in git.
 
 </purpose>
 
@@ -25,11 +27,15 @@ When a milestone completes:
 5. Perform full PROJECT.md evolution review
 6. Offer to create next milestone inline
 
-**Context Efficiency:** Archives keep ROADMAP.md constant-size and REQUIREMENTS.md milestone-scoped.
+**Context Efficiency:** Archives keep ROADMAP.md constant-size and
+REQUIREMENTS.md milestone-scoped.
 
-**ROADMAP archive** uses `templates/milestone-archive.md` — includes milestone header (status, phases, date), full phase details, milestone summary (decisions, issues, tech debt).
+**ROADMAP archive** uses `templates/milestone-archive.md` — includes milestone
+header (status, phases, date), full phase details, milestone summary (decisions,
+issues, tech debt).
 
-**REQUIREMENTS archive** contains all requirements marked complete with outcomes, traceability table with final status, notes on changed requirements.
+**REQUIREMENTS archive** contains all requirements marked complete with
+outcomes, traceability table with final status, notes on changed requirements.
 
 </archival_behavior>
 
@@ -43,14 +49,18 @@ When a milestone completes:
 ROADMAP=$(node ./.claude/get-shit-done/bin/gsd-tools.cjs roadmap analyze)
 ```
 
-This returns all phases with plan/summary counts and disk status. Use this to verify:
+This returns all phases with plan/summary counts and disk status. Use this to
+verify:
+
 - Which phases belong to this milestone?
-- All phases complete (all plans have summaries)? Check `disk_status === 'complete'` for each.
+- All phases complete (all plans have summaries)? Check
+  `disk_status === 'complete'` for each.
 - `progress_percent` should be 100%.
 
 **Requirements completion check (REQUIRED before presenting):**
 
 Parse REQUIREMENTS.md traceability table:
+
 - Count total v1 requirements vs checked-off (`[x]`) requirements
 - Identify any non-Complete rows in the traceability table
 
@@ -79,11 +89,13 @@ Requirements: {N}/{M} v1 requirements checked off
 ```
 
 MUST present 3 options:
+
 1. **Proceed anyway** — mark milestone complete with known gaps
 2. **Run audit first** — `/gsd:audit-milestone` to assess gap severity
 3. **Abort** — return to development
 
-If user selects "Proceed anyway": note incomplete requirements in MILESTONES.md under `### Known Gaps` with REQ-IDs and descriptions.
+If user selects "Proceed anyway": note incomplete requirements in MILESTONES.md
+under `### Known Gaps` with REQ-IDs and descriptions.
 
 <config-check>
 
@@ -113,6 +125,7 @@ Ready to mark this milestone as shipped?
 ```
 
 Wait for confirmation.
+
 - "adjust scope": Ask which phases to include.
 - "wait": Stop, user returns when ready.
 
@@ -173,9 +186,13 @@ Key accomplishments for this milestone:
 
 <step name="create_milestone_entry">
 
-**Note:** MILESTONES.md entry is now created automatically by `gsd-tools milestone complete` in the archive_milestone step. The entry includes version, date, phase/plan/task counts, and accomplishments extracted from SUMMARY.md files.
+**Note:** MILESTONES.md entry is now created automatically by
+`gsd-tools milestone complete` in the archive_milestone step. The entry includes
+version, date, phase/plan/task counts, and accomplishments extracted from
+SUMMARY.md files.
 
-If additional details are needed (e.g., user-provided "Delivered" summary, git range, LOC stats), add them manually after the CLI creates the base entry.
+If additional details are needed (e.g., user-provided "Delivered" summary, git
+range, LOC stats), add them manually after the CLI creates the base entry.
 
 </step>
 
@@ -232,7 +249,8 @@ Update PROJECT.md inline. Update "Last updated" footer:
 
 ```markdown
 ---
-*Last updated: [date] after v[X.Y] milestone*
+
+_Last updated: [date] after v[X.Y] milestone_
 ```
 
 **Example full evolution (v1.0 → v1.1 prep):**
@@ -272,7 +290,8 @@ After v1.0:
 ```markdown
 ## What This Is
 
-A real-time collaborative whiteboard for remote teams with instant sync and drawing tools.
+A real-time collaborative whiteboard for remote teams with instant sync and
+drawing tools.
 
 ## Core Value
 
@@ -300,9 +319,8 @@ Real-time sync that feels instant.
 
 ## Context
 
-Shipped v1.0 with 2,400 LOC TypeScript.
-Tech stack: Next.js, Supabase, Canvas API.
-Initial user testing showed demand for shape tools.
+Shipped v1.0 with 2,400 LOC TypeScript. Tech stack: Next.js, Supabase, Canvas
+API. Initial user testing showed demand for shape tools.
 ```
 
 **Step complete when:**
@@ -371,42 +389,54 @@ ARCHIVE=$(node ./.claude/get-shit-done/bin/gsd-tools.cjs milestone complete "v[X
 ```
 
 The CLI handles:
+
 - Creating `.planning/milestones/` directory
 - Archiving ROADMAP.md to `milestones/v[X.Y]-ROADMAP.md`
-- Archiving REQUIREMENTS.md to `milestones/v[X.Y]-REQUIREMENTS.md` with archive header
+- Archiving REQUIREMENTS.md to `milestones/v[X.Y]-REQUIREMENTS.md` with archive
+  header
 - Moving audit file to milestones if it exists
-- Creating/appending MILESTONES.md entry with accomplishments from SUMMARY.md files
+- Creating/appending MILESTONES.md entry with accomplishments from SUMMARY.md
+  files
 - Updating STATE.md (status, last activity)
 
-Extract from result: `version`, `date`, `phases`, `plans`, `tasks`, `accomplishments`, `archived`.
+Extract from result: `version`, `date`, `phases`, `plans`, `tasks`,
+`accomplishments`, `archived`.
 
 Verify: `✅ Milestone archived to .planning/milestones/`
 
 **Phase archival (optional):** After archival completes, ask the user:
 
-AskUserQuestion(header="Archive Phases", question="Archive phase directories to milestones/?", options: "Yes — move to milestones/v[X.Y]-phases/" | "Skip — keep phases in place")
+AskUserQuestion(header="Archive Phases", question="Archive phase directories to
+milestones/?", options: "Yes — move to milestones/v[X.Y]-phases/" | "Skip — keep
+phases in place")
 
 If "Yes": move phase directories to the milestone archive:
+
 ```bash
 mkdir -p .planning/milestones/v[X.Y]-phases
 # For each phase directory in .planning/phases/:
 mv .planning/phases/{phase-dir} .planning/milestones/v[X.Y]-phases/
 ```
+
 Verify: `✅ Phase directories archived to .planning/milestones/v[X.Y]-phases/`
 
-If "Skip": Phase directories remain in `.planning/phases/` as raw execution history. Use `/gsd:cleanup` later to archive retroactively.
+If "Skip": Phase directories remain in `.planning/phases/` as raw execution
+history. Use `/gsd:cleanup` later to archive retroactively.
 
 After archival, the AI still handles:
+
 - Reorganizing ROADMAP.md with milestone grouping (requires judgment)
 - Full PROJECT.md evolution review (requires understanding)
 - Deleting original ROADMAP.md and REQUIREMENTS.md
-- These are NOT fully delegated because they require AI interpretation of content
+- These are NOT fully delegated because they require AI interpretation of
+  content
 
 </step>
 
 <step name="reorganize_roadmap_and_delete_originals">
 
-After `milestone complete` has archived, reorganize ROADMAP.md with milestone groupings, then delete originals:
+After `milestone complete` has archived, reorganize ROADMAP.md with milestone
+groupings, then delete originals:
 
 **Reorganize ROADMAP.md** — group completed milestone phases:
 
@@ -440,7 +470,8 @@ rm .planning/REQUIREMENTS.md
 
 <step name="update_state">
 
-Most STATE.md updates were handled by `milestone complete`, but verify and update remaining fields:
+Most STATE.md updates were handled by `milestone complete`, but verify and
+update remaining fields:
 
 **Project Reference:**
 
@@ -449,11 +480,12 @@ Most STATE.md updates were handled by `milestone complete`, but verify and updat
 
 See: .planning/PROJECT.md (updated [today])
 
-**Core value:** [Current core value from PROJECT.md]
-**Current focus:** [Next milestone or "Planning next milestone"]
+**Core value:** [Current core value from PROJECT.md] **Current focus:** [Next
+milestone or "Planning next milestone"]
 ```
 
 **Accumulated Context:**
+
 - Clear decisions summary (full log in PROJECT.md)
 - Clear resolved blockers
 - Keep open blockers for next milestone
@@ -470,7 +502,8 @@ Use `init milestone-op` for context, or load config directly:
 INIT=$(node ./.claude/get-shit-done/bin/gsd-tools.cjs init execute-phase "1")
 ```
 
-Extract `branching_strategy`, `phase_branch_template`, `milestone_branch_template`, and `commit_docs` from init JSON.
+Extract `branching_strategy`, `phase_branch_template`,
+`milestone_branch_template`, and `commit_docs` from init JSON.
 
 **If "none":** Skip to git_tag.
 
@@ -504,7 +537,8 @@ Options:
 3. **Keep branches** — Leave for manual handling
 ```
 
-AskUserQuestion with options: Squash merge (Recommended), Merge with history, Delete without merging, Keep branches.
+AskUserQuestion with options: Squash merge (Recommended), Merge with history,
+Delete without merging, Keep branches.
 
 **Squash merge:**
 
@@ -604,6 +638,7 @@ Confirm: "Tagged: v[X.Y]"
 Ask: "Push tag to remote? (y/n)"
 
 If yes:
+
 ```bash
 git push origin v[X.Y]
 ```
@@ -617,27 +652,28 @@ Commit milestone completion.
 ```bash
 node ./.claude/get-shit-done/bin/gsd-tools.cjs commit "chore: complete v[X.Y] milestone" --files .planning/milestones/v[X.Y]-ROADMAP.md .planning/milestones/v[X.Y]-REQUIREMENTS.md .planning/milestones/v[X.Y]-MILESTONE-AUDIT.md .planning/MILESTONES.md .planning/PROJECT.md .planning/STATE.md
 ```
-```
 
+```
 Confirm: "Committed: chore: complete v[X.Y] milestone"
 
 </step>
 
 <step name="offer_next">
-
 ```
+
 ✅ Milestone v[X.Y] [Name] complete
 
 Shipped:
+
 - [N] phases ([M] plans, [P] tasks)
 - [One sentence of what shipped]
 
 Archived:
+
 - milestones/v[X.Y]-ROADMAP.md
 - milestones/v[X.Y]-REQUIREMENTS.md
 
-Summary: .planning/MILESTONES.md
-Tag: v[X.Y]
+Summary: .planning/MILESTONES.md Tag: v[X.Y]
 
 ---
 
@@ -650,8 +686,8 @@ Tag: v[X.Y]
 <sub>`/clear` first → fresh context window</sub>
 
 ---
-```
 
+```
 </step>
 
 </process>
@@ -698,3 +734,4 @@ Milestone completion is successful when:
 - [ ] User knows next step (/gsd:new-milestone)
 
 </success_criteria>
+```

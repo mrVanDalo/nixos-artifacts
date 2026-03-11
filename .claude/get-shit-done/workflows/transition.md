@@ -12,7 +12,8 @@
 
 <purpose>
 
-Mark current phase complete and advance to next. This is the natural point where progress tracking and PROJECT.md evolution happen.
+Mark current phase complete and advance to next. This is the natural point where
+progress tracking and PROJECT.md evolution happen.
 
 "Planning next phase" = "current phase is done"
 
@@ -29,8 +30,8 @@ cat .planning/STATE.md 2>/dev/null
 cat .planning/PROJECT.md 2>/dev/null
 ```
 
-Parse current position to verify we're transitioning the right phase.
-Note accumulated context that may need updating after transition.
+Parse current position to verify we're transitioning the right phase. Note
+accumulated context that may need updating after transition.
 
 </step>
 
@@ -75,7 +76,8 @@ Proceed directly to cleanup_handoff step.
 
 <if mode="interactive" OR="custom with gates.confirm_transition true">
 
-Ask: "Phase [X] complete — all [Y] plans finished. Ready to mark done and move to Phase [X+1]?"
+Ask: "Phase [X] complete — all [Y] plans finished. Ready to mark done and move
+to Phase [X+1]?"
 
 Wait for confirmation before proceeding.
 
@@ -83,8 +85,8 @@ Wait for confirmation before proceeding.
 
 **If plans incomplete:**
 
-**SAFETY RAIL: always_confirm_destructive applies here.**
-Skipping incomplete plans is destructive — ALWAYS prompt regardless of mode.
+**SAFETY RAIL: always_confirm_destructive applies here.** Skipping incomplete
+plans is destructive — ALWAYS prompt regardless of mode.
 
 Present:
 
@@ -127,20 +129,23 @@ TRANSITION=$(node ./.claude/get-shit-done/bin/gsd-tools.cjs phase complete "${cu
 ```
 
 The CLI handles:
+
 - Marking the phase checkbox as `[x]` complete with today's date
 - Updating plan count to final (e.g., "3/3 plans complete")
 - Updating the Progress table (Status → Complete, adding date)
-- Advancing STATE.md to next phase (Current Phase, Status → Ready to plan, Current Plan → Not started)
+- Advancing STATE.md to next phase (Current Phase, Status → Ready to plan,
+  Current Plan → Not started)
 - Detecting if this is the last phase in the milestone
 
-Extract from result: `completed_phase`, `plans_executed`, `next_phase`, `next_phase_name`, `is_last_phase`.
+Extract from result: `completed_phase`, `plans_executed`, `next_phase`,
+`next_phase_name`, `is_last_phase`.
 
 </step>
 
 <step name="archive_prompts">
 
-If prompts were generated for the phase, they stay in place.
-The `completed/` subfolder pattern from create-meta-prompts handles archival.
+If prompts were generated for the phase, they stay in place. The `completed/`
+subfolder pattern from create-meta-prompts handles archival.
 
 </step>
 
@@ -182,7 +187,8 @@ Make the edits inline. Update "Last updated" footer:
 
 ```markdown
 ---
-*Last updated: [date] after Phase [X]*
+
+_Last updated: [date] after Phase [X]_
 ```
 
 **Example evolution:**
@@ -233,9 +239,12 @@ After (Phase 2 shipped JWT auth, discovered rate limiting needed):
 
 <step name="update_current_position_after_transition">
 
-**Note:** Basic position updates (Current Phase, Status, Current Plan, Last Activity) were already handled by `gsd-tools phase complete` in the update_roadmap_and_state step.
+**Note:** Basic position updates (Current Phase, Status, Current Plan, Last
+Activity) were already handled by `gsd-tools phase complete` in the
+update_roadmap_and_state step.
 
-Verify the updates are correct by reading STATE.md. If the progress bar needs updating, use:
+Verify the updates are correct by reading STATE.md. If the progress bar needs
+updating, use:
 
 ```bash
 PROGRESS=$(node ./.claude/get-shit-done/bin/gsd-tools.cjs progress bar --raw)
@@ -261,8 +270,8 @@ Update Project Reference section in STATE.md.
 
 See: .planning/PROJECT.md (updated [today])
 
-**Core value:** [Current core value from PROJECT.md]
-**Current focus:** [Next phase name]
+**Core value:** [Current core value from PROJECT.md] **Current focus:** [Next
+phase name]
 ```
 
 Update the date and current focus to reflect the transition.
@@ -320,8 +329,7 @@ Update Session Continuity section in STATE.md to reflect transition completion.
 **Format:**
 
 ```markdown
-Last session: [today]
-Stopped at: Phase [X] complete, ready to plan Phase [X+1]
+Last session: [today] Stopped at: Phase [X] complete, ready to plan Phase [X+1]
 Resume file: None
 ```
 
@@ -340,12 +348,14 @@ Resume file: None
 **Use the transition result from `gsd-tools phase complete`:**
 
 The `is_last_phase` field from the phase complete result tells you directly:
+
 - `is_last_phase: false` → More phases remain → Go to **Route A**
 - `is_last_phase: true` → Milestone complete → Go to **Route B**
 
 The `next_phase` and `next_phase_name` fields give you the next phase details.
 
 If you need additional context, use:
+
 ```bash
 ROADMAP=$(node ./.claude/get-shit-done/bin/gsd-tools.cjs roadmap analyze)
 ```
@@ -452,6 +462,7 @@ Exit skill and invoke SlashCommand("/gsd:discuss-phase [X+1] --auto")
 **Route B: Milestone complete (all phases done)**
 
 **Clear auto-advance** — milestone boundary is the natural stopping point:
+
 ```bash
 node ./.claude/get-shit-done/bin/gsd-tools.cjs config-set workflow.auto_advance false
 ```
@@ -501,8 +512,8 @@ Exit skill and invoke SlashCommand("/gsd:complete-milestone {version}")
 
 </process>
 
-<implicit_tracking>
-Progress tracking is IMPLICIT: planning phase N implies phases 1-(N-1) complete. No separate progress step—forward motion IS progress.
+<implicit_tracking> Progress tracking is IMPLICIT: planning phase N implies
+phases 1-(N-1) complete. No separate progress step—forward motion IS progress.
 </implicit_tracking>
 
 <partial_completion>

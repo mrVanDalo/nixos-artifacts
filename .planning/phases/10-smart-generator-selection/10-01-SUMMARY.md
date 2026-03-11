@@ -47,7 +47,9 @@ completed: 2026-02-18
 
 # Phase 10 Plan 01: Smart Generator Selection Summary
 
-**Smart generator selection that skips the selection dialog when only one unique generator exists for a shared artifact, streamlining the UX by 1-2 keypresses per generation.**
+**Smart generator selection that skips the selection dialog when only one unique
+generator exists for a shared artifact, streamlining the UX by 1-2 keypresses
+per generation.**
 
 ## Performance
 
@@ -59,25 +61,30 @@ completed: 2026-02-18
 
 ## Accomplishments
 
-- Modified `handle_shared_artifact_enter` in update.rs to check generator count before showing dialog
+- Modified `handle_shared_artifact_enter` in update.rs to check generator count
+  before showing dialog
 - Single generator flows directly to Prompt screen (or Generating if no prompts)
 - Multiple generators still show SelectGenerator screen as before
-- Generator path is stored in shared entry for consistency with multi-generator flow
+- Generator path is stored in shared entry for consistency with multi-generator
+  flow
 - Added 4 comprehensive unit tests covering all code paths
 
 ## Task Commits
 
 Each task was committed atomically:
 
-1. **Task 1: Add generator count check before showing dialog** - `da0cb5e` (feat)
+1. **Task 1: Add generator count check before showing dialog** - `da0cb5e`
+   (feat)
 2. **Task 2: Add unit tests for generator selection logic** - `13a494d` (test)
-3. **Task 3: Verify existing tests still pass** - Implicit (verification step, no code changes)
+3. **Task 3: Verify existing tests still pass** - Implicit (verification step,
+   no code changes)
 
 **Plan metadata:** (to be committed)
 
 ## Files Created/Modified
 
-- `pkgs/artifacts/src/app/update.rs` - Added smart selection logic in `handle_shared_artifact_enter` (lines 168-246)
+- `pkgs/artifacts/src/app/update.rs` - Added smart selection logic in
+  `handle_shared_artifact_enter` (lines 168-246)
 - `pkgs/artifacts/src/app/update.rs` - Added 4 unit tests:
   - `test_single_generator_skips_dialog`
   - `test_single_generator_no_prompts_goes_to_generating`
@@ -87,9 +94,12 @@ Each task was committed atomically:
 ## Decisions Made
 
 - Used `shared.info.generators.len() == 1` as the check condition
-- Clone needed data (files, targets, prompts) before mutable borrow to avoid Rust borrow checker issues
-- Store the selected generator path in `shared.selected_generator` for consistency
-- Preserve the same effect structure (`RunSharedGenerator`) for both smart-selected and user-selected flows
+- Clone needed data (files, targets, prompts) before mutable borrow to avoid
+  Rust borrow checker issues
+- Store the selected generator path in `shared.selected_generator` for
+  consistency
+- Preserve the same effect structure (`RunSharedGenerator`) for both
+  smart-selected and user-selected flows
 
 ## Deviations from Plan
 
@@ -97,7 +107,9 @@ None - plan executed exactly as written.
 
 ## Issues Encountered
 
-- **Borrow checker issue:** Initial implementation tried to access `shared.info.files` after a mutable borrow of `model.entries`. Fixed by cloning all needed data before the mutable borrow.
+- **Borrow checker issue:** Initial implementation tried to access
+  `shared.info.files` after a mutable borrow of `model.entries`. Fixed by
+  cloning all needed data before the mutable borrow.
 
 ## User Setup Required
 
@@ -107,7 +119,8 @@ None - no external service configuration required.
 
 - Smart generator selection complete
 - Tests verify both single and multiple generator paths
-- Ready for Phase 10 Plan 02: Enhanced dialog context for when multiple generators exist
+- Ready for Phase 10 Plan 02: Enhanced dialog context for when multiple
+  generators exist
 
 ---
 

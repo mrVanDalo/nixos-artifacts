@@ -5,7 +5,10 @@
 <domain>
 ## Phase Boundary
 
-Add a confirmation dialog before regenerating existing artifacts to prevent accidental overwrites. Users must explicitly confirm before overwriting, with clear warnings and safe defaults. Covers both single artifacts and shared artifacts with keyboard navigation support.
+Add a confirmation dialog before regenerating existing artifacts to prevent
+accidental overwrites. Users must explicitly confirm before overwriting, with
+clear warnings and safe defaults. Covers both single artifacts and shared
+artifacts with keyboard navigation support.
 
 </domain>
 
@@ -14,7 +17,8 @@ Add a confirmation dialog before regenerating existing artifacts to prevent acci
 
 ### Dialog trigger conditions
 
-- Trigger after `check_serialization` indicates artifact needs regeneration (not before)
+- Trigger after `check_serialization` indicates artifact needs regeneration (not
+  before)
 - Only artifacts that already exist in backend storage trigger confirmation
 - One dialog per artifact (not batch confirmation for multiple artifacts)
 - Button selection only (no typed confirmation required)

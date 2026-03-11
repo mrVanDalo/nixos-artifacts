@@ -180,9 +180,8 @@
     clippy::manual_let_else,
     clippy::doc_lazy_continuation,
     clippy::blocks_in_conditions,
-    clippy::module_inception,
+    clippy::module_inception
 )]
-
 // Allow warnings for lints that are too strict even for pedantic
 #![allow(
     clippy::unwrap_or_default,
@@ -190,7 +189,7 @@
     clippy::bind_instead_of_map,
     clippy::match_bool,
     clippy::needless_lifetimes,
-    clippy::wrong_self_convention,
+    clippy::wrong_self_convention
 )]
 
 pub mod app;

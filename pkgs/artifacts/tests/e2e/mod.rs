@@ -21,8 +21,8 @@ pub use diagnostics::dump_test_diagnostics;
 
 use anyhow::{Context, Result};
 use artifacts::cli::headless::{
-    generate_single_artifact, generate_single_artifact_with_diagnostics, HeadlessArtifactResult,
-    PromptValues,
+    HeadlessArtifactResult, PromptValues, generate_single_artifact,
+    generate_single_artifact_with_diagnostics,
 };
 use artifacts::config::backend::BackendConfiguration;
 use artifacts::config::make::{ArtifactDef, MakeConfiguration};
@@ -155,11 +155,7 @@ fn verify_artifact_exists(storage_dir: &Path, artifact_name: &str) -> Result<()>
                         .filter_map(|e| e.ok())
                         .map(|e| e.file_name())
                         .collect();
-                    if names.is_empty() {
-                        None
-                    } else {
-                        Some(names)
-                    }
+                    if names.is_empty() { None } else { Some(names) }
                 })
                 .unwrap_or_else(|| vec!["(empty or inaccessible)".into()])
         ));

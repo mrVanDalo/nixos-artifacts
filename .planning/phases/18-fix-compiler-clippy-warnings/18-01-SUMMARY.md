@@ -49,7 +49,8 @@ completed: 2026-02-22
 
 # Phase 18 Plan 01: Fix Compiler (rustc) Warnings Summary
 
-**Clean build with zero rustc warnings for main code - all unused imports removed and unused variables properly handled**
+**Clean build with zero rustc warnings for main code - all unused imports
+removed and unused variables properly handled**
 
 ## Performance
 
@@ -78,23 +79,36 @@ Each task was committed atomically:
 
 ## Files Created/Modified
 
-- `pkgs/artifacts/src/effect_handler.rs` - Removed HashMap, OutputStream, ScriptOutput imports
+- `pkgs/artifacts/src/effect_handler.rs` - Removed HashMap, OutputStream,
+  ScriptOutput imports
 - `pkgs/artifacts/src/logging.rs` - Feature-gated imports and methods
-- `pkgs/artifacts/src/config/make.rs` - Removed log_trace import, gated pretty usage
-- `pkgs/artifacts/src/config/nix.rs` - Gated logging code, removed unused variables
+- `pkgs/artifacts/src/config/make.rs` - Removed log_trace import, gated pretty
+  usage
+- `pkgs/artifacts/src/config/nix.rs` - Gated logging code, removed unused
+  variables
 - `pkgs/artifacts/src/tui/views/regenerate_dialog.rs` - Removed Wrap import
-- `pkgs/artifacts/src/tui/views/chronological_log.rs` - Removed Scrollbar imports
-- `pkgs/artifacts/src/tui/views/generator_selection.rs` - Removed Stylize import and visual_idx variable
-- `pkgs/artifacts/src/tui/views/mod.rs` - Added #[allow(dead_code)] to render_warning_banner
-- `pkgs/artifacts/src/tui/background.rs` - Removed AsyncBufReadExt, fixed unused variables
+- `pkgs/artifacts/src/tui/views/chronological_log.rs` - Removed Scrollbar
+  imports
+- `pkgs/artifacts/src/tui/views/generator_selection.rs` - Removed Stylize import
+  and visual_idx variable
+- `pkgs/artifacts/src/tui/views/mod.rs` - Added #[allow(dead_code)] to
+  render_warning_banner
+- `pkgs/artifacts/src/tui/background.rs` - Removed AsyncBufReadExt, fixed unused
+  variables
 - `pkgs/artifacts/src/backend/generator.rs` - Gated bwrap_pretty usage
-- `pkgs/artifacts/src/backend/serialization.rs` - Gated get_target_label and log calls
+- `pkgs/artifacts/src/backend/serialization.rs` - Gated get_target_label and log
+  calls
 
 ## Decisions Made
 
-- **Feature-gating approach**: All logging-related imports, variables, and code blocks wrapped in `#[cfg(feature = "logging")]` to prevent warnings when the feature is disabled
-- **Variable naming**: Unused variables prefixed with underscore; completely unused variables (like visual_idx) removed entirely
-- **Dead code allowance**: Functions like render_warning_banner and send_output_line marked with `#[allow(dead_code)]` rather than removed to preserve API
+- **Feature-gating approach**: All logging-related imports, variables, and code
+  blocks wrapped in `#[cfg(feature = "logging")]` to prevent warnings when the
+  feature is disabled
+- **Variable naming**: Unused variables prefixed with underscore; completely
+  unused variables (like visual_idx) removed entirely
+- **Dead code allowance**: Functions like render_warning_banner and
+  send_output_line marked with `#[allow(dead_code)]` rather than removed to
+  preserve API
 
 ## Deviations from Plan
 
@@ -103,9 +117,12 @@ Each task was committed atomically:
 **1. [Rule 3 - Blocking] Logging feature gates needed**
 
 - **Found during:** Task 3
-- **Issue:** Variables like `pretty`, `target_label`, and `bwrap_pretty` only used in logging statements - caused warnings when feature disabled
-- **Fix:** Wrapped all logging-related code in `#[cfg(feature = "logging")]` blocks, feature-gated imports
-- **Files modified:** make.rs, nix.rs, generator.rs, serialization.rs, logging.rs
+- **Issue:** Variables like `pretty`, `target_label`, and `bwrap_pretty` only
+  used in logging statements - caused warnings when feature disabled
+- **Fix:** Wrapped all logging-related code in `#[cfg(feature = "logging")]`
+  blocks, feature-gated imports
+- **Files modified:** make.rs, nix.rs, generator.rs, serialization.rs,
+  logging.rs
 - **Committed in:** 2e6bc26
 
 **2. [Rule 3 - Blocking] Test code needed HashMap import**
@@ -117,13 +134,15 @@ Each task was committed atomically:
 
 ---
 
-**Total deviations:** 2 auto-fixed (both Rule 3 - Blocking)
-**Impact on plan:** Both necessary for clean build. No scope creep.
+**Total deviations:** 2 auto-fixed (both Rule 3 - Blocking) **Impact on plan:**
+Both necessary for clean build. No scope creep.
 
 ## Issues Encountered
 
-- Initial removal of HashMap from effect_handler.rs broke tests - required test-scoped import
-- Multiple iterations needed to properly feature-gate logging code across modules
+- Initial removal of HashMap from effect_handler.rs broke tests - required
+  test-scoped import
+- Multiple iterations needed to properly feature-gate logging code across
+  modules
 - Some variables were only used inside logging blocks, requiring restructuring
 
 ## User Setup Required
@@ -134,7 +153,8 @@ None - no external service configuration required.
 
 - Main code compiles with zero rustc warnings
 - Ready for Phase 18-02: Fix Clippy Warnings
-- Build verified: `cargo build` completes with "Finished dev [unoptimized + debuginfo] target(s)"
+- Build verified: `cargo build` completes with "Finished dev [unoptimized +
+  debuginfo] target(s)"
 
 ---
 

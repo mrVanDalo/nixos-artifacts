@@ -1,6 +1,6 @@
+use crate::app::Effect;
 use crate::app::message::{CheckOutput, GeneratorOutput, Message, SerializeOutput};
 use crate::app::model::{ArtifactEntry, ArtifactStatus, ListEntry, Model, TargetType};
-use crate::app::Effect;
 use crate::backend::generator::{run_generator_script, verify_generated_files};
 use crate::backend::output_capture::{CapturedOutput, OutputStream};
 use crate::backend::serialization::{
@@ -192,7 +192,8 @@ impl EffectHandler for BackendEffectHandler {
                         return Ok(vec![Message::CheckSerializationResult {
                             artifact_index,
                             status: ArtifactStatus::Failed {
-                                error: "CheckSerialization effect called on shared artifact".to_string(),
+                                error: "CheckSerialization effect called on shared artifact"
+                                    .to_string(),
                                 output: String::new(),
                                 retry_available: true,
                             },

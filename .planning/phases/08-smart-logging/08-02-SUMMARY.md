@@ -50,7 +50,8 @@ completed: 2026-02-17
 
 # Phase 08 Plan 02: Complete Logging Infrastructure
 
-**Feature-gated macro API (error!, warn!, info!, debug!) with Logger struct, fail-fast validation, and real-time streaming**
+**Feature-gated macro API (error!, warn!, info!, debug!) with Logger struct,
+fail-fast validation, and real-time streaming**
 
 ## Performance
 
@@ -64,17 +65,22 @@ completed: 2026-02-17
 
 - **LogLevel enum** with Debug, Info, Warn, Error variants for filtering
 - **Logger struct** with Mutex-wrapped File, path tracking, and level filtering
-- **Logger::new_from_args()** with fail-fast path validation and permission setting (640)
-- **Feature-gated macros** error!, warn!, info!, debug! that compile to nothing when disabled
-- **Structured log format** with timestamps, levels, module paths, and optional line numbers
+- **Logger::new_from_args()** with fail-fast path validation and permission
+  setting (640)
+- **Feature-gated macros** error!, warn!, info!, debug! that compile to nothing
+  when disabled
+- **Structured log format** with timestamps, levels, module paths, and optional
+  line numbers
 - **Real-time streaming** with flush after each log entry (no buffering)
-- **Backward compatibility** maintained with legacy log() and log_component() APIs
+- **Backward compatibility** maintained with legacy log() and log_component()
+  APIs
 - **Comprehensive tests** - 11 logging tests passing
 
 ## Task Commits
 
 1. **Task 1: Create feature-gated macro API** - `e59bf48` (feat)
-2. **Task 2+4: Complete logging infrastructure with re-exports** - `3e7cd46` (feat)
+2. **Task 2+4: Complete logging infrastructure with re-exports** - `3e7cd46`
+   (feat)
 
 ## Files Created/Modified
 
@@ -92,10 +98,14 @@ completed: 2026-02-17
 
 ## Decisions Made
 
-1. **Maintained backward compatibility** - Legacy log() and log_component() functions remain available for code that uses them
-2. **Feature-gated OpenOptions** - Import only when logging feature enabled to avoid unused import warnings
-3. **LogLevel ordering** - Debug < Info < Warn < Error enables natural filtering with PartialOrd
-4. **Debug includes line numbers** - Only DEBUG level shows line numbers for precise source location
+1. **Maintained backward compatibility** - Legacy log() and log_component()
+   functions remain available for code that uses them
+2. **Feature-gated OpenOptions** - Import only when logging feature enabled to
+   avoid unused import warnings
+3. **LogLevel ordering** - Debug < Info < Warn < Error enables natural filtering
+   with PartialOrd
+4. **Debug includes line numbers** - Only DEBUG level shows line numbers for
+   precise source location
 5. **Log format simplicity** - HH:MM:SS.mmm timestamp is readable and compact
 
 ## Deviations from Plan
@@ -105,8 +115,10 @@ completed: 2026-02-17
 **1. [Rule 3 - Blocking] Fixed import conflicts and type mismatches**
 
 - **Found during:** Task 1 (implementing macros)
-- **Issue:** Tests used wrong LogLevel type (args::LogLevel vs logging::LogLevel), missing Debug derive on Logger
-- **Fix:** Updated test imports to use correct types, added #[derive(Debug)] to Logger struct
+- **Issue:** Tests used wrong LogLevel type (args::LogLevel vs
+  logging::LogLevel), missing Debug derive on Logger
+- **Fix:** Updated test imports to use correct types, added #[derive(Debug)] to
+  Logger struct
 - **Files modified:** pkgs/artifacts/src/logging.rs
 - **Committed in:** e59bf48 (Task 1 commit)
 
@@ -114,7 +126,8 @@ completed: 2026-02-17
 
 - **Found during:** Task 4 (lib.rs re-exports)
 - **Issue:** Attempted explicit re-export of macros caused redefinition error
-- **Fix:** Removed explicit re-exports - macros are automatically exported via #[macro_export]
+- **Fix:** Removed explicit re-exports - macros are automatically exported via
+  #[macro_export]
 - **Files modified:** pkgs/artifacts/src/lib.rs
 - **Committed in:** 3e7cd46 (Task 2+4 commit)
 
@@ -128,8 +141,8 @@ completed: 2026-02-17
 
 ---
 
-**Total deviations:** 3 auto-fixed (all Rule 3 - Blocking)
-**Impact on plan:** All auto-fixes were necessary for compilation. No scope creep.
+**Total deviations:** 3 auto-fixed (all Rule 3 - Blocking) **Impact on plan:**
+All auto-fixes were necessary for compilation. No scope creep.
 
 ## Issues Encountered
 
@@ -137,14 +150,14 @@ None - all tasks executed successfully.
 
 ## Verification Results
 
-✅ `cargo check` passes (no features) - macros are no-ops
-✅ `cargo check --features logging` passes - full logging enabled
-✅ `cargo test --lib --features logging` - 109 tests pass (3 pre-existing failures in tempfile)
-✅ Macros are grep-able: `grep -n 'macro_rules! debug' src/logging.rs` finds definition
-✅ Log format matches spec: `[HH:MM:SS.mmm] [LEVEL] module: message`
-✅ File permissions set to 640 (owner rw, group r)
-✅ Level filtering works correctly
-✅ Backward compatibility maintained
+✅ `cargo check` passes (no features) - macros are no-ops ✅
+`cargo check --features logging` passes - full logging enabled ✅
+`cargo test --lib --features logging` - 109 tests pass (3 pre-existing failures
+in tempfile) ✅ Macros are grep-able:
+`grep -n 'macro_rules! debug' src/logging.rs` finds definition ✅ Log format
+matches spec: `[HH:MM:SS.mmm] [LEVEL] module: message` ✅ File permissions set
+to 640 (owner rw, group r) ✅ Level filtering works correctly ✅ Backward
+compatibility maintained
 
 ## User Setup Required
 

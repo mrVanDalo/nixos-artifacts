@@ -12,7 +12,7 @@
 //! Shell escaping functions properly quote special characters to prevent
 //! injection attacks when constructing shell commands.
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 

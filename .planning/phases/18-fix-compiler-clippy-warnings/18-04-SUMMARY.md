@@ -52,7 +52,8 @@ completed: 2026-02-22
 
 # Phase 18 Plan 04: Fix Clippy Warnings in Tests Summary
 
-**Clippy `--tests` now passes with zero warnings at default lint level, satisfying LINT-04.**
+**Clippy `--tests` now passes with zero warnings at default lint level,
+satisfying LINT-04.**
 
 ## Performance
 
@@ -77,14 +78,22 @@ completed: 2026-02-22
 
 ## Files Created/Modified
 
-- `pkgs/artifacts/src/backend/tempfile.rs` - Simplified `&*temp_file` to `&temp_file`
-- `pkgs/artifacts/src/tui/model_builder.rs` - Removed unnecessary `.to_string()` call
-- `pkgs/artifacts/src/tui/channels.rs` - Changed `vec![]` to `[]` arrays in tests
-- `tests/async_tests/channel_tests.rs` - Restructured error handling to avoid expect_fun_call
-- `tests/async_tests/runtime_async_tests.rs` - Changed `len() >= 1` to `!is_empty()`
-- `tests/async_tests/state_machine_tests.rs` - Used `repeat_n()` and fixed recursion param naming
-- `tests/e2e/edge_cases.rs` - Applied `values()`, `keys()`, and `!is_empty()` idioms
-- `tests/e2e/shared_artifact.rs` - Collapsed nested ifs and fixed reference comparisons
+- `pkgs/artifacts/src/backend/tempfile.rs` - Simplified `&*temp_file` to
+  `&temp_file`
+- `pkgs/artifacts/src/tui/model_builder.rs` - Removed unnecessary `.to_string()`
+  call
+- `pkgs/artifacts/src/tui/channels.rs` - Changed `vec![]` to `[]` arrays in
+  tests
+- `tests/async_tests/channel_tests.rs` - Restructured error handling to avoid
+  expect_fun_call
+- `tests/async_tests/runtime_async_tests.rs` - Changed `len() >= 1` to
+  `!is_empty()`
+- `tests/async_tests/state_machine_tests.rs` - Used `repeat_n()` and fixed
+  recursion param naming
+- `tests/e2e/edge_cases.rs` - Applied `values()`, `keys()`, and `!is_empty()`
+  idioms
+- `tests/e2e/shared_artifact.rs` - Collapsed nested ifs and fixed reference
+  comparisons
 
 ## Decisions Made
 
@@ -95,11 +104,14 @@ completed: 2026-02-22
 
 ## Deviations from Plan
 
-None - plan executed exactly as written. All 23 clippy warnings were fixed as anticipated.
+None - plan executed exactly as written. All 23 clippy warnings were fixed as
+anticipated.
 
 ## Issues Encountered
 
-None. After Plans 18-01 through 18-03 fixed all rustc warnings, clippy at default level had only style suggestions, all of which were straightforward to apply.
+None. After Plans 18-01 through 18-03 fixed all rustc warnings, clippy at
+default level had only style suggestions, all of which were straightforward to
+apply.
 
 ## User Setup Required
 

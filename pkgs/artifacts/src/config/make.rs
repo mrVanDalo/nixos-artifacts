@@ -62,7 +62,7 @@ use serde::de::{self, Deserializer};
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "logging")]
 use serde_json::to_string_pretty;
-use serde_json::{from_str as json_from_str, Value};
+use serde_json::{Value, from_str as json_from_str};
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};

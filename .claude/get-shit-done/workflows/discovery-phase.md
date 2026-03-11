@@ -4,23 +4,21 @@ Produces DISCOVERY.md (for Level 2-3) that informs PLAN.md creation.
 
 Called from plan-phase.md's mandatory_discovery step with a depth parameter.
 
-NOTE: For comprehensive ecosystem research ("how do experts build this"), use /gsd:research-phase instead, which produces RESEARCH.md.
+NOTE: For comprehensive ecosystem research ("how do experts build this"), use
+/gsd:research-phase instead, which produces RESEARCH.md.
 </purpose>
 
-<depth_levels>
-**This workflow supports three depth levels:**
+<depth_levels> **This workflow supports three depth levels:**
 
-| Level | Name         | Time      | Output                                       | When                                      |
-| ----- | ------------ | --------- | -------------------------------------------- | ----------------------------------------- |
-| 1     | Quick Verify | 2-5 min   | No file, proceed with verified knowledge     | Single library, confirming current syntax |
-| 2     | Standard     | 15-30 min | DISCOVERY.md                                 | Choosing between options, new integration |
-| 3     | Deep Dive    | 1+ hour   | Detailed DISCOVERY.md with validation gates  | Architectural decisions, novel problems   |
+| Level | Name         | Time      | Output                                      | When                                      |
+| ----- | ------------ | --------- | ------------------------------------------- | ----------------------------------------- |
+| 1     | Quick Verify | 2-5 min   | No file, proceed with verified knowledge    | Single library, confirming current syntax |
+| 2     | Standard     | 15-30 min | DISCOVERY.md                                | Choosing between options, new integration |
+| 3     | Deep Dive    | 1+ hour   | Detailed DISCOVERY.md with validation gates | Architectural decisions, novel problems   |
 
-**Depth is determined by plan-phase.md before routing here.**
-</depth_levels>
+**Depth is determined by plan-phase.md before routing here.** </depth_levels>
 
-<source_hierarchy>
-**MANDATORY: Context7 BEFORE WebSearch**
+<source_hierarchy> **MANDATORY: Context7 BEFORE WebSearch**
 
 Claude's training data is 6-18 months stale. Always verify.
 
@@ -28,8 +26,8 @@ Claude's training data is 6-18 months stale. Always verify.
 2. **Official docs** - When Context7 lacks coverage
 3. **WebSearch LAST** - For comparisons and trends only
 
-See ./.claude/get-shit-done/templates/discovery.md `<discovery_protocol>` for full protocol.
-</source_hierarchy>
+See ./.claude/get-shit-done/templates/discovery.md `<discovery_protocol>` for
+full protocol. </source_hierarchy>
 
 <process>
 
@@ -69,7 +67,8 @@ For: Single known library, confirming syntax/version still correct.
    - API syntax unchanged
    - No breaking changes in recent versions
 
-4. **If verified:** Return to plan-phase.md with confirmation. No DISCOVERY.md needed.
+4. **If verified:** Return to plan-phase.md with confirmation. No DISCOVERY.md
+   needed.
 
 5. **If concerns found:** Escalate to Level 2.
 
@@ -105,9 +104,11 @@ For: Choosing between options, new external integration.
    - "[option] known issues"
    - "[option] with [our stack]"
 
-5. **Cross-verify:** Any WebSearch finding → confirm with Context7/official docs.
+5. **Cross-verify:** Any WebSearch finding → confirm with Context7/official
+   docs.
 
-6. **Create DISCOVERY.md** using ./.claude/get-shit-done/templates/discovery.md structure:
+6. **Create DISCOVERY.md** using ./.claude/get-shit-done/templates/discovery.md
+   structure:
 
    - Summary with recommendation
    - Key findings per option
@@ -165,7 +166,8 @@ For: Architectural decisions, novel problems, high-risk choices.
    - Confidence by finding
    - If LOW confidence on any critical finding → add validation checkpoints
 
-7. **Confidence gate:** If overall confidence is LOW, present options before proceeding.
+7. **Confidence gate:** If overall confidence is LOW, present options before
+   proceeding.
 
 8. Return to plan-phase.md.
 
@@ -213,28 +215,27 @@ Write `.planning/phases/XX-name/DISCOVERY.md`:
 <step name="confidence_gate">
 After creating DISCOVERY.md, check confidence level.
 
-If confidence is LOW:
-Use AskUserQuestion:
+If confidence is LOW: Use AskUserQuestion:
 
 - header: "Low Conf."
-- question: "Discovery confidence is LOW: [reason]. How would you like to proceed?"
+- question: "Discovery confidence is LOW: [reason]. How would you like to
+  proceed?"
 - options:
   - "Dig deeper" - Do more research before planning
   - "Proceed anyway" - Accept uncertainty, plan with caveats
   - "Pause" - I need to think about this
 
-If confidence is MEDIUM:
-Inline: "Discovery complete (medium confidence). [brief reason]. Proceed to planning?"
+If confidence is MEDIUM: Inline: "Discovery complete (medium confidence). [brief
+reason]. Proceed to planning?"
 
-If confidence is HIGH:
-Proceed directly, just note: "Discovery complete (high confidence)."
+If confidence is HIGH: Proceed directly, just note: "Discovery complete (high
+confidence)."
 </step>
 
 <step name="open_questions_gate">
 If DISCOVERY.md has open_questions:
 
-Present them inline:
-"Open questions from discovery:
+Present them inline: "Open questions from discovery:
 
 - [Question 1]
 - [Question 2]
@@ -258,7 +259,6 @@ What's next?
 4. Review discovery
 
 ```
-
 NOTE: DISCOVERY.md is NOT committed separately. It will be committed with phase completion.
 </step>
 
@@ -287,3 +287,4 @@ NOTE: DISCOVERY.md is NOT committed separately. It will be committed with phase 
 - Confidence gate passed
 - Ready to inform PLAN.md creation
 </success_criteria>
+```

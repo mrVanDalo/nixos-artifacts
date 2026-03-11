@@ -8,12 +8,12 @@ allowed-tools:
   - Write
   - AskUserQuestion
 ---
+
 <objective>
 Validate `.planning/` directory integrity and report actionable issues. Checks for missing files, invalid configurations, inconsistent state, and orphaned plans.
 </objective>
 
-<execution_context>
-@./.claude/get-shit-done/workflows/health.md
+<execution_context> @./.claude/get-shit-done/workflows/health.md
 </execution_context>
 
 <process>

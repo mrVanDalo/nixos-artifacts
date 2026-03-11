@@ -1,24 +1,39 @@
 # Phase 12: Script Output Visibility - Research
 
-**Researched:** 2026-02-18  
-**Domain:** Rust TUI Application with ratatui, Async Script Execution  
+**Researched:** 2026-02-18\
+**Domain:** Rust TUI Application with ratatui, Async Script Execution\
 **Confidence:** HIGH
 
 ## Summary
 
-The artifacts CLI already has substantial infrastructure for script output capture and display. Research reveals that:
+The artifacts CLI already has substantial infrastructure for script output
+capture and display. Research reveals that:
 
-1. **Output Capture Infrastructure Exists**: `backend/output_capture.rs` provides `CapturedOutput` and `OutputLine` types that already capture stdout/stderr from scripts with stream identification.
+1. **Output Capture Infrastructure Exists**: `backend/output_capture.rs`
+   provides `CapturedOutput` and `OutputLine` types that already capture
+   stdout/stderr from scripts with stream identification.
 
-2. **Channel-Based Async Architecture**: The TUI uses tokio channels (`EffectCommand`/`EffectResult`) to communicate between foreground (UI) and background (script execution) tasks, enabling non-blocking script execution.
+2. **Channel-Based Async Architecture**: The TUI uses tokio channels
+   (`EffectCommand`/`EffectResult`) to communicate between foreground (UI) and
+   background (script execution) tasks, enabling non-blocking script execution.
 
-3. **Partial Output Integration**: Output is already being captured in `effect_handler.rs` and returned via messages (`GeneratorOutput`, `SerializeOutput`, `CheckOutput`), but conversion in `runtime.rs` discards much of this data.
+3. **Partial Output Integration**: Output is already being captured in
+   `effect_handler.rs` and returned via messages (`GeneratorOutput`,
+   `SerializeOutput`, `CheckOutput`), but conversion in `runtime.rs` discards
+   much of this data.
 
-4. **Log Display Infrastructure**: The list view (`list.rs`) already has a log panel that displays `StepLogs` with accordion-style sections for Check/Generate/Serialize steps.
+4. **Log Display Infrastructure**: The list view (`list.rs`) already has a log
+   panel that displays `StepLogs` with accordion-style sections for
+   Check/Generate/Serialize steps.
 
-5. **Model Storage for Output**: `StepLogs` struct in `model.rs` provides storage organized by step (check, generate, serialize) with `LogEntry` supporting different log levels (Info, Output, Error, Success).
+5. **Model Storage for Output**: `StepLogs` struct in `model.rs` provides
+   storage organized by step (check, generate, serialize) with `LogEntry`
+   supporting different log levels (Info, Output, Error, Success).
 
-**Primary recommendation:** Complete the data flow from background script execution through channel results to model storage, then enhance the log panel display to show real-time updates during script execution and historical output in artifact detail view.
+**Primary recommendation:** Complete the data flow from background script
+execution through channel results to model storage, then enhance the log panel
+display to show real-time updates during script execution and historical output
+in artifact detail view.
 
 ---
 
@@ -28,7 +43,8 @@ The artifacts CLI already has substantial infrastructure for script output captu
 
 **Location**: `pkgs/artifacts/src/backend/output_capture.rs`
 
-The `run_with_captured_output()` function already captures both stdout and stderr:
+The `run_with_captured_output()` function already captures both stdout and
+stderr:
 
 ```rust
 pub struct CapturedOutput {
@@ -42,7 +58,8 @@ pub struct OutputLine {
 }
 ```
 
-**Key capability**: Uses separate threads with `mpsc::channel` to merge stdout/stderr in approximate arrival order.
+**Key capability**: Uses separate threads with `mpsc::channel` to merge
+stdout/stderr in approximate arrival order.
 
 ### Effect Handler Integration (PARTIAL)
 
@@ -63,7 +80,8 @@ fn run_generator_and_store_output(...) -> Result<GeneratorOutput, String> {
 }
 ```
 
-**Gap**: Output is captured but only split into stdout/stderr vectors - the interleaved stream order is lost.
+**Gap**: Output is captured but only split into stdout/stderr vectors - the
+interleaved stream order is lost.
 
 ### Channel Communication (NEEDS ENHANCEMENT)
 
@@ -85,7 +103,8 @@ pub enum EffectResult {
 
 **Location**: `pkgs/artifacts/src/tui/background.rs`
 
-The background task executes effects and returns results, but output formatting is basic.
+The background task executes effects and returns results, but output formatting
+is basic.
 
 ### Runtime Conversion (HAS GAPS)
 
@@ -109,7 +128,8 @@ EffectResult::GeneratorFinished { output, ... } => {
 }
 ```
 
-**Gap**: Converting from `EffectResult` to `Msg` loses stderr separation and interleaving information.
+**Gap**: Converting from `EffectResult` to `Msg` loses stderr separation and
+interleaving information.
 
 ### Model Storage (COMPLETE)
 
@@ -135,6 +155,7 @@ pub struct LogEntry {
 **Location**: `pkgs/artifacts/src/tui/views/list.rs`
 
 The log panel already supports:
+
 - Accordion-style step display (Check/Generate/Serialize)
 - Log level indicators (i/|/!/✓)
 - Auto-scroll to latest logs
@@ -148,7 +169,8 @@ The log panel already supports:
 
 **Current**: Output is split into separate stdout/stderr vectors after capture.
 
-**Better**: Preserve the `Vec<OutputLine>` with stream markers to show output in true execution order with stream identification.
+**Better**: Preserve the `Vec<OutputLine>` with stream markers to show output in
+true execution order with stream identification.
 
 ```rust
 pub struct ScriptOutput {
@@ -171,7 +193,8 @@ For real-time display during script execution:
 4. Update model with new lines during execution
 5. Final `Msg::ScriptFinished` completes the operation
 
-**Note**: Current architecture waits for script completion before updating. Real-time streaming requires switching to async process execution.
+**Note**: Current architecture waits for script completion before updating.
+Real-time streaming requires switching to async process execution.
 
 ### Pattern 3: Unified Output Storage
 
@@ -195,13 +218,13 @@ impl StepLogs {
 
 ## Don't Hand-Roll
 
-| Problem | Don't Build | Use Instead | Why |
-|---------|-------------|-------------|-----|
-| Async process execution | Manual thread spawning | `tokio::process::Command` | Built-in async support, cancellation, proper cleanup |
-| Output line buffering | Manual byte buffering | `tokio::io::AsyncBufReadExt::lines()` | Proper UTF-8 handling, async iteration |
-| Terminal scrolling | Custom scroll logic | `Paragraph::scroll()` in ratatui | Standard widget behavior, tested |
-| Log storage | Custom data structures | Existing `StepLogs` + `LogEntry` | Already integrated with views |
-| Channel communication | Raw channels | Existing `EffectCommand`/`EffectResult` | Already integrated with runtime |
+| Problem                 | Don't Build            | Use Instead                             | Why                                                  |
+| ----------------------- | ---------------------- | --------------------------------------- | ---------------------------------------------------- |
+| Async process execution | Manual thread spawning | `tokio::process::Command`               | Built-in async support, cancellation, proper cleanup |
+| Output line buffering   | Manual byte buffering  | `tokio::io::AsyncBufReadExt::lines()`   | Proper UTF-8 handling, async iteration               |
+| Terminal scrolling      | Custom scroll logic    | `Paragraph::scroll()` in ratatui        | Standard widget behavior, tested                     |
+| Log storage             | Custom data structures | Existing `StepLogs` + `LogEntry`        | Already integrated with views                        |
+| Channel communication   | Raw channels           | Existing `EffectCommand`/`EffectResult` | Already integrated with runtime                      |
 
 ---
 
@@ -209,29 +232,39 @@ impl StepLogs {
 
 ### Pitfall 1: Blocking the UI Thread
 
-**What goes wrong**: Running scripts synchronously in the effect handler freezes the TUI, preventing real-time updates.
+**What goes wrong**: Running scripts synchronously in the effect handler freezes
+the TUI, preventing real-time updates.
 
-**Why it happens**: Current `effect_handler.rs` uses synchronous `run_generator_script()` which blocks until completion.
+**Why it happens**: Current `effect_handler.rs` uses synchronous
+`run_generator_script()` which blocks until completion.
 
-**How to avoid**: Use `tokio::process::Command` in the background task (`background.rs`) and send incremental output messages.
+**How to avoid**: Use `tokio::process::Command` in the background task
+(`background.rs`) and send incremental output messages.
 
-**Warning signs**: UI unresponsive during script execution, no spinner animation.
+**Warning signs**: UI unresponsive during script execution, no spinner
+animation.
 
 ### Pitfall 2: Buffering All Output in Memory
 
-**What goes wrong**: Scripts with massive output (e.g., verbose logging) consume excessive memory.
+**What goes wrong**: Scripts with massive output (e.g., verbose logging) consume
+excessive memory.
 
 **Why it happens**: Storing every line indefinitely in `StepLogs`.
 
-**How to avoid**: Implement ring buffer or truncation for completed artifacts (keep last N lines, summarize earlier output).
+**How to avoid**: Implement ring buffer or truncation for completed artifacts
+(keep last N lines, summarize earlier output).
 
 ### Pitfall 3: Losing Stream Identity
 
-**What goes wrong**: Merging stdout/stderr into single string loses which stream each line came from.
+**What goes wrong**: Merging stdout/stderr into single string loses which stream
+each line came from.
 
-**Why it happens**: `EffectResult::GeneratorFinished { output: Option<String> }` is a single string.
+**Why it happens**: `EffectResult::GeneratorFinished { output: Option<String> }`
+is a single string.
 
-**How to avoid**: Use structured output preserving stream identity through the entire pipeline:
+**How to avoid**: Use structured output preserving stream identity through the
+entire pipeline:
+
 ```rust
 pub struct ScriptOutput {
     pub lines: Vec<(OutputStream, String)>,
@@ -240,11 +273,14 @@ pub struct ScriptOutput {
 
 ### Pitfall 4: Race Conditions in Log Display
 
-**What goes wrong**: Scrolling log display shows inconsistent state if model updates mid-render.
+**What goes wrong**: Scrolling log display shows inconsistent state if model
+updates mid-render.
 
-**Why it happens**: Rendering happens in `terminal.draw()` while background tasks mutate model via messages.
+**Why it happens**: Rendering happens in `terminal.draw()` while background
+tasks mutate model via messages.
 
-**How to avoid**: Ensure all model updates happen in `update()` function (single-threaded), and use `tokio::sync::mpsc` for thread-safe message passing.
+**How to avoid**: Ensure all model updates happen in `update()` function
+(single-threaded), and use `tokio::sync::mpsc` for thread-safe message passing.
 
 ---
 
@@ -352,7 +388,8 @@ async fn run_generator_streaming(
 }
 ```
 
-**Note**: This requires adding new `EffectResult::OutputLine` variant and handling it in `result_to_message()`.
+**Note**: This requires adding new `EffectResult::OutputLine` variant and
+handling it in `result_to_message()`.
 
 ---
 
@@ -421,18 +458,23 @@ impl StepLogs {
 
 1. **Real-time vs At-End Display**
    - What we know: Current system captures output at end
-   - What's unclear: Whether real-time streaming is required for v3.0 or can be deferred
-   - Recommendation: Implement at-end display first (easier), then streaming in later phase
+   - What's unclear: Whether real-time streaming is required for v3.0 or can be
+     deferred
+   - Recommendation: Implement at-end display first (easier), then streaming in
+     later phase
 
 2. **Output Retention Policy**
    - What we know: `StepLogs` stores all logs indefinitely
-   - What's unclear: Whether to truncate/summarize old output for memory efficiency
+   - What's unclear: Whether to truncate/summarize old output for memory
+     efficiency
    - Recommendation: Keep full output for now (debugging is primary use case)
 
 3. **Shared Artifact Output Aggregation**
    - What we know: Shared artifacts run once and serialize to multiple targets
-   - What's unclear: How to display output from multiple target checks in detail view
-   - Recommendation: Store per-target check output in `SharedEntry`, aggregate in display
+   - What's unclear: How to display output from multiple target checks in detail
+     view
+   - Recommendation: Store per-target check output in `SharedEntry`, aggregate
+     in display
 
 ---
 
@@ -440,9 +482,12 @@ impl StepLogs {
 
 ### Primary (HIGH confidence)
 
-- `pkgs/artifacts/src/backend/output_capture.rs` - Complete output capture implementation
-- `pkgs/artifacts/src/tui/effect_handler.rs` - Effect execution with output capture
-- `pkgs/artifacts/src/app/model.rs` - Model structures including StepLogs, LogEntry
+- `pkgs/artifacts/src/backend/output_capture.rs` - Complete output capture
+  implementation
+- `pkgs/artifacts/src/tui/effect_handler.rs` - Effect execution with output
+  capture
+- `pkgs/artifacts/src/app/model.rs` - Model structures including StepLogs,
+  LogEntry
 - `pkgs/artifacts/src/tui/views/list.rs` - Log panel display implementation
 - `pkgs/artifacts/src/tui/channels.rs` - Channel message types
 - `pkgs/artifacts/src/tui/runtime.rs` - Message conversion and runtime loop
@@ -451,7 +496,8 @@ impl StepLogs {
 ### Secondary (MEDIUM confidence)
 
 - Ratatui documentation (via training): `Paragraph::scroll()`, `List` widgets
-- Tokio documentation (via training): `tokio::process::Command`, `AsyncBufReadExt::lines()`
+- Tokio documentation (via training): `tokio::process::Command`,
+  `AsyncBufReadExt::lines()`
 
 ---
 
@@ -463,27 +509,34 @@ impl StepLogs {
 - Architecture: HIGH - Existing patterns are clear and well-structured
 - Pitfalls: MEDIUM - Some edge cases identified, may have missed others
 
-**Research date:** 2026-02-18  
+**Research date:** 2026-02-18\
 **Valid until:** 30 days (stable codebase)
 
 ---
 
 ## RESEARCH COMPLETE
 
-**Phase:** 12 - Script Output Visibility  
+**Phase:** 12 - Script Output Visibility\
 **Confidence:** HIGH
 
 ### Key Findings
 
-1. **Strong Foundation**: 80% of the infrastructure already exists - output capture, channel communication, model storage, and display views are all in place.
+1. **Strong Foundation**: 80% of the infrastructure already exists - output
+   capture, channel communication, model storage, and display views are all in
+   place.
 
-2. **Main Gap**: Data flow from `EffectResult` through `result_to_message()` to `StepLogs` needs completion. Currently output is captured but lost in conversion.
+2. **Main Gap**: Data flow from `EffectResult` through `result_to_message()` to
+   `StepLogs` needs completion. Currently output is captured but lost in
+   conversion.
 
-3. **Two-Tier Approach**: 
-   - **Tier 1 (Immediate)**: Complete the data flow to show output after script completion (matches requirement OUT-04)
-   - **Tier 2 (Advanced)**: Implement async streaming for real-time updates (requirement OUT-03)
+3. **Two-Tier Approach**:
+   - **Tier 1 (Immediate)**: Complete the data flow to show output after script
+     completion (matches requirement OUT-04)
+   - **Tier 2 (Advanced)**: Implement async streaming for real-time updates
+     (requirement OUT-03)
 
-4. **No New Dependencies**: Can be implemented with existing tokio and ratatui capabilities.
+4. **No New Dependencies**: Can be implemented with existing tokio and ratatui
+   capabilities.
 
 ### File Created
 
@@ -491,11 +544,11 @@ impl StepLogs {
 
 ### Confidence Assessment
 
-| Area | Level | Reason |
-|------|-------|--------|
-| Standard stack | HIGH | Existing codebase patterns are clear and consistent |
-| Architecture | HIGH | Complete understanding of data flow from capture to display |
-| Pitfalls | MEDIUM | Identified common issues, some edge cases may exist |
+| Area           | Level  | Reason                                                      |
+| -------------- | ------ | ----------------------------------------------------------- |
+| Standard stack | HIGH   | Existing codebase patterns are clear and consistent         |
+| Architecture   | HIGH   | Complete understanding of data flow from capture to display |
+| Pitfalls       | MEDIUM | Identified common issues, some edge cases may exist         |
 
 ### Open Questions
 
@@ -505,4 +558,5 @@ impl StepLogs {
 
 ### Ready for Planning
 
-Research complete. Planner can now create PLAN.md files with specific tasks for completing the data flow and enhancing display.
+Research complete. Planner can now create PLAN.md files with specific tasks for
+completing the data flow and enhancing display.

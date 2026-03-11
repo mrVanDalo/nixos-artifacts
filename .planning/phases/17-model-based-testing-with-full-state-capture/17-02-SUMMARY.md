@@ -48,7 +48,10 @@ completed: 2026-02-20
 
 # Phase 17 Plan 02: Model-based Testing with Full State Capture Summary
 
-**ViewTestResult updated with optional ModelState field, enabling dual assertion pattern that captures both view-specific state AND full Model state alongside rendered terminal output, documenting the Elm Architecture transformation chain**
+**ViewTestResult updated with optional ModelState field, enabling dual assertion
+pattern that captures both view-specific state AND full Model state alongside
+rendered terminal output, documenting the Elm Architecture transformation
+chain**
 
 ## Performance
 
@@ -60,37 +63,57 @@ completed: 2026-02-20
 
 ## Accomplishments
 
-1. **Updated ViewTestResult struct** to support dual state capture with optional `ModelState` field and `with_model()` helper method
+1. **Updated ViewTestResult struct** to support dual state capture with optional
+   `ModelState` field and `with_model()` helper method
 
-2. **Added ModelState import** from shared model_state module, enabling cross-test type reuse established in plan 17-01
+2. **Added ModelState import** from shared model_state module, enabling
+   cross-test type reuse established in plan 17-01
 
-3. **Updated Display implementation** to output three sections: State (view-specific), Model (optional, full app state), and Rendered (terminal output)
+3. **Updated Display implementation** to output three sections: State
+   (view-specific), Model (optional, full app state), and Rendered (terminal
+   output)
 
-4. **Updated all 11 artifact list tests** to capture full Model state using `model: Some(ModelState::from_model(&model))`
+4. **Updated all 11 artifact list tests** to capture full Model state using
+   `model: Some(ModelState::from_model(&model))`
 
-5. **Accepted 21 updated snapshots** showing the new three-section format that documents the complete Elm Architecture transformation chain
+5. **Accepted 21 updated snapshots** showing the new three-section format that
+   documents the complete Elm Architecture transformation chain
 
 ## Task Commits
 
 Each task was committed atomically:
 
 1. **Task 1: Add ModelState field to ViewTestResult** - `511f3d3` (feat)
-2. **Task 2: Update artifact list tests with Model capture** - `00e8709` (test - snapshots)
+2. **Task 2: Update artifact list tests with Model capture** - `00e8709` (test -
+   snapshots)
 
 **Plan metadata:** docs: complete plan (final commit)
 
 ## Files Created/Modified
 
-- `pkgs/artifacts/tests/tui/view_tests.rs` - Added ModelState import, updated ViewTestResult with optional model field, added with_model() helper, updated all artifact list tests
-- `pkgs/artifacts/tests/tui/snapshots/*.snap` - 21 updated snapshots with new State/Model/Rendered format
+- `pkgs/artifacts/tests/tui/view_tests.rs` - Added ModelState import, updated
+  ViewTestResult with optional model field, added with_model() helper, updated
+  all artifact list tests
+- `pkgs/artifacts/tests/tui/snapshots/*.snap` - 21 updated snapshots with new
+  State/Model/Rendered format
 
 ## Decisions Made
 
-- **Option<ModelState> for backward compatibility**: Prompt, progress, and generator selection tests use screen-specific state (PromptSnapshot, GeneratingSnapshot, GeneratorSelectionSnapshot) rather than full Model, so they use `model: None`. Only artifact list tests that work with full Model instances use `model: Some(...)`.
+- **Option<ModelState> for backward compatibility**: Prompt, progress, and
+  generator selection tests use screen-specific state (PromptSnapshot,
+  GeneratingSnapshot, GeneratorSelectionSnapshot) rather than full Model, so
+  they use `model: None`. Only artifact list tests that work with full Model
+  instances use `model: Some(...)`.
 
-- **Three-section snapshot format**: Display impl outputs State first (view-specific), then Model (if present), then Rendered. This creates a clear visual flow showing how inputs transform into Model state and then into view output.
+- **Three-section snapshot format**: Display impl outputs State first
+  (view-specific), then Model (if present), then Rendered. This creates a clear
+  visual flow showing how inputs transform into Model state and then into view
+  output.
 
-- **Artifact list tests get Model capture**: Tests that construct and render from full Model instances (test_artifact_list_*, test_multiple_machines_*, test_shared_artifact_*) capture complete Model state. Tests that render from screen-specific state keep their existing comprehensive snapshot structs.
+- **Artifact list tests get Model capture**: Tests that construct and render
+  from full Model instances (test_artifact_list__, test_multiple_machines__,
+  test_shared_artifact_*) capture complete Model state. Tests that render from
+  screen-specific state keep their existing comprehensive snapshot structs.
 
 ## Deviations from Plan
 
@@ -98,9 +121,13 @@ None - plan executed exactly as written.
 
 ## Issues Encountered
 
-- **Duplicate model fields**: Initial sed command added `model: None` to all ViewTestResult instantiations, including those that already had `model: Some(...)`. Fixed with additional sed command to remove duplicates.
+- **Duplicate model fields**: Initial sed command added `model: None` to all
+  ViewTestResult instantiations, including those that already had
+  `model: Some(...)`. Fixed with additional sed command to remove duplicates.
 
-- **Header text difference**: Snapshot diffs showed "Tab: l" vs "Enter:" in header - this is an unrelated UI change from previous work, not affecting the ModelState capture implementation.
+- **Header text difference**: Snapshot diffs showed "Tab: l" vs "Enter:" in
+  header - this is an unrelated UI change from previous work, not affecting the
+  ModelState capture implementation.
 
 ## User Setup Required
 
@@ -111,7 +138,8 @@ None - no external service configuration required.
 - Dual assertion pattern established and working
 - All artifact list view tests now document complete Model state
 - Snapshots show the full Elm Architecture chain: inputs → Model → View
-- View tests are now self-documenting - developers can trace how Model states produce different views
+- View tests are now self-documenting - developers can trace how Model states
+  produce different views
 - Phase 17 complete: Model-based testing with full state capture
 
 ---

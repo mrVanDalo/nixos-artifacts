@@ -1,16 +1,26 @@
 # Phase 11: Error Handling Improvements - Research
 
-**Researched:** 2026-02-18
-**Domain:** Rust TUI Error Handling (ratatui + crossterm)
-**Confidence:** HIGH
+**Researched:** 2026-02-18 **Domain:** Rust TUI Error Handling (ratatui +
+crossterm) **Confidence:** HIGH
 
 ## Summary
 
-Phase 11 focuses on ensuring TUI errors display properly to stderr without polluting normal output, with comprehensive panic handling and terminal restoration. This research covers five key requirements: initialization error handling, terminal restoration on failure, runtime error display within the TUI, panic handlers that restore terminal state, and log file output isolation.
+Phase 11 focuses on ensuring TUI errors display properly to stderr without
+polluting normal output, with comprehensive panic handling and terminal
+restoration. This research covers five key requirements: initialization error
+handling, terminal restoration on failure, runtime error display within the TUI,
+panic handlers that restore terminal state, and log file output isolation.
 
-The codebase already has foundational pieces in place: a `TerminalGuard` struct with RAII-based restoration, an `install_panic_hook()` function, and a logging infrastructure with feature-gated macros (`error!`, `warn!`, `info!`, `debug!`). The Elm Architecture pattern used in the TUI separates concerns well, with errors displayed in the Model's `error` field.
+The codebase already has foundational pieces in place: a `TerminalGuard` struct
+with RAII-based restoration, an `install_panic_hook()` function, and a logging
+infrastructure with feature-gated macros (`error!`, `warn!`, `info!`, `debug!`).
+The Elm Architecture pattern used in the TUI separates concerns well, with
+errors displayed in the Model's `error` field.
 
-**Primary recommendation:** Implement a two-phase error handling strategy: pre-terminal errors go directly to stderr, while post-terminal errors are displayed in-TUI with a robust panic handler that always restores terminal state before aborting.
+**Primary recommendation:** Implement a two-phase error handling strategy:
+pre-terminal errors go directly to stderr, while post-terminal errors are
+displayed in-TUI with a robust panic handler that always restores terminal state
+before aborting.
 
 ---
 
@@ -32,11 +42,13 @@ The codebase already has foundational pieces in place: a `TerminalGuard` struct 
 3. **Logging System** (`src/logging.rs`)
    - Feature-gated macros: `error!`, `warn!`, `info!`, `debug!`
    - Writes to file when `--log-file` provided
-   - **Gap:** No mechanism to suppress non-error output to stdout/stderr when logging
+   - **Gap:** No mechanism to suppress non-error output to stdout/stderr when
+     logging
 
 4. **CLI Entry Point** (`src/bin/artifacts.rs`)
    - Prints errors to stderr with `eprintln!` when logging feature disabled
-   - **Gap:** Initialization errors (before TUI starts) may not be properly directed
+   - **Gap:** Initialization errors (before TUI starts) may not be properly
+     directed
 
 5. **TUI Runtime** (`src/tui/runtime.rs`)
    - Uses `model.error` field for runtime errors
@@ -48,46 +60,58 @@ The codebase already has foundational pieces in place: a `TerminalGuard` struct 
 ## Requirements Breakdown
 
 ### ERR-01: TUI Initialization Failures
-**Current:** Initialization happens in `run_tui()` after terminal setup  
+
+**Current:** Initialization happens in `run_tui()` after terminal setup\
 **Gap:** Errors before terminal setup should print to stderr and exit non-zero
 
 **Required Changes:**
-1. Move configuration loading (backend.toml, flake.nix parsing) BEFORE terminal initialization
+
+1. Move configuration loading (backend.toml, flake.nix parsing) BEFORE terminal
+   initialization
 2. Print clear error messages to stderr using `eprintln!`
 3. Exit with code 1 on failure
 
 ### ERR-02: Terminal Restoration Failures
-**Current:** `TerminalGuard::restore()` returns `Result<()>`  
+
+**Current:** `TerminalGuard::restore()` returns `Result<()>`\
 **Gap:** Errors in restoration are propagated but may not be printed to stderr
 
 **Required Changes:**
+
 1. In `restore()` error paths, print explicit error to stderr before returning
-2. In `Drop` implementation, attempt restoration but ignore errors (can't propagate from Drop)
+2. In `Drop` implementation, attempt restoration but ignore errors (can't
+   propagate from Drop)
 3. In panic handler, print restoration failure to stderr if it occurs
 
 ### ERR-03: Runtime Errors in TUI
-**Current:** Errors stored in `model.error` and displayed in TUI  
+
+**Current:** Errors stored in `model.error` and displayed in TUI\
 **Gap:** No guarantee errors don't leak to stdout/stderr from background tasks
 
 **Required Changes:**
+
 1. Audit background task (`src/tui/background.rs`) for any stdout/stderr writes
 2. Ensure all generator/serialization output is captured and stored, not printed
 3. Verify `println!`/`eprintln!` are not used in TUI code paths
 
 ### ERR-04: Panic Handler Improvements
-**Current:** Basic panic hook that restores terminal  
+
+**Current:** Basic panic hook that restores terminal\
 **Gap:** Does not print to stderr before calling original hook
 
 **Required Changes:**
+
 1. Print panic message to stderr explicitly in hook
 2. Ensure terminal restoration happens even if original hook panics
 3. Consider using `std::panic::resume_unwind` or proper abort after restoration
 
 ### UI-03: Log File Output Isolation
-**Current:** Logging macros write to file but don't suppress other output  
+
+**Current:** Logging macros write to file but don't suppress other output\
 **Gap:** Normal output (e.g., "No artifacts found") still goes to stdout
 
 **Required Changes:**
+
 1. Audit all `println!` calls in TUI code paths
 2. When `--log-file` is provided:
    - Redirect normal output to log file only
@@ -100,7 +124,7 @@ The codebase already has foundational pieces in place: a `TerminalGuard` struct 
 
 ### Pattern 1: Pre-Terminal Error Handling
 
-**When to use:** Before `TerminalGuard::new()` is called  
+**When to use:** Before `TerminalGuard::new()` is called\
 **Pattern:**
 
 ```rust
@@ -134,7 +158,7 @@ async fn run_tui(...) -> Result<()> {
 
 ### Pattern 2: Enhanced Panic Hook
 
-**When to use:** Always installed before terminal setup  
+**When to use:** Always installed before terminal setup\
 **Pattern:**
 
 ```rust
@@ -166,7 +190,7 @@ pub fn install_panic_hook() {
 
 ### Pattern 3: Terminal Restoration with Error Reporting
 
-**When to use:** In `TerminalGuard::restore()` and `Drop`  
+**When to use:** In `TerminalGuard::restore()` and `Drop`\
 **Pattern:**
 
 ```rust
@@ -201,7 +225,7 @@ impl Drop for TerminalGuard {
 
 ### Pattern 4: Output Suppression with --log-file
 
-**When to use:** When `--log-file` CLI argument is provided  
+**When to use:** When `--log-file` CLI argument is provided\
 **Pattern:**
 
 ```rust
@@ -235,13 +259,13 @@ match result {
 
 ## Don't Hand-Roll
 
-| Problem | Don't Build | Use Instead | Why |
-|---------|-------------|-------------|-----|
-| Panic handling | Custom unwind catcher | `std::panic::set_hook` | Standard Rust mechanism, integrates with test framework |
-| Terminal restoration | Manual cleanup in every error path | RAII `Drop` trait | Guarantees cleanup even with early returns |
-| Error formatting | Custom error display | `anyhow::Context` + `Display` | Proper error chains, source location |
-| Log level filtering | Manual if-checks | `log` crate filters | Standard, configurable at runtime |
-| Stdout suppression | `std::io::set_output_capture` | Conditional compilation or wrapping | `set_output_capture` is internal/unstable |
+| Problem              | Don't Build                        | Use Instead                         | Why                                                     |
+| -------------------- | ---------------------------------- | ----------------------------------- | ------------------------------------------------------- |
+| Panic handling       | Custom unwind catcher              | `std::panic::set_hook`              | Standard Rust mechanism, integrates with test framework |
+| Terminal restoration | Manual cleanup in every error path | RAII `Drop` trait                   | Guarantees cleanup even with early returns              |
+| Error formatting     | Custom error display               | `anyhow::Context` + `Display`       | Proper error chains, source location                    |
+| Log level filtering  | Manual if-checks                   | `log` crate filters                 | Standard, configurable at runtime                       |
+| Stdout suppression   | `std::io::set_output_capture`      | Conditional compilation or wrapping | `set_output_capture` is internal/unstable               |
 
 ---
 
@@ -249,45 +273,58 @@ match result {
 
 ### Pitfall 1: Terminal Restoration in Drop Swallows Errors
 
-**What goes wrong:** Errors during `Drop::drop()` cannot be propagated, making terminal restoration failures invisible  
-**Why it happens:** `Drop::drop()` returns `()`, not `Result`  
-**How to avoid:** 
+**What goes wrong:** Errors during `Drop::drop()` cannot be propagated, making
+terminal restoration failures invisible\
+**Why it happens:** `Drop::drop()` returns `()`, not `Result`\
+**How to avoid:**
+
 - Make `restore()` explicit and call it before letting guard drop
 - In panic hook, call `restore_terminal()` explicitly before abort
 - Accept that Drop-based restoration is best-effort only
 
 ### Pitfall 2: Panic Hook Double Panic
 
-**What goes wrong:** If original panic hook panics, program aborts without proper cleanup  
-**Why it happens:** Rust aborts on double panic  
+**What goes wrong:** If original panic hook panics, program aborts without
+proper cleanup\
+**Why it happens:** Rust aborts on double panic\
 **How to avoid:**
+
 - Use `std::panic::take_hook()` to get original hook
-- Wrap original hook call in `catch_unwind` if possible (may not work in panic context)
+- Wrap original hook call in `catch_unwind` if possible (may not work in panic
+  context)
 - Ensure `restore_terminal()` is infallible
 
 ### Pitfall 3: Alternate Screen Hides Stderr
 
-**What goes wrong:** When alternate screen is active, stderr output may not be visible to user  
-**Why it happens:** Alternate screen is a separate buffer; stderr goes to main screen  
+**What goes wrong:** When alternate screen is active, stderr output may not be
+visible to user\
+**Why it happens:** Alternate screen is a separate buffer; stderr goes to main
+screen\
 **How to avoid:**
-- Never write to stderr while in alternate screen (except in panic handler after restoration)
+
+- Never write to stderr while in alternate screen (except in panic handler after
+  restoration)
 - All runtime errors must go through TUI model.error field
 - Only initialization errors and panics should use stderr
 
 ### Pitfall 4: Background Task Output Leaks
 
-**What goes wrong:** Generator/serialization scripts may write to stdout/stderr directly  
-**Why it happens:** External scripts don't know about TUI  
+**What goes wrong:** Generator/serialization scripts may write to stdout/stderr
+directly\
+**Why it happens:** External scripts don't know about TUI\
 **How to avoid:**
+
 - Capture stdout/stderr when spawning child processes
 - Use `std::process::Command::output()` instead of `status()` or `spawn()`
 - Store captured output in model for display within TUI
 
 ### Pitfall 5: Initialization Order Dependencies
 
-**What goes wrong:** Moving config loading before terminal setup may break error reporting that relied on terminal  
-**Why it happens:** Some error formatting may assume TUI context  
+**What goes wrong:** Moving config loading before terminal setup may break error
+reporting that relied on terminal\
+**Why it happens:** Some error formatting may assume TUI context\
 **How to avoid:**
+
 - Keep error messages simple (strings only) during init phase
 - Avoid complex error rendering before terminal is ready
 - Use `anyhow` for error context, `eprintln!` for display
@@ -547,10 +584,12 @@ pub fn render(f: &mut Frame, model: &Model) {
 ### Changes Required by File
 
 **`src/bin/artifacts.rs`**
+
 - **Current:** Basic error printing to stderr
 - **Changes:** None needed - already handles top-level errors correctly
 
 **`src/cli/mod.rs`**
+
 - **Current:** `run_tui()` loads configs, initializes terminal, runs TUI
 - **Changes:**
   1. Add explicit error context to config loading
@@ -559,6 +598,7 @@ pub fn render(f: &mut Frame, model: &Model) {
   4. Ensure `install_panic_hook()` called before `TerminalGuard::new()`
 
 **`src/tui/terminal.rs`**
+
 - **Current:** `TerminalGuard` with RAII, basic panic hook
 - **Changes:**
   1. Enhance `install_panic_hook()` to print to stderr
@@ -566,13 +606,16 @@ pub fn render(f: &mut Frame, model: &Model) {
   3. Ensure `restore_terminal()` is infallible (used in panic hook)
 
 **`src/tui/runtime.rs`**
+
 - **Current:** Runtime loop with error handling
 - **Changes:**
   1. Verify no `println!`/`eprintln!` in TUI code paths
   2. Ensure all errors go through `model.error`
 
 **`src/tui/background.rs`** (if exists)
-- **Audit:** Ensure child process output is captured, not leaked to stdout/stderr
+
+- **Audit:** Ensure child process output is captured, not leaked to
+  stdout/stderr
 
 ---
 
@@ -633,13 +676,16 @@ pub fn render(f: &mut Frame, model: &Model) {
 
 2. **Error Display in TUI**
    - What: How runtime errors are displayed
-   - Unclear: Whether all errors go through `model.error` or some use `eprintln!`
-   - Recommendation: Search codebase for `eprintln!` and `println!` in `src/tui/`
+   - Unclear: Whether all errors go through `model.error` or some use
+     `eprintln!`
+   - Recommendation: Search codebase for `eprintln!` and `println!` in
+     `src/tui/`
 
 3. **Exit Codes**
    - What: Exit code behavior on different failure modes
    - Unclear: Whether partial failures (some artifacts succeed) exit non-zero
-   - Recommendation: Define clear exit code strategy (0 = all success, 1 = any failure)
+   - Recommendation: Define clear exit code strategy (0 = all success, 1 = any
+     failure)
 
 ---
 
@@ -647,7 +693,8 @@ pub fn render(f: &mut Frame, model: &Model) {
 
 ### Primary (HIGH confidence)
 
-- **Codebase analysis** - Reviewed `src/tui/terminal.rs`, `src/cli/mod.rs`, `src/bin/artifacts.rs`, `src/logging.rs`, `src/tui/runtime.rs`
+- **Codebase analysis** - Reviewed `src/tui/terminal.rs`, `src/cli/mod.rs`,
+  `src/bin/artifacts.rs`, `src/logging.rs`, `src/tui/runtime.rs`
 - **Ratatui documentation** - RAII patterns for terminal management
 - **Crossterm documentation** - Raw mode and alternate screen handling
 
@@ -666,5 +713,5 @@ pub fn render(f: &mut Frame, model: &Model) {
 - Architecture: HIGH - Standard Rust error handling patterns
 - Pitfalls: MEDIUM - Inferred from code structure, limited testing
 
-**Research date:** 2026-02-18
-**Valid until:** 2026-03-18 (30 days for stable patterns)
+**Research date:** 2026-02-18 **Valid until:** 2026-03-18 (30 days for stable
+patterns)

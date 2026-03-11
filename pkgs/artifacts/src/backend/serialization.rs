@@ -32,14 +32,14 @@
 use crate::app::model::TargetType;
 use crate::backend::helpers::{resolve_path, validate_backend_script};
 use crate::backend::output_capture::{
-    run_with_captured_output_and_timeout, CapturedOutput, ScriptError,
+    CapturedOutput, ScriptError, run_with_captured_output_and_timeout,
 };
 use crate::backend::tempfile::TempFile;
 use crate::config::backend::{BackendConfiguration, BackendEntry};
 use crate::config::make::{ArtifactDef, MakeConfiguration};
 use crate::log_debug;
-use anyhow::{bail, Context, Result};
-use serde_json::{json, to_string_pretty, Map, Value};
+use anyhow::{Context, Result, bail};
+use serde_json::{Map, Value, json, to_string_pretty};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};

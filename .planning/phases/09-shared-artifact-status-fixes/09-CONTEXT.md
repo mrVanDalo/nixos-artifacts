@@ -5,7 +5,10 @@
 <domain>
 ## Phase Boundary
 
-Fix TUI status icons for shared artifacts to show correct aggregation state (needs-generation/up-to-date/failed) instead of generic "pending" status. Handle error case when shared artifact definitions have mismatched file names across machines.
+Fix TUI status icons for shared artifacts to show correct aggregation state
+(needs-generation/up-to-date/failed) instead of generic "pending" status. Handle
+error case when shared artifact definitions have mismatched file names across
+machines.
 
 </domain>
 
@@ -23,8 +26,10 @@ Fix TUI status icons for shared artifacts to show correct aggregation state (nee
 
 - Status comes directly from `shared_check_serialization` script result
 - No per-machine aggregation - the script handles all machines atomically
-- Exit code determines status: success = up-to-date, specific code = needs-generation, failure = failed
-- Status transitions: pending → final state after check completes, never returns to pending
+- Exit code determines status: success = up-to-date, specific code =
+  needs-generation, failure = failed
+- Status transitions: pending → final state after check completes, never returns
+  to pending
 
 ### Error State (Mismatched File Definitions)
 
@@ -39,14 +44,18 @@ Fix TUI status icons for shared artifacts to show correct aggregation state (nee
 
 - Shared badge: Keep current "shared" indicator (as implemented)
 - List ordering: Mixed with single artifacts (not grouped separately)
-- Selection: When selected, show generator selection dialog (unless in error state)
-- Detail pane: Error messages appear in right-side detail pane when error-state artifact selected
+- Selection: When selected, show generator selection dialog (unless in error
+  state)
+- Detail pane: Error messages appear in right-side detail pane when error-state
+  artifact selected
 
 ### Generator Selection Behavior
 
-- Skip dialog: When only one unique generator (by Nix store path) exists across all machines
+- Skip dialog: When only one unique generator (by Nix store path) exists across
+  all machines
 - Show dialog: When multiple unique generators exist
-- Error state override: Never show generator dialog when artifact is in error state
+- Error state override: Never show generator dialog when artifact is in error
+  state
 
 ### Claude's Discretion
 
@@ -60,9 +69,12 @@ Fix TUI status icons for shared artifacts to show correct aggregation state (nee
 <specifics>
 ## Specific Ideas
 
-- The shared artifact status must match the actual backend state after `shared_check_serialization` runs
-- File name definitions must be identical across all machine references to a shared artifact
-- Generator scripts can differ (that's why selection dialog exists), but file outputs must match
+- The shared artifact status must match the actual backend state after
+  `shared_check_serialization` runs
+- File name definitions must be identical across all machine references to a
+  shared artifact
+- Generator scripts can differ (that's why selection dialog exists), but file
+  outputs must match
 
 </specifics>
 

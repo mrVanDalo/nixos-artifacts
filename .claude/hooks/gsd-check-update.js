@@ -2,19 +2,29 @@
 // Check for GSD updates in background, write result to cache
 // Called by SessionStart hook - runs once per session
 
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
-const { spawn } = require('child_process');
+const fs = require("fs");
+const path = require("path");
+const os = require("os");
+const { spawn } = require("child_process");
 
 const homeDir = os.homedir();
 const cwd = process.cwd();
-const cacheDir = path.join(homeDir, '.claude', 'cache');
-const cacheFile = path.join(cacheDir, 'gsd-update-check.json');
+const cacheDir = path.join(homeDir, ".claude", "cache");
+const cacheFile = path.join(cacheDir, "gsd-update-check.json");
 
 // VERSION file locations (check project first, then global)
-const projectVersionFile = path.join(cwd, '.claude', 'get-shit-done', 'VERSION');
-const globalVersionFile = path.join(homeDir, '.claude', 'get-shit-done', 'VERSION');
+const projectVersionFile = path.join(
+  cwd,
+  ".claude",
+  "get-shit-done",
+  "VERSION",
+);
+const globalVersionFile = path.join(
+  homeDir,
+  ".claude",
+  "get-shit-done",
+  "VERSION",
+);
 
 // Ensure cache directory exists
 if (!fs.existsSync(cacheDir)) {
@@ -22,7 +32,9 @@ if (!fs.existsSync(cacheDir)) {
 }
 
 // Run check in background (spawn background process, windowsHide prevents console flash)
-const child = spawn(process.execPath, ['-e', `
+const child = spawn(process.execPath, [
+  "-e",
+  `
   const fs = require('fs');
   const { execSync } = require('child_process');
 
@@ -53,10 +65,11 @@ const child = spawn(process.execPath, ['-e', `
   };
 
   fs.writeFileSync(cacheFile, JSON.stringify(result));
-`], {
-  stdio: 'ignore',
+`,
+], {
+  stdio: "ignore",
   windowsHide: true,
-  detached: true  // Required on Windows for proper process detachment
+  detached: true, // Required on Windows for proper process detachment
 });
 
 child.unref();

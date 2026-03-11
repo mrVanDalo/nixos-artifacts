@@ -1,42 +1,35 @@
 # Architecture Research Template
 
-Template for `.planning/research/ARCHITECTURE.md` — system structure patterns for the project domain.
+Template for `.planning/research/ARCHITECTURE.md` — system structure patterns
+for the project domain.
 
 <template>
 
 ```markdown
 # Architecture Research
 
-**Domain:** [domain type]
-**Researched:** [date]
-**Confidence:** [HIGH/MEDIUM/LOW]
+**Domain:** [domain type] **Researched:** [date] **Confidence:**
+[HIGH/MEDIUM/LOW]
 
 ## Standard Architecture
 
 ### System Overview
-
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        [Layer Name]                          │
-├─────────────────────────────────────────────────────────────┤
-│  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐        │
-│  │ [Comp]  │  │ [Comp]  │  │ [Comp]  │  │ [Comp]  │        │
-│  └────┬────┘  └────┬────┘  └────┬────┘  └────┬────┘        │
-│       │            │            │            │              │
-├───────┴────────────┴────────────┴────────────┴──────────────┤
-│                        [Layer Name]                          │
-├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │                    [Component]                       │    │
-│  └─────────────────────────────────────────────────────┘    │
-├─────────────────────────────────────────────────────────────┤
-│                        [Layer Name]                          │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐                   │
-│  │ [Store]  │  │ [Store]  │  │ [Store]  │                   │
-│  └──────────┘  └──────────┘  └──────────┘                   │
+
+┌─────────────────────────────────────────────────────────────┐ │ [Layer Name] │
+├─────────────────────────────────────────────────────────────┤ │ ┌─────────┐
+┌─────────┐ ┌─────────┐ ┌─────────┐ │ │ │ [Comp] │ │ [Comp] │ │ [Comp] │ │
+[Comp] │ │ │ └────┬────┘ └────┬────┘ └────┬────┘ └────┬────┘ │ │ │ │ │ │ │
+├───────┴────────────┴────────────┴────────────┴──────────────┤ │ [Layer Name] │
+├─────────────────────────────────────────────────────────────┤ │
+┌─────────────────────────────────────────────────────┐ │ │ │ [Component] │ │ │
+└─────────────────────────────────────────────────────┘ │
+├─────────────────────────────────────────────────────────────┤ │ [Layer Name] │
+│ ┌──────────┐ ┌──────────┐ ┌──────────┐ │ │ │ [Store] │ │ [Store] │ │ [Store] │
+│ │ └──────────┘ └──────────┘ └──────────┘ │
 └─────────────────────────────────────────────────────────────┘
-```
 
+```
 ### Component Responsibilities
 
 | Component | Responsibility | Typical Implementation |
@@ -46,19 +39,13 @@ Template for `.planning/research/ARCHITECTURE.md` — system structure patterns 
 | [name] | [what it owns] | [how it's usually built] |
 
 ## Recommended Project Structure
-
-```
-src/
-├── [folder]/           # [purpose]
-│   ├── [subfolder]/    # [purpose]
-│   └── [file].ts       # [purpose]
-├── [folder]/           # [purpose]
-│   ├── [subfolder]/    # [purpose]
-│   └── [file].ts       # [purpose]
-├── [folder]/           # [purpose]
-└── [folder]/           # [purpose]
 ```
 
+src/ ├── [folder]/ # [purpose] │ ├── [subfolder]/ # [purpose] │ └── [file].ts #
+[purpose] ├── [folder]/ # [purpose] │ ├── [subfolder]/ # [purpose] │ └──
+[file].ts # [purpose] ├── [folder]/ # [purpose] └── [folder]/ # [purpose]
+
+````
 ### Structure Rationale
 
 - **[folder]/:** [why organized this way]
@@ -75,24 +62,23 @@ src/
 **Example:**
 ```typescript
 // [Brief code example showing the pattern]
-```
+````
 
 ### Pattern 2: [Pattern Name]
 
-**What:** [description]
-**When to use:** [conditions]
-**Trade-offs:** [pros and cons]
+**What:** [description] **When to use:** [conditions] **Trade-offs:** [pros and
+cons]
 
 **Example:**
+
 ```typescript
 // [Brief code example showing the pattern]
 ```
 
 ### Pattern 3: [Pattern Name]
 
-**What:** [description]
-**When to use:** [conditions]
-**Trade-offs:** [pros and cons]
+**What:** [description] **When to use:** [conditions] **Trade-offs:** [pros and
+cons]
 
 ## Data Flow
 
@@ -121,11 +107,11 @@ src/
 
 ## Scaling Considerations
 
-| Scale | Architecture Adjustments |
-|-------|--------------------------|
-| 0-1k users | [approach — usually monolith is fine] |
-| 1k-100k users | [approach — what to optimize first] |
-| 100k+ users | [approach — when to consider splitting] |
+| Scale         | Architecture Adjustments                |
+| ------------- | --------------------------------------- |
+| 0-1k users    | [approach — usually monolith is fine]   |
+| 1k-100k users | [approach — what to optimize first]     |
+| 100k+ users   | [approach — when to consider splitting] |
 
 ### Scaling Priorities
 
@@ -136,29 +122,27 @@ src/
 
 ### Anti-Pattern 1: [Name]
 
-**What people do:** [the mistake]
-**Why it's wrong:** [the problem it causes]
+**What people do:** [the mistake] **Why it's wrong:** [the problem it causes]
 **Do this instead:** [the correct approach]
 
 ### Anti-Pattern 2: [Name]
 
-**What people do:** [the mistake]
-**Why it's wrong:** [the problem it causes]
+**What people do:** [the mistake] **Why it's wrong:** [the problem it causes]
 **Do this instead:** [the correct approach]
 
 ## Integration Points
 
 ### External Services
 
-| Service | Integration Pattern | Notes |
-|---------|---------------------|-------|
-| [service] | [how to connect] | [gotchas] |
-| [service] | [how to connect] | [gotchas] |
+| Service   | Integration Pattern | Notes     |
+| --------- | ------------------- | --------- |
+| [service] | [how to connect]    | [gotchas] |
+| [service] | [how to connect]    | [gotchas] |
 
 ### Internal Boundaries
 
-| Boundary | Communication | Notes |
-|----------|---------------|-------|
+| Boundary              | Communication       | Notes            |
+| --------------------- | ------------------- | ---------------- |
 | [module A ↔ module B] | [API/events/direct] | [considerations] |
 
 ## Sources
@@ -168,10 +152,10 @@ src/
 - [Case studies]
 
 ---
-*Architecture research for: [domain]*
-*Researched: [date]*
-```
 
+_Architecture research for: [domain]_ _Researched: [date]_
+
+```
 </template>
 
 <guidelines>
@@ -202,3 +186,4 @@ src/
 - Helps prevent common mistakes during implementation
 
 </guidelines>
+```

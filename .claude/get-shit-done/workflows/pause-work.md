@@ -2,9 +2,8 @@
 Create `.continue-here.md` handoff file to preserve complete work state across sessions. Enables seamless resumption with full context restoration.
 </purpose>
 
-<required_reading>
-Read all files referenced by the invoking prompt's execution_context before starting.
-</required_reading>
+<required_reading> Read all files referenced by the invoking prompt's
+execution_context before starting. </required_reading>
 
 <process>
 
@@ -45,29 +44,24 @@ status: in_progress
 last_updated: [timestamp from current-timestamp]
 ---
 
-<current_state>
-[Where exactly are we? Immediate context]
-</current_state>
+<current_state> [Where exactly are we? Immediate context] </current_state>
 
 <completed_work>
 
 - Task 1: [name] - Done
 - Task 2: [name] - Done
-- Task 3: [name] - In progress, [what's done]
-</completed_work>
+- Task 3: [name] - In progress, [what's done] </completed_work>
 
 <remaining_work>
 
 - Task 3: [what's left]
 - Task 4: Not started
-- Task 5: Not started
-</remaining_work>
+- Task 5: Not started </remaining_work>
 
 <decisions_made>
 
 - Decided to use [X] because [reason]
-- Chose [approach] over [alternative] because [reason]
-</decisions_made>
+- Chose [approach] over [alternative] because [reason] </decisions_made>
 
 <blockers>
 - [Blocker 1]: [status/workaround]
@@ -77,17 +71,18 @@ last_updated: [timestamp from current-timestamp]
 [Mental state, what were you thinking, the plan]
 </context>
 
-<next_action>
-Start with: [specific first action when resuming]
-</next_action>
+<next_action> Start with: [specific first action when resuming] </next_action>
 ```
 
 Be specific enough for a fresh Claude to understand immediately.
 
-Use `current-timestamp` for last_updated field. You can use init todos (which provides timestamps) or call directly:
+Use `current-timestamp` for last_updated field. You can use init todos (which
+provides timestamps) or call directly:
+
 ```bash
 timestamp=$(node ./.claude/get-shit-done/bin/gsd-tools.cjs current-timestamp full --raw)
 ```
+
 </step>
 
 <step name="commit">
@@ -120,3 +115,4 @@ To resume: /gsd:resume-work
 - [ ] Committed as WIP
 - [ ] User knows location and how to resume
 </success_criteria>
+```

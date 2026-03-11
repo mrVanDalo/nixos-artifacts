@@ -53,7 +53,9 @@ completed: 2026-02-18
 
 # Phase 13 Plan 02: Enhanced Generator Dialog View Rendering Summary
 
-**Rich generator selection dialog displaying artifact type, description, prompts, generators with selection indicator, and all targets with type prefixes**
+**Rich generator selection dialog displaying artifact type, description,
+prompts, generators with selection indicator, and all targets with type
+prefixes**
 
 ## Performance
 
@@ -65,8 +67,10 @@ completed: 2026-02-18
 
 ## Accomplishments
 
-- Added `prompts: Vec<PromptDef>`, `nixos_targets`, and `home_targets` to SelectGeneratorState
-- Updated state construction in update.rs to populate new fields from SharedArtifactInfo
+- Added `prompts: Vec<PromptDef>`, `nixos_targets`, and `home_targets` to
+  SelectGeneratorState
+- Updated state construction in update.rs to populate new fields from
+  SharedArtifactInfo
 - Rewrote generator selection view with helper functions:
   - `truncate_path()` - Nix store path truncation with middle ellipsis
   - `format_targets_with_prefix()` - Alphabetical sorting with +N more indicator
@@ -80,14 +84,17 @@ completed: 2026-02-18
   5. Generator list with > selection arrow, ellipsis-truncated paths
   6. All targets with nixos:/home: prefixes, alphabetical sort, +N more for >10
   7. Help text at bottom
-- Updated GeneratorSelectionSnapshot with description, prompts, and target fields
+- Updated GeneratorSelectionSnapshot with description, prompts, and target
+  fields
 - Added description field to PromptState for consistency
 
 ## Task Commits
 
-1. **Task 1: Add prompts and targets to SelectGeneratorState** - `dbfacce` (feat)
+1. **Task 1: Add prompts and targets to SelectGeneratorState** - `dbfacce`
+   (feat)
 2. **Task 2: Update state construction in update.rs** - `6ebd027` (feat)
-3. **Tasks 3-4: Add helper functions and rewrite render function** - `889bd95` (feat)
+3. **Tasks 3-4: Add helper functions and rewrite render function** - `889bd95`
+   (feat)
 4. **Fix PromptState and test helpers** - `6f16710` (fix)
 5. **Fix remaining test constructions** - `e7f4817` (fix)
 6. **Update GeneratorSelectionSnapshot with new fields** - `aa8435e` (feat)
@@ -95,17 +102,24 @@ completed: 2026-02-18
 
 ## Files Created/Modified
 
-- `pkgs/artifacts/src/app/model.rs` - Added prompts, nixos_targets, home_targets to SelectGeneratorState; added description to PromptState
-- `pkgs/artifacts/src/app/update.rs` - Updated SelectGeneratorState and PromptState constructions with new fields
-- `pkgs/artifacts/src/tui/views/generator_selection.rs` - Complete rewrite with section-based layout and helper functions
-- `pkgs/artifacts/tests/tui/view_tests.rs` - Updated GeneratorSelectionSnapshot; fixed all test constructions
+- `pkgs/artifacts/src/app/model.rs` - Added prompts, nixos_targets, home_targets
+  to SelectGeneratorState; added description to PromptState
+- `pkgs/artifacts/src/app/update.rs` - Updated SelectGeneratorState and
+  PromptState constructions with new fields
+- `pkgs/artifacts/src/tui/views/generator_selection.rs` - Complete rewrite with
+  section-based layout and helper functions
+- `pkgs/artifacts/tests/tui/view_tests.rs` - Updated GeneratorSelectionSnapshot;
+  fixed all test constructions
 
 ## Decisions Made
 
-- Used `PromptDef` directly from `config::make` - already has exactly the fields needed (name, description), no conversion required
-- Implemented section-based layout with line separators between each section (except optional prompts section)
+- Used `PromptDef` directly from `config::make` - already has exactly the fields
+  needed (name, description), no conversion required
+- Implemented section-based layout with line separators between each section
+  (except optional prompts section)
 - Removed color-coding for type labels (text only) per user design decision
-- Added description field to PromptState for UI consistency even though it's not displayed yet
+- Added description field to PromptState for UI consistency even though it's not
+  displayed yet
 
 ## Deviations from Plan
 
@@ -114,17 +128,22 @@ completed: 2026-02-18
 **1. [Rule 1 - Bug] Fixed broken calculate_visual_index**
 
 - **Found during:** Task 4
-- **Issue:** Original calculate_visual_index was broken for new layout, counting incorrect lines
-- **Fix:** Rewrote calculation to properly account for all sections (type indicator, separators, title, description, prompts, generators, targets, help)
+- **Issue:** Original calculate_visual_index was broken for new layout, counting
+  incorrect lines
+- **Fix:** Rewrote calculation to properly account for all sections (type
+  indicator, separators, title, description, prompts, generators, targets, help)
 - **Files modified:** src/tui/views/generator_selection.rs
-- **Verification:** cargo check passes, visual index correctly positions selection
+- **Verification:** cargo check passes, visual index correctly positions
+  selection
 - **Committed in:** 889bd95
 
 **2. [Rule 3 - Blocking] Fixed lifetime issue with display_path**
 
 - **Found during:** Task 4
-- **Issue:** truncate_path() returned String but was borrowed as &str causing lifetime error
-- **Fix:** Changed Span::styled(&display_path, ...) to Span::styled(display_path.clone(), ...)
+- **Issue:** truncate_path() returned String but was borrowed as &str causing
+  lifetime error
+- **Fix:** Changed Span::styled(&display_path, ...) to
+  Span::styled(display_path.clone(), ...)
 - **Files modified:** src/tui/views/generator_selection.rs
 - **Verification:** cargo check passes
 - **Committed in:** 889bd95
@@ -132,8 +151,10 @@ completed: 2026-02-18
 **3. [Rule 3 - Blocking] Fixed test constructions for new fields**
 
 - **Found during:** Task 5
-- **Issue:** All 7 existing SelectGeneratorState test constructions missing new fields (prompts, nixos_targets, home_targets)
-- **Fix:** Updated all 7 test cases to include new fields with appropriate values
+- **Issue:** All 7 existing SelectGeneratorState test constructions missing new
+  fields (prompts, nixos_targets, home_targets)
+- **Fix:** Updated all 7 test cases to include new fields with appropriate
+  values
 - **Files modified:** tests/tui/view_tests.rs
 - **Verification:** Tests compile
 - **Committed in:** 6f16710
@@ -141,7 +162,8 @@ completed: 2026-02-18
 **4. [Rule 3 - Blocking] Fixed PromptState test constructions**
 
 - **Found during:** Task 5
-- **Issue:** PromptState now has description field, breaking 5 test constructions in view_tests.rs
+- **Issue:** PromptState now has description field, breaking 5 test
+  constructions in view_tests.rs
 - **Fix:** Added description: None to all PromptState test constructions
 - **Files modified:** tests/tui/view_tests.rs
 - **Verification:** Tests compile
@@ -150,19 +172,23 @@ completed: 2026-02-18
 **5. [Rule 1 - Bug] Fixed erroneous description field in GeneratingState tests**
 
 - **Found during:** Task 5
-- **Issue:** Tests had description: None in GeneratingState which doesn't have that field
-- **Fix:** Removed erroneous description field from GeneratingState test constructions
+- **Issue:** Tests had description: None in GeneratingState which doesn't have
+  that field
+- **Fix:** Removed erroneous description field from GeneratingState test
+  constructions
 - **Files modified:** tests/tui/view_tests.rs
 - **Verification:** Tests compile
 - **Committed in:** a943213
 
-**Total deviations:** 5 auto-fixed (2 bugs, 3 blocking)
-**Impact on plan:** All auto-fixes necessary for compilation and correctness. No scope creep.
+**Total deviations:** 5 auto-fixed (2 bugs, 3 blocking) **Impact on plan:** All
+auto-fixes necessary for compilation and correctness. No scope creep.
 
 ## Issues Encountered
 
-- The generator selection view is complex with many sections; calculate_visual_index needed careful recalculation
-- Existing test file had many state constructions that needed updating for new fields
+- The generator selection view is complex with many sections;
+  calculate_visual_index needed careful recalculation
+- Existing test file had many state constructions that needed updating for new
+  fields
 - Adding description to PromptState was a deviation but provides consistency
 
 ## User Setup Required
@@ -184,6 +210,4 @@ None - no external service configuration required.
 
 ---
 
-_Phase: 13-enhanced-generator-dialog_
-_Plan: 02_
-_Completed: 2026-02-18_
+_Phase: 13-enhanced-generator-dialog_ _Plan: 02_ _Completed: 2026-02-18_

@@ -2,9 +2,8 @@
 List all pending todos, allow selection, load full context for the selected todo, and route to appropriate action.
 </purpose>
 
-<required_reading>
-Read all files referenced by the invoking prompt's execution_context before starting.
-</required_reading>
+<required_reading> Read all files referenced by the invoking prompt's
+execution_context before starting. </required_reading>
 
 <process>
 
@@ -18,6 +17,7 @@ INIT=$(node ./.claude/get-shit-done/bin/gsd-tools.cjs init todos)
 Extract from init JSON: `todo_count`, `todos`, `pending_dir`.
 
 If `todo_count` is 0:
+
 ```
 No pending todos.
 
@@ -65,8 +65,8 @@ Format age as relative time from created timestamp.
 <step name="handle_selection">
 Wait for user to reply with a number.
 
-If valid: load selected todo, proceed.
-If invalid: "Invalid selection. Reply with a number (1-[N]) or `q` to exit."
+If valid: load selected todo, proceed. If invalid: "Invalid selection. Reply
+with a number (1-[N]) or `q` to exit."
 </step>
 
 <step name="load_context">
@@ -93,15 +93,17 @@ If `files` field has entries, read and briefly summarize each.
 Check for roadmap (can use init progress or directly check file existence):
 
 If `.planning/ROADMAP.md` exists:
+
 1. Check if todo's area matches an upcoming phase
 2. Check if todo's files overlap with a phase's scope
 3. Note any match for action options
-</step>
+   </step>
 
 <step name="offer_actions">
 **If todo maps to a roadmap phase:**
 
 Use AskUserQuestion:
+
 - header: "Action"
 - question: "This todo relates to Phase [N]: [name]. What would you like to do?"
 - options:
@@ -113,6 +115,7 @@ Use AskUserQuestion:
 **If no roadmap match:**
 
 Use AskUserQuestion:
+
 - header: "Action"
 - question: "What would you like to do with this todo?"
 - options:
@@ -120,7 +123,7 @@ Use AskUserQuestion:
   - "Create a phase" — /gsd:add-phase with this scope
   - "Brainstorm approach" — think through before deciding
   - "Put it back" — return to list
-</step>
+    </step>
 
 <step name="execute_action">
 **Work on it now:**
@@ -129,24 +132,23 @@ mv ".planning/todos/pending/[filename]" ".planning/todos/done/"
 ```
 Update STATE.md todo count. Present problem/solution context. Begin work or ask how to proceed.
 
-**Add to phase plan:**
-Note todo reference in phase planning notes. Keep in pending. Return to list or exit.
+**Add to phase plan:** Note todo reference in phase planning notes. Keep in
+pending. Return to list or exit.
 
-**Create a phase:**
-Display: `/gsd:add-phase [description from todo]`
-Keep in pending. User runs command in fresh context.
+**Create a phase:** Display: `/gsd:add-phase [description from todo]` Keep in
+pending. User runs command in fresh context.
 
-**Brainstorm approach:**
-Keep in pending. Start discussion about problem and approaches.
+**Brainstorm approach:** Keep in pending. Start discussion about problem and
+approaches.
 
-**Put it back:**
-Return to list_todos step.
+**Put it back:** Return to list_todos step.
 </step>
 
 <step name="update_state">
 After any action that changes todo count:
 
-Re-run `init todos` to get updated count, then update STATE.md "### Pending Todos" section if exists.
+Re-run `init todos` to get updated count, then update STATE.md "### Pending
+Todos" section if exists.
 </step>
 
 <step name="git_commit">
@@ -165,6 +167,7 @@ Confirm: "Committed: docs: start work on todo - [title]"
 </process>
 
 <success_criteria>
+
 - [ ] All pending todos listed with title, area, age
 - [ ] Area filter applied if specified
 - [ ] Selected todo's full context loaded
@@ -172,5 +175,4 @@ Confirm: "Committed: docs: start work on todo - [title]"
 - [ ] Appropriate actions offered
 - [ ] Selected action executed
 - [ ] STATE.md updated if todo count changed
-- [ ] Changes committed to git (if todo moved to done/)
-</success_criteria>
+- [ ] Changes committed to git (if todo moved to done/) </success_criteria>
