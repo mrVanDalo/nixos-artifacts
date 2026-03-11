@@ -1489,6 +1489,34 @@ mod model_tests {
         rendered: String,
     }
 
+    impl fmt::Display for StateCapture {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            writeln!(f, "Step {}:", self.step_index)?;
+            writeln!(f, "Message: {}", self.message)?;
+            writeln!(f)?;
+            writeln!(f, "Model:")?;
+            writeln!(f, "{:#?}", self.model_state)?;
+            writeln!(f)?;
+            writeln!(f, "Rendered:")?;
+            write!(f, "{}", self.rendered)
+        }
+    }
+
+    /// Wrapper for Vec<StateCapture> to implement Display
+    struct StateCaptures(Vec<StateCapture>);
+
+    impl fmt::Display for StateCaptures {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            for (i, capture) in self.0.iter().enumerate() {
+                if i > 0 {
+                    writeln!(f)?;
+                }
+                write!(f, "{}", capture)?;
+            }
+            Ok(())
+        }
+    }
+
     /// Run an event sequence and capture Model state and rendered view at each step
     fn run_event_sequence(mut model: Model, events: Vec<Message>) -> Vec<StateCapture> {
         let backend = TestBackend::new(80, 24);
@@ -1564,7 +1592,7 @@ mod model_tests {
 
         let captures = run_event_sequence(model, events);
 
-        insta::assert_debug_snapshot!(captures);
+        assert_snapshot!(StateCaptures(captures).to_string());
     }
 
     #[test]
@@ -1576,7 +1604,7 @@ mod model_tests {
 
         let captures = run_event_sequence(model, events);
 
-        insta::assert_debug_snapshot!(captures);
+        assert_snapshot!(StateCaptures(captures).to_string());
     }
 
     #[test]
@@ -1590,7 +1618,7 @@ mod model_tests {
 
         let captures = run_event_sequence(model, events);
 
-        insta::assert_debug_snapshot!(captures);
+        assert_snapshot!(StateCaptures(captures).to_string());
     }
 
     #[test]
@@ -1640,7 +1668,7 @@ mod model_tests {
 
         let captures = run_event_sequence(model, events);
 
-        insta::assert_debug_snapshot!(captures);
+        assert_snapshot!(StateCaptures(captures).to_string());
     }
 
     #[test]
@@ -1655,7 +1683,7 @@ mod model_tests {
 
         let captures = run_event_sequence(model, events);
 
-        insta::assert_debug_snapshot!(captures);
+        assert_snapshot!(StateCaptures(captures).to_string());
     }
 
     #[test]
@@ -1673,7 +1701,7 @@ mod model_tests {
 
         let captures = run_event_sequence(model, events);
 
-        insta::assert_debug_snapshot!(captures);
+        assert_snapshot!(StateCaptures(captures).to_string());
     }
 
     #[test]
@@ -1688,7 +1716,7 @@ mod model_tests {
 
         let captures = run_event_sequence(model, events);
 
-        insta::assert_debug_snapshot!(captures);
+        assert_snapshot!(StateCaptures(captures).to_string());
     }
 
     #[test]
@@ -1703,7 +1731,7 @@ mod model_tests {
 
         let captures = run_event_sequence(model, events);
 
-        insta::assert_debug_snapshot!(captures);
+        assert_snapshot!(StateCaptures(captures).to_string());
     }
 
     #[test]
@@ -1718,6 +1746,6 @@ mod model_tests {
         let events = vec![];
         let captures = run_event_sequence(model, events);
 
-        insta::assert_debug_snapshot!(captures);
+        assert_snapshot!(StateCaptures(captures).to_string());
     }
 }

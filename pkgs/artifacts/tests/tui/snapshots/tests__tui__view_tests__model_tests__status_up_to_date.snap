@@ -1,26 +1,49 @@
 ---
 source: tests/tui/view_tests.rs
-expression: captures
+expression: StateCaptures(captures).to_string()
 ---
-[
-    StateCapture {
-        step_index: 0,
-        message: "CheckSerializationResult { artifact_index: 0, status: UpToDate, result: Ok(ScriptOutput { stdout_lines: [], stderr_lines: [] }) }",
-        model_state: ModelState {
-            screen: "ArtifactList",
-            selected_index: 0,
-            selected_log_step: "Check",
-            artifacts: [
-                ArtifactState {
-                    target: "machine-1",
-                    name: "artifact-1",
-                    status: "Pending",
-                    target_type: "nixos",
-                },
-            ],
-            error: None,
-            warnings_count: 0,
+Step 0:
+Message: CheckSerializationResult { artifact_index: 0, status: UpToDate, result: Ok(ScriptOutput { stdout_lines: [], stderr_lines: [] }) }
+
+Model:
+ModelState {
+    screen: "ArtifactList",
+    selected_index: 0,
+    selected_log_step: "Check",
+    artifacts: [
+        ArtifactState {
+            target: "machine-1",
+            name: "artifact-1",
+            status: "Pending",
+            target_type: "nixos",
         },
-        rendered: "\"┌Artifacts (1) - j/k: move, Enter: gen,┐┌Logs: machine-1/artifact-1────────────┐\"\n\"│> ✓ [N] machine-1/artifact-1          ││▼ Check                               │\"\n\"│                                      ││  ✓ Already up to date                │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"└──────────────────────────────────────┘│                                      │\"\n\"○ Pend ◐ Need ✓ OK ✗ Fail               └──────────────────────────────────────┘\"\n",
-    },
-]
+    ],
+    error: None,
+    warnings_count: 0,
+}
+
+Rendered:
+"┌Artifacts (1) - j/k: move, Enter: gen,┐┌Logs: machine-1/artifact-1────────────┐"
+"│> ✓ [N] machine-1/artifact-1          ││▼ Check                               │"
+"│                                      ││  ✓ Already up to date                │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"└──────────────────────────────────────┘│                                      │"
+"○ Pend ◐ Need ✓ OK ✗ Fail               └──────────────────────────────────────┘"

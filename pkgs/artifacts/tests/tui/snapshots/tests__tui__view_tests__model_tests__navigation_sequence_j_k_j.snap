@@ -1,102 +1,177 @@
 ---
 source: tests/tui/view_tests.rs
-expression: captures
+expression: StateCaptures(captures).to_string()
 ---
-[
-    StateCapture {
-        step_index: 0,
-        message: "Key(KeyEvent { code: Char('j'), modifiers: KeyModifiers(0x0) })",
-        model_state: ModelState {
-            screen: "ArtifactList",
-            selected_index: 0,
-            selected_log_step: "Check",
-            artifacts: [
-                ArtifactState {
-                    target: "machine-one",
-                    name: "ssh-key",
-                    status: "Pending",
-                    target_type: "nixos",
-                },
-                ArtifactState {
-                    target: "machine-two",
-                    name: "api-token",
-                    status: "UpToDate",
-                    target_type: "nixos",
-                },
-                ArtifactState {
-                    target: "user@host",
-                    name: "gpg-key",
-                    status: "NeedsGeneration",
-                    target_type: "homemanager",
-                },
-            ],
-            error: None,
-            warnings_count: 0,
+Step 0:
+Message: Key(KeyEvent { code: Char('j'), modifiers: KeyModifiers(0x0) })
+
+Model:
+ModelState {
+    screen: "ArtifactList",
+    selected_index: 0,
+    selected_log_step: "Check",
+    artifacts: [
+        ArtifactState {
+            target: "machine-one",
+            name: "ssh-key",
+            status: "Pending",
+            target_type: "nixos",
         },
-        rendered: "\"┌Artifacts (3) - j/k: move, Enter: gen,┐┌Logs: machine-two/api-token───────────┐\"\n\"│  ○ [N] machine-one/ssh-key           ││No logs yet. Generate this artifact to│\"\n\"│> ✓ [N] machine-two/api-token         ││see output.                           │\"\n\"│  ◐ [H] user@host/gpg-key             ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"└──────────────────────────────────────┘│                                      │\"\n\"○ Pend ◐ Need ✓ OK ✗ Fail               └──────────────────────────────────────┘\"\n",
-    },
-    StateCapture {
-        step_index: 1,
-        message: "Key(KeyEvent { code: Char('j'), modifiers: KeyModifiers(0x0) })",
-        model_state: ModelState {
-            screen: "ArtifactList",
-            selected_index: 1,
-            selected_log_step: "Check",
-            artifacts: [
-                ArtifactState {
-                    target: "machine-one",
-                    name: "ssh-key",
-                    status: "Pending",
-                    target_type: "nixos",
-                },
-                ArtifactState {
-                    target: "machine-two",
-                    name: "api-token",
-                    status: "UpToDate",
-                    target_type: "nixos",
-                },
-                ArtifactState {
-                    target: "user@host",
-                    name: "gpg-key",
-                    status: "NeedsGeneration",
-                    target_type: "homemanager",
-                },
-            ],
-            error: None,
-            warnings_count: 0,
+        ArtifactState {
+            target: "machine-two",
+            name: "api-token",
+            status: "UpToDate",
+            target_type: "nixos",
         },
-        rendered: "\"┌Artifacts (3) - j/k: move, Enter: gen,┐┌Logs: user@host/gpg-key───────────────┐\"\n\"│  ○ [N] machine-one/ssh-key           ││No logs yet. Generate this artifact to│\"\n\"│  ✓ [N] machine-two/api-token         ││see output.                           │\"\n\"│> ◐ [H] user@host/gpg-key             ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"└──────────────────────────────────────┘│                                      │\"\n\"○ Pend ◐ Need ✓ OK ✗ Fail               └──────────────────────────────────────┘\"\n",
-    },
-    StateCapture {
-        step_index: 2,
-        message: "Key(KeyEvent { code: Char('k'), modifiers: KeyModifiers(0x0) })",
-        model_state: ModelState {
-            screen: "ArtifactList",
-            selected_index: 2,
-            selected_log_step: "Check",
-            artifacts: [
-                ArtifactState {
-                    target: "machine-one",
-                    name: "ssh-key",
-                    status: "Pending",
-                    target_type: "nixos",
-                },
-                ArtifactState {
-                    target: "machine-two",
-                    name: "api-token",
-                    status: "UpToDate",
-                    target_type: "nixos",
-                },
-                ArtifactState {
-                    target: "user@host",
-                    name: "gpg-key",
-                    status: "NeedsGeneration",
-                    target_type: "homemanager",
-                },
-            ],
-            error: None,
-            warnings_count: 0,
+        ArtifactState {
+            target: "user@host",
+            name: "gpg-key",
+            status: "NeedsGeneration",
+            target_type: "homemanager",
         },
-        rendered: "\"┌Artifacts (3) - j/k: move, Enter: gen,┐┌Logs: machine-two/api-token───────────┐\"\n\"│  ○ [N] machine-one/ssh-key           ││No logs yet. Generate this artifact to│\"\n\"│> ✓ [N] machine-two/api-token         ││see output.                           │\"\n\"│  ◐ [H] user@host/gpg-key             ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"│                                      ││                                      │\"\n\"└──────────────────────────────────────┘│                                      │\"\n\"○ Pend ◐ Need ✓ OK ✗ Fail               └──────────────────────────────────────┘\"\n",
-    },
-]
+    ],
+    error: None,
+    warnings_count: 0,
+}
+
+Rendered:
+"┌Artifacts (3) - j/k: move, Enter: gen,┐┌Logs: machine-two/api-token───────────┐"
+"│  ○ [N] machine-one/ssh-key           ││No logs yet. Generate this artifact to│"
+"│> ✓ [N] machine-two/api-token         ││see output.                           │"
+"│  ◐ [H] user@host/gpg-key             ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"└──────────────────────────────────────┘│                                      │"
+"○ Pend ◐ Need ✓ OK ✗ Fail               └──────────────────────────────────────┘"
+
+Step 1:
+Message: Key(KeyEvent { code: Char('j'), modifiers: KeyModifiers(0x0) })
+
+Model:
+ModelState {
+    screen: "ArtifactList",
+    selected_index: 1,
+    selected_log_step: "Check",
+    artifacts: [
+        ArtifactState {
+            target: "machine-one",
+            name: "ssh-key",
+            status: "Pending",
+            target_type: "nixos",
+        },
+        ArtifactState {
+            target: "machine-two",
+            name: "api-token",
+            status: "UpToDate",
+            target_type: "nixos",
+        },
+        ArtifactState {
+            target: "user@host",
+            name: "gpg-key",
+            status: "NeedsGeneration",
+            target_type: "homemanager",
+        },
+    ],
+    error: None,
+    warnings_count: 0,
+}
+
+Rendered:
+"┌Artifacts (3) - j/k: move, Enter: gen,┐┌Logs: user@host/gpg-key───────────────┐"
+"│  ○ [N] machine-one/ssh-key           ││No logs yet. Generate this artifact to│"
+"│  ✓ [N] machine-two/api-token         ││see output.                           │"
+"│> ◐ [H] user@host/gpg-key             ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"└──────────────────────────────────────┘│                                      │"
+"○ Pend ◐ Need ✓ OK ✗ Fail               └──────────────────────────────────────┘"
+
+Step 2:
+Message: Key(KeyEvent { code: Char('k'), modifiers: KeyModifiers(0x0) })
+
+Model:
+ModelState {
+    screen: "ArtifactList",
+    selected_index: 2,
+    selected_log_step: "Check",
+    artifacts: [
+        ArtifactState {
+            target: "machine-one",
+            name: "ssh-key",
+            status: "Pending",
+            target_type: "nixos",
+        },
+        ArtifactState {
+            target: "machine-two",
+            name: "api-token",
+            status: "UpToDate",
+            target_type: "nixos",
+        },
+        ArtifactState {
+            target: "user@host",
+            name: "gpg-key",
+            status: "NeedsGeneration",
+            target_type: "homemanager",
+        },
+    ],
+    error: None,
+    warnings_count: 0,
+}
+
+Rendered:
+"┌Artifacts (3) - j/k: move, Enter: gen,┐┌Logs: machine-two/api-token───────────┐"
+"│  ○ [N] machine-one/ssh-key           ││No logs yet. Generate this artifact to│"
+"│> ✓ [N] machine-two/api-token         ││see output.                           │"
+"│  ◐ [H] user@host/gpg-key             ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"│                                      ││                                      │"
+"└──────────────────────────────────────┘│                                      │"
+"○ Pend ◐ Need ✓ OK ✗ Fail               └──────────────────────────────────────┘"
