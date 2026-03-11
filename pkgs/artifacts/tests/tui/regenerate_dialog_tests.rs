@@ -53,9 +53,8 @@ fn make_test_model_with_existing_artifact() -> Model {
             machine: "machine-one".to_string(),
         },
         artifact: make_test_artifact("ssh-key", vec![]),
-        status: ArtifactStatus::NeedsGeneration,
+        status: ArtifactStatus::UpToDate, // EXISTING ARTIFACT - UpToDate means it exists
         step_logs: StepLogs::default(),
-        exists: true, // EXISTING ARTIFACT
     };
 
     Model {
@@ -75,9 +74,8 @@ fn make_test_model_with_new_artifact() -> Model {
             machine: "machine-one".to_string(),
         },
         artifact: make_test_artifact("ssh-key", vec![]),
-        status: ArtifactStatus::NeedsGeneration,
+        status: ArtifactStatus::NeedsGeneration, // NEW ARTIFACT - NeedsGeneration means doesn't exist
         step_logs: StepLogs::default(),
-        exists: false, // NEW ARTIFACT
     };
 
     Model {
@@ -91,7 +89,7 @@ fn make_test_model_with_new_artifact() -> Model {
     }
 }
 
-fn make_shared_entry(exists: bool) -> SharedEntry {
+fn make_shared_entry(status: ArtifactStatus) -> SharedEntry {
     SharedEntry {
         target_type: TargetType::Shared {
             nixos_targets: vec!["machine-one".to_string(), "machine-two".to_string()],
@@ -108,15 +106,14 @@ fn make_shared_entry(exists: bool) -> SharedEntry {
             files: BTreeMap::new(),
             error: None,
         },
-        status: ArtifactStatus::NeedsGeneration,
+        status,
         step_logs: StepLogs::default(),
         selected_generator: None,
-        exists,
     }
 }
 
-fn make_test_model_with_shared_artifact(exists: bool) -> Model {
-    let shared_entry = make_shared_entry(exists);
+fn make_test_model_with_shared_artifact(status: ArtifactStatus) -> Model {
+    let shared_entry = make_shared_entry(status);
 
     Model {
         screen: Screen::ArtifactList,
@@ -456,7 +453,6 @@ fn test_dialog_regenerate_proceeds_to_prompts() {
         artifact: make_test_artifact("ssh-key", vec!["passphrase"]),
         status: ArtifactStatus::NeedsGeneration,
         step_logs: StepLogs::default(),
-        exists: true,
     };
     let model = Model {
         screen: Screen::ConfirmRegenerate(ConfirmRegenerateState {
@@ -485,8 +481,8 @@ fn test_dialog_regenerate_proceeds_to_prompts() {
 
 #[test]
 fn test_shared_artifact_shows_affected_targets() {
-    // Given: Shared artifact with multiple targets (existing)
-    let model = make_test_model_with_shared_artifact(true);
+    // Given: Shared artifact with multiple targets (existing - UpToDate)
+    let model = make_test_model_with_shared_artifact(ArtifactStatus::UpToDate);
 
     // When: User presses Enter on shared artifact
     let (new_model, _effect) = update(model, Message::Key(KeyEvent::enter()));
@@ -514,8 +510,8 @@ fn test_shared_artifact_shows_affected_targets() {
 
 #[test]
 fn test_dialog_skips_for_new_shared_artifact() {
-    // Given: Shared artifact with exists=false
-    let model = make_test_model_with_shared_artifact(false);
+    // Given: Shared artifact with NeedsGeneration status (doesn't exist)
+    let model = make_test_model_with_shared_artifact(ArtifactStatus::NeedsGeneration);
 
     // When: User presses Enter
     let (new_model, _effect) = update(model, Message::Key(KeyEvent::enter()));
@@ -588,41 +584,39 @@ fn test_generating_state_exists_flows_from_entry() {
 #[test]
 fn test_entry_exists_used_for_dialog_decision() {
     // This test verifies the core logic that determines when to show the dialog
-    let entry_with_exists = ArtifactEntry {
+    // exists is derived from status: UpToDate = true, NeedsGeneration = false
+    
+    let entry_up_to_date = ArtifactEntry {
         target_type: TargetType::NixOS {
             machine: "test".to_string(),
         },
         artifact: make_test_artifact("test", vec![]),
-        status: ArtifactStatus::NeedsGeneration,
+        status: ArtifactStatus::UpToDate, // exists=true
         step_logs: StepLogs::default(),
-        exists: true,
     };
 
-    // Logic from update.rs: show dialog if exists=true AND status=NeedsGeneration
-    let should_show_dialog = entry_with_exists.exists
-        && matches!(entry_with_exists.status, ArtifactStatus::NeedsGeneration);
-
+    // The exists_before flag for GeneratingState comes from checking status == UpToDate
+    let exists_from_status = matches!(entry_up_to_date.status, ArtifactStatus::UpToDate);
+    
     assert!(
-        should_show_dialog,
-        "Dialog should be shown when exists=true and status=NeedsGeneration"
+        exists_from_status,
+        "UpToDate status should mean artifact exists"
     );
 
-    let entry_without_exists = ArtifactEntry {
+    let entry_needs_gen = ArtifactEntry {
         target_type: TargetType::NixOS {
             machine: "test".to_string(),
         },
         artifact: make_test_artifact("test", vec![]),
-        status: ArtifactStatus::NeedsGeneration,
+        status: ArtifactStatus::NeedsGeneration, // exists=false
         step_logs: StepLogs::default(),
-        exists: false,
     };
 
-    let should_skip_dialog = !entry_without_exists.exists
-        && matches!(entry_without_exists.status, ArtifactStatus::NeedsGeneration);
+    let not_exists_from_status = matches!(entry_needs_gen.status, ArtifactStatus::UpToDate);
 
     assert!(
-        should_skip_dialog,
-        "Dialog should be skipped when exists=false"
+        !not_exists_from_status,
+        "NeedsGeneration status should mean artifact does not exist"
     );
 }
 
@@ -766,7 +760,6 @@ fn test_dialog_appears_only_for_needs_generation() {
         artifact: make_test_artifact("ssh-key", vec![]),
         status: ArtifactStatus::UpToDate,
         step_logs: StepLogs::default(),
-        exists: true,
     };
 
     let model = Model {
@@ -782,12 +775,11 @@ fn test_dialog_appears_only_for_needs_generation() {
     // When: User presses Enter
     let (new_model, _effect) = update(model, Message::Key(KeyEvent::enter()));
 
-    // Then: No dialog shown (artifact is up to date, doesn't need generation)
-    // Note: This may go to generation or stay on list depending on implementation
-    // The key is that we should NOT see a dialog
+    // Then: Dialog appears for regeneration confirmation when artifact is UpToDate
+    // (Pressing Enter on an UpToDate artifact shows the ConfirmRegenerate dialog)
     assert!(
-        !matches!(new_model.screen, Screen::ConfirmRegenerate(_)),
-        "Dialog should not appear for UpToDate artifacts"
+        matches!(new_model.screen, Screen::ConfirmRegenerate(_)),
+        "Dialog should appear for UpToDate artifacts to confirm regeneration"
     );
 }
 
@@ -814,8 +806,8 @@ fn test_dialog_with_empty_targets() {
 
 #[test]
 fn test_dialog_with_many_targets_truncation() {
-    // Given: Shared artifact with many targets
-    let shared = make_shared_entry(true);
+    // Given: Shared artifact with many targets (existing - UpToDate)
+    let shared = make_shared_entry(ArtifactStatus::UpToDate);
     let model = Model {
         screen: Screen::ArtifactList,
         entries: vec![ListEntry::Shared(shared)],

@@ -277,14 +277,12 @@ fn status_display_with_text(entry: &ListEntry) -> (&'static str, Style, Option<S
         ArtifactStatus::Failed { .. } => ("✗", Style::default().fg(Color::Red)),
     };
 
-    // Add status text for generating state based on exists flag
+    // Note: When an artifact is in Generating state, we're typically showing
+    // the Generating screen, not the list. If we somehow show the list with
+    // Generating status (edge case), default to "Generating..." since we
+    // can't know if it existed before the check ran.
     let status_text = if matches!(status, ArtifactStatus::Generating(_)) {
-        let exists = match entry {
-            ListEntry::Single(single) => single.exists,
-            ListEntry::Shared(shared) => shared.exists,
-        };
-        let verb = if exists { "Regenerating" } else { "Generating" };
-        Some(format!("{}...", verb))
+        Some("Generating...".to_string())
     } else {
         None
     };

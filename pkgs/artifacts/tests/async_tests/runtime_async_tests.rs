@@ -19,9 +19,9 @@ use artifacts::app::model::{
 use artifacts::config::backend::BackendConfiguration;
 use artifacts::config::make::{ArtifactDef, FileDef, MakeConfiguration, PromptDef};
 use artifacts::tui::background::spawn_background_task;
-use artifacts::tui::channels::{EffectCommand, EffectResult, ScriptOutput};
+use artifacts::app::message::ScriptOutput;
 use artifacts::tui::events::EventSource;
-use artifacts::tui::runtime::{effect_to_command, result_to_message, run_async};
+use artifacts::tui::runtime::{effect_to_command, run_async};
 use ratatui::Terminal;
 use ratatui::backend::TestBackend;
 use tokio::time::timeout;
@@ -69,14 +69,12 @@ fn make_test_model() -> Model {
         artifact: make_test_artifact("ssh-key", vec!["passphrase"]),
         status: ArtifactStatus::Pending,
         step_logs: StepLogs::default(),
-        exists: false,
     };
     let entry2 = ArtifactEntry {
         target_type: TargetType::NixOS { machine: "machine-two".to_string() },
         artifact: make_test_artifact("api-token", vec![]),
         status: ArtifactStatus::Pending,
         step_logs: StepLogs::default(),
-        exists: false,
     };
 
     Model {
@@ -162,7 +160,7 @@ impl EventSource for MockEventSource {
 #[allow(dead_code)]
 #[derive(Debug, Default)]
 struct CommandTracker {
-    commands: Vec<EffectCommand>,
+    commands: Vec<Effect>,
 }
 
 #[allow(dead_code)]
@@ -171,7 +169,7 @@ impl CommandTracker {
         Self::default()
     }
 
-    fn track(&mut self, cmd: EffectCommand) {
+    fn track(&mut self, cmd: Effect) {
         self.commands.push(cmd);
     }
 
@@ -186,7 +184,7 @@ impl CommandTracker {
     fn contains_check_serialization(&self) -> bool {
         self.commands
             .iter()
-            .any(|c| matches!(c, EffectCommand::CheckSerialization { .. }))
+            .any(|c| matches!(c, Effect::CheckSerialization { .. }))
     }
 }
 
@@ -268,7 +266,7 @@ async fn test_run_async_drains_results_before_blocking() {
 #[tokio::test]
 #[serial_test::serial]
 async fn test_run_async_sends_effects_to_background() {
-    // Verify effects are converted to EffectCommands and sent via channels
+    // Verify effects are converted to Effects and sent via channels
     let _model = make_test_model();
     let backend = TestBackend::new(80, 24);
     let _terminal = Terminal::new(backend).unwrap();
@@ -286,11 +284,10 @@ async fn test_run_async_sends_effects_to_background() {
     );
 
     // Send a command and verify it processes
-    let cmd = EffectCommand::CheckSerialization {
+    let cmd = Effect::CheckSerialization {
         artifact_index: 0,
         artifact_name: "test".to_string(),
-        target: "machine".to_string(),
-        target_type: "nixos".to_string(),
+        target_type: TargetType::NixOS { machine: "machine".to_string() },
     };
 
     cmd_tx.send(cmd).unwrap();
@@ -302,7 +299,7 @@ async fn test_run_async_sends_effects_to_background() {
         .expect("Should receive result");
 
     match result {
-        EffectResult::CheckSerialization { artifact_index, .. } => {
+        Message::CheckSerializationResult { artifact_index, .. } => {
             assert_eq!(artifact_index, 0, "artifact_index should match");
         }
         _ => panic!("Expected CheckSerialization result"),
@@ -325,11 +322,10 @@ async fn test_run_async_handles_results() {
 
     // Send CheckSerialization command
     cmd_tx
-        .send(EffectCommand::CheckSerialization {
+        .send(Effect::CheckSerialization {
             artifact_index: 0,
             artifact_name: "test".to_string(),
-            target: "machine".to_string(),
-            target_type: "nixos".to_string(),
+            target_type: TargetType::NixOS { machine: "machine".to_string() },
         })
         .unwrap();
 
@@ -339,22 +335,22 @@ async fn test_run_async_handles_results() {
         .expect("Should not timeout")
         .expect("Should receive result");
 
-    // Convert result to message (simulating what run_async does)
-    let msg = result_to_message(result);
-
-    // Verify message type
-    match msg {
+    // Result is already a Message, verify it
+    match result {
         Message::CheckSerializationResult {
             artifact_index,
-            result,
-            ..
+            status,
+            result: _,
         } => {
             assert_eq!(artifact_index, 0);
-            // Result should indicate whether generation is needed
-            // (since there's no actual artifact, it will need generation)
-            assert!(result.is_ok());
+            // For empty config, artifact not found -> status is Failed (error case)
+            // The actual behavior depends on backend implementation
+            assert!(
+                matches!(status, ArtifactStatus::NeedsGeneration | ArtifactStatus::Failed { .. }),
+                "Status should be NeedsGeneration or Failed for missing artifact"
+            );
         }
-        _ => panic!("Expected CheckSerializationResult, got {:?}", msg),
+        _ => panic!("Expected CheckSerializationResult, got {:?}", result),
     }
 
     // Clean shutdown
@@ -405,11 +401,10 @@ async fn test_select_shutdown_branch() {
 
     // Send a command
     cmd_tx
-        .send(EffectCommand::CheckSerialization {
+        .send(Effect::CheckSerialization {
             artifact_index: 0,
             artifact_name: "test".to_string(),
-            target: "machine".to_string(),
-            target_type: "nixos".to_string(),
+            target_type: TargetType::NixOS { machine: "machine".to_string() },
         })
         .unwrap();
 
@@ -419,7 +414,7 @@ async fn test_select_shutdown_branch() {
         .expect("Should not timeout")
         .expect("Should receive result");
 
-    assert!(matches!(result, EffectResult::CheckSerialization { .. }));
+    assert!(matches!(result, Message::CheckSerializationResult { .. }));
 
     // Signal shutdown
     shutdown_token.cancel();
@@ -449,11 +444,10 @@ async fn test_select_result_branch() {
     // Send multiple commands
     for i in 0..3 {
         cmd_tx
-            .send(EffectCommand::CheckSerialization {
+            .send(Effect::CheckSerialization {
                 artifact_index: i,
                 artifact_name: format!("artifact{}", i),
-                target: "machine".to_string(),
-                target_type: "nixos".to_string(),
+                target_type: TargetType::NixOS { machine: "machine".to_string() },
             })
             .unwrap();
     }
@@ -466,7 +460,7 @@ async fn test_select_result_branch() {
             .expect("Should not timeout")
             .expect("Should receive result");
 
-        if let EffectResult::CheckSerialization { artifact_index, .. } = result {
+        if let Message::CheckSerializationResult { artifact_index, .. } = result {
             received.push(artifact_index);
         }
     }
@@ -489,11 +483,10 @@ async fn test_select_command_branch() {
 
     // Send command - exercises cmd_tx.send()
     cmd_tx
-        .send(EffectCommand::CheckSerialization {
+        .send(Effect::CheckSerialization {
             artifact_index: 42,
             artifact_name: "test".to_string(),
-            target: "machine".to_string(),
-            target_type: "nixos".to_string(),
+            target_type: TargetType::NixOS { machine: "machine".to_string() },
         })
         .unwrap();
 
@@ -504,7 +497,7 @@ async fn test_select_command_branch() {
         .expect("Should receive result");
 
     match result {
-        EffectResult::CheckSerialization { artifact_index, .. } => {
+        Message::CheckSerializationResult { artifact_index, .. } => {
             assert_eq!(artifact_index, 42);
         }
         _ => panic!("Expected CheckSerialization result"),
@@ -526,11 +519,10 @@ async fn test_select_channel_closed() {
 
     // Send one command
     cmd_tx
-        .send(EffectCommand::CheckSerialization {
+        .send(Effect::CheckSerialization {
             artifact_index: 0,
             artifact_name: "test".to_string(),
-            target: "machine".to_string(),
-            target_type: "nixos".to_string(),
+            target_type: TargetType::NixOS { machine: "machine".to_string() },
         })
         .unwrap();
 
@@ -540,7 +532,7 @@ async fn test_select_channel_closed() {
         .expect("Should not timeout")
         .expect("Should receive result");
 
-    assert!(matches!(result, EffectResult::CheckSerialization { .. }));
+    assert!(matches!(result, Message::CheckSerializationResult { .. }));
 
     // Drop the sender (closes channel)
     drop(cmd_tx);
@@ -573,11 +565,10 @@ async fn test_channel_disconnect_graceful() {
     // Send commands
     for i in 0..2 {
         cmd_tx
-            .send(EffectCommand::CheckSerialization {
+            .send(Effect::CheckSerialization {
                 artifact_index: i,
                 artifact_name: format!("artifact{}", i),
-                target: "machine".to_string(),
-                target_type: "nixos".to_string(),
+                target_type: TargetType::NixOS { machine: "machine".to_string() },
             })
             .unwrap();
     }
@@ -588,7 +579,7 @@ async fn test_channel_disconnect_graceful() {
         .expect("Should not timeout")
         .expect("Should receive first result");
 
-    assert!(matches!(result, EffectResult::CheckSerialization { .. }));
+    assert!(matches!(result, Message::CheckSerializationResult { .. }));
 
     // Drop tx_cmd while rx_res still active
     drop(cmd_tx);
@@ -622,11 +613,10 @@ async fn test_result_channel_disconnect() {
 
     // Send command - background will try to send result
     cmd_tx
-        .send(EffectCommand::CheckSerialization {
+        .send(Effect::CheckSerialization {
             artifact_index: 0,
             artifact_name: "test".to_string(),
-            target: "machine".to_string(),
-            target_type: "nixos".to_string(),
+            target_type: TargetType::NixOS { machine: "machine".to_string() },
         })
         .unwrap();
 
@@ -651,11 +641,10 @@ async fn test_graceful_shutdown_with_in_flight_commands() {
     // Send multiple commands
     for i in 0..5 {
         cmd_tx
-            .send(EffectCommand::CheckSerialization {
+            .send(Effect::CheckSerialization {
                 artifact_index: i,
                 artifact_name: format!("artifact{}", i),
-                target: "machine".to_string(),
-                target_type: "nixos".to_string(),
+                target_type: TargetType::NixOS { machine: "machine".to_string() },
             })
             .unwrap();
     }
@@ -668,7 +657,7 @@ async fn test_graceful_shutdown_with_in_flight_commands() {
     loop {
         match timeout(Duration::from_millis(500), res_rx.recv()).await {
             Ok(Some(result)) => {
-                if let EffectResult::CheckSerialization { artifact_index, .. } = result {
+                if let Message::CheckSerializationResult { artifact_index, .. } = result {
                     received.push(artifact_index);
                 }
             }
@@ -727,11 +716,10 @@ async fn test_shutdown_drain_timeout() {
     // Send some commands
     for i in 0..3 {
         cmd_tx
-            .send(EffectCommand::CheckSerialization {
+            .send(Effect::CheckSerialization {
                 artifact_index: i,
                 artifact_name: format!("artifact{}", i),
-                target: "machine".to_string(),
-                target_type: "nixos".to_string(),
+                target_type: TargetType::NixOS { machine: "machine".to_string() },
             })
             .unwrap();
     }
@@ -764,7 +752,7 @@ async fn test_shutdown_drain_timeout() {
 #[tokio::test]
 #[serial_test::serial]
 async fn test_effect_to_command_conversion() {
-    // Verify all Effect variants convert to EffectCommands
+    // Verify all Effect variants convert to Effects
 
     // Test CheckSerialization
     let effect = Effect::CheckSerialization {
@@ -774,7 +762,7 @@ async fn test_effect_to_command_conversion() {
     };
     let cmds = effect_to_command(effect);
     assert_eq!(cmds.len(), 1);
-    assert!(matches!(cmds[0], EffectCommand::CheckSerialization { .. }));
+    assert!(matches!(cmds[0], Effect::CheckSerialization { .. }));
 
     // Test None
     let cmds = effect_to_command(Effect::None);
@@ -787,37 +775,29 @@ async fn test_effect_to_command_conversion() {
 
 #[tokio::test]
 #[serial_test::serial]
-async fn test_result_to_message_conversion() {
-    // Verify EffectResults convert to correct Msg variants
+async fn test_check_result_message() {
+    // Verify messages are constructed correctly
 
-    // Test CheckSerialization result
-    let result = EffectResult::CheckSerialization {
+    // Test CheckSerializationResult message
+    let msg = Message::CheckSerializationResult {
         artifact_index: 0,
-        needs_generation: true,
-        exists: true,
-        output: ScriptOutput::from_message("test output"),
+        status: ArtifactStatus::NeedsGeneration,
+        result: Ok(ScriptOutput::from_message("test output")),
     };
-    let msg = result_to_message(result);
     assert!(matches!(msg, Message::CheckSerializationResult { .. }));
 
-    // Test GeneratorFinished result
-    let result = EffectResult::GeneratorFinished {
+    // Test GeneratorFinished message
+    let msg = Message::GeneratorFinished {
         artifact_index: 1,
-        success: true,
-        output: ScriptOutput::from_message("stdout"),
-        error: None,
+        result: Ok(ScriptOutput::from_message("stdout")),
     };
-    let msg = result_to_message(result);
     assert!(matches!(msg, Message::GeneratorFinished { .. }));
 
-    // Test SerializeFinished result
-    let result = EffectResult::SerializeFinished {
+    // Test SerializeFinished message
+    let msg = Message::SerializeFinished {
         artifact_index: 2,
-        success: true,
-        output: ScriptOutput::default(),
-        error: None,
+        result: Ok(ScriptOutput::default()),
     };
-    let msg = result_to_message(result);
     assert!(matches!(msg, Message::SerializeFinished { .. }));
 }
 

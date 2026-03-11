@@ -9,10 +9,12 @@
 use std::collections::{BTreeMap, HashMap};
 use std::time::Duration;
 
+use artifacts::app::message::Message;
+use artifacts::app::model::TargetType;
 use artifacts::config::backend::BackendConfiguration;
 use artifacts::config::make::MakeConfiguration;
 use artifacts::tui::background::spawn_background_task;
-use artifacts::tui::channels::{EffectCommand, EffectResult};
+use artifacts::app::effect::Effect;
 use tokio::time::timeout;
 use tokio_util::sync::CancellationToken;
 
@@ -51,11 +53,10 @@ async fn test_select_shutdown_branch() {
 
     // Send one command that will be processed before shutdown
     tx_cmd
-        .send(EffectCommand::CheckSerialization {
+        .send(Effect::CheckSerialization {
             artifact_index: 0,
             artifact_name: "test".to_string(),
-            target: "machine".to_string(),
-            target_type: "nixos".to_string(),
+            target_type: TargetType::NixOS { machine: "machine".to_string() },
         })
         .unwrap();
 
@@ -67,7 +68,7 @@ async fn test_select_shutdown_branch() {
 
     // Verify result was received
     match result {
-        EffectResult::CheckSerialization { artifact_index, .. } => {
+        Message::CheckSerializationResult { artifact_index, .. } => {
             assert_eq!(artifact_index, 0, "artifact_index should match");
         }
         _ => panic!("Expected CheckSerialization result"),
@@ -109,11 +110,10 @@ async fn test_select_command_branch() {
     let num_commands = 3;
     for i in 0..num_commands {
         tx_cmd
-            .send(EffectCommand::CheckSerialization {
+            .send(Effect::CheckSerialization {
                 artifact_index: i,
                 artifact_name: format!("artifact-{}", i),
-                target: "machine".to_string(),
-                target_type: "nixos".to_string(),
+                target_type: TargetType::NixOS { machine: "machine".to_string() },
             })
             .unwrap();
     }
@@ -126,7 +126,7 @@ async fn test_select_command_branch() {
             .expect("Should receive result");
 
         match result {
-            EffectResult::CheckSerialization { artifact_index, .. } => {
+            Message::CheckSerializationResult { artifact_index, .. } => {
                 assert_eq!(
                     artifact_index, i,
                     "artifact_index should match command index {}",
@@ -158,11 +158,10 @@ async fn test_select_channel_closed_branch() {
 
     // Send one command before closing
     tx_cmd
-        .send(EffectCommand::CheckSerialization {
+        .send(Effect::CheckSerialization {
             artifact_index: 42,
             artifact_name: "test".to_string(),
-            target: "machine".to_string(),
-            target_type: "nixos".to_string(),
+            target_type: TargetType::NixOS { machine: "machine".to_string() },
         })
         .unwrap();
 
@@ -177,7 +176,7 @@ async fn test_select_channel_closed_branch() {
         .expect("Should receive result before channel closes");
 
     match result {
-        EffectResult::CheckSerialization { artifact_index, .. } => {
+        Message::CheckSerializationResult { artifact_index, .. } => {
             assert_eq!(artifact_index, 42, "artifact_index should match");
         }
         _ => panic!("Expected CheckSerialization result"),
@@ -224,11 +223,10 @@ async fn test_select_with_in_flight_command() {
     let num_commands = 5;
     for i in 0..num_commands {
         tx_cmd
-            .send(EffectCommand::CheckSerialization {
+            .send(Effect::CheckSerialization {
                 artifact_index: i,
                 artifact_name: format!("artifact-{}", i),
-                target: "machine".to_string(),
-                target_type: "nixos".to_string(),
+                target_type: TargetType::NixOS { machine: "machine".to_string() },
             })
             .unwrap();
     }
@@ -242,7 +240,7 @@ async fn test_select_with_in_flight_command() {
     loop {
         match timeout(Duration::from_millis(500), rx_res.recv()).await {
             Ok(Some(result)) => {
-                if let EffectResult::CheckSerialization { artifact_index, .. } = result {
+                if let Message::CheckSerializationResult { artifact_index, .. } = result {
                     received_results.push(artifact_index);
                 }
             }

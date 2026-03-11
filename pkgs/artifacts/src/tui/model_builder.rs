@@ -26,7 +26,6 @@ pub fn build_model(make: &MakeConfiguration) -> Model {
                     artifact: artifact.clone(),
                     status: ArtifactStatus::Pending,
                     step_logs: StepLogs::default(),
-                    exists: false,
                 };
                 entries.push(ListEntry::Single(entry));
             }
@@ -42,7 +41,6 @@ pub fn build_model(make: &MakeConfiguration) -> Model {
                     artifact: artifact.clone(),
                     status: ArtifactStatus::Pending,
                     step_logs: StepLogs::default(),
-                    exists: false,
                 };
                 entries.push(ListEntry::Single(entry));
             }
@@ -71,7 +69,6 @@ pub fn build_model(make: &MakeConfiguration) -> Model {
             status,
             step_logs: StepLogs::default(),
             selected_generator: None,
-            exists: false,
         }));
     }
 

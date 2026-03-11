@@ -266,7 +266,6 @@ pub fn generate_single_artifact(
         artifact: artifact.clone(),
         status: ArtifactStatus::Pending,
         step_logs: StepLogs::default(),
-        exists: false,
     };
 
     let _ = run_generator_script(
@@ -437,7 +436,6 @@ pub fn generate_single_artifact_with_diagnostics(
         artifact: artifact.clone(),
         status: ArtifactStatus::Pending,
         step_logs: StepLogs::default(),
-        exists: false,
     };
 
     let generator_result = run_generator_script(

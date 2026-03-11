@@ -5,10 +5,12 @@
 
 use std::collections::{BTreeMap, HashMap};
 
+use artifacts::app::message::{Message, ScriptOutput};
+use artifacts::app::model::{ArtifactStatus, TargetType};
 use artifacts::config::backend::BackendConfiguration;
 use artifacts::config::make::MakeConfiguration;
 use artifacts::tui::background::{BackgroundEffectHandler, spawn_background_task};
-use artifacts::tui::channels::{EffectCommand, EffectResult};
+use artifacts::app::effect::Effect;
 use tokio::time::{Duration, timeout};
 use tokio_util::sync::CancellationToken;
 
@@ -44,11 +46,10 @@ async fn test_background_processes_check_command() {
 
     // Send a CheckSerialization command
     tx_cmd
-        .send(EffectCommand::CheckSerialization {
+        .send(Effect::CheckSerialization {
             artifact_index: 42,
             artifact_name: "test-artifact".to_string(),
-            target: "machine-1".to_string(),
-            target_type: "nixos".to_string(),
+            target_type: TargetType::NixOS { machine: "machine-1".to_string() },
         })
         .unwrap();
 
@@ -60,21 +61,20 @@ async fn test_background_processes_check_command() {
 
     // Verify result variant and artifact_index
     match result {
-        EffectResult::CheckSerialization {
+        Message::CheckSerializationResult {
             artifact_index,
-            needs_generation,
-            exists: _,
-            output,
+            status,
+            result: _,
         } => {
             assert_eq!(artifact_index, 42, "artifact_index should match command");
-            // For empty config, artifact not found -> fail-open -> needs_generation
+            // For empty config, artifact not found -> fail-open -> NeedsGeneration
             // The actual behavior depends on the backend implementation
             assert!(
-                !output.stdout_lines.is_empty() || !output.stderr_lines.is_empty() || !needs_generation,
-                "Should have output or needs_generation flag"
+                matches!(status, ArtifactStatus::NeedsGeneration | ArtifactStatus::Failed { .. }),
+                "Should have NeedsGeneration or Failed status"
             );
         }
-        _ => panic!("Expected CheckSerialization result, got {:?}", result),
+        _ => panic!("Expected CheckSerializationResult message, got {:?}", result),
     }
 }
 
@@ -90,11 +90,10 @@ async fn test_background_processes_generator_command() {
 
     // Send a RunGenerator command
     tx_cmd
-        .send(EffectCommand::RunGenerator {
+        .send(Effect::RunGenerator {
             artifact_index: 7,
             artifact_name: "test-artifact".to_string(),
-            target: "machine-1".to_string(),
-            target_type: "nixos".to_string(),
+            target_type: TargetType::NixOS { machine: "machine-1".to_string() },
             prompts: HashMap::new(),
         })
         .unwrap();
@@ -107,21 +106,18 @@ async fn test_background_processes_generator_command() {
 
     // Verify result variant and artifact_index
     match result {
-        EffectResult::GeneratorFinished {
+        Message::GeneratorFinished {
             artifact_index,
-            success,
-            output: _,
-            error,
+            result: gen_result,
         } => {
             assert_eq!(artifact_index, 7, "artifact_index should match command");
             // With empty config, generator lookup will fail
             assert!(
-                !success,
+                gen_result.is_err(),
                 "Generator should fail with empty config (artifact not found)"
             );
-            assert!(error.is_some(), "Error should be present on failure");
         }
-        _ => panic!("Expected GeneratorFinished result, got {:?}", result),
+        _ => panic!("Expected GeneratorFinished message, got {:?}", result),
     }
 }
 
@@ -140,11 +136,10 @@ async fn test_timeout_behavior() {
 
     // Send a command that will fail fast with empty config
     tx_cmd
-        .send(EffectCommand::CheckSerialization {
+        .send(Effect::CheckSerialization {
             artifact_index: 99,
             artifact_name: "missing".to_string(),
-            target: "test".to_string(),
-            target_type: "nixos".to_string(),
+            target_type: TargetType::NixOS { machine: "test".to_string() },
         })
         .unwrap();
 
@@ -156,7 +151,7 @@ async fn test_timeout_behavior() {
         .expect("Should receive result");
 
     match result {
-        EffectResult::CheckSerialization { artifact_index, .. } => {
+        Message::CheckSerializationResult { artifact_index, .. } => {
             assert_eq!(artifact_index, 99, "artifact_index should match");
         }
         _ => panic!("Expected CheckSerialization result"),
@@ -174,11 +169,10 @@ async fn test_graceful_shutdown_on_channel_close() {
 
     // Send one command before closing
     tx_cmd
-        .send(EffectCommand::CheckSerialization {
+        .send(Effect::CheckSerialization {
             artifact_index: 0,
             artifact_name: "test".to_string(),
-            target: "machine".to_string(),
-            target_type: "nixos".to_string(),
+            target_type: TargetType::NixOS { machine: "machine".to_string() },
         })
         .unwrap();
 
@@ -213,11 +207,10 @@ async fn test_fifo_ordering_with_real_background() {
     let num_commands = 5;
     for i in 0..num_commands {
         tx_cmd
-            .send(EffectCommand::CheckSerialization {
+            .send(Effect::CheckSerialization {
                 artifact_index: i,
                 artifact_name: format!("artifact-{}", i),
-                target: "machine".to_string(),
-                target_type: "nixos".to_string(),
+                target_type: TargetType::NixOS { machine: "machine".to_string() },
             })
             .unwrap();
     }
@@ -230,7 +223,7 @@ async fn test_fifo_ordering_with_real_background() {
             .expect("Should receive result");
 
         match result {
-            EffectResult::CheckSerialization { artifact_index, .. } => {
+            Message::CheckSerializationResult { artifact_index, .. } => {
                 assert_eq!(
                     artifact_index, i,
                     "FIFO order violated at index {}. Expected {}, got {}",
@@ -252,18 +245,17 @@ async fn test_background_effect_handler_new() {
 
     // Verify handler was created (we can't check internals directly,
     // but we can verify it compiles and accepts commands)
-    let cmd = EffectCommand::CheckSerialization {
+    let cmd = Effect::CheckSerialization {
         artifact_index: 0,
         artifact_name: "test".to_string(),
-        target: "machine".to_string(),
-        target_type: "nixos".to_string(),
+        target_type: TargetType::NixOS { machine: "machine".to_string() },
     };
 
     // Execute will fail (artifact not found) but should not panic
     let result = handler.execute(cmd).await;
 
     match result {
-        EffectResult::CheckSerialization { artifact_index, .. } => {
+        Message::CheckSerializationResult { artifact_index, .. } => {
             assert_eq!(artifact_index, 0, "artifact_index should be preserved");
         }
         _ => panic!("Expected CheckSerialization result"),
@@ -282,11 +274,10 @@ async fn test_cancellation_token_shutdown() {
     // Send a few commands
     for i in 0..3 {
         tx_cmd
-            .send(EffectCommand::CheckSerialization {
+            .send(Effect::CheckSerialization {
                 artifact_index: i,
                 artifact_name: format!("artifact-{}", i),
-                target: "machine".to_string(),
-                target_type: "nixos".to_string(),
+                target_type: TargetType::NixOS { machine: "machine".to_string() },
             })
             .unwrap();
     }

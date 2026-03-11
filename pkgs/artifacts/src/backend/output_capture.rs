@@ -36,6 +36,7 @@
 //! )?;
 //! ```
 
+pub use crate::app::model::OutputStream;
 use std::io::{BufRead, BufReader};
 use std::process::Child;
 use std::sync::mpsc;
@@ -131,17 +132,6 @@ pub struct OutputLine {
     pub stream: OutputStream,
     /// The content of the output line
     pub content: String,
-}
-
-/// Which stream the output came from.
-///
-/// Distinguishes between stdout and stderr output streams.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum OutputStream {
-    /// Standard output stream
-    Stdout,
-    /// Standard error stream
-    Stderr,
 }
 
 /// Run a child process and capture its stdout/stderr output.

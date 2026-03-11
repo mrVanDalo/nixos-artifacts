@@ -5,13 +5,31 @@ use crate::app::{init, update};
 use crate::config::backend::BackendConfiguration;
 use crate::config::make::MakeConfiguration;
 use crate::logging::log_component;
-use crate::tui::channels::{EffectCommand, EffectResult};
 use crate::tui::events::EventSource;
 use crate::tui::views::render;
 use anyhow::Result;
 use ratatui::{Terminal, backend::Backend};
 use std::time::{Duration, Instant};
 use tokio_util::sync::CancellationToken;
+
+/// Helper to send effect to background if it needs execution.
+fn send_effect(
+    effect: Effect,
+    tx: &tokio::sync::mpsc::UnboundedSender<Effect>,
+) -> bool {
+    match effect {
+        Effect::None | Effect::Quit => true,
+        Effect::Batch(effects) => {
+            for e in effects {
+                if !send_effect(e, tx) {
+                    return false;
+                }
+            }
+            true
+        }
+        _ => tx.send(effect).is_ok(),
+    }
+}
 
 /// The result of running the TUI application
 #[derive(Debug, Clone)]
@@ -178,9 +196,7 @@ where
         // This prevents TUI freeze by never blocking when results are available
         while let Ok(result) = res_rx.try_recv() {
             log_component("RUNTIME", &format!("Received result: {:?}", result));
-            let msg = result_to_message(result);
-            log_component("RUNTIME", "Converted result to message");
-            let (new_model, effect) = update(model, msg);
+            let (new_model, effect) = update(model, result);
             log_component(
                 "RUNTIME",
                 &format!(
@@ -244,8 +260,7 @@ where
                         {
                             Ok(Some(result)) => {
                                 log_component("RUNTIME", "Drained result during shutdown");
-                                let msg = result_to_message(result);
-                                let (new_model, _) = update(model, msg);
+                                let (new_model, _) = update(model, result);
                                 model = new_model;
 
                                 // Re-render to show final state
@@ -304,8 +319,7 @@ where
                         "RUNTIME",
                         &format!("Received result after command: {:?}", result),
                     );
-                    let msg = result_to_message(result);
-                    let (new_model, effect) = update(model, msg);
+                    let (new_model, effect) = update(model, result);
                     model = new_model;
 
                     // Execute any follow-up effects
@@ -357,8 +371,7 @@ where
                     match tokio::time::timeout(Duration::from_millis(100), res_rx.recv()).await {
                         Ok(Some(result)) => {
                             log_component("RUNTIME", "Drained result during exhausted shutdown");
-                            let msg = result_to_message(result);
-                            let (new_model, _) = update(model, msg);
+                            let (new_model, _) = update(model, result);
                             model = new_model;
                         }
                         Ok(None) | Err(_) => break,
@@ -374,9 +387,7 @@ where
                 // Try to get a result
                 Some(result) = res_rx.recv() => {
                     log_component("RUNTIME", &format!("Received result while waiting: {:?}", result));
-                    let msg = result_to_message(result);
-                    log_component("RUNTIME", "Converted result to message");
-                    let (new_model, effect) = update(model, msg);
+                    let (new_model, effect) = update(model, result);
                     log_component("RUNTIME", &format!("Model updated via select, entries: {}, selected: {}", new_model.entries.len(), new_model.selected_index));
                     model = new_model;
 
@@ -425,273 +436,27 @@ where
 /// Execute the initial effect (if any) by sending to background.
 /// Returns the updated model after processing the result.
 async fn execute_initial_effect(
-    cmd_tx: &tokio::sync::mpsc::UnboundedSender<EffectCommand>,
+    cmd_tx: &tokio::sync::mpsc::UnboundedSender<Effect>,
     model: Model,
     effect: Effect,
 ) -> Result<Model> {
-    // Send all initial effects to background
-    let cmds = effect_to_command(effect);
-    log_component(
-        "RUNTIME",
-        &format!("Sending {} initial commands", cmds.len()),
-    );
-    for cmd in &cmds {
-        log_component("RUNTIME", &format!("Sending command: {:?}", cmd));
+    // Send initial effects to background
+    log_component("RUNTIME", &format!("Sending initial effect: {:?}", effect));
+    if send_effect(effect, cmd_tx) {
+        log_component("RUNTIME", "Initial effect sent successfully");
+    } else {
+        log_component("RUNTIME", "Failed to send initial effect or effect was None/Quit");
     }
-    for cmd in cmds {
-        if let Err(e) = cmd_tx.send(cmd) {
-            log_component("RUNTIME", &format!("Failed to send command: {}", e));
-        }
-    }
-
     Ok(model)
 }
 
-/// Convert an Effect into EffectCommands for channel transmission.
-/// Returns a vector of commands (may be empty for None/Quit).
-pub fn effect_to_command(effect: Effect) -> Vec<EffectCommand> {
+/// Convert an Effect to a Vec of Effects for sending to the background.
+/// Handles Batch effects by flattening them.
+pub fn effect_to_command(effect: Effect) -> Vec<Effect> {
     match effect {
-        Effect::None | Effect::Quit => vec![],
-
-        Effect::CheckSerialization {
-            artifact_index,
-            artifact_name,
-            target_type,
-        } => vec![EffectCommand::CheckSerialization {
-            artifact_index,
-            artifact_name,
-            target: target_type.target_name().unwrap_or("shared").to_string(),
-            target_type: target_type.to_string(),
-        }],
-
-        Effect::RunGenerator {
-            artifact_index,
-            artifact_name,
-            target_type,
-            prompts,
-        } => vec![EffectCommand::RunGenerator {
-            artifact_index,
-            artifact_name,
-            target: target_type.target_name().unwrap_or("shared").to_string(),
-            target_type: target_type.to_string(),
-            prompts,
-        }],
-
-        Effect::Serialize {
-            artifact_index,
-            artifact_name,
-            target_type,
-            out_dir: _,
-        } => vec![EffectCommand::Serialize {
-            artifact_index,
-            artifact_name,
-            target: target_type.target_name().unwrap_or("shared").to_string(),
-            target_type: target_type.to_string(),
-        }],
-
-        Effect::ShowGeneratorSelection { .. } => {
-            // This effect is handled synchronously by update() - no background work
-            vec![]
-        }
-
-        Effect::SharedCheckSerialization {
-            artifact_index,
-            artifact_name,
-            backend_name: _,
-            nixos_targets,
-            home_targets,
-        } => {
-            // Convert to EffectCommand format
-            let targets: Vec<String> = nixos_targets
-                .iter()
-                .chain(home_targets.iter())
-                .cloned()
-                .collect();
-            let target_types: Vec<String> = nixos_targets
-                .iter()
-                .map(|_| "nixos".to_string())
-                .chain(home_targets.iter().map(|_| "home".to_string()))
-                .collect();
-            vec![EffectCommand::SharedCheckSerialization {
-                artifact_index,
-                artifact_name,
-                targets,
-                target_types,
-            }]
-        }
-
-        Effect::RunSharedGenerator {
-            artifact_index,
-            artifact_name,
-            prompts,
-        } => vec![EffectCommand::RunSharedGenerator {
-            artifact_index,
-            artifact_name,
-            prompts,
-        }],
-
-        Effect::SharedSerialize {
-            artifact_index,
-            artifact_name,
-            backend_name: _,
-            out_dir: _,
-            nixos_targets,
-            home_targets,
-        } => vec![EffectCommand::SharedSerialize {
-            artifact_index,
-            artifact_name,
-            machine_targets: nixos_targets,
-            user_targets: home_targets,
-        }],
-
-        Effect::Batch(effects) => {
-            // Process all effects in the batch
-            effects.into_iter().flat_map(effect_to_command).collect()
-        }
-    }
-}
-
-/// Convert an EffectResult from the background into a Msg for the update loop.
-pub fn result_to_message(result: EffectResult) -> Message {
-    match result {
-        EffectResult::CheckSerialization {
-            artifact_index,
-            needs_generation,
-            exists,
-            output,
-        } => {
-            use crate::app::message::CheckOutput;
-            // Convert to new message format with separate needs_generation and exists fields
-            Message::CheckSerializationResult {
-                artifact_index,
-                needs_generation,
-                exists,
-                result: Ok(()),
-                output: Some(CheckOutput {
-                    stdout_lines: output.stdout_lines,
-                    stderr_lines: output.stderr_lines,
-                }),
-            }
-        }
-
-        EffectResult::GeneratorFinished {
-            artifact_index,
-            success,
-            output,
-            error,
-        } => {
-            use crate::app::message::GeneratorOutput;
-            let result = if success {
-                Ok(GeneratorOutput {
-                    stdout_lines: output.stdout_lines,
-                    stderr_lines: output.stderr_lines,
-                    files_generated: 0, // TODO: Get actual count
-                })
-            } else {
-                Err(error.unwrap_or_else(|| "Generator failed".to_string()))
-            };
-            Message::GeneratorFinished {
-                artifact_index,
-                result,
-            }
-        }
-
-        EffectResult::SerializeFinished {
-            artifact_index,
-            success,
-            output,
-            error,
-        } => {
-            use crate::app::message::SerializeOutput;
-            let result = if success {
-                Ok(SerializeOutput {
-                    stdout_lines: output.stdout_lines,
-                    stderr_lines: output.stderr_lines,
-                })
-            } else {
-                Err(error.unwrap_or_else(|| "Serialize failed".to_string()))
-            };
-            Message::SerializeFinished {
-                artifact_index,
-                result,
-            }
-        }
-
-        EffectResult::SharedCheckSerialization {
-            artifact_index,
-            needs_generation,
-            exists,
-            outputs,
-        } => {
-            use crate::app::message::CheckOutput;
-            // For simplicity, check if any target needs generation or exists
-            let any_needs_gen = needs_generation.iter().any(|&b| b);
-            let any_exists = exists.iter().any(|&b| b);
-            // Aggregate outputs - take first if any
-            let aggregated_output = if outputs.is_empty() {
-                None
-            } else {
-                let first = &outputs[0];
-                Some(CheckOutput {
-                    stdout_lines: first.stdout_lines.clone(),
-                    stderr_lines: first.stderr_lines.clone(),
-                })
-            };
-            Message::SharedCheckSerializationResult {
-                artifact_index,
-                needs_generation: any_needs_gen,
-                exists: any_exists,
-                result: Ok(()),
-                output: aggregated_output,
-            }
-        }
-
-        EffectResult::SharedGeneratorFinished {
-            artifact_index,
-            success,
-            output,
-            error,
-        } => {
-            use crate::app::message::GeneratorOutput;
-            let result = if success {
-                Ok(GeneratorOutput {
-                    stdout_lines: output.stdout_lines,
-                    stderr_lines: output.stderr_lines,
-                    files_generated: 0,
-                })
-            } else {
-                Err(error.unwrap_or_else(|| "Shared generator failed".to_string()))
-            };
-            Message::SharedGeneratorFinished {
-                artifact_index,
-                result,
-            }
-        }
-
-        EffectResult::SharedSerializeFinished {
-            artifact_index,
-            results: _,
-        } => {
-            // TODO: Aggregate results properly
-            use crate::app::message::SerializeOutput;
-            Message::SharedSerializeFinished {
-                artifact_index,
-                result: Ok(SerializeOutput {
-                    stdout_lines: vec![],
-                    stderr_lines: vec![],
-                }),
-            }
-        }
-
-        EffectResult::OutputLine {
-            artifact_index,
-            stream,
-            content,
-        } => Message::OutputLine {
-            artifact_index,
-            stream: crate::app::model::OutputStream::from(stream),
-            content,
-        },
+        Effect::None | Effect::Quit => Vec::new(),
+        Effect::Batch(effects) => effects,
+        effect => vec![effect],
     }
 }
 
@@ -744,6 +509,7 @@ mod tests {
     use crate::app::KeyEvent;
     use crate::app::model::*;
     use crate::config::make::{ArtifactDef, FileDef, PromptDef};
+    use crate::tui::channels::Effect;
     use crate::tui::events::ScriptedEventSource;
     use crate::tui::events::test_helpers::*;
     use ratatui::backend::TestBackend;
@@ -785,14 +551,12 @@ mod tests {
             artifact: make_test_artifact("ssh-key", vec!["passphrase"]),
             status: ArtifactStatus::Pending,
             step_logs: StepLogs::default(),
-            exists: false,
         };
         let entry2 = ArtifactEntry {
             target_type: TargetType::NixOS { machine: "machine-two".to_string() },
             artifact: make_test_artifact("api-token", vec![]),
             status: ArtifactStatus::Pending,
             step_logs: StepLogs::default(),
-            exists: false,
         };
 
         Model {
@@ -977,7 +741,7 @@ mod tests {
             target_type: TargetType::NixOS { machine: "machine".to_string() },
         });
         assert_eq!(cmd.len(), 1);
-        assert!(matches!(cmd[0], EffectCommand::CheckSerialization { .. }));
+        assert!(matches!(cmd[0], Effect::CheckSerialization { .. }));
 
         // Test RunGenerator
         let cmd = effect_to_command(Effect::RunGenerator {
@@ -987,39 +751,7 @@ mod tests {
             prompts: HashMap::new(),
         });
         assert_eq!(cmd.len(), 1);
-        assert!(matches!(cmd[0], EffectCommand::RunGenerator { .. }));
-    }
-
-    #[test]
-    fn test_result_to_message_handles_all_variants() {
-        use crate::tui::channels::ScriptOutput;
-
-        // Test CheckSerialization result
-        let msg = result_to_message(EffectResult::CheckSerialization {
-            artifact_index: 0,
-            needs_generation: true,
-            exists: false,
-            output: ScriptOutput::default(),
-        });
-        assert!(matches!(msg, Message::CheckSerializationResult { .. }));
-
-        // Test GeneratorFinished result
-        let msg = result_to_message(EffectResult::GeneratorFinished {
-            artifact_index: 0,
-            success: true,
-            output: ScriptOutput::default(),
-            error: None,
-        });
-        assert!(matches!(msg, Message::GeneratorFinished { .. }));
-
-        // Test SerializeFinished result
-        let msg = result_to_message(EffectResult::SerializeFinished {
-            artifact_index: 0,
-            success: true,
-            output: ScriptOutput::default(),
-            error: None,
-        });
-        assert!(matches!(msg, Message::SerializeFinished { .. }));
+        assert!(matches!(cmd[0], Effect::RunGenerator { .. }));
     }
 
     // === Async Runtime Tests ===
@@ -1055,11 +787,10 @@ mod tests {
             spawn_background_task(backend_config, make_config, shutdown_token);
 
         // Send a command through the channel
-        let cmd = EffectCommand::CheckSerialization {
+        let cmd = Effect::CheckSerialization {
             artifact_index: 0,
             artifact_name: "test".to_string(),
-            target: "machine".to_string(),
-            target_type: "nixos".to_string(),
+            target_type: TargetType::NixOS { machine: "machine".to_string() },
         };
 
         cmd_tx.send(cmd).expect("Should be able to send command");
@@ -1072,7 +803,7 @@ mod tests {
 
         // Verify the result has correct artifact_index
         match result {
-            EffectResult::CheckSerialization { artifact_index, .. } => {
+            Message::CheckSerializationResult { artifact_index, .. } => {
                 assert_eq!(artifact_index, 0, "artifact_index should match command");
             }
             _ => panic!("Expected CheckSerialization result"),
@@ -1153,11 +884,10 @@ mod tests {
 
         // Send multiple commands
         for i in 0..3 {
-            let cmd = EffectCommand::CheckSerialization {
+            let cmd = Effect::CheckSerialization {
                 artifact_index: i,
                 artifact_name: format!("artifact{}", i),
-                target: "machine".to_string(),
-                target_type: "nixos".to_string(),
+                target_type: TargetType::NixOS { machine: "machine".to_string() },
             };
             cmd_tx.send(cmd).expect("Should send command");
         }
@@ -1175,7 +905,7 @@ mod tests {
         // Verify FIFO ordering
         for (i, result) in received.iter().enumerate() {
             match result {
-                EffectResult::CheckSerialization { artifact_index, .. } => {
+                Message::CheckSerializationResult { artifact_index, .. } => {
                     assert_eq!(*artifact_index, i, "Results should be in FIFO order");
                 }
                 _ => panic!("Unexpected result variant"),

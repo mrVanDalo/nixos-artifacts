@@ -1,5 +1,5 @@
 use crate::app::message::{CheckOutput, GeneratorOutput, Message, SerializeOutput};
-use crate::app::model::{ArtifactEntry, ListEntry, Model, TargetType};
+use crate::app::model::{ArtifactEntry, ArtifactStatus, ListEntry, Model, TargetType};
 use crate::app::Effect;
 use crate::backend::generator::{run_generator_script, verify_generated_files};
 use crate::backend::output_capture::{CapturedOutput, OutputStream};
@@ -38,7 +38,7 @@ impl BackendEffectHandler {
         entry: &ArtifactEntry,
         target: &str,
         target_type: TargetType,
-    ) -> (bool, bool, Result<(), String>, Option<CheckOutput>) {
+    ) -> (ArtifactStatus, Result<(), String>, Option<CheckOutput>) {
         let context = target_type.context();
         match run_check_serialization(&entry.artifact, target, &self.backend, &self.make, context) {
             Ok(check_result) => {
@@ -47,23 +47,22 @@ impl BackendEffectHandler {
                     stdout_lines,
                     stderr_lines,
                 };
-                // Determine exists from check script output
-                // If exit success (exit code 0), artifact exists and is up to date
-                // If exit failure, check output for "EXISTS" keyword
-                let exists = if check_result.output.exit_success {
-                    true
+                let status = if check_result.needs_generation {
+                    ArtifactStatus::NeedsGeneration
                 } else {
-                    // Check if "EXISTS" appears in any output line
-                    check_result
-                        .output
-                        .lines
-                        .iter()
-                        .any(|line| line.content.contains("EXISTS"))
+                    ArtifactStatus::UpToDate
                 };
-                let needs_generation = check_result.needs_generation;
-                (needs_generation, exists, Ok(()), Some(output))
+                (status, Ok(()), Some(output))
             }
-            Err(e) => (true, false, Err(e.to_string()), None),
+            Err(e) => (
+                ArtifactStatus::Failed {
+                    error: e.to_string(),
+                    output: String::new(),
+                    retry_available: true,
+                },
+                Err(e.to_string()),
+                None,
+            ),
         }
     }
 
@@ -192,24 +191,24 @@ impl EffectHandler for BackendEffectHandler {
                     ListEntry::Shared(_) => {
                         return Ok(vec![Message::CheckSerializationResult {
                             artifact_index,
-                            needs_generation: false,
-                            exists: false,
+                            status: ArtifactStatus::Failed {
+                                error: "CheckSerialization effect called on shared artifact".to_string(),
+                                output: String::new(),
+                                retry_available: true,
+                            },
                             result: Err(
                                 "CheckSerialization effect called on shared artifact".to_string()
                             ),
-                            output: None,
                         }]);
                     }
                 };
-                let (needs_generation, exists, result, output) =
+                let (status, result, output) =
                     self.check_if_artifact_needs_generation(&entry, &target, target_type);
 
                 Ok(vec![Message::CheckSerializationResult {
                     artifact_index,
-                    needs_generation,
-                    exists,
+                    status,
                     result,
-                    output,
                 }])
             }
 
@@ -292,30 +291,25 @@ impl EffectHandler for BackendEffectHandler {
                             stdout_lines,
                             stderr_lines,
                         };
-                        // Determine exists from check script output
-                        let exists = if check_result.output.exit_success {
-                            true
+                        let status = if check_result.needs_generation {
+                            ArtifactStatus::NeedsGeneration
                         } else {
-                            check_result
-                                .output
-                                .lines
-                                .iter()
-                                .any(|line| line.content.contains("EXISTS"))
+                            ArtifactStatus::UpToDate
                         };
                         Ok(vec![Message::SharedCheckSerializationResult {
                             artifact_index,
-                            needs_generation: check_result.needs_generation,
-                            exists,
-                            result: Ok(()),
-                            output: Some(output),
+                            statuses: vec![status],
+                            outputs: vec![output],
                         }])
                     }
                     Err(e) => Ok(vec![Message::SharedCheckSerializationResult {
                         artifact_index,
-                        needs_generation: true,
-                        exists: false,
-                        result: Err(e.to_string()),
-                        output: None,
+                        statuses: vec![ArtifactStatus::Failed {
+                            error: e.to_string(),
+                            output: String::new(),
+                            retry_available: true,
+                        }],
+                        outputs: vec![],
                     }]),
                 }
             }

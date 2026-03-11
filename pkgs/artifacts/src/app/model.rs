@@ -79,8 +79,6 @@ pub struct ArtifactEntry {
     pub status: ArtifactStatus,
     /// Logs organized by generation step
     pub step_logs: StepLogs,
-    /// Whether the artifact already exists in backend storage
-    pub exists: bool,
 }
 
 /// Target type for artifact entries.
@@ -88,7 +86,7 @@ pub struct ArtifactEntry {
 /// Determines the context (NixOS vs home-manager vs shared) and affects
 /// how artifacts are serialized and which environment variables
 /// are passed to scripts.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum TargetType {
     /// NixOS machine configuration
     NixOS { machine: String },
@@ -136,6 +134,17 @@ impl std::fmt::Display for TargetType {
 /// then triggers generation the status moves to `Generating` while the
 /// generator and serialization steps run, and finally settles back to
 /// `UpToDate`.  Any step can fail and move the status to `Failed`.
+///
+/// # State Assumptions
+///
+/// - `NeedsGeneration`: The artifact does NOT exist in backend storage and
+///   needs to be generated for the first time. The UI shows "Generate".
+/// - `UpToDate`: The artifact EXISTS in backend storage and is current.
+///   If the user triggers generation from this state, the UI shows
+///   "Regenerate" since the artifact already exists.
+/// - `Pending`: Initial state, the check has not run yet.
+/// - `Generating`: A generation operation is in progress.
+/// - `Failed`: A previous operation failed, can be retried.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub enum ArtifactStatus {
     /// Initial state before the backend check has run.  Every entry starts
@@ -145,10 +154,17 @@ pub enum ArtifactStatus {
     Pending,
     /// The backend's `check_serialization` determined that the serialized
     /// artifact is stale or missing and needs to be regenerated.
+    ///
+    /// This status implies the artifact does NOT exist in backend storage.
+    /// When the user triggers generation, the UI should show "Generate".
     NeedsGeneration,
     /// The backend's `check_serialization` confirmed the serialized artifact
     /// is current, *or* generation and serialization have just completed
     /// successfully.
+    ///
+    /// This status implies the artifact EXISTS in backend storage.
+    /// When the user triggers generation, the UI should show "Regenerate"
+    /// since this will overwrite an existing artifact.
     UpToDate,
     /// The generator or serialization step is actively running for this
     /// artifact. The inner state tracks which step and any output.
@@ -221,21 +237,12 @@ pub enum LogLevel {
 }
 
 /// Identifies which stream a line came from for streaming output.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum OutputStream {
     /// Standard output from a script
     Stdout,
     /// Standard error from a script
     Stderr,
-}
-
-impl From<crate::tui::channels::OutputStream> for OutputStream {
-    fn from(stream: crate::tui::channels::OutputStream) -> Self {
-        match stream {
-            crate::tui::channels::OutputStream::Stdout => Self::Stdout,
-            crate::tui::channels::OutputStream::Stderr => Self::Stderr,
-        }
-    }
 }
 
 /// A warning about backend capability issues (non-blocking)
@@ -645,8 +652,6 @@ pub struct SharedEntry {
     pub step_logs: StepLogs,
     /// The selected generator path (set after user selection)
     pub selected_generator: Option<String>,
-    /// Whether the artifact already exists in backend storage
-    pub exists: bool,
 }
 
 impl ArtifactStatus {

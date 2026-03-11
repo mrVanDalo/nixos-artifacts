@@ -195,7 +195,6 @@
 
 pub mod app;
 pub mod backend;
-pub mod effect_handler;
 pub mod logging;
 #[macro_use]
 pub mod macros;

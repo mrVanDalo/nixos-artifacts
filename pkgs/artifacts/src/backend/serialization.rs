@@ -655,6 +655,7 @@ pub fn run_check_serialization(
         script_path,
     )?;
 
+    #[allow(unused_variables)]
     let target_label = match target_type {
         TargetType::HomeManager { .. } => "username",
         TargetType::NixOS { .. } | TargetType::Shared { .. } => "machine",

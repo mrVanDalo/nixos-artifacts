@@ -28,24 +28,20 @@ pub enum Message {
     /// Check serialization completed for an artifact
     CheckSerializationResult {
         artifact_index: usize,
-        needs_generation: bool,      // true = artifact needs to be regenerated
-        exists: bool,                // true = artifact already exists in backend
-        result: Result<(), String>,  // Err = check failed, Ok = check succeeded
-        output: Option<CheckOutput>, // Captured stdout/stderr from the check script
+        status: crate::app::model::ArtifactStatus,
+        result: Result<ScriptOutput, String>,
     },
 
     /// Generator script finished (per-target artifact).
     GeneratorFinished {
-        /// Index of the artifact that finished
         artifact_index: usize,
-        /// Result containing output or error message
-        result: Result<GeneratorOutput, String>,
+        result: Result<ScriptOutput, String>,
     },
 
     /// Serialize script finished
     SerializeFinished {
         artifact_index: usize,
-        result: Result<SerializeOutput, String>,
+        result: Result<ScriptOutput, String>,
     },
 
     /// Generator selected for a shared artifact
@@ -57,22 +53,20 @@ pub enum Message {
     /// Shared check serialization completed for an artifact
     SharedCheckSerializationResult {
         artifact_index: usize,
-        needs_generation: bool,      // true = artifact needs to be regenerated
-        exists: bool,                // true = artifact already exists in backend
-        result: Result<(), String>,  // Err = check failed, Ok = check succeeded
-        output: Option<CheckOutput>, // Captured stdout/stderr from the check script
+        statuses: Vec<crate::app::model::ArtifactStatus>,
+        outputs: Vec<ScriptOutput>,
     },
 
     /// Shared generator script finished
     SharedGeneratorFinished {
         artifact_index: usize,
-        result: Result<GeneratorOutput, String>,
+        result: Result<ScriptOutput, String>,
     },
 
     /// Shared serialize script finished
     SharedSerializeFinished {
         artifact_index: usize,
-        result: Result<SerializeOutput, String>,
+        results: Vec<(String, bool, ScriptOutput)>,
     },
 
     /// Streaming output line received during script execution
@@ -102,32 +96,42 @@ pub enum Message {
 
     /// Request to quit the application
     Quit,
-
-    /// Effect result from background task (contains `EffectResult` from channels)
-    /// Note: This wraps the `EffectResult` from the channels module
-    ChannelResult(crate::tui::channels::EffectResult),
 }
 
-/// Output captured from generator script execution
-#[derive(Debug, Clone)]
-pub struct GeneratorOutput {
-    pub stdout_lines: Vec<String>,
-    pub stderr_lines: Vec<String>,
-    pub files_generated: usize,
-}
-
-/// Output captured from serialization script execution
-#[derive(Debug, Clone)]
-pub struct SerializeOutput {
+/// Output captured from script execution (stdout/stderr)
+#[derive(Debug, Clone, Default)]
+pub struct ScriptOutput {
     pub stdout_lines: Vec<String>,
     pub stderr_lines: Vec<String>,
 }
 
-/// Output captured from `check_serialization` script execution
-#[derive(Debug, Clone)]
-pub struct CheckOutput {
-    pub stdout_lines: Vec<String>,
-    pub stderr_lines: Vec<String>,
+impl ScriptOutput {
+    /// Convert from CapturedOutput to ScriptOutput, splitting stdout and stderr
+    pub fn from_captured(captured: &crate::backend::output_capture::CapturedOutput) -> Self {
+        use crate::app::model::OutputStream;
+        let mut stdout_lines = Vec::new();
+        let mut stderr_lines = Vec::new();
+
+        for line in &captured.lines {
+            match line.stream {
+                OutputStream::Stdout => stdout_lines.push(line.content.clone()),
+                OutputStream::Stderr => stderr_lines.push(line.content.clone()),
+            }
+        }
+
+        Self {
+            stdout_lines,
+            stderr_lines,
+        }
+    }
+
+    /// Create a ScriptOutput from a single message (for errors/warnings)
+    pub fn from_message(message: &str) -> Self {
+        Self {
+            stdout_lines: vec![message.to_string()],
+            stderr_lines: Vec::new(),
+        }
+    }
 }
 
 /// Wrapper around crossterm key events for easier construction in tests.

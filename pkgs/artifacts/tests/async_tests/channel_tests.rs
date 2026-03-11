@@ -6,17 +6,17 @@
 use tokio::sync::mpsc::unbounded_channel;
 use tokio::time::{Duration, timeout};
 
-/// Mock EffectCommand for testing channel communication
+/// Mock command for testing channel communication
 #[derive(Debug, Clone, PartialEq)]
-pub enum MockEffectCommand {
+pub enum MockCommand {
     CheckSerialization { artifact_index: usize, name: String },
     RunGenerator { artifact_index: usize, name: String },
 }
 
-/// Mock EffectResult for testing channel communication
+/// Mock result for testing channel communication
 #[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq)]
-pub enum MockEffectResult {
+pub enum MockResult {
     CheckFinished {
         artifact_index: usize,
         needs_generation: bool,
@@ -29,11 +29,11 @@ pub enum MockEffectResult {
 
 #[tokio::test]
 async fn test_command_sent_via_channel() {
-    // Verify EffectCommand can be sent from "foreground" to "background"
+    // Verify commands can be sent from "foreground" to "background"
     // through unbounded channel
-    let (tx_cmd, mut rx_cmd) = unbounded_channel::<MockEffectCommand>();
+    let (tx_cmd, mut rx_cmd) = unbounded_channel::<MockCommand>();
 
-    let cmd = MockEffectCommand::CheckSerialization {
+    let cmd = MockCommand::CheckSerialization {
         artifact_index: 0,
         name: "test-artifact".to_string(),
     };
@@ -48,7 +48,7 @@ async fn test_command_sent_via_channel() {
 
     assert_eq!(
         received,
-        MockEffectCommand::CheckSerialization {
+        MockCommand::CheckSerialization {
             artifact_index: 0,
             name: "test-artifact".to_string(),
         }
@@ -57,10 +57,10 @@ async fn test_command_sent_via_channel() {
 
 #[tokio::test]
 async fn test_result_received_via_channel() {
-    // Verify EffectResult can be received from "background" back to "foreground"
-    let (tx_res, mut rx_res) = unbounded_channel::<MockEffectResult>();
+    // Verify results can be received from "background" back to "foreground"
+    let (tx_res, mut rx_res) = unbounded_channel::<MockResult>();
 
-    let result = MockEffectResult::CheckFinished {
+    let result = MockResult::CheckFinished {
         artifact_index: 1,
         needs_generation: true,
     };
@@ -75,7 +75,7 @@ async fn test_result_received_via_channel() {
 
     assert_eq!(
         received,
-        MockEffectResult::CheckFinished {
+        MockResult::CheckFinished {
             artifact_index: 1,
             needs_generation: true,
         }
@@ -85,10 +85,10 @@ async fn test_result_received_via_channel() {
 #[tokio::test]
 async fn test_channel_disconnect_graceful() {
     // Verify dropping sender causes recv() to return None, handled gracefully
-    let (tx_cmd, mut rx_cmd) = unbounded_channel::<MockEffectCommand>();
+    let (tx_cmd, mut rx_cmd) = unbounded_channel::<MockCommand>();
 
     tx_cmd
-        .send(MockEffectCommand::CheckSerialization {
+        .send(MockCommand::CheckSerialization {
             artifact_index: 0,
             name: "first".to_string(),
         })
@@ -105,7 +105,7 @@ async fn test_channel_disconnect_graceful() {
 
     assert_eq!(
         received,
-        MockEffectCommand::CheckSerialization {
+        MockCommand::CheckSerialization {
             artifact_index: 0,
             name: "first".to_string(),
         }
@@ -125,12 +125,12 @@ async fn test_channel_disconnect_graceful() {
 #[tokio::test]
 async fn test_multiple_commands_sequential() {
     // Verify FIFO ordering: commands sent A, B, C are received in same order
-    let (tx_cmd, mut rx_cmd) = unbounded_channel::<MockEffectCommand>();
+    let (tx_cmd, mut rx_cmd) = unbounded_channel::<MockCommand>();
 
     // Send commands A, B, C with sequential indices
     for i in 0..3 {
         tx_cmd
-            .send(MockEffectCommand::RunGenerator {
+            .send(MockCommand::RunGenerator {
                 artifact_index: i,
                 name: format!("artifact-{}", i),
             })
@@ -150,7 +150,7 @@ async fn test_multiple_commands_sequential() {
 
         assert_eq!(
             received,
-            MockEffectCommand::RunGenerator {
+            MockCommand::RunGenerator {
                 artifact_index: i,
                 name: format!("artifact-{}", i),
             },

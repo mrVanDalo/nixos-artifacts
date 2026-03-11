@@ -155,7 +155,6 @@ mod tests {
             artifact: make_test_artifact("test-artifact"),
             status: ArtifactStatus::NeedsGeneration,
             step_logs: StepLogs::default(),
-            exists: false,
         };
 
         let model = Model {

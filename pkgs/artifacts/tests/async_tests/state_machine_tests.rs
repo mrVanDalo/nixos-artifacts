@@ -1,7 +1,7 @@
 //! State machine simulation tests for async effect handling.
 //!
 //! These tests verify the complete state machine transitions using a dual assertion strategy:
-//! 1. Commands sent to the background task match expected EffectCommand variants
+//! 1. Effects sent to the background task match expected Effect variants
 //! 2. Final Model state correctly reflects async operation results
 //!
 //! Tests cover full lifecycle transitions:
@@ -12,8 +12,7 @@
 use std::collections::{BTreeMap, HashMap};
 
 use artifacts::app::effect::Effect;
-use artifacts::app::message::Message;
-use artifacts::app::message::{CheckOutput, GeneratorOutput, SerializeOutput};
+use artifacts::app::message::{Message, ScriptOutput};
 use artifacts::app::model::{
     ArtifactEntry, ArtifactStatus, GeneratingState, GenerationStep, ListEntry, Model, Screen,
     StepLogs, TargetType,
@@ -21,7 +20,6 @@ use artifacts::app::model::{
 use artifacts::app::update::update;
 use artifacts::config::backend::BackendConfiguration;
 use artifacts::config::make::{ArtifactDef, FileDef, MakeConfiguration, PromptDef};
-use artifacts::tui::channels::{EffectCommand, EffectResult};
 use serial_test::serial;
 
 // ============================================================================
@@ -96,7 +94,6 @@ fn create_test_model(artifact_name: &str, has_prompts: bool) -> Model {
         artifact: artifact.clone(),
         status: ArtifactStatus::Pending,
         step_logs: StepLogs::default(),
-        exists: false,
     };
 
     Model {
@@ -112,7 +109,7 @@ fn create_test_model(artifact_name: &str, has_prompts: bool) -> Model {
 
 /// Command tracker for dual assertion strategy
 struct CommandTracker {
-    commands: Vec<EffectCommand>,
+    commands: Vec<Effect>,
 }
 
 impl CommandTracker {
@@ -122,7 +119,7 @@ impl CommandTracker {
         }
     }
 
-    fn track(&mut self, cmd: EffectCommand) {
+    fn track(&mut self, cmd: Effect) {
         self.commands.push(cmd);
     }
 
@@ -139,12 +136,13 @@ impl CommandTracker {
     fn assert_command_at(&self, index: usize, expected_name: &str) {
         let cmd = self.commands.get(index).expect("Command should exist");
         let actual = match cmd {
-            EffectCommand::CheckSerialization { .. } => "CheckSerialization",
-            EffectCommand::RunGenerator { .. } => "RunGenerator",
-            EffectCommand::Serialize { .. } => "Serialize",
-            EffectCommand::SharedCheckSerialization { .. } => "SharedCheckSerialization",
-            EffectCommand::RunSharedGenerator { .. } => "RunSharedGenerator",
-            EffectCommand::SharedSerialize { .. } => "SharedSerialize",
+            Effect::CheckSerialization { .. } => "CheckSerialization",
+            Effect::RunGenerator { .. } => "RunGenerator",
+            Effect::Serialize { .. } => "Serialize",
+            Effect::SharedCheckSerialization { .. } => "SharedCheckSerialization",
+            Effect::RunSharedGenerator { .. } => "RunSharedGenerator",
+            Effect::SharedSerialize { .. } => "SharedSerialize",
+            Effect::None | Effect::Batch(_) | Effect::Quit => "None",
         };
         assert_eq!(actual, expected_name, "Command at index {} mismatch", index);
     }
@@ -152,92 +150,14 @@ impl CommandTracker {
     fn get_artifact_index_at(&self, index: usize) -> usize {
         let cmd = self.commands.get(index).expect("Command should exist");
         match cmd {
-            EffectCommand::CheckSerialization { artifact_index, .. } => *artifact_index,
-            EffectCommand::RunGenerator { artifact_index, .. } => *artifact_index,
-            EffectCommand::Serialize { artifact_index, .. } => *artifact_index,
-            EffectCommand::SharedCheckSerialization { artifact_index, .. } => *artifact_index,
-            EffectCommand::RunSharedGenerator { artifact_index, .. } => *artifact_index,
-            EffectCommand::SharedSerialize { artifact_index, .. } => *artifact_index,
+            Effect::CheckSerialization { artifact_index, .. } => *artifact_index,
+            Effect::RunGenerator { artifact_index, .. } => *artifact_index,
+            Effect::Serialize { artifact_index, .. } => *artifact_index,
+            Effect::SharedCheckSerialization { artifact_index, .. } => *artifact_index,
+            Effect::RunSharedGenerator { artifact_index, .. } => *artifact_index,
+            Effect::SharedSerialize { artifact_index, .. } => *artifact_index,
+            Effect::None | Effect::Batch(_) | Effect::Quit => 0,
         }
-    }
-}
-
-/// Convert Effect to EffectCommand for tracking
-fn effect_to_command(effect: &Effect) -> Option<EffectCommand> {
-    match effect {
-        Effect::CheckSerialization {
-            artifact_index,
-            artifact_name,
-            target_type,
-        } => Some(EffectCommand::CheckSerialization {
-            artifact_index: *artifact_index,
-            artifact_name: artifact_name.clone(),
-            target: target_type.target_name().unwrap_or("shared").to_string(),
-            target_type: target_type.context_str().to_string(),
-        }),
-        Effect::RunGenerator {
-            artifact_index,
-            artifact_name,
-            target_type,
-            prompts,
-        } => Some(EffectCommand::RunGenerator {
-            artifact_index: *artifact_index,
-            artifact_name: artifact_name.clone(),
-            target: target_type.target_name().unwrap_or("shared").to_string(),
-            target_type: target_type.context_str().to_string(),
-            prompts: prompts.clone(),
-        }),
-        Effect::Serialize {
-            artifact_index,
-            artifact_name,
-            target_type,
-            ..
-        } => Some(EffectCommand::Serialize {
-            artifact_index: *artifact_index,
-            artifact_name: artifact_name.clone(),
-            target: target_type.target_name().unwrap_or("shared").to_string(),
-            target_type: target_type.context_str().to_string(),
-        }),
-        Effect::SharedCheckSerialization {
-            artifact_index,
-            artifact_name,
-            nixos_targets,
-            home_targets,
-            ..
-        } => Some(EffectCommand::SharedCheckSerialization {
-            artifact_index: *artifact_index,
-            artifact_name: artifact_name.clone(),
-            targets: nixos_targets
-                .iter()
-                .chain(home_targets.iter())
-                .cloned()
-                .collect(),
-            target_types: std::iter::repeat_n("nixos".to_string(), nixos_targets.len())
-                .chain(std::iter::repeat_n("home".to_string(), home_targets.len()))
-                .collect(),
-        }),
-        Effect::RunSharedGenerator {
-            artifact_index,
-            artifact_name,
-            prompts,
-        } => Some(EffectCommand::RunSharedGenerator {
-            artifact_index: *artifact_index,
-            artifact_name: artifact_name.clone(),
-            prompts: prompts.clone(),
-        }),
-        Effect::SharedSerialize {
-            artifact_index,
-            artifact_name,
-            nixos_targets,
-            home_targets,
-            ..
-        } => Some(EffectCommand::SharedSerialize {
-            artifact_index: *artifact_index,
-            artifact_name: artifact_name.clone(),
-            machine_targets: nixos_targets.clone(),
-            user_targets: home_targets.clone(),
-        }),
-        _ => None,
     }
 }
 
@@ -246,24 +166,23 @@ fn process_effects_and_track(
     model: &mut Model,
     effect: Effect,
     tracker: &mut CommandTracker,
-) -> Vec<EffectResult> {
+) -> Vec<Message> {
     let mut results = Vec::new();
 
     fn process_single_effect(
         _model: &mut Model,
         effect: Effect,
         tracker: &mut CommandTracker,
-        _results: &mut Vec<EffectResult>,
+        _results: &mut Vec<Message>,
     ) {
-        if let Some(cmd) = effect_to_command(&effect) {
-            tracker.track(cmd);
-        }
-
-        // Handle batch effects recursively
-        if let Effect::Batch(effects) = effect {
-            for e in effects {
-                process_single_effect(_model, e, tracker, _results);
+        match &effect {
+            Effect::None | Effect::Quit => {}
+            Effect::Batch(effects) => {
+                for e in effects {
+                    process_single_effect(_model, e.clone(), tracker, _results);
+                }
             }
+            _ => tracker.track(effect),
         }
     }
 
@@ -305,18 +224,15 @@ fn test_check_serialization_flow_needs_generation() {
     assert_eq!(tracker.get_artifact_index_at(0), 0);
 
     // Simulate successful check result indicating generation needed
-    let check_output = CheckOutput {
-        stdout_lines: vec!["Check passed".to_string()],
-        stderr_lines: vec![],
-    };
     let (new_model, _) = update(
         model,
         Message::CheckSerializationResult {
             artifact_index: 0,
-            needs_generation: true,
-            exists: false,
-            result: Ok(()),
-            output: Some(check_output),
+            status: ArtifactStatus::NeedsGeneration,
+            result: Ok(ScriptOutput {
+                stdout_lines: vec!["Check passed".to_string()],
+                stderr_lines: vec![],
+            }),
         },
     );
 
@@ -361,10 +277,8 @@ fn test_check_serialization_flow_up_to_date() {
         model,
         Message::CheckSerializationResult {
             artifact_index: 0,
-            needs_generation: false,
-            exists: true,
-            result: Ok(()),
-            output: None,
+            status: ArtifactStatus::UpToDate,
+            result: Ok(ScriptOutput::default()),
         },
     );
 
@@ -416,10 +330,9 @@ fn test_generator_flow_success() {
     assert_eq!(tracker.get_artifact_index_at(0), 0);
 
     // Simulate successful generator result
-    let generator_output = GeneratorOutput {
+    let generator_output = ScriptOutput {
         stdout_lines: vec!["Generated key file".to_string()],
         stderr_lines: vec![],
-        files_generated: 1,
     };
     let (model_after_gen, serialize_effect) = update(
         model.clone(),
@@ -455,7 +368,7 @@ fn test_generator_flow_success() {
         exists: false,
     });
 
-    let serialize_output = SerializeOutput {
+    let serialize_output = ScriptOutput {
         stdout_lines: vec!["Serialized to backend".to_string()],
         stderr_lines: vec![],
     };
@@ -553,10 +466,9 @@ fn test_serialize_flow_failure() {
     });
 
     // Simulate successful generation first
-    let generator_output = GeneratorOutput {
+    let generator_output = ScriptOutput {
         stdout_lines: vec!["Generated".to_string()],
         stderr_lines: vec![],
-        files_generated: 1,
     };
     let (model_after_gen, _) = update(
         model.clone(),
@@ -573,7 +485,6 @@ fn test_serialize_flow_failure() {
         target_type: TargetType::NixOS {
             machine: "machine-one".to_string(),
         },
-        out_dir: std::path::PathBuf::from("/tmp"),
     };
 
     process_effects_and_track(&mut model, serialize_effect, &mut tracker);
@@ -634,10 +545,12 @@ fn test_check_serialization_failure() {
         model,
         Message::CheckSerializationResult {
             artifact_index: 0,
-            needs_generation: true,
-            exists: false,
+            status: ArtifactStatus::Failed {
+                error: "Check script not found".to_string(),
+                output: String::new(),
+                retry_available: true,
+            },
             result: Err("Check script not found".to_string()),
-            output: None,
         },
     );
 
@@ -671,7 +584,6 @@ fn test_batch_effect_processing() {
         artifact: artifact1.clone(),
         status: ArtifactStatus::Pending,
         step_logs: StepLogs::default(),
-        exists: false,
     };
     let entry2 = ArtifactEntry {
         target_type: TargetType::NixOS {
@@ -680,7 +592,6 @@ fn test_batch_effect_processing() {
         artifact: artifact2.clone(),
         status: ArtifactStatus::Pending,
         step_logs: StepLogs::default(),
-        exists: false,
     };
 
     let mut model = Model {
@@ -778,10 +689,8 @@ fn test_complete_lifecycle_success() {
         model,
         Message::CheckSerializationResult {
             artifact_index: 0,
-            needs_generation: true,
-            exists: false,
-            result: Ok(()),
-            output: None,
+            status: ArtifactStatus::NeedsGeneration,
+            result: Ok(ScriptOutput::default()),
         },
     );
     assert_eq!(model.entries[0].status(), &ArtifactStatus::NeedsGeneration);
@@ -806,10 +715,9 @@ fn test_complete_lifecycle_success() {
     };
     process_effects_and_track(&mut model.clone(), gen_effect, &mut tracker);
 
-    let gen_output = GeneratorOutput {
+    let gen_output = ScriptOutput {
         stdout_lines: vec!["Generated".to_string()],
         stderr_lines: vec![],
-        files_generated: 1,
     };
     let (model_after_gen, serialize_effect) = update(
         model_with_screen,
@@ -831,7 +739,7 @@ fn test_complete_lifecycle_success() {
 
     process_effects_and_track(&mut model.clone(), serialize_effect, &mut tracker);
 
-    let serialize_output = SerializeOutput {
+    let serialize_output = ScriptOutput {
         stdout_lines: vec!["Serialized".to_string()],
         stderr_lines: vec![],
     };
@@ -864,10 +772,8 @@ fn test_retry_available_after_failed_check() {
         model,
         Message::CheckSerializationResult {
             artifact_index: 0,
-            needs_generation: true,
-            exists: false,
+            status: ArtifactStatus::NeedsGeneration,
             result: Err("Backend not configured".to_string()),
-            output: None,
         },
     );
 
@@ -915,7 +821,6 @@ fn test_multiple_command_types_tracked() {
             target_type: TargetType::NixOS {
                 machine: "machine-one".to_string(),
             },
-            out_dir: std::path::PathBuf::from("/tmp"),
         },
     ];
 
@@ -978,11 +883,11 @@ fn test_batch_filters_none_effects() {
     tracker.assert_command_count(2);
 }
 
-/// Test: Command variant extraction
-/// Verifies all EffectCommand variants can be extracted and tracked
+/// Test: Effect variant field extraction
+/// Verifies all Effect variants have correct fields extractable
 #[test]
 #[serial]
-fn test_all_command_variants_extractable() {
+fn test_all_effect_variants_field_extraction() {
     let test_effect = Effect::CheckSerialization {
         artifact_index: 42,
         artifact_name: "test-check".to_string(),
@@ -991,20 +896,16 @@ fn test_all_command_variants_extractable() {
         },
     };
 
-    let cmd = effect_to_command(&test_effect);
-    assert!(cmd.is_some());
-
-    if let Some(EffectCommand::CheckSerialization {
+    // Verify we can extract fields directly from Effect
+    if let Effect::CheckSerialization {
         artifact_index,
         artifact_name,
-        target,
         target_type,
-    }) = cmd
+    } = test_effect
     {
         assert_eq!(artifact_index, 42);
         assert_eq!(artifact_name, "test-check");
-        assert_eq!(target, "machine-one");
-        assert_eq!(target_type, "nixos");
+        assert!(matches!(target_type, TargetType::NixOS { machine } if machine == "machine-one"));
     } else {
         panic!("Expected CheckSerialization variant");
     }
@@ -1034,10 +935,10 @@ fn test_dual_assertion_strategy_demonstration() {
 
     process_effects_and_track(&mut model.clone(), check_effect, &mut tracker);
 
-    // Assertion 1A: Correct command variant was tracked
+    // Assertion 1A: Correct effect variant was tracked
     assert_eq!(tracker.commands.len(), 1);
     match &tracker.commands[0] {
-        EffectCommand::CheckSerialization { artifact_index, .. } => {
+        Effect::CheckSerialization { artifact_index, .. } => {
             // Assertion 1B: artifact_index preserved correctly
             assert_eq!(*artifact_index, 0);
         }
@@ -1050,10 +951,8 @@ fn test_dual_assertion_strategy_demonstration() {
         model,
         Message::CheckSerializationResult {
             artifact_index: 0,
-            needs_generation: false,
-            exists: true,
-            result: Ok(()),
-            output: None,
+            status: ArtifactStatus::UpToDate,
+            result: Ok(ScriptOutput::default()),
         },
     );
 

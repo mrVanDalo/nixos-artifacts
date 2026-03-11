@@ -38,7 +38,7 @@
 //! ```
 
 use super::effect::Effect;
-use super::message::{CheckOutput, GeneratorOutput, KeyEvent, Message, SerializeOutput};
+use super::message::{KeyEvent, Message, ScriptOutput};
 use super::model::*;
 use crossterm::event::{KeyCode, KeyModifiers};
 
@@ -69,7 +69,6 @@ pub fn init(model: &Model) -> Effect {
             ListEntry::Shared(shared) => Effect::SharedCheckSerialization {
                 artifact_index: i,
                 artifact_name: shared.info.artifact_name.clone(),
-                backend_name: shared.info.backend_name.clone(),
                 nixos_targets: shared.info.nixos_targets.clone(),
                 home_targets: shared.info.home_targets.clone(),
             },
@@ -120,9 +119,9 @@ pub fn update(model: Model, msg: Message) -> (Model, Effect) {
             Screen::Generating(_),
             Message::SharedSerializeFinished {
                 artifact_index,
-                result,
+                results,
             },
-        ) => handle_shared_serialize_finished(model, artifact_index, result),
+        ) => handle_shared_serialize_finished(model, artifact_index, results),
 
         // === Chronological Log Screen ===
         (Screen::ChronologicalLog(_), Message::Key(key)) => update_chronological_log(model, key),
@@ -132,38 +131,20 @@ pub fn update(model: Model, msg: Message) -> (Model, Effect) {
             _,
             Message::CheckSerializationResult {
                 artifact_index,
-                needs_generation,
-                exists,
+                status,
                 result,
-                output,
             },
-        ) => handle_check_result(
-            model,
-            artifact_index,
-            needs_generation,
-            exists,
-            result,
-            output,
-        ),
+        ) => handle_check_result(model, artifact_index, status, result),
 
         // === Shared check serialization results (any screen) ===
         (
             _,
             Message::SharedCheckSerializationResult {
                 artifact_index,
-                needs_generation,
-                exists,
-                result,
-                output,
+                statuses,
+                outputs,
             },
-        ) => handle_check_result(
-            model,
-            artifact_index,
-            needs_generation,
-            exists,
-            result,
-            output,
-        ),
+        ) => handle_shared_check_result(model, artifact_index, statuses, outputs),
 
         // === Streaming output (any screen) ===
         (
@@ -226,13 +207,9 @@ fn start_generation_for_selected(mut model: Model) -> (Model, Effect) {
             return (model, Effect::None);
         };
 
-        let artifact_exists = match entry {
-            ListEntry::Single(single) => single.exists,
-            ListEntry::Shared(shared) => shared.exists,
-        };
-        let needs_generation = matches!(entry.status(), ArtifactStatus::NeedsGeneration);
-
-        if artifact_exists && needs_generation {
+        // Show confirmation dialog if artifact exists (UpToDate status)
+        // User is trying to regenerate an existing artifact
+        if matches!(entry.status(), ArtifactStatus::UpToDate) {
             // Extract info needed for the dialog
             let artifact_name = entry.artifact_name().to_string();
             let affected_targets = match entry {
@@ -457,48 +434,36 @@ fn create_prompt_state(artifact_index: usize, entry: &ArtifactEntry) -> PromptSt
 fn handle_check_result(
     mut model: Model,
     artifact_index: usize,
-    needs_generation: bool,
-    exists: bool,
-    result: Result<(), String>,
-    output: Option<CheckOutput>,
+    status: ArtifactStatus,
+    result: Result<ScriptOutput, String>,
 ) -> (Model, Effect) {
     if let Some(entry) = model.entries.get_mut(artifact_index) {
-        // Update exists flag based on check result
-        match entry {
-            crate::app::model::ListEntry::Single(single) => {
-                single.exists = exists;
-            }
-            crate::app::model::ListEntry::Shared(shared) => {
-                shared.exists = exists;
-            }
-        }
-
-        // Add captured script output to logs using helper methods
-        if let Some(check_output) = output {
-            entry
-                .step_logs_mut()
-                .append_stdout(LogStep::Check, &check_output.stdout_lines);
-            entry
-                .step_logs_mut()
-                .append_stderr(LogStep::Check, &check_output.stderr_lines);
-        }
-
-        // Add status summary
-        match result {
-            Ok(()) => {
-                if needs_generation {
-                    *entry.status_mut() = ArtifactStatus::NeedsGeneration;
-                    entry.step_logs_mut().check.push(LogEntry {
-                        level: LogLevel::Info,
-                        message: "Artifact needs regeneration".to_string(),
-                    });
-                } else {
-                    *entry.status_mut() = ArtifactStatus::UpToDate;
-                    entry.step_logs_mut().check.push(LogEntry {
-                        level: LogLevel::Success,
-                        message: "Already up to date".to_string(),
-                    });
+        match &result {
+            Ok(output) => {
+                // Add captured script output to logs using helper methods
+                if !output.stdout_lines.is_empty() || !output.stderr_lines.is_empty() {
+                    entry
+                        .step_logs_mut()
+                        .append_stdout(LogStep::Check, &output.stdout_lines);
+                    entry
+                        .step_logs_mut()
+                        .append_stderr(LogStep::Check, &output.stderr_lines);
                 }
+
+                // Set status from check result
+                *entry.status_mut() = status.clone();
+                
+                // Add status summary log entry
+                let (level, message) = match status {
+                    ArtifactStatus::NeedsGeneration => {
+                        (LogLevel::Info, "Artifact needs regeneration".to_string())
+                    }
+                    ArtifactStatus::UpToDate => {
+                        (LogLevel::Success, "Already up to date".to_string())
+                    }
+                    _ => (LogLevel::Info, "Unknown status".to_string()),
+                };
+                entry.step_logs_mut().check.push(LogEntry { level, message });
             }
             Err(e) => {
                 *entry.status_mut() = ArtifactStatus::Failed {
@@ -508,7 +473,7 @@ fn handle_check_result(
                 };
                 entry.step_logs_mut().check.push(LogEntry {
                     level: LogLevel::Error,
-                    message: e,
+                    message: e.clone(),
                 });
             }
         }
@@ -519,7 +484,7 @@ fn handle_check_result(
 fn handle_generator_finished(
     model: Model,
     artifact_index: usize,
-    result: Result<GeneratorOutput, String>,
+    result: Result<ScriptOutput, String>,
 ) -> (Model, Effect) {
     match result {
         Ok(output) => handle_generator_success(model, artifact_index, output),
@@ -531,7 +496,7 @@ fn handle_generator_finished(
 fn handle_generator_success(
     mut model: Model,
     artifact_index: usize,
-    output: GeneratorOutput,
+    output: ScriptOutput,
 ) -> (Model, Effect) {
     // Store logs in entry
     if let Some(entry) = model.entries.get_mut(artifact_index) {
@@ -550,7 +515,7 @@ fn handle_generator_success(
         }
         step_logs.generate.push(LogEntry {
             level: LogLevel::Success,
-            message: format!("Generated {} file(s)", output.files_generated),
+            message: "Generated files".to_string(),
         });
     }
 
@@ -565,10 +530,8 @@ fn handle_generator_success(
             artifact_index,
             artifact_name: single.artifact.name.clone(),
             target_type: single.target_type.clone(),
-            out_dir: Default::default(),
         },
         ListEntry::Shared(_) => {
-            // Shared serialization handled separately
             Effect::None
         }
     };
@@ -607,7 +570,7 @@ fn handle_generator_failure(
 fn handle_serialize_finished(
     model: Model,
     artifact_index: usize,
-    result: Result<SerializeOutput, String>,
+    result: Result<ScriptOutput, String>,
 ) -> (Model, Effect) {
     match result {
         Ok(output) => handle_serialize_success(model, artifact_index, output),
@@ -619,7 +582,7 @@ fn handle_serialize_finished(
 fn handle_serialize_success(
     mut model: Model,
     artifact_index: usize,
-    output: SerializeOutput,
+    output: ScriptOutput,
 ) -> (Model, Effect) {
     if let Some(entry) = model.entries.get_mut(artifact_index) {
         let step_logs = entry.step_logs_mut();
@@ -733,12 +696,14 @@ fn update_generator_selection(mut model: Model, key: KeyEvent) -> (Model, Effect
                         artifact_name: shared.info.artifact_name.clone(),
                         prompts: Default::default(),
                     };
+                    // exists = true if status is UpToDate (regenerating existing)
+                    let exists_before = matches!(shared.status, ArtifactStatus::UpToDate);
                     model.screen = Screen::Generating(GeneratingState {
                         artifact_index,
                         artifact_name: shared.info.artifact_name.clone(),
                         step: GenerationStep::RunningGenerator,
                         log_lines: vec![],
-                        exists: shared.exists, // Use entry's exists flag
+                        exists: exists_before,
                     });
                     (model, effect)
                 } else {
@@ -915,6 +880,43 @@ fn start_generation_for_selected_internal(
     mut model: Model,
     artifact_index: usize,
 ) -> (Model, Effect) {
+    // Extract all needed data before any mutable borrow
+    let entry_data: Option<(bool, Option<String>, String, Option<String>, Vec<crate::config::make::PromptDef>, Vec<String>, Vec<String>, Vec<crate::config::make::GeneratorInfo>)> = {
+        let Some(entry) = model.entries.get(artifact_index) else {
+            return (model, Effect::None);
+        };
+        match entry {
+            ListEntry::Single(single) => {
+                let prompt_state = create_prompt_state(artifact_index, single);
+                let artifact_name = single.artifact.name.clone();
+                let target_type = single.target_type.clone();
+                let exists_before = matches!(single.status, ArtifactStatus::UpToDate);
+                let prompts_empty = prompt_state.prompts.is_empty();
+                // Store what we need for the branches
+                Some((exists_before, None, artifact_name, None, vec![], vec![], vec![], vec![]))
+            }
+            ListEntry::Shared(shared) => {
+                if shared.info.error.is_some() {
+                    return (model, Effect::None);
+                }
+                let artifact_name = shared.info.artifact_name.clone();
+                let exists_before = matches!(shared.status, ArtifactStatus::UpToDate);
+                let description = shared.info.description.clone();
+                let generator_path = shared.info.generators.first().map(|g| g.path.clone());
+                let prompts: Vec<_> = shared.info.prompts.values().cloned().collect();
+                let nixos_targets = shared.info.nixos_targets.clone();
+                let home_targets = shared.info.home_targets.clone();
+                let generators = shared.info.generators.clone();
+                Some((exists_before, generator_path, artifact_name, description, prompts, nixos_targets, home_targets, generators))
+            }
+        }
+    };
+
+    let Some((exists_before, generator_path, artifact_name, description, prompts, nixos_targets, home_targets, generators)) = entry_data else {
+        return (model, Effect::None);
+    };
+
+    // Now we can mutate model without borrowing entry
     let Some(entry) = model.entries.get(artifact_index) else {
         return (model, Effect::None);
     };
@@ -922,21 +924,22 @@ fn start_generation_for_selected_internal(
     match entry {
         ListEntry::Single(single) => {
             let prompt_state = create_prompt_state(artifact_index, single);
+            let artifact_name = single.artifact.name.clone();
+            let target_type = single.target_type.clone();
 
             if prompt_state.prompts.is_empty() {
-                // No prompts needed, go straight to generating
                 let effect = Effect::RunGenerator {
                     artifact_index,
-                    artifact_name: single.artifact.name.clone(),
-                    target_type: single.target_type.clone(),
+                    artifact_name: artifact_name.clone(),
+                    target_type,
                     prompts: Default::default(),
                 };
                 model.screen = Screen::Generating(GeneratingState {
                     artifact_index,
-                    artifact_name: single.artifact.name.clone(),
+                    artifact_name,
                     step: GenerationStep::RunningGenerator,
                     log_lines: vec![],
-                    exists: single.exists, // Use entry's exists flag
+                    exists: exists_before,
                 });
                 (model, effect)
             } else {
@@ -944,40 +947,15 @@ fn start_generation_for_selected_internal(
                 (model, Effect::None)
             }
         }
-        ListEntry::Shared(shared) => {
-            // Block generation for validation errors
-            if shared.info.error.is_some() {
-                return (model, Effect::None);
-            }
-
-            let artifact_name = shared.info.artifact_name.clone();
-
-            // Check if there's only one unique generator
-            if shared.info.generators.len() == 1 {
-                // Smart selection: skip dialog, use the only generator
-                let generator_path = shared.info.generators[0].path.clone();
-                let prompts: Vec<PromptEntry> = shared
-                    .info
-                    .prompts
-                    .values()
-                    .map(|p| PromptEntry {
-                        name: p.name.clone(),
-                        description: p.description.clone(),
-                    })
-                    .collect();
-
-                // Store the selected generator in the shared entry
-                let shared_exists = if let Some(ListEntry::Shared(shared)) =
-                    model.entries.get_mut(artifact_index)
-                {
-                    shared.selected_generator = Some(generator_path);
-                    shared.exists
-                } else {
-                    false
-                };
+        ListEntry::Shared(_) => {
+            if generators.len() == 1 {
+                if let Some(generator_path) = generator_path {
+                    if let Some(ListEntry::Shared(shared)) = model.entries.get_mut(artifact_index) {
+                        shared.selected_generator = Some(generator_path);
+                    }
+                }
 
                 if prompts.is_empty() {
-                    // No prompts needed, go straight to generating
                     let effect = Effect::RunSharedGenerator {
                         artifact_index,
                         artifact_name: artifact_name.clone(),
@@ -985,19 +963,21 @@ fn start_generation_for_selected_internal(
                     };
                     model.screen = Screen::Generating(GeneratingState {
                         artifact_index,
-                        artifact_name: artifact_name.clone(),
+                        artifact_name,
                         step: GenerationStep::RunningGenerator,
                         log_lines: vec![],
-                        exists: shared_exists, // Use entry's exists flag
+                        exists: exists_before,
                     });
                     (model, effect)
                 } else {
-                    // Need to collect prompts first
                     model.screen = Screen::Prompt(PromptState {
                         artifact_index,
-                        artifact_name: artifact_name.clone(),
-                        description: None,
-                        prompts,
+                        artifact_name,
+                        description,
+                        prompts: prompts.iter().map(|p| PromptEntry {
+                            name: p.name.clone(),
+                            description: p.description.clone(),
+                        }).collect(),
                         current_prompt_index: 0,
                         input_mode: InputMode::Line,
                         buffer: String::new(),
@@ -1006,26 +986,17 @@ fn start_generation_for_selected_internal(
                     (model, Effect::None)
                 }
             } else {
-                // Multiple generators: show selection dialog
-                let prompts: Vec<_> = shared.info.prompts.values().cloned().collect();
-
                 model.screen = Screen::SelectGenerator(SelectGeneratorState {
                     artifact_index,
                     artifact_name: artifact_name.clone(),
-                    description: shared.info.description.clone(),
-                    generators: shared.info.generators.clone(),
+                    description,
+                    generators,
                     selected_index: 0,
                     prompts,
-                    nixos_targets: shared.info.nixos_targets.clone(),
-                    home_targets: shared.info.home_targets.clone(),
+                    nixos_targets,
+                    home_targets,
                 });
-
-                // The effect is mostly informational now (screen is already set)
-                let effect = Effect::ShowGeneratorSelection {
-                    artifact_index,
-                    artifact_name,
-                };
-                (model, effect)
+                (model, Effect::None)
             }
         }
     }
@@ -1033,10 +1004,50 @@ fn start_generation_for_selected_internal(
 
 // === Shared Artifact Handlers ===
 
+fn handle_shared_check_result(
+    mut model: Model,
+    artifact_index: usize,
+    statuses: Vec<ArtifactStatus>,
+    outputs: Vec<ScriptOutput>,
+) -> (Model, Effect) {
+    // Aggregate results: needs_generation if any needs it, exists if any is UpToDate
+    let any_needs_gen = statuses.iter().any(|s| matches!(s, ArtifactStatus::NeedsGeneration));
+    
+    if let Some(entry) = model.entries.get_mut(artifact_index) {
+        // Add captured script output to logs using first output if available
+        if let Some(check_output) = outputs.first() {
+            if !check_output.stdout_lines.is_empty() || !check_output.stderr_lines.is_empty() {
+                entry
+                    .step_logs_mut()
+                    .append_stdout(LogStep::Check, &check_output.stdout_lines);
+                entry
+                    .step_logs_mut()
+                    .append_stderr(LogStep::Check, &check_output.stderr_lines);
+            }
+        }
+
+        // Set status based on aggregated result
+        if any_needs_gen {
+            *entry.status_mut() = ArtifactStatus::NeedsGeneration;
+            entry.step_logs_mut().check.push(LogEntry {
+                level: LogLevel::Info,
+                message: "Shared artifact needs regeneration".to_string(),
+            });
+        } else {
+            *entry.status_mut() = ArtifactStatus::UpToDate;
+            entry.step_logs_mut().check.push(LogEntry {
+                level: LogLevel::Success,
+                message: "Already up to date".to_string(),
+            });
+        }
+    }
+    (model, Effect::None)
+}
+
 fn handle_shared_generator_finished(
     model: Model,
     artifact_index: usize,
-    result: Result<GeneratorOutput, String>,
+    result: Result<ScriptOutput, String>,
 ) -> (Model, Effect) {
     match result {
         Ok(output) => handle_shared_generator_success(model, artifact_index, output),
@@ -1048,7 +1059,7 @@ fn handle_shared_generator_finished(
 fn handle_shared_generator_success(
     mut model: Model,
     artifact_index: usize,
-    output: GeneratorOutput,
+    output: ScriptOutput,
 ) -> (Model, Effect) {
     if let Some(entry) = model.entries.get_mut(artifact_index) {
         let step_logs = entry.step_logs_mut();
@@ -1066,7 +1077,7 @@ fn handle_shared_generator_success(
         }
         step_logs.generate.push(LogEntry {
             level: LogLevel::Success,
-            message: format!("Generated {} file(s)", output.files_generated),
+            message: "Generated files".to_string(),
         });
     }
 
@@ -1078,8 +1089,6 @@ fn handle_shared_generator_success(
         ListEntry::Shared(shared) => Effect::SharedSerialize {
             artifact_index,
             artifact_name: shared.info.artifact_name.clone(),
-            backend_name: shared.info.backend_name.clone(),
-            out_dir: Default::default(),
             nixos_targets: shared.info.nixos_targets.clone(),
             home_targets: shared.info.home_targets.clone(),
         },
@@ -1121,11 +1130,27 @@ fn handle_shared_generator_failure(
 fn handle_shared_serialize_finished(
     model: Model,
     artifact_index: usize,
-    result: Result<SerializeOutput, String>,
+    results: Vec<(String, bool, ScriptOutput)>,
 ) -> (Model, Effect) {
-    match result {
-        Ok(output) => handle_shared_serialize_success(model, artifact_index, output),
-        Err(error) => handle_shared_serialize_failure(model, artifact_index, error),
+    // Check if all succeeded
+    let all_success = results.iter().all(|(_, success, _)| *success);
+    
+    if all_success {
+        handle_shared_serialize_success(model, artifact_index, results)
+    } else {
+        // Find first error
+        let error_msg = results.iter()
+            .filter(|(_, success, _)| !*success)
+            .map(|(_, _, output)| {
+                if output.stderr_lines.is_empty() {
+                    "Serialization failed".to_string()
+                } else {
+                    output.stderr_lines.join("\n")
+                }
+            })
+            .next()
+            .unwrap_or_else(|| "Serialization failed".to_string());
+        handle_shared_serialize_failure(model, artifact_index, error_msg)
     }
 }
 
@@ -1133,21 +1158,24 @@ fn handle_shared_serialize_finished(
 fn handle_shared_serialize_success(
     mut model: Model,
     artifact_index: usize,
-    output: SerializeOutput,
+    results: Vec<(String, bool, ScriptOutput)>,
 ) -> (Model, Effect) {
     if let Some(entry) = model.entries.get_mut(artifact_index) {
         let step_logs = entry.step_logs_mut();
-        for line in &output.stdout_lines {
-            step_logs.serialize.push(LogEntry {
-                level: LogLevel::Output,
-                message: line.clone(),
-            });
-        }
-        for line in &output.stderr_lines {
-            step_logs.serialize.push(LogEntry {
-                level: LogLevel::Error,
-                message: line.clone(),
-            });
+        // Use first result's output for logs
+        if let Some((_, _, output)) = results.first() {
+            for line in &output.stdout_lines {
+                step_logs.serialize.push(LogEntry {
+                    level: LogLevel::Output,
+                    message: line.clone(),
+                });
+            }
+            for line in &output.stderr_lines {
+                step_logs.serialize.push(LogEntry {
+                    level: LogLevel::Error,
+                    message: line.clone(),
+                });
+            }
         }
         step_logs.serialize.push(LogEntry {
             level: LogLevel::Success,
@@ -1272,7 +1300,6 @@ mod tests {
             artifact: make_test_artifact("ssh-key", vec!["passphrase"]),
             status: ArtifactStatus::Pending,
             step_logs: StepLogs::default(),
-            exists: false,
         };
         let entry2 = ArtifactEntry {
             target_type: TargetType::NixOS {
@@ -1281,7 +1308,6 @@ mod tests {
             artifact: make_test_artifact("api-token", vec![]),
             status: ArtifactStatus::Pending,
             step_logs: StepLogs::default(),
-            exists: false,
         };
 
         Model {
@@ -1529,8 +1555,6 @@ mod tests {
     /// Test that GeneratorFinished returns Serialize effect
     #[test]
     fn test_update_returns_serialize_effect() {
-        use crate::app::message::GeneratorOutput;
-
         let mut model = make_test_model();
         model.selected_index = 0;
         model.screen = Screen::Generating(GeneratingState {
@@ -1542,17 +1566,14 @@ mod tests {
         });
 
         // Simulate successful generator completion
-        let result = Ok(GeneratorOutput {
-            stdout_lines: vec!["Generated key".to_string()],
-            stderr_lines: vec![],
-            files_generated: 2,
-        });
-
         let (new_model, effect) = update(
             model,
             Message::GeneratorFinished {
                 artifact_index: 0,
-                result,
+                result: Ok(ScriptOutput {
+                    stdout_lines: vec!["Generated key".to_string()],
+                    stderr_lines: vec![],
+                }),
             },
         );
 
@@ -1600,8 +1621,6 @@ mod tests {
     /// Test that GeneratorFinished result updates model status correctly
     #[test]
     fn test_update_handles_async_result() {
-        use crate::app::message::GeneratorOutput;
-
         let mut model = make_test_model();
         model.selected_index = 0;
 
@@ -1624,17 +1643,14 @@ mod tests {
         }
 
         // Simulate successful completion
-        let result = Ok(GeneratorOutput {
-            stdout_lines: vec!["Generated successfully".to_string()],
-            stderr_lines: vec![],
-            files_generated: 1,
-        });
-
         let (new_model, _effect) = update(
             model,
             Message::GeneratorFinished {
                 artifact_index: 0,
-                result,
+                result: Ok(ScriptOutput {
+                    stdout_lines: vec!["Generated successfully".to_string()],
+                    stderr_lines: vec![],
+                }),
             },
         );
 
@@ -1684,13 +1700,11 @@ mod tests {
             model,
             Message::SharedCheckSerializationResult {
                 artifact_index: 0,
-                needs_generation: true,
-                exists: false,
-                result: Ok(()),
-                output: Some(CheckOutput {
+                statuses: vec![ArtifactStatus::NeedsGeneration],
+                outputs: vec![ScriptOutput {
                     stdout_lines: vec!["Checking shared artifact...".to_string()],
                     stderr_lines: vec![],
-                }),
+                }],
             },
         );
 
@@ -1715,10 +1729,8 @@ mod tests {
             model,
             Message::SharedCheckSerializationResult {
                 artifact_index: 0,
-                needs_generation: false,
-                exists: true,
-                result: Ok(()),
-                output: None,
+                statuses: vec![ArtifactStatus::UpToDate],
+                outputs: vec![],
             },
         );
 
@@ -1731,33 +1743,35 @@ mod tests {
         assert!(effect.is_none());
     }
 
-    /// Test that SharedCheckSerializationResult handles error status
+    /// Test that SharedCheckSerializationResult handles multiple targets
     #[test]
-    fn test_shared_check_serialization_result_error() {
+    fn test_shared_check_serialization_result_multi_target() {
         let model = make_test_model_with_shared();
 
-        // Simulate failed shared check
+        // Simulate successful shared check result with multiple targets (any NeedsGeneration = needs gen)
         let (new_model, effect) = update(
             model,
             Message::SharedCheckSerializationResult {
                 artifact_index: 0,
-                needs_generation: true,
-                exists: false,
-                result: Err("Check script failed".to_string()),
-                output: Some(CheckOutput {
-                    stdout_lines: vec![],
-                    stderr_lines: vec!["Error: Backend not found".to_string()],
-                }),
+                statuses: vec![
+                    ArtifactStatus::UpToDate,
+                    ArtifactStatus::NeedsGeneration,
+                    ArtifactStatus::UpToDate,
+                ],
+                outputs: vec![
+                    ScriptOutput::default(),
+                    ScriptOutput::default(),
+                    ScriptOutput::default(),
+                ],
             },
         );
 
-        // Status should transition to Failed
-        match new_model.entries[0].status() {
-            ArtifactStatus::Failed { error, .. } => {
-                assert!(error.contains("Check script failed"));
-            }
-            other => panic!("Expected Failed status, got {:?}", other),
-        }
+        // Status should transition to NeedsGeneration because one target needs it
+        assert_eq!(
+            new_model.entries[0].status(),
+            &ArtifactStatus::NeedsGeneration,
+            "Shared artifact should need generation when any target needs it"
+        );
         assert!(effect.is_none());
     }
 
@@ -1805,7 +1819,6 @@ mod tests {
             status: ArtifactStatus::Pending,
             step_logs: StepLogs::default(),
             selected_generator: None,
-            exists: false,
         };
 
         let model = Model {
@@ -1881,7 +1894,6 @@ mod tests {
             status: ArtifactStatus::Pending,
             step_logs: StepLogs::default(),
             selected_generator: None,
-            exists: false,
         };
 
         let model = Model {
@@ -1956,7 +1968,6 @@ mod tests {
             status: ArtifactStatus::Pending,
             step_logs: StepLogs::default(),
             selected_generator: None,
-            exists: false,
         };
 
         let model = Model {
@@ -1979,10 +1990,10 @@ mod tests {
             new_model.screen
         );
 
-        // Effect should be ShowGeneratorSelection
+        // Effect should be None (screen transition is handled in update)
         assert!(
-            matches!(effect, Effect::ShowGeneratorSelection { .. }),
-            "Expected ShowGeneratorSelection effect, got {:?}",
+            effect.is_none(),
+            "Expected None effect, got {:?}",
             effect
         );
 
@@ -2033,7 +2044,6 @@ mod tests {
             status: ArtifactStatus::Pending,
             step_logs: StepLogs::default(),
             selected_generator: None,
-            exists: false,
         };
 
         let model = Model {
@@ -2099,7 +2109,6 @@ mod tests {
             status: ArtifactStatus::Pending,
             step_logs: StepLogs::default(),
             selected_generator: None,
-            exists: false,
         };
 
         Model {

@@ -19,13 +19,13 @@
 //! [`crate::tui::runtime`]: crate::tui::runtime
 
 use std::collections::HashMap;
-use std::path::PathBuf;
+
+use crate::app::model::TargetType;
 
 /// Side effects that the runtime must execute.
 ///
 /// These are returned by [`update`](crate::app::update::update), not executed inside it.
-/// The runtime converts these into [`crate::tui::channels::EffectCommand`]s and sends them to
-/// the background task for execution.
+/// The runtime sends these directly to the background task for execution.
 #[derive(Debug, Clone, Default)]
 pub enum Effect {
     /// No side effect
@@ -42,14 +42,14 @@ pub enum Effect {
     CheckSerialization {
         artifact_index: usize,
         artifact_name: String,
-        target_type: crate::app::model::TargetType,
+        target_type: TargetType,
     },
 
     /// Run the generator script for an artifact
     RunGenerator {
         artifact_index: usize,
         artifact_name: String,
-        target_type: crate::app::model::TargetType,
+        target_type: TargetType,
         prompts: HashMap<String, String>,
     },
 
@@ -57,21 +57,13 @@ pub enum Effect {
     Serialize {
         artifact_index: usize,
         artifact_name: String,
-        target_type: crate::app::model::TargetType,
-        out_dir: PathBuf,
-    },
-
-    /// Show generator selection dialog for a shared artifact
-    ShowGeneratorSelection {
-        artifact_index: usize,
-        artifact_name: String,
+        target_type: TargetType,
     },
 
     /// Check if a shared artifact needs regeneration
     SharedCheckSerialization {
         artifact_index: usize,
         artifact_name: String,
-        backend_name: String,
         nixos_targets: Vec<String>,
         home_targets: Vec<String>,
     },
@@ -87,8 +79,6 @@ pub enum Effect {
     SharedSerialize {
         artifact_index: usize,
         artifact_name: String,
-        backend_name: String,
-        out_dir: PathBuf,
         nixos_targets: Vec<String>,
         home_targets: Vec<String>,
     },

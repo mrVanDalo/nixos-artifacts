@@ -5,7 +5,7 @@ expression: captures
 [
     StateCapture {
         step_index: 0,
-        message: "CheckSerializationResult { artifact_index: 0, needs_generation: true, exists: false, result: Ok(()), output: None }",
+        message: "CheckSerializationResult { artifact_index: 0, status: NeedsGeneration, result: Ok(ScriptOutput { stdout_lines: [], stderr_lines: [] }) }",
         model_state: ModelState {
             screen: "ArtifactList",
             selected_index: 0,

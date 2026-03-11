@@ -9,10 +9,12 @@
 use std::collections::{BTreeMap, HashMap};
 use std::time::Duration;
 
+use artifacts::app::message::Message;
+use artifacts::app::model::TargetType;
 use artifacts::config::backend::BackendConfiguration;
 use artifacts::config::make::MakeConfiguration;
 use artifacts::tui::background::spawn_background_task;
-use artifacts::tui::channels::{EffectCommand, EffectResult};
+use artifacts::app::effect::Effect;
 use tempfile::TempDir;
 use tokio::time::timeout;
 use tokio_util::sync::CancellationToken;
@@ -52,11 +54,10 @@ async fn test_graceful_shutdown_completes_in_flight() {
 
     // Send one command
     tx_cmd
-        .send(EffectCommand::CheckSerialization {
+        .send(Effect::CheckSerialization {
             artifact_index: 0,
             artifact_name: "in-flight".to_string(),
-            target: "machine".to_string(),
-            target_type: "nixos".to_string(),
+            target_type: TargetType::NixOS { machine: "machine".to_string() },
         })
         .unwrap();
 
@@ -70,7 +71,7 @@ async fn test_graceful_shutdown_completes_in_flight() {
         .expect("Should receive result for in-flight command");
 
     match result {
-        EffectResult::CheckSerialization { artifact_index, .. } => {
+        Message::CheckSerializationResult { artifact_index, .. } => {
             assert_eq!(artifact_index, 0, "artifact_index should match");
         }
         _ => panic!("Expected CheckSerialization result"),
@@ -108,11 +109,10 @@ async fn test_shutdown_with_queued_commands() {
     let num_commands = 5;
     for i in 0..num_commands {
         tx_cmd
-            .send(EffectCommand::CheckSerialization {
+            .send(Effect::CheckSerialization {
                 artifact_index: i,
                 artifact_name: format!("queued-{}", i),
-                target: "machine".to_string(),
-                target_type: "nixos".to_string(),
+                target_type: TargetType::NixOS { machine: "machine".to_string() },
             })
             .unwrap();
     }
@@ -125,7 +125,7 @@ async fn test_shutdown_with_queued_commands() {
     loop {
         match timeout(Duration::from_millis(500), rx_res.recv()).await {
             Ok(Some(result)) => {
-                if let EffectResult::CheckSerialization { artifact_index, .. } = result {
+                if let Message::CheckSerializationResult { artifact_index, .. } = result {
                     received.push(artifact_index);
                 }
             }
@@ -200,11 +200,10 @@ async fn test_result_channel_disconnect() {
     // Send a command - background will try to send result but channel is closed
     // This should not panic
     tx_cmd
-        .send(EffectCommand::CheckSerialization {
+        .send(Effect::CheckSerialization {
             artifact_index: 0,
             artifact_name: "test".to_string(),
-            target: "machine".to_string(),
-            target_type: "nixos".to_string(),
+            target_type: TargetType::NixOS { machine: "machine".to_string() },
         })
         .unwrap();
 
@@ -235,11 +234,10 @@ async fn test_command_timeout() {
     // Send a command that will fail quickly (not timeout, just fail open)
     // This verifies the background task is running and responding
     tx_cmd
-        .send(EffectCommand::CheckSerialization {
+        .send(Effect::CheckSerialization {
             artifact_index: 99,
             artifact_name: "timeout-test".to_string(),
-            target: "machine".to_string(),
-            target_type: "nixos".to_string(),
+            target_type: TargetType::NixOS { machine: "machine".to_string() },
         })
         .unwrap();
 
