@@ -1,7 +1,7 @@
 # Backend Developer Guide for nixos-artifacts
 
-**Version:** 1.0  
-**Last Updated:** 2026-02-20  
+**Version:** 2.0  
+**Last Updated:** 2026-03-11  
 **Status:** Complete reference for backend implementation
 
 This guide provides everything needed to implement a custom serialization backend for nixos-artifacts. It is designed to be copied standalone to other repositories.
@@ -10,11 +10,16 @@ This guide provides everything needed to implement a custom serialization backen
 
 - [Overview](#overview)
 - [Backend Interface](#backend-interface)
-- [The Four Scripts](#the-four-scripts)
+- [Backend Scripts](#backend-scripts)
   - [check_serialization](#check_serialization)
+    - [nixos_check_serialization](#nixos_check_serialization)
+    - [home_check_serialization](#home_check_serialization)
+    - [shared_check_serialization](#shared_check_serialization)
   - [serialize](#serialize)
+    - [nixos_serialize](#nixos_serialize)
+    - [home_serialize](#home_serialize)
+    - [shared_serialize](#shared_serialize)
   - [deserialize](#deserialize)
-  - [shared_serialize (optional)](#shared_serialize-optional)
 - [Backend Configuration (backend.toml)](#backend-configuration-backendtoml)
 - [Environment Variables Reference](#environment-variables-reference)
 - [File Format Reference](#file-format-reference)
@@ -45,13 +50,13 @@ A **backend** is a set of shell scripts that implement the storage contract for 
 
 ### Backend Types
 
-Backends must handle two types of targets:
+Backends handle three types of targets:
 
 | Type | Description | Permissions |
 |------|-------------|-------------|
-| **NixOS Machines** | Full system configurations | Has `owner`, `group`, and `mode` |
-| **Home Manager Users** | User-level configurations | Only `path` (no system permissions) |
-| **Shared Artifacts** | Identical across multiple targets | Stored once, used by many |
+| **NixOS Machines** | Full system configurations | Has `owner` and `group` fields |
+| **Home Manager Users** | User-level configurations | `owner` and `group` are `null` |
+| **Shared Artifacts** | Identical across multiple machines/users | Requires dedicated `shared_*` scripts |
 
 ### When to Write a Custom Backend
 
@@ -66,10 +71,11 @@ Consider writing a custom backend when:
 
 The CLI calls your backend scripts at specific points in the artifact lifecycle. All scripts:
 
-- Run in a bubblewrap container with restricted filesystem access
 - Receive data through environment variables and temporary files
 - Must return exit code 0 on success, non-zero on failure
 - Can read configuration from a JSON file (`$config`)
+
+Note: Generator scripts run in isolated bubblewrap containers for security, but backend serialization scripts run directly on the host system.
 
 ### Script Lifecycle
 
@@ -79,11 +85,11 @@ check_serialization
 generator runs → creates files in $out
     ↓
 serialize stores files from $out
-    ↓ (during system activation)
-deserialize restores files to $out
 ```
 
-## The Four Scripts
+For shared artifacts, the lifecycle uses `shared_check_serialization` and `shared_serialize` instead.
+
+## Backend Scripts
 
 ### check_serialization
 
@@ -91,18 +97,30 @@ deserialize restores files to $out
 
 **When Called:** Before the generator script runs, during the `artifacts generate` workflow.
 
+**Exit Codes:**
+
+| Exit Code | Meaning | Action Taken by CLI |
+|-----------|---------|---------------------|
+| 0 | Artifact exists | Skip generation for this artifact |
+| Non-zero | Artifact needs generation | Continue to generator phase |
+
+#### nixos_check_serialization
+
+Called for NixOS machine targets.
+
 **Environment Variables:**
 
 | Variable | Type | Description | Example |
 |----------|------|-------------|---------|
 | `$inputs` | Directory | Path to directory containing JSON files with file metadata | `/tmp/artifacts-inputs-xxx` |
 | `$config` | File | Path to JSON file with backend configuration | `/tmp/config-xxx.json` |
+| `$artifact_context` | String | Context type: always `"nixos"` | `nixos` |
 | `$machine` | String | Target machine name | `server-one` |
 | `$artifact` | String | Artifact name being processed | `ssh-host-key` |
 
-**Input Details:**
+**$inputs Directory Format:**
 
-The `$inputs` directory contains one JSON file per file defined in the artifact's `files` attribute. Each JSON file has this structure:
+Each file in `$inputs` is named after a file key and contains JSON:
 
 ```json
 {
@@ -112,36 +130,17 @@ The `$inputs` directory contains one JSON file per file defined in the artifact'
 }
 ```
 
-For Home Manager artifacts, `owner` and `group` are omitted (only `path` is present).
-
-**Exit Codes:**
-
-| Exit Code | Meaning | Action Taken by CLI |
-|-----------|---------|---------------------|
-| 0 | Artifact exists | Skip generation for this artifact |
-| Non-zero | Artifact needs generation | Continue to generator phase |
-
-**Output Convention:**
-
-While not required by the CLI, it's conventional to print `EXISTS` to stdout when the artifact is found. This aids in debugging.
-
-**Complete Example:**
+**Example:**
 
 ```bash
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Environment variables available:
-# $inputs - Directory with expected file metadata
-# $config - JSON file with backend configuration
-# $machine - Target machine name
-# $artifact - Artifact name
-
 # Read storage path from config (with default)
 STORAGE_PATH=$(jq -r '.storage_path // "/var/lib/mybackend"' "$config")
 
-# Check if artifact exists in storage
-if [[ -f "$STORAGE_PATH/$artifact.json" ]]; then
+# Check if artifact exists for this machine
+if [[ -f "$STORAGE_PATH/$machine/$artifact.json" ]]; then
     echo "EXISTS"
     exit 0
 fi
@@ -150,26 +149,137 @@ fi
 exit 1
 ```
 
+#### home_check_serialization
+
+Called for Home Manager user targets.
+
+**Environment Variables:**
+
+| Variable | Type | Description | Example |
+|----------|------|-------------|---------|
+| `$inputs` | Directory | Path to directory containing JSON files with file metadata | `/tmp/artifacts-inputs-xxx` |
+| `$config` | File | Path to JSON file with backend configuration | `/tmp/config-xxx.json` |
+| `$artifact_context` | String | Context type: always `"homemanager"` | `homemanager` |
+| `$username` | String | Target user identifier | `alice@workstation` |
+| `$artifact` | String | Artifact name being processed | `ssh-host-key` |
+
+**$inputs Directory Format:**
+
+Each file in `$inputs` contains JSON where `owner` and `group` may be `null`:
+
+```json
+{
+  "path": "~/.ssh/id_ed25519",
+  "owner": null,
+  "group": null
+}
+```
+
+**Example:**
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Read storage path from config (with default)
+STORAGE_PATH=$(jq -r '.storage_path // "/var/lib/mybackend"' "$config")
+
+# Check if artifact exists for this user
+if [[ -f "$STORAGE_PATH/$username/$artifact.json" ]]; then
+    echo "EXISTS"
+    exit 0
+fi
+
+# Artifact doesn't exist - signal that generation is needed
+exit 1
+```
+
+#### shared_check_serialization
+
+Called for shared artifacts (required if `capabilities.shared = true`). Must check if the artifact exists for ALL targets that share it.
+
+**Environment Variables:**
+
+| Variable | Type | Description | Example |
+|----------|------|-------------|---------|
+| `$artifact` | String | Artifact name being processed | `wireguard-key` |
+| `$machines` | File | JSON file mapping machine names to their configs | `/tmp/machines-xxx.json` |
+| `$users` | File | JSON file mapping user@host to their configs | `/tmp/users-xxx.json` |
+
+**$machines JSON Format:**
+
+```json
+{
+  "server-one": {
+    "storage_path": "/var/lib/mybackend",
+    "encryption_key": "abc123"
+  },
+  "server-two": {
+    "storage_path": "/var/lib/mybackend",
+    "encryption_key": "def456"
+  }
+}
+```
+
+**$users JSON Format:**
+
+```json
+{
+  "alice@workstation": {
+    "storage_path": "~/.local/share/mybackend"
+  },
+  "bob@laptop": {
+    "storage_path": "~/.local/share/mybackend"
+  }
+}
+```
+
+**Example:**
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Check if artifact exists for ALL targets
+STORAGE_PATH="/var/lib/mybackend"
+
+# Helper to check if artifact exists for a target
+check_target() {
+    local target="$1"
+    [[ -f "$STORAGE_PATH/$target/$artifact.json" ]]
+}
+
+# Check all machines
+if [[ -f "$machines" ]]; then
+    while read -r machine; do
+        if ! check_target "$machine"; then
+            exit 1  # Missing for this machine
+        fi
+    done < <(jq -r 'keys[]' "$machines")
+fi
+
+# Check all users  
+if [[ -f "$users" ]]; then
+    while read -r user; do
+        if ! check_target "$user"; then
+            exit 1  # Missing for this user
+        fi
+    done < <(jq -r 'keys[]' "$users")
+fi
+
+# All targets have the artifact
+exit 0
+```
+
 ### serialize
 
 **Purpose:** Store the files generated by the generator script in your backend's storage.
 
 **When Called:** After the generator script successfully completes, for each target that needs the artifact.
 
-**Environment Variables:**
+**$out Directory Contents:**
 
-| Variable | Type | Description | Example |
-|----------|------|-------------|---------|
-| `$out` | Directory | Path to directory containing all generated files | `/tmp/artifacts-out-xxx` |
-| `$config` | File | Path to JSON file with backend configuration | `/tmp/config-xxx.json` |
-| `$machine` | String | Target machine name or user@host | `server-one` or `alice@workstation` |
-| `$artifact` | String | Artifact name being processed | `api-key` |
-
-**Input Details:**
-
-The `$out` directory contains the files created by the generator script. Filenames match the keys in the `files` attribute of your artifact definition.
-
-For example, if your artifact defines:
+The `$out` directory contains files created by the generator script. Filenames match the keys in the artifact's `files` attribute. For example, if your artifact defines:
 
 ```nix
 files = {
@@ -185,144 +295,273 @@ Then `$out` will contain:
 **Expected Behavior:**
 
 - Store all files from `$out` in your backend
-- Use the backend configuration from `$config` for storage parameters
 - Return exit code 0 on success, non-zero on failure
 - The CLI aborts if this script fails
 
-**Complete Example:**
+#### nixos_serialize
+
+Called for NixOS machine targets.
+
+**Environment Variables:**
+
+| Variable | Type | Description | Example |
+|----------|------|-------------|---------|
+| `$out` | Directory | Path to directory containing all generated files | `/tmp/artifacts-out-xxx` |
+| `$config` | File | Path to JSON file with backend configuration | `/tmp/config-xxx.json` |
+| `$artifact_context` | String | Context type: always `"nixos"` | `nixos` |
+| `$machine` | String | Target machine name | `server-one` |
+| `$artifact` | String | Artifact name being processed | `api-key` |
+
+**Example:**
 
 ```bash
 #!/usr/bin/env bash
 set -euo pipefail
-
-# Environment variables available:
-# $out - Directory containing generated files
-# $config - JSON file with backend configuration
-# $machine - Target machine name
-# $artifact - Artifact name
 
 # Read storage path from config
 STORAGE_PATH=$(jq -r '.storage_path // "/var/lib/mybackend"' "$config")
 
 # Create storage directory if it doesn't exist
-mkdir -p "$STORAGE_PATH"
+mkdir -p "$STORAGE_PATH/$machine"
 
 # Store each generated file
 for file in "$out"/*; do
     if [[ -f "$file" ]]; then
         filename=$(basename "$file")
-        # Example: copy to storage (replace with your storage logic)
-        cp "$file" "$STORAGE_PATH/$artifact-$filename"
-        echo "Stored: $artifact-$filename"
+        cp "$file" "$STORAGE_PATH/$machine/$artifact-$filename"
+        echo "Stored: $machine/$artifact-$filename"
     fi
 done
 ```
 
-### deserialize
+#### home_serialize
 
-**Purpose:** Restore stored artifact files for use during system activation.
-
-**When Called:** During NixOS system activation or Home Manager activation.
+Called for Home Manager user targets.
 
 **Environment Variables:**
 
 | Variable | Type | Description | Example |
 |----------|------|-------------|---------|
-| `$inputs` | Directory | Path to directory with expected file metadata (same format as check_serialization) | `/tmp/artifacts-inputs-xxx` |
+| `$out` | Directory | Path to directory containing all generated files | `/tmp/artifacts-out-xxx` |
 | `$config` | File | Path to JSON file with backend configuration | `/tmp/config-xxx.json` |
-| `$machine` | String | Target machine name | `server-one` |
-| `$artifact` | String | Artifact name being processed | `database-password` |
-| `$out` | Directory | Path where restored files should be placed (you must create this directory) | N/A |
+| `$artifact_context` | String | Context type: always `"homemanager"` | `homemanager` |
+| `$username` | String | Target user identifier | `alice@workstation` |
+| `$artifact` | String | Artifact name being processed | `api-key` |
 
-**Output Requirements:**
-
-Your script must create files in the `$out` directory (which doesn't exist yet - you must create it). The CLI will then copy these files to their final destinations with correct ownership and permissions.
-
-**Expected Behavior:**
-
-- Create the `$out` directory
-- Restore all files expected by the artifact
-- Place restored files in `$out` (filenames must match artifact `files` keys)
-- Return exit code 0 on success
-
-**Complete Example:**
+**Example:**
 
 ```bash
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Environment variables available:
-# $inputs - Directory with expected file metadata
-# $config - JSON file with backend configuration
-# $machine - Target machine name
-# $artifact - Artifact name
-# $out - Output directory (must be created)
-
 # Read storage path from config
 STORAGE_PATH=$(jq -r '.storage_path // "/var/lib/mybackend"' "$config")
 
-# Create output directory
-mkdir -p "$out"
+# Create storage directory if it doesn't exist
+mkdir -p "$STORAGE_PATH/$username"
 
-# Restore each expected file
-for metadata_file in "$inputs"/*; do
-    if [[ -f "$metadata_file" ]]; then
-        filename=$(basename "$metadata_file")
-        source_file="$STORAGE_PATH/$artifact-$filename"
-
-        if [[ -f "$source_file" ]]; then
-            cp "$source_file" "$out/$filename"
-            echo "Restored: $filename"
-        else
-            echo "Error: Missing stored file for $filename" >&2
-            exit 1
-        fi
+# Store each generated file
+for file in "$out"/*; do
+    if [[ -f "$file" ]]; then
+        filename=$(basename "$file")
+        cp "$file" "$STORAGE_PATH/$username/$artifact-$filename"
+        echo "Stored: $username/$artifact-$filename"
     fi
 done
 ```
 
-### shared_serialize (optional)
+#### shared_serialize
 
-**Purpose:** Store an artifact for all targets that share it, called once instead of per-target.
-
-**When Called:** After successful generator execution for artifacts with `shared = true`.
+Called for shared artifacts (required if `capabilities.shared = true`). Must store the artifact for ALL targets that share it.
 
 **Environment Variables:**
 
 | Variable | Type | Description | Example |
 |----------|------|-------------|---------|
-| `$out` | Directory | Path to directory containing generated files | `/tmp/artifacts-out-xxx` |
+| `$out` | Directory | Path to directory containing all generated files | `/tmp/artifacts-out-xxx` |
 | `$artifact` | String | Artifact name being processed | `wireguard-key` |
-| `$machines` | File | Path to JSON file mapping machine names to configs | `/tmp/machines-xxx.json` |
-| `$users` | File | Path to JSON file mapping user@host to configs | `/tmp/users-xxx.json` |
+| `$machines` | File | JSON file mapping machine names to their configs | `/tmp/machines-xxx.json` |
+| `$users` | File | JSON file mapping user@host to their configs | `/tmp/users-xxx.json` |
 
-**Note:** Unlike other scripts, `$config` is **not** directly available. Read per-target configuration from the `$machines` and `$users` JSON files.
+Note: Unlike per-target scripts, `$config` is not available. Read per-target configuration from `$machines` and `$users`.
 
-**Input Details:**
+**Expected Behavior:**
 
-The `$machines` JSON file maps machine names to their backend configurations:
+- Store the artifact for all machines listed in `$machines`
+- Store the artifact for all users listed in `$users`
+- Handle the case where one or both files may be empty (no targets of that type)
+- Return exit code 0 on success
+
+**Example:**
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Function to store files for a target
+store_files() {
+    local target="$1"
+    local config="$2"
+    local storage_path=$(echo "$config" | jq -r '.storage_path // "/var/lib/mybackend"')
+    
+    mkdir -p "$storage_path/$target"
+    
+    for file in "$out"/*; do
+        if [[ -f "$file" ]]; then
+            local filename=$(basename "$file")
+            cp "$file" "$storage_path/$target/$artifact-$filename"
+            echo "Stored for $target: $artifact-$filename"
+        fi
+    done
+}
+
+# Store for all machines
+if [[ -f "$machines" ]] && [[ "$(jq 'length' "$machines")" -gt 0 ]]; then
+    for machine in $(jq -r 'keys[]' "$machines"); do
+        machine_config=$(jq -c ".\"$machine\"" "$machines")
+        store_files "$machine" "$machine_config"
+    done
+fi
+
+# Store for all users
+if [[ -f "$users" ]] && [[ "$(jq 'length' "$users")" -gt 0 ]]; then
+    for user in $(jq -r 'keys[]' "$users"); do
+        user_config=$(jq -c ".\"$user\"" "$users")
+        store_files "$user" "$user_config"
+    done
+fi
+```
+
+### serialize
+
+**Purpose:** Store the files generated by the generator script in your backend's storage.
+
+**When Called:** After the generator script successfully completes, for each target that needs the artifact.
+
+**$out Directory Contents:**
+
+The `$out` directory contains files created by the generator script. Filenames match the keys in the artifact's `files` attribute. For example, if your artifact defines:
+
+```nix
+files = {
+  cert = { path = "/etc/ssl/cert.pem"; owner = "root"; };
+  key = { path = "/etc/ssl/key.pem"; owner = "root"; };
+};
+```
+
+Then `$out` will contain:
+- `$out/cert` - The certificate content
+- `$out/key` - The private key content
+
+**Expected Behavior:**
+
+- Store all files from `$out` in your backend
+- Return exit code 0 on success, non-zero on failure
+- The CLI aborts if this script fails
+
+#### nixos_serialize
+
+Called for NixOS machine targets.
+
+**Environment Variables:**
+
+| Variable | Type | Description | Example |
+|----------|------|-------------|---------|
+| `$out` | Directory | Path to directory containing all generated files | `/tmp/artifacts-out-xxx` |
+| `$config` | File | Path to JSON file with backend configuration | `/tmp/config-xxx.json` |
+| `$artifact_context` | String | Context type: always `"nixos"` | `nixos` |
+| `$machine` | String | Target machine name | `server-one` |
+| `$artifact` | String | Artifact name being processed | `api-key` |
+
+**Example:**
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Read storage path from config
+STORAGE_PATH=$(jq -r '.storage_path // "/var/lib/mybackend"' "$config")
+
+# Create storage directory if it doesn't exist
+mkdir -p "$STORAGE_PATH/$machine"
+
+# Store each generated file
+for file in "$out"/*; do
+    if [[ -f "$file" ]]; then
+        filename=$(basename "$file")
+        cp "$file" "$STORAGE_PATH/$machine/$artifact-$filename"
+        echo "Stored: $machine/$artifact-$filename"
+    fi
+done
+```
+
+#### home_serialize
+
+Called for Home Manager user targets.
+
+**Environment Variables:**
+
+| Variable | Type | Description | Example |
+|----------|------|-------------|---------|
+| `$out` | Directory | Path to directory containing all generated files | `/tmp/artifacts-out-xxx` |
+| `$config` | File | Path to JSON file with backend configuration | `/tmp/config-xxx.json` |
+| `$artifact_context` | String | Context type: always `"homemanager"` | `homemanager` |
+| `$username` | String | Target user identifier | `alice@workstation` |
+| `$artifact` | String | Artifact name being processed | `api-key` |
+
+**Example:**
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Read storage path from config
+STORAGE_PATH=$(jq -r '.storage_path // "/var/lib/mybackend"' "$config")
+
+# Create storage directory if it doesn't exist
+mkdir -p "$STORAGE_PATH/$username"
+
+# Store each generated file
+for file in "$out"/*; do
+    if [[ -f "$file" ]]; then
+        filename=$(basename "$file")
+        cp "$file" "$STORAGE_PATH/$username/$artifact-$filename"
+        echo "Stored: $username/$artifact-$filename"
+    fi
+done
+```
+
+#### shared_serialize
+
+Called for shared artifacts (required if `capabilities.shared = true`). Must store the artifact for ALL targets that share it.
+
+**Environment Variables:**
+
+| Variable | Type | Description | Example |
+|----------|------|-------------|---------|
+| `$out` | Directory | Path to directory containing all generated files | `/tmp/artifacts-out-xxx` |
+| `$artifact` | String | Artifact name being processed | `wireguard-key` |
+| `$machines` | File | JSON file mapping machine names to their configs | `/tmp/machines-xxx.json` |
+| `$users` | File | JSON file mapping user@host to their configs | `/tmp/users-xxx.json` |
+
+Note: Unlike per-target scripts, `$config` is not available. Read per-target configuration from `$machines` and `$users`.
+
+**$machines JSON Format:**
 
 ```json
 {
   "server-one": {
     "storage_path": "/var/lib/mybackend",
     "encryption_key": "abc123"
-  },
-  "server-two": {
-    "storage_path": "/var/lib/mybackend",
-    "encryption_key": "def456"
   }
 }
 ```
 
-The `$users` JSON file has the same structure but for Home Manager targets:
+**$users JSON Format:**
 
 ```json
 {
   "alice@workstation": {
-    "storage_path": "~/.local/share/mybackend"
-  },
-  "bob@laptop": {
     "storage_path": "~/.local/share/mybackend"
   }
 }
@@ -335,17 +574,11 @@ The `$users` JSON file has the same structure but for Home Manager targets:
 - Handle the case where one or both files may be empty (no targets of that type)
 - Return exit code 0 on success
 
-**Complete Example:**
+**Example:**
 
 ```bash
 #!/usr/bin/env bash
 set -euo pipefail
-
-# Environment variables available:
-# $artifact - Artifact name
-# $out - Directory with generated files
-# $machines - JSON file with machine configs
-# $users - JSON file with user configs
 
 # Function to store files for a target
 store_files() {
@@ -353,33 +586,39 @@ store_files() {
     local config="$2"
     local storage_path=$(echo "$config" | jq -r '.storage_path // "/var/lib/mybackend"')
     
-    mkdir -p "$storage_path"
+    mkdir -p "$storage_path/$target"
     
     for file in "$out"/*; do
         if [[ -f "$file" ]]; then
             local filename=$(basename "$file")
-            cp "$file" "$storage_path/$artifact-$filename"
+            cp "$file" "$storage_path/$target/$artifact-$filename"
             echo "Stored for $target: $artifact-$filename"
         fi
     done
 }
 
-# Iterate over machines
+# Store for all machines
 if [[ -f "$machines" ]] && [[ "$(jq 'length' "$machines")" -gt 0 ]]; then
     for machine in $(jq -r 'keys[]' "$machines"); do
-        machine_config=$(jq -r ".\"$machine\"" "$machines")
+        machine_config=$(jq -c ".\"$machine\"" "$machines")
         store_files "$machine" "$machine_config"
     done
 fi
 
-# Iterate over users
+# Store for all users
 if [[ -f "$users" ]] && [[ "$(jq 'length' "$users")" -gt 0 ]]; then
     for user in $(jq -r 'keys[]' "$users"); do
-        user_config=$(jq -r ".\"$user\"" "$users")
+        user_config=$(jq -c ".\"$user\"" "$users")
         store_files "$user" "$user_config"
     done
 fi
 ```
+
+### deserialize
+
+**Note:** The `deserialize` script is defined as part of the backend interface but is not currently used by the artifacts CLI. Deserialization happens during NixOS system activation via NixOS module integration, which is managed separately by backend implementations (e.g., agenix, sops-nix).
+
+If you're implementing a backend, you may define a `deserialize` script for documentation purposes, but it won't be called by this CLI tool.
 
 ## Backend Configuration (backend.toml)
 
@@ -389,21 +628,17 @@ The `backend.toml` file defines your backend's scripts and capabilities.
 
 ```toml
 [mybackend]
-# NixOS-specific scripts (at least one of nixos_* or home_* is required)
+# NixOS-specific scripts (required if serializes = true, default)
 nixos_check_serialization = "./scripts/nixos-check.sh"
 nixos_serialize = "./scripts/nixos-serialize.sh"
 
-# Home Manager-specific scripts
+# Home Manager-specific scripts (required if serializes = true, default)
 home_check_serialization = "./scripts/home-check.sh"
 home_serialize = "./scripts/home-serialize.sh"
 
 # Shared artifact scripts (required if capabilities.shared = true)
 shared_check_serialization = "./scripts/shared-check.sh"
 shared_serialize = "./scripts/shared-serialize.sh"
-
-# Common scripts (used for both NixOS and Home Manager)
-deserialize = "./scripts/deserialize.sh"
-check_configuration = "./scripts/check-config.sh"
 
 [mybackend.capabilities]
 # Whether this backend supports shared artifacts
@@ -424,8 +659,8 @@ You can define different scripts for NixOS and Home Manager targets:
 
 ```toml
 [mybackend]
-nixos_check_serialization = "./nixos-check.sh"  # Has owner/group
-home_check_serialization = "./home-check.sh"    # No owner/group
+nixos_check_serialization = "./nixos-check.sh"  # Has $machine env var
+home_check_serialization = "./home-check.sh"    # Has $username env var
 ```
 
 If you define both, the CLI calls the appropriate one based on the target type. If you only define one type (e.g., only `nixos_*`), that backend only works with NixOS configurations.
@@ -437,6 +672,8 @@ If you define both, the CLI calls the appropriate one based on the target type. 
 | `shared` | `false` | Set to `true` if your backend supports `shared_serialize`. Required for shared artifacts. |
 | `serializes` | `true` | Set to `false` for test backends that don't actually store anything. |
 
+When `serializes = false`, no scripts are required. This is useful for test/mock backends.
+
 ### Include Directive
 
 Backend configurations can be split across multiple files:
@@ -446,26 +683,43 @@ Backend configurations can be split across multiple files:
 include = ["./backends/agenix.toml", "./backends/sops.toml"]
 
 [my-custom]
-check_serialization = "./check.sh"
-serialize = "./serialize.sh"
-deserialize = "./deserialize.sh"
+nixos_check_serialization = "./check.sh"
+nixos_serialize = "./serialize.sh"
+home_check_serialization = "./check.sh"
+home_serialize = "./serialize.sh"
 ```
 
 Paths in `include` are resolved relative to the file containing the directive. Nested includes are supported, and circular includes are detected and rejected.
 
 ## Environment Variables Reference
 
-This table summarizes all environment variables available to backend scripts:
+### Environment Variables by Script Type
 
-| Variable | Available In | Type | Description | Example |
-|----------|--------------|------|-------------|---------|
-| `$out` | serialize, shared_serialize | Directory | Contains generated files from the generator script | `/tmp/artifacts-out-abc123` |
-| `$inputs` | check_serialization, deserialize | Directory | Contains JSON files with file metadata (path, owner, group) | `/tmp/artifacts-inputs-def456` |
-| `$config` | check_serialization, serialize, deserialize, check_configuration | File | JSON file with backend settings from `[backend.settings]` and per-target config | `{"storage_path": "/var/lib/secrets"}` |
-| `$machine` | check_serialization, serialize, deserialize, check_configuration | String | Target identifier - either NixOS machine name or Home Manager user@host | `server-one` or `alice@workstation` |
-| `$artifact` | All scripts | String | The artifact name being processed | `ssh-host-key` |
-| `$machines` | shared_serialize | File | JSON file mapping machine names to their `artifacts.config.<backend>.nixos.<machine>` configs | `{"server-one": {"key": "abc"}}` |
-| `$users` | shared_serialize | File | JSON file mapping user@host to their `artifacts.config.<backend>.home.<user>` configs | `{"alice@host": {"key": "def"}}` |
+| Variable | nixos_check / nixos_serialize | home_check / home_serialize | shared_check | shared_serialize |
+|----------|------------------------------|----------------------------|--------------|------------------|
+| `$out` | ✅ (serialize only) | ✅ (serialize only) | ❌ | ✅ |
+| `$inputs` | ✅ (check only) | ✅ (check only) | ❌ | ❌ |
+| `$config` | ✅ | ✅ | ❌ | ❌ |
+| `$artifact_context` | ✅ | ✅ | ❌ | ❌ |
+| `$machine` | ✅ (NixOS only) | ❌ | ❌ | ❌ |
+| `$username` | ❌ | ✅ (Home only) | ❌ | ❌ |
+| `$artifact` | ✅ | ✅ | ✅ | ✅ |
+| `$machines` | ❌ | ❌ | ✅ | ✅ |
+| `$users` | ❌ | ❌ | ✅ | ✅ |
+
+### Variable Details
+
+| Variable | Type | Description | Example |
+|----------|------|-------------|---------|
+| `$out` | Directory | Contains generated files from the generator script | `/tmp/artifacts-out-abc123` |
+| `$inputs` | Directory | Contains JSON files with file metadata | `/tmp/artifacts-inputs-def456` |
+| `$config` | File | JSON file with backend settings from `[backend.settings]` | `{"storage_path": "/var/lib/secrets"}` |
+| `$artifact_context` | String | Context type: `"nixos"` or `"homemanager"` | `nixos` |
+| `$machine` | String | NixOS machine name (NixOS scripts only) | `server-one` |
+| `$username` | String | Home Manager user identifier (Home scripts only) | `alice@workstation` |
+| `$artifact` | String | The artifact name being processed | `ssh-host-key` |
+| `$machines` | File | JSON mapping machine names to their backend configs | `{"server-one": {"key": "abc"}}` |
+| `$users` | File | JSON mapping user@host to their backend configs | `{"alice@host": {"key": "def"}}` |
 
 ## File Format Reference
 
@@ -479,8 +733,7 @@ Each file in `$inputs` is a JSON object with the following structure:
 {
   "path": "/etc/ssh/ssh_host_ed25519_key",
   "owner": "root",
-  "group": "root",
-  "mode": "600"
+  "group": "root"
 }
 ```
 
@@ -488,11 +741,13 @@ Each file in `$inputs` is a JSON object with the following structure:
 
 ```json
 {
-  "path": "~/.ssh/id_ed25519"
+  "path": "~/.ssh/id_ed25519",
+  "owner": null,
+  "group": null
 }
 ```
 
-Note that Home Manager artifacts don't have `owner`, `group`, or `mode` since home-manager doesn't manage system-level permissions.
+Note: The `owner` and `group` fields may be `null` for Home Manager artifacts since home-manager doesn't manage system-level permissions. There is no `mode` field.
 
 ### $machines JSON
 
@@ -534,8 +789,7 @@ Here's a minimal but complete backend example that stores artifacts as tar.gz ar
 my-backend/
 ├── backend.toml
 ├── check.sh
-├── serialize.sh
-└── deserialize.sh
+└── serialize.sh
 ```
 
 ### backend.toml
@@ -557,9 +811,24 @@ shared = false
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Simple check: does file exist?
+# Environment variables available:
+# $inputs - Directory with expected file metadata
+# $config - JSON file with backend configuration
+# $artifact_context - "nixos" or "homemanager"
+# $machine - Target machine name (NixOS only)
+# $username - Target user name (Home Manager only)
+# $artifact - Artifact name
+
+# Determine target identifier
+if [[ "$artifact_context" == "nixos" ]]; then
+    TARGET="$machine"
+else
+    TARGET="$username"
+fi
+
+# Read storage path from config (with default)
 STORAGE_DIR="${STORAGE_DIR:-./storage}"
-ARTIFACT_FILE="$STORAGE_DIR/$artifact.tar.gz"
+ARTIFACT_FILE="$STORAGE_DIR/$TARGET/$artifact.tar.gz"
 
 if [[ -f "$ARTIFACT_FILE" ]]; then
     echo "EXISTS"
@@ -575,26 +844,28 @@ fi
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Environment variables available:
+# $out - Directory containing generated files
+# $config - JSON file with backend configuration
+# $artifact_context - "nixos" or "homemanager"
+# $machine - Target machine name (NixOS only)
+# $username - Target user name (Home Manager only)
+# $artifact - Artifact name
+
+# Determine target identifier
+if [[ "$artifact_context" == "nixos" ]]; then
+    TARGET="$machine"
+else
+    TARGET="$username"
+fi
+
+# Read storage path from config
 STORAGE_DIR="${STORAGE_DIR:-./storage}"
-mkdir -p "$STORAGE_DIR"
+mkdir -p "$STORAGE_DIR/$TARGET"
 
 # Archive all files from $out
-tar -czf "$STORAGE_DIR/$artifact.tar.gz" -C "$out" .
-echo "Serialized: $artifact.tar.gz"
-```
-
-### deserialize.sh
-
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-
-STORAGE_DIR="${STORAGE_DIR:-./storage}"
-mkdir -p "$out"
-
-# Extract to $out
-tar -xzf "$STORAGE_DIR/$artifact.tar.gz" -C "$out"
-echo "Deserialized: $artifact"
+tar -czf "$STORAGE_DIR/$TARGET/$artifact.tar.gz" -C "$out" .
+echo "Serialized: $TARGET/$artifact.tar.gz"
 ```
 
 ## Error Handling
@@ -717,9 +988,7 @@ STORAGE_PATH=$(jq -r '.storage_path // "/default/path"' "$config")
 
 **Problem:** Your script can't write to the storage directory.
 
-**Cause:** The bubblewrap container restricts filesystem access.
-
-**Solution:** Ensure your storage path is accessible within the container's bind mounts. Use paths under `/var/lib`, `/tmp`, or paths explicitly mounted by the CLI.
+**Solution:** Ensure your storage path is writable by the user running the CLI. For the generator script (which runs in a bubblewrap container), paths under `/var/lib`, `/tmp`, or explicitly configured paths are recommended. For serialization scripts, these run without container isolation and use normal filesystem permissions.
 
 ## See Also
 
