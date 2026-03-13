@@ -18,85 +18,29 @@
     flake-parts.lib.mkFlake { inherit inputs; } {
       imports = [
         inputs.devshell.flakeModule
+        ./backends
         ./nix/devshells.nix
         ./nix/docs.nix
         ./nix/formatter.nix
         ./nix/options.nix
+        ./nix/rust-docs.nix
+        ./pkgs/artifacts
       ];
       perSystem =
         {
-          pkgs,
           self',
           system,
-          lib,
           ...
         }:
-        let
-          mkBackend = import ./backends/default.nix { inherit lib pkgs; };
-          testBackend = mkBackend "test" {
-            nixos_check_serialization = ./backends/test/check.sh;
-            nixos_serialize = ./backends/test/serialize.sh;
-            home_check_serialization = ./backends/test/check.sh;
-            home_serialize = ./backends/test/serialize.sh;
-            shared_check_serialization = ./backends/test/check.sh;
-            shared_serialize = ./backends/test/shared-serialize.sh;
-            capabilities = {
-              shared = true;
-              serializes = true;
-            };
-          };
-        in
         {
 
           packages.default = self'.packages.artifacts;
-          packages.artifacts-bin = pkgs.callPackage ./pkgs/artifacts { };
-          packages.rust-docs = self'.packages.artifacts-bin.overrideAttrs (old: {
-            name = "artifacts-rust-docs";
-            buildPhase = ''
-              echo "Building Rust API documentation..."
-              cargo doc --lib --no-deps --document-private-items 2>&1 || {
-                echo "Warning: Documentation build had errors but continuing"
-              }
-            '';
-            installPhase = ''
-              mkdir -p $out/share/doc/artifacts-rust
-              cp -r target/doc/* $out/share/doc/artifacts-rust/
 
-              cat > $out/share/doc/artifacts-rust/index.html <<'HTML'
-              <!DOCTYPE html>
-              <html>
-              <head>
-                <meta charset="utf-8">
-                <meta http-equiv="refresh" content="0; URL=artifacts/index.html">
-                <title>Artifacts API Documentation</title>
-              </head>
-              <body>
-                <p>Redirecting to <a href="artifacts/index.html">artifacts/index.html</a>...</p>
-              </body>
-              </html>
-              HTML
+          packages.artifacts = self.lib.mkArtifactCli {
+            inherit system;
+            backends = [ self'.packages.example-backend ];
+          };
 
-              echo "Documentation installed to $out/share/doc/artifacts-rust/"
-            '';
-            checkPhase = "true";
-          });
-
-          packages.artifacts =
-            let
-              mergeBackends = backendPaths:
-                pkgs.runCommand "merged-backends.toml" { } ''
-                  cat ${lib.concatStringsSep " " (map (p: "${p}/backend.toml") backendPaths)} > $out
-                '';
-              backendsFile = mergeBackends [ testBackend ];
-            in
-            pkgs.writers.writeBashBin "artifacts" ''
-              set -e
-              set -o pipefail
-              export NIXOS_ARTIFACTS_BACKEND_CONFIG=${backendsFile}
-              ${self'.packages.artifacts-bin}/bin/artifacts "$@"
-            '';
-
-          packages.artifacts-test = self'.packages.artifacts;
         };
       systems = [
         "x86_64-linux"
@@ -104,8 +48,6 @@
       ];
 
       flake = {
-        lib.mkBackend = import ./backends/default.nix;
-
         nixosConfigurations =
           let
             machineConfiguration =
