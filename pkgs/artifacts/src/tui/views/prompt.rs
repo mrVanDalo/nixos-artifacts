@@ -9,24 +9,23 @@ use ratatui::{
 
 /// Render the prompt input view
 pub fn render_prompt(frame: &mut Frame, state: &PromptState, area: Rect) {
+    let input_height = if state.input_mode == InputMode::Multiline {
+        Constraint::Min(5)
+    } else {
+        Constraint::Length(3)
+    };
+
     let chunks = Layout::vertical([
-        Constraint::Length(3), // Header
-        Constraint::Length(4), // Description
-        Constraint::Length(3), // Input
-        Constraint::Min(1),    // Help text
+        Constraint::Length(3),
+        Constraint::Length(4),
+        input_height,
+        Constraint::Length(2),
     ])
     .split(area);
 
-    // Header with artifact name and progress
     render_header(frame, state, chunks[0]);
-
-    // Current prompt description
     render_description(frame, state, chunks[1]);
-
-    // Input line
     render_input(frame, state, chunks[2]);
-
-    // Help text
     render_help(frame, state, chunks[3]);
 }
 
@@ -77,33 +76,56 @@ fn render_input(frame: &mut Frame, state: &PromptState, area: Rect) {
         state.buffer.clone()
     };
 
-    let input_line = Line::from(vec![
-        Span::styled(format!("[{}]", state.input_mode.label()), mode_style),
-        Span::raw(" > "),
-        Span::raw(&display_buffer),
-        Span::styled("█", Style::default().fg(Color::Gray)), // Cursor
-    ]);
+    let title = format!("Input [{}]", state.input_mode.label());
 
-    let input = Paragraph::new(vec![input_line])
-        .block(Block::default().borders(Borders::ALL).title("Input"));
+    if state.input_mode == InputMode::Multiline {
+        let lines: Vec<Line> = display_buffer
+            .lines()
+            .chain(std::iter::once(""))
+            .map(|line| Line::from(line.to_string()))
+            .collect();
 
-    frame.render_widget(input, area);
+        let input = Paragraph::new(lines)
+            .block(Block::default().borders(Borders::ALL).title(title))
+            .style(mode_style);
+
+        frame.render_widget(input, area);
+    } else {
+        let input_line = Line::from(vec![
+            Span::styled("> ", mode_style),
+            Span::raw(&display_buffer),
+            Span::styled("█", Style::default().fg(Color::Gray)),
+        ]);
+
+        let input = Paragraph::new(vec![input_line])
+            .block(Block::default().borders(Borders::ALL).title(title));
+
+        frame.render_widget(input, area);
+    }
 }
 
 fn render_help(frame: &mut Frame, state: &PromptState, area: Rect) {
-    let help_text = if state.buffer.is_empty() {
-        match state.input_mode {
-            InputMode::Line => "Tab: change mode | Enter: submit | Esc: cancel",
-            InputMode::Multiline => {
-                "Tab: change mode | Ctrl+D: submit | Enter: newline | Esc: cancel"
+    let help_text = match state.input_mode {
+        InputMode::Line => {
+            if state.buffer.is_empty() {
+                "Tab: change mode | Enter: submit | Esc: cancel"
+            } else {
+                "Enter: submit | Esc: cancel"
             }
-            InputMode::Hidden => "Tab: change mode | Enter: submit | Esc: cancel",
         }
-    } else {
-        match state.input_mode {
-            InputMode::Line => "Enter: submit | Esc: cancel",
-            InputMode::Multiline => "Ctrl+D: submit | Enter: newline | Esc: cancel",
-            InputMode::Hidden => "Enter: submit | Esc: cancel",
+        InputMode::Multiline => {
+            if state.buffer.is_empty() {
+                "Tab: change mode | Enter: newline | Ctrl+D: submit | Esc: cancel"
+            } else {
+                "Enter: newline | Ctrl+D: submit | Esc: cancel"
+            }
+        }
+        InputMode::Hidden => {
+            if state.buffer.is_empty() {
+                "Tab: change mode | Enter: submit | Esc: cancel"
+            } else {
+                "Enter: submit | Esc: cancel"
+            }
         }
     };
 
