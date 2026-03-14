@@ -24,7 +24,7 @@
 
         packages = [
           self'.formatter
-          self'.packages.artifacts-test
+          self'.packages.artifacts
         ];
       };
     };
