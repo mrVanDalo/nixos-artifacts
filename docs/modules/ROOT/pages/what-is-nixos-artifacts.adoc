@@ -50,11 +50,11 @@ See xref:artifact-definition-example.adoc[Artifact definition example] for a con
 
 - xref:latest@nixos-artifacts-agenix:ROOT:index.adoc[Agenix]
 
-NOTE: Have a look at xref:defining-backends.adoc[How to define backends], if you want to write your own backend.
+NOTE: Have a look at xref:backend-quickstart.adoc[Backend Quickstart], if you want to write your own backend.
 
 == CLI and workflow
 
-Use the CLI to drive the main loop for generation and rotation. Start with xref:artifacts-workflow-diagrams.adoc[artifact workflow diagrams] for the high-level flow, then xref:generate-artifacts-cli.adoc[Generate artifacts] for concrete commands.
+Use the tool to drive the main loop for generation and rotation. See xref:configure-nixos-artifacts.adoc[Configure nixos-artifacts] for configuration and usage.
 
 == Shared artifacts
 
@@ -85,7 +85,7 @@ artifacts.store.cluster-token = {
 
 All definitions with the same name and `shared = true` are aggregated. The TUI displays shared artifacts as a single entry showing all targets. See xref:artifact-definition-example.adoc#shared-artifacts[Shared artifact example] for more details.
 
-NOTE: The backend must support shared serialization via a `shared_serialize` script. See xref:defining-backends.adoc#shared-serialization[Shared serialization] for backend requirements.
+NOTE: The backend must support shared serialization via a `shared_serialize` script. See xref:backend-scripts-reference.adoc#_shared_serialize[Scripts Reference] for backend requirements.
 
 == Planned features
 

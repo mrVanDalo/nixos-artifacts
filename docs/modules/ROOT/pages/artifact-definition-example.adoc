@@ -1,41 +1,56 @@
 = Artifact definition example
 
-This defines an artifact that creates an SSH key, demonstrating `prompts`, `generator`, and `files` options.
+This defines an artifact that creates a Gitea runner token, demonstrating `files`, `prompts`, and `generator` options.
 
 [source,nix]
 ----
 { config, pkgs, ... }:
 {
-  artifacts.store.ssh-host-key = {
-    files."id_ed25519".mode = "0400"; <1>
-    files."id_ed25519".path = "/root/.ssh/new_key"; <2>
-    files."id_ed25519.pub".mode = "0444"; <3>
-    files."id_ed25519.pub".path = "/root/.ssh/new_key.pub"; <4>
-    prompts.passphrase.description = "Enter Passphrase"; <5>
-    generator = pkgs.writeShellScriptBin "gen-ssh" '' <6>
-      ${pkgs.openssh}/bin/ssh-keygen \
-        -t ed25519 \
-        -N $(cat $prompts/passphrase) \
-        -f "$out/id_ed25519"
-    '';
+  artifacts.store.gitea-runner = {
+    files.auth_token = { # <1>
+      path = "/var/lib/gitea-runner/auth_token"; <2>
+      mode = "0400"; <3>
+      owner = "gitea-runner"; <4>
+      group = "gitea-runner"; <5>
+    };
+    
+    prompts.auth_token.description = "Enter auth token"; <6>
+    
+    generator = pkgs.writeShellApplication { <7>
+      name = "generate-gitea-auth-token";
+      text = ''
+        TOKEN="$(cat $prompts/auth_token)"
+        echo "TOKEN=$TOKEN" > "$out/auth_token"
+      '';
+    };
   };
-
-  environment.systemPackages = [
-    (pkgs.writers.writeBashBin "ssh-to-my-machine" ''
-        ${pkgs.openssh}/bin/ssh \
-          -i ${config.artifacts.store.ssh-host-key.files."id_ed25519".path} \ <7>
-          root@my-machine
-    '')
-  ];
 }
 ----
-<1> the file mode of `id_ed25519`
-<2> the path where `id_ed25519` should be stored on the target system.
-<3> the file mode of `id_ed25519.pub`
-<4> the path where `id_ed25519.pub` should be stored on the target system.
-<5> creates a prompt before the `generator` script is executed. The input of that prompt will be present in the file `$prompts/passphrase`.
-<6> The generator script definition. It must be a Nix package that generates all defined files into `$out`.
-<7> Use reference to the artifact path
+<1> the file handle `auth_token` - this name must match the filename created by the generator in `$out/`
+<2> the xref:options-nixos.adoc#_artifacts_store_name_files_name_path[path] where `auth_token` should be stored on the target system
+<3> the xref:options-nixos.adoc#_artifacts_store_name_files_name_mode[mode] of `auth_token`
+<4> the xref:options-nixos.adoc#_artifacts_store_name_files_name_owner[owner] that owns the file
+<5> the xref:options-nixos.adoc#_artifacts_store_name_files_name_group[group] that owns the file
+<6> creates a xref:options-nixos.adoc#_artifacts_store_name_prompts_name_description[prompt] before the `generator` script is executed
+<7> the xref:options-nixos.adoc#_artifacts_store_name_generator[generator] script definition
+
+== Using artifact paths
+
+Reference artifact paths in NixOS configuration using `config.artifacts.store.<name>.files.<file>.path`:
+
+[source,nix]
+----
+{ config, pkgs, ... }:
+{
+  services.gitea-actions-runner = {
+    instances."my-runner" = {
+      enable = true;
+      tokenFile = config.artifacts.store.gitea-runner.files.auth_token.path; <1>
+    };
+  };
+}
+----
+<1> References the xref:options-nixos.adoc#_artifacts_store_name_files_name_path[path] defined in the artifact, creating a dependency.
 
 
 == Generator contract
@@ -47,7 +62,7 @@ The generator must:
 
 The backend will then handle serialization of $out.
 
-See also xref:defining-backends.adoc[Defining backends] for how serialization/deserialization is provided.
+See also xref:backend-concepts.adoc[Backend Concepts] for how serialization/deserialization is provided.
 
 [#shared-artifacts]
 == Shared artifact example
@@ -67,9 +82,13 @@ Shared artifacts are generated once and distributed to multiple machines. Set `s
           artifacts.store.oidc-secret = {
             shared = true;  # <1>
             files.client-secret.path = "/run/secrets/oidc-client-secret";
-            generator = pkgs.writers.writeBash "gen-oidc" ''
-              ${pkgs.openssl}/bin/openssl rand -hex 32 > $out/client-secret
-            '';
+            generator = pkgs.writeShellApplication {
+              name = "gen-oidc";
+              runtimeInputs = [ pkgs.openssl ];
+              text = ''
+                openssl rand -hex 32 > "$out/client-secret"
+              '';
+            };
           };
         })
       ];
@@ -83,9 +102,13 @@ Shared artifacts are generated once and distributed to multiple machines. Set `s
           artifacts.store.oidc-secret = {
             shared = true;  # <1>
             files.client-secret.path = "/run/secrets/oidc-client-secret";
-            generator = pkgs.writers.writeBash "gen-oidc" ''
-              ${pkgs.openssl}/bin/openssl rand -hex 32 > $out/client-secret
-            '';
+            generator = pkgs.writeShellApplication {
+              name = "gen-oidc";
+              runtimeInputs = [ pkgs.openssl ];
+              text = ''
+                openssl rand -hex 32 > "$out/client-secret"
+              '';
+            };
           };
         })
       ];
@@ -93,7 +116,7 @@ Shared artifacts are generated once and distributed to multiple machines. Set `s
   };
 }
 ----
-<1> Both machines define `shared = true` for the same artifact name `oidc-secret`.
+<1> Both machines define xref:options-nixos.adoc#_artifacts_store_name_shared[shared] as `true` for the same artifact name `oidc-secret`.
 
 === How shared artifacts work
 

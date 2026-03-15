@@ -33,15 +33,19 @@ docs/
         │   ├── index.adoc                         # Landing page
         │   ├── what-is-nixos-artifacts.adoc       # Overview and concepts
         │   ├── artifact-definition-example.adoc   # How to define artifacts
-        │   ├── generate-artifacts-cli.adoc        # CLI usage guide
-        │   ├── defining-backends.adoc             # Backend development guide
-        │   ├── how-to-use-a-backend.adoc         # Using backends
-        │   ├── artifacts-workflow-diagrams.adoc   # Workflow visualization
-        │   └── options.adoc                       # Options reference
+        │   ├── configure-nixos-artifacts.adoc       # Configuration and usage guide
+        │   ├── backend-quickstart.adoc           # Create a backend in minutes
+        │   ├── backend-concepts.adoc             # Backend execution flow
+        │   ├── backend-scripts-reference.adoc    # Scripts reference
+        │   ├── backend-nix-integration.adoc      # Nix integration
+        │   ├── artifacts-workflow-diagrams.adoc # Workflow visualization
+        │   ├── reference-mkbackend.adoc           # mkBackend function reference
+        │   ├── reference-mkartifactcli.adoc       # mkArtifactCli function reference
+        │   ├── options-nixos.adoc                 # NixOS options (GENERATED)
+        │   └── options-homemanager.adoc           # Home Manager options (GENERATED)
         └── partials/            # Reusable documentation fragments
             ├── artifacts-input-example.adoc
             ├── artifact-store-example-ssh.adoc
-            ├── artifact-cli-configuration.adoc
             └── workflow-loop-diagram.mermaid
 ```
 
@@ -70,9 +74,21 @@ nix run .#build-docs
    artifact definition
 3. **Artifact Definition** - How to declare artifacts using NixOS options
 4. **CLI Usage** - Commands for generating and rotating artifacts
-5. **Backend Integration** - How to use and define backends
+5. **Backend Development** - Four-part guide: quickstart, concepts, scripts
+   reference, and Nix integration
 6. **Workflow Diagrams** - Visual representation of the generation/rotation flow
-7. **Options Reference** - Complete reference of available options
+7. **Options Reference** - Auto-generated reference of available options
+
+## Generated Files
+
+The following files are auto-generated from NixOS module options and should not
+be edited manually:
+
+- `options-nixos.adoc` - NixOS options (generated from `modules/store.nix`)
+- `options-homemanager.adoc` - Home Manager options (generated from module)
+
+To regenerate these files, run the appropriate Nix command from the project
+root.
 
 ## Development Guidelines
 
@@ -111,6 +127,9 @@ nix run .#build-docs
 - **Store**: High-level NixOS option tree for artifact declarations
 - **Generator**: Tool that produces artifact files from prompts
 - **CLI**: Command-line tool for orchestrating generation and rotation
+- **mkBackend**: Nix function to create backend packages (`self.lib.mkBackend`)
+- **mkArtifactCli**: Nix function to configure the CLI with backends
+  (`self.lib.mkArtifactCli`)
 
 ## Common Tasks
 

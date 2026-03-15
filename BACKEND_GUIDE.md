@@ -828,24 +828,26 @@ archives.
 ```
 my-backend/
 ├── backend.toml
-├── check.sh
-└── serialize.sh
+├── nixos-check.sh        # Called for NixOS machine checks
+├── nixos-serialize.sh    # Called for NixOS machine serialization
+├── home-check.sh         # Called for Home Manager checks
+└── home-serialize.sh     # Called for Home Manager serialization
 ```
 
 ### backend.toml
 
 ```toml
 [my-backend]
-nixos_check_serialization = "./check.sh"
-nixos_serialize = "./serialize.sh"
-home_check_serialization = "./check.sh"
-home_serialize = "./serialize.sh"
+nixos_check_serialization = "./nixos-check.sh"
+nixos_serialize = "./nixos-serialize.sh"
+home_check_serialization = "./home-check.sh"
+home_serialize = "./home-serialize.sh"
 
 [my-backend.capabilities]
 shared = false
 ```
 
-### check.sh
+### nixos-check.sh
 
 ```bash
 #!/usr/bin/env bash
@@ -854,21 +856,13 @@ set -euo pipefail
 # Environment variables available:
 # $inputs - Directory with expected file metadata
 # $config - JSON file with backend configuration
-# $artifact_context - "nixos" or "homemanager"
-# $machine - Target machine name (NixOS only)
-# $username - Target user name (Home Manager only)
+# $artifact_context - Always "nixos" for this script
+# $machine - Target machine name
 # $artifact - Artifact name
-
-# Determine target identifier
-if [[ "$artifact_context" == "nixos" ]]; then
-    TARGET="$machine"
-else
-    TARGET="$username"
-fi
 
 # Read storage path from config (with default)
 STORAGE_DIR="${STORAGE_DIR:-./storage}"
-ARTIFACT_FILE="$STORAGE_DIR/$TARGET/$artifact.tar.gz"
+ARTIFACT_FILE="$STORAGE_DIR/$machine/$artifact.tar.gz"
 
 if [[ -f "$ARTIFACT_FILE" ]]; then
     echo "EXISTS"
@@ -878,7 +872,7 @@ else
 fi
 ```
 
-### serialize.sh
+### nixos-serialize.sh
 
 ```bash
 #!/usr/bin/env bash
@@ -887,25 +881,64 @@ set -euo pipefail
 # Environment variables available:
 # $out - Directory containing generated files
 # $config - JSON file with backend configuration
-# $artifact_context - "nixos" or "homemanager"
-# $machine - Target machine name (NixOS only)
-# $username - Target user name (Home Manager only)
+# $artifact_context - Always "nixos" for this script
+# $machine - Target machine name
 # $artifact - Artifact name
-
-# Determine target identifier
-if [[ "$artifact_context" == "nixos" ]]; then
-    TARGET="$machine"
-else
-    TARGET="$username"
-fi
 
 # Read storage path from config
 STORAGE_DIR="${STORAGE_DIR:-./storage}"
-mkdir -p "$STORAGE_DIR/$TARGET"
+mkdir -p "$STORAGE_DIR/$machine"
 
 # Archive all files from $out
-tar -czf "$STORAGE_DIR/$TARGET/$artifact.tar.gz" -C "$out" .
-echo "Serialized: $TARGET/$artifact.tar.gz"
+tar -czf "$STORAGE_DIR/$machine/$artifact.tar.gz" -C "$out" .
+echo "Serialized: $machine/$artifact.tar.gz"
+```
+
+### home-check.sh
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Environment variables available:
+# $inputs - Directory with expected file metadata
+# $config - JSON file with backend configuration
+# $artifact_context - Always "homemanager" for this script
+# $username - Target user identifier (user@host format)
+# $artifact - Artifact name
+
+# Read storage path from config (with default)
+STORAGE_DIR="${STORAGE_DIR:-./storage}"
+ARTIFACT_FILE="$STORAGE_DIR/$username/$artifact.tar.gz"
+
+if [[ -f "$ARTIFACT_FILE" ]]; then
+    echo "EXISTS"
+    exit 0
+else
+    exit 1
+fi
+```
+
+### home-serialize.sh
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Environment variables available:
+# $out - Directory containing generated files
+# $config - JSON file with backend configuration
+# $artifact_context - Always "homemanager" for this script
+# $username - Target user identifier (user@host format)
+# $artifact - Artifact name
+
+# Read storage path from config
+STORAGE_DIR="${STORAGE_DIR:-./storage}"
+mkdir -p "$STORAGE_DIR/$username"
+
+# Archive all files from $out
+tar -czf "$STORAGE_DIR/$username/$artifact.tar.gz" -C "$out" .
+echo "Serialized: $username/$artifact.tar.gz"
 ```
 
 ## Error Handling
@@ -970,12 +1003,9 @@ While the CLI only checks zero vs non-zero, follow these conventions:
 ### Test with the CLI
 
 ```bash
-# List all artifacts
-artifacts list backend.toml
-
-# Generate a specific artifact
-artifacts tui backend.toml
-# Then select your artifact and press Enter
+# Set the backend config path and run from your flake directory
+NIXOS_ARTIFACTS_BACKEND_CONFIG=/path/to/my-backend/backend.toml \
+  artifacts /path/to/flake
 ```
 
 ## Troubleshooting
@@ -1046,6 +1076,30 @@ filesystem permissions.
   nixos-artifacts repository
 - **CLI Reference:** Run `artifacts --help` for command-line options
 - **Repository:** https://github.com/mrVanDalo/nixos-artifacts
+
+## Using This Guide with AI Assistants
+
+This guide is designed to be self-contained and can be used with AI coding
+assistants (like Claude, ChatGPT, or GitHub Copilot) to implement backends
+quickly. When working with an AI assistant:
+
+1. **Copy this guide** into your conversation or provide a link to it
+2. **Describe your storage backend** - Where do you want to store artifacts?
+   (e.g., encrypted files in git, cloud secret manager, custom storage)
+3. **Ask the AI to generate** the required scripts based on this guide's
+   interface specification
+
+Example prompt:
+
+> "I want to create a backend that stores artifacts as encrypted files in
+> a `secrets/` directory using age encryption. Using the BACKEND_GUIDE.md
+> specification, generate the check_serialization and serialize scripts for
+> NixOS machines. Each secret should be encrypted with the machine's age
+> public key stored in the config."
+
+The AI can help you generate correct script implementations, handle edge
+cases, and ensure proper error handling while following the interface
+specification.
 
 ---
 

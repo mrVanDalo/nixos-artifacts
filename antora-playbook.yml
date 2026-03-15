@@ -11,6 +11,9 @@ content:
     - url: https://github.com/mrVanDalo/nixos-artifacts-agenix.git
       start_path: docs
       branches: HEAD
+antora:
+  extensions:
+    - require: "@sntke/antora-mermaid-extension"
 ui:
   bundle:
     url: ./docs/ui-bundle.zip

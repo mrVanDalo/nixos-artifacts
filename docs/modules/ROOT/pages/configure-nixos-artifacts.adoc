@@ -1,0 +1,85 @@
+= Configure nixos-artifacts
+
+This page explains how to configure `artifacts`, choose backends, and run the tool.
+
+== Configure backends
+
+The `artifacts` CLI package is configured by passing backend packages. Use `mkArtifactCli` to create a CLI configured with your backends.
+
+[source,nix]
+----
+# In your flake.nix perSystem config
+packages.default = self.lib.mkArtifactCli { <1>
+  inherit system;
+  backends = [ <2>
+    my-backend-package      # Created via mkBackend
+    another-backend-package
+  ];
+};
+----
+<1> xref:reference-mkartifactcli.adoc[mkArtifactCli] creates a CLI package configured with the specified backends.
+<2> Each backend is created via xref:reference-mkbackend.adoc[mkBackend].
+
+Now you can install this package system-wide or in a dev shell.
+
+NOTE: Have a look at xref:backend-quickstart.adoc[Backend Quickstart] for details of the scripts that need to be defined.
+
+== Choose a backend for artifacts
+
+You can set a default backend for all artifacts and optionally override it for a specific artifact.
+
+=== Set a default backend
+
+Set the default backend once so all artifacts use it unless they override it.
+
+[source,nix]
+----
+# In your NixOS configuration
+{
+  artifacts.default.backend.serialization = "my-backend";
+}
+----
+
+=== Override the backend for a specific artifact
+
+You can select a different backend for an individual artifact by setting the serialization field on that artifact.
+
+[source,nix]
+----
+# In your NixOS configuration
+{
+  artifacts.store.my-artifact = {
+    serialization = "my-backend";
+  };
+}
+----
+
+== Run
+
+[source,shell]
+----
+artifacts <1>
+artifacts --machine my-machine <2>
+artifacts --home alice@host <3>
+artifacts --artifact my-artifact <4>
+artifacts --machine my-machine --artifact my-artifact <5>
+artifacts /path/to/flake <6>
+----
+<1> Show all artifacts from all machines and home-manager configurations
+<2> Filter to show only artifacts for the specified machine (repeatable)
+<3> Filter to show only artifacts for the specified home-manager user (repeatable)
+<4> Filter to show only artifacts matching the specified name (repeatable)
+<5> Combine filters to show specific artifacts on specific machines
+<6> Specify a different flake directory (default: current directory)
+
+=== Logging
+
+For debugging, you can enable logging to a file:
+
+[source,shell]
+----
+artifacts --log-file /tmp/artifacts.log
+artifacts --log-file /tmp/artifacts.log --log-level debug
+----
+
+Log levels: `error`, `warn`, `info`, `debug` (default: `debug`).

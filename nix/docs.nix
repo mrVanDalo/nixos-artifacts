@@ -6,14 +6,21 @@
 
       antoraCommand = pkgs.writeShellApplication {
         name = "antora-command";
-        runtimeInputs = [ pkgs.antora ];
+        runtimeInputs = [
+          pkgs.antora
+          inputs.antora-flake.packages.${pkgs.system}.antora-mermaid-extension
+        ];
         text = ''
           set -euo pipefail
           export ANTORA_CACHE_DIR="$PWD/.cache"
+          export NODE_PATH="${
+            inputs.antora-flake.packages.${pkgs.system}.antora-mermaid-extension
+          }/lib/node_modules"
           echo "Building documentation..."
           cd docs
           antora \
             --stacktrace \
+            --extension @sntke/antora-mermaid-extension \
             --to-dir ../build/site \
             antora-playbook.yml
           echo

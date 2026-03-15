@@ -1,0 +1,118 @@
+= mkArtifactCli Reference
+
+`mkArtifactCli` creates a CLI package configured with backend packages.
+
+== Function Signature
+
+[source,nix]
+----
+self.lib.mkArtifactCli {
+  system,
+  backends,
+}
+----
+
+== Parameters
+
+[cols="1,1,3"]
+|===
+| Parameter | Required | Description
+
+| `system`
+| Yes
+| System architecture (e.g., `"x86_64-linux"`).
+
+| `backends`
+| Yes
+| List of backend packages created via xref:reference-mkbackend.adoc[mkBackend]. Each package must contain a `backend.toml` file.
+|===
+
+== Output
+
+Returns a derivation that produces a wrapper script:
+
+- Sets `NIXOS_ARTIFACTS_BACKEND_CONFIG` environment variable
+- Points to a merged `backends.toml` that includes all backend configurations
+- Invokes the `artifacts-bin` binary with all arguments
+
+== Example
+
+[source,nix]
+----
+# In your flake.nix perSystem config
+perSystem = { self', system, ... }:
+{
+  packages.default = self.lib.mkArtifactCli {
+    inherit system;
+    backends = [
+      self'.packages.agenix-backend
+      self'.packages.sops-backend
+    ];
+  };
+};
+----
+
+== Using with Flake Outputs
+
+The CLI is commonly configured in the `perSystem` block and exposes backends created by `mkBackend`:
+
+[source,nix]
+----
+# flake.nix
+{
+  outputs = inputs@{ flake-parts, self, ... }:
+    flake-parts.lib.mkFlake { inherit inputs; } {
+      imports = [ ./backends/default.nix ];
+
+      perSystem = { self', system, ... }:
+        {
+          packages.default = self.lib.mkArtifactCli {
+            inherit system;
+            backends = [ self'.packages.my-backend ];
+          };
+        };
+    };
+}
+----
+
+== Integration Example
+
+Complete example showing both functions together:
+
+[source,nix]
+----
+# backends/my-backend/default.nix
+{ self, ... }:
+{
+  perSystem = { system, ... }:
+    let
+      myBackend = self.lib.mkBackend {
+        inherit system;
+        name = "my-backend";
+        nixos_check_serialization = ./check.sh;
+        nixos_serialize = ./serialize.sh;
+        home_check_serialization = ./check.sh;
+        home_serialize = ./serialize.sh;
+      };
+    in
+    {
+      packages.my-backend = myBackend;
+    };
+}
+
+# In another flake using this backend
+{
+  inputs.my-backend.url = "github:user/my-backend";
+
+  outputs = inputs@{ self, ... }:
+    self.lib.mkArtifactCli {
+      system = "x86_64-linux";
+      backends = [ inputs.my-backend.packages.x86_64-linux.my-backend ];
+    };
+}
+----
+
+== See also
+
+- xref:reference-mkbackend.adoc[mkBackend Reference] — Create a backend package
+- xref:configure-nixos-artifacts.adoc[Configure nixos-artifacts] — Configuration and usage

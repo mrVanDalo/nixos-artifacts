@@ -6,46 +6,25 @@ WARNING: This project is experimental. Interfaces and option structures may chan
 NixOS Artifacts is a framework to unify artifacts and secrets in NixOS flakes.
 It provides a standardized interface for generation, rotation, and multi-backend storage.
 
-- xref:what-is-nixos-artifacts.adoc[What is NixOS Artifacts].
-- xref:artifacts-workflow-diagrams.adoc[Artifact Workflow Diagrams].
+== Quick Start
 
-== Get started
+_New to nixos-artifacts?_ Start with xref:getting-started.adoc[Getting Started] for a guided tutorial using agenix as the backend.
 
-These are the steps more or less you need to do to use `nixos-artifacts`.
+== Documentation
 
-=== Flake setup
-
-First you have to include `nixos-artifacts` and a `nixos-artifact` backend (in this example `agenix`).
-
-include::partial$artifacts-input-example.adoc[]
-
-=== Configure artifacts-cli
-
-Second you have to configure the xref:generate-artifacts-cli.adoc[artifacts-cli], backends might
-ship with a already configured backend (like xref:latest@nixos-artifacts-agenix:ROOT:how-to-configure-artifacts-cli.adoc[nixos-artifacts-agenix]).
-
-include::partial$artifact-cli-configuration.adoc[]
-
-.Have a look at
-- xref:generate-artifacts-cli.adoc[Generate artifacts (artifacts CLI)].
-- xref:defining-backends.adoc[How to define backends].
-- xref:how-to-use-a-backend.adoc[How to use a backend].
-- xref:latest@nixos-artifacts-agenix:ROOT:index.adoc[agenix backend implementation].
-
-
-=== Define your artifacts
-
-Thrid define your artifacts.
-
-include::partial$artifact-store-example-ssh.adoc[]
-
-.Have a look at
-- xref:artifact-definition-example.adoc[Artifact definition example].
+* xref:what-is-nixos-artifacts.adoc[What is NixOS Artifacts] — Core concepts and architecture
+* xref:artifact-definition-example.adoc[Artifact definition example] — How to define artifacts
+* xref:configure-nixos-artifacts.adoc[Configure nixos-artifacts] — Configuration and usage
 
 == Backend Development
 
-nixos-artifacts supports custom backends for different storage mechanisms. You can implement your own backend by defining serialization scripts.
+* xref:backend-quickstart.adoc[Backend Quickstart] — Create a working backend in minutes
+* xref:backend-concepts.adoc[Backend Concepts] — Understand script execution flow
+* xref:backend-scripts-reference.adoc[Backend Scripts Reference] — Environment variables and examples
 
-* xref:defining-backends.adoc[How to define backends] — Quick reference
-* xref:backend-dev-guide.adoc[Backend Developer Guide] — Complete implementation guide
-* xref:how-to-use-a-backend.adoc[How to use a backend] — Using backends in your project
+== Reference
+
+* xref:reference-mkbackend.adoc[mkBackend] — Create backend packages
+* xref:reference-mkartifactcli.adoc[mkArtifactCli] — Create CLI packages
+* xref:options-nixos.adoc[NixOS options] — Full NixOS module options
+* xref:options-homemanager.adoc[Home Manager options] — Home Manager module options

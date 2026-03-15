@@ -1,0 +1,127 @@
+= mkBackend Reference
+
+`mkBackend` creates a backend package with all necessary scripts and configuration.
+
+== Function Signature
+
+[source,nix]
+----
+self.lib.mkBackend {
+  pkgs ? null,        # Package set (alternative to system)
+  system ? null,      # System architecture (alternative to pkgs)
+  name,                # Backend name
+  nixos_check_serialization,
+  nixos_serialize,
+  home_check_serialization,
+  home_serialize,
+  shared_check_serialization ? null,
+  shared_serialize ? null,
+  settings ? { },
+  capabilities ? { shared = false; serializes = true; },
+  enabled ? true,
+}
+----
+
+== Parameters
+
+[cols="1,1,3"]
+|===
+| Parameter | Required | Description
+
+| `pkgs`
+| One of `pkgs` or `system`
+| Nixpkgs package set. Use when you have access to `pkgs` in your context.
+
+| `system`
+| One of `pkgs` or `system`
+| System architecture string (e.g., `"x86_64-linux"`). Used to lookup `inputs.nixpkgs.legacyPackages.${system}`.
+
+| `name`
+| Yes
+| Backend name. This is the identifier used in `artifacts.store.<name>.serialization`.
+
+| `nixos_check_serialization`
+| Yes
+| Path to script that checks if a NixOS artifact already exists. See xref:backend-scripts-reference.adoc#_check_serialization[check_serialization script].
+
+| `nixos_serialize`
+| Yes
+| Path to script that serializes a NixOS artifact. See xref:backend-scripts-reference.adoc#_serialize[serialize script].
+
+| `home_check_serialization`
+| Yes
+| Path to script that checks if a Home Manager artifact already exists.
+
+| `home_serialize`
+| Yes
+| Path to script that serializes a Home Manager artifact.
+
+| `shared_check_serialization`
+| No
+| Path to script that checks if a shared artifact exists. Required if `capabilities.shared = true`.
+
+| `shared_serialize`
+| No
+| Path to script that serializes shared artifacts for all targets. Required if `capabilities.shared = true`.
+
+| `settings`
+| No
+| Attribute set of backend-specific settings. These are available in the `$config` JSON file at runtime. Default: `{ }`
+
+| `capabilities.shared`
+| No
+| Set to `true` if the backend supports shared artifacts. Default: `false`
+
+| `capabilities.serializes`
+| No
+| Set to `false` for test backends that don't actually persist data. Default: `true`
+
+| `enabled`
+| No
+| Whether the backend is enabled. Default: `true`
+|===
+
+== Output
+
+Returns a derivation that produces a directory containing:
+
+- `backend.toml` - Generated backend configuration
+- `nixos_check_serialization.sh` - NixOS check script
+- `nixos_serialize.sh` - NixOS serialize script
+- `home_check_serialization.sh` - Home Manager check script
+- `home_serialize.sh` - Home Manager serialize script
+- `shared_check_serialization.sh` - (optional) Shared check script
+- `shared_serialize.sh` - (optional) Shared serialize script
+
+== Example
+
+[source,nix]
+----
+# In backends/my-backend/default.nix
+{ self, ... }:
+{
+  perSystem = { system, ... }:
+    let
+      myBackend = self.lib.mkBackend {
+        inherit system;
+        name = "my-backend";
+
+        nixos_check_serialization = ./check.sh;
+        nixos_serialize = ./serialize.sh;
+        home_check_serialization = ./check.sh;
+        home_serialize = ./serialize.sh;
+
+        capabilities.shared = false;
+        settings.storage_path = "/var/lib/my-backend";
+      };
+    in
+    {
+      packages.my-backend = myBackend;
+    };
+}
+----
+
+== See also
+
+- xref:reference-mkartifactcli.adoc[mkArtifactCli Reference] — Create a CLI package configured with backend packages
+- xref:backend-quickstart.adoc[Backend Quickstart] — Quick introduction to creating backends

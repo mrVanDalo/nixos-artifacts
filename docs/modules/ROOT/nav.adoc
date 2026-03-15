@@ -1,10 +1,14 @@
+* xref:getting-started.adoc[Getting Started]
 * xref:what-is-nixos-artifacts.adoc[What is nixos-artifacts]
 * xref:artifact-definition-example.adoc[Artifact definition example]
-* xref:generate-artifacts-cli.adoc[Generate artifacts (CLI)]
-* xref:defining-backends.adoc[How to define backends]
-* xref:backend-dev-guide.adoc[Backend Developer Guide]
-* xref:how-to-use-a-backend.adoc[How to use a backend]
-* xref:artifacts-workflow-diagrams.adoc[Workflow diagrams]
+* xref:configure-nixos-artifacts.adoc[Configure nixos-artifacts]
+* Backend Development
+** xref:backend-quickstart.adoc[Quickstart]
+** xref:backend-concepts.adoc[Concepts]
+** xref:backend-scripts-reference.adoc[Scripts Reference]
+* Reference
+** xref:reference-mkbackend.adoc[mkBackend]
+** xref:reference-mkartifactcli.adoc[mkArtifactCli]
 * Options
 ** xref:options-nixos.adoc[NixOS]
 ** xref:options-homemanager.adoc[Home Manager]

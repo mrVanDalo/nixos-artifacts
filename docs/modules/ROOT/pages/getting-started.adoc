@@ -1,0 +1,148 @@
+= Getting Started
+
+This guide gets you up and running with nixos-artifacts using agenix as the backend.
+
+WARNING: This project is experimental. Interfaces and option structures may change without notice.
+
+== Prerequisites
+
+* A NixOS flake-based configuration
+* Basic familiarity with NixOS modules
+
+== Step 1: Add Inputs
+
+Add `nixos-artifacts` and `nixos-artifacts-agenix` to your flake inputs:
+
+[source,nix]
+----
+{
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nixos-artifacts.url = "github:mrVanDalo/nixos-artifacts";
+    nixos-artifacts-agenix.url = "github:mrVanDalo/nixos-artifacts-agenix";
+  };
+
+  outputs = inputs@{ self, nixpkgs, ... }: {
+    nixosConfigurations.my-host = nixpkgs.lib.nixosSystem {
+      system = "x86_64-linux";
+      modules = [
+        inputs.nixos-artifacts.nixosModules.default
+        inputs.nixos-artifacts-agenix.nixosModules.default
+        # your other modules...
+      ];
+    };
+  };
+}
+----
+
+== Step 2: Configure Backend
+
+Set agenix as your default backend and configure the agenix-specific options:
+
+[source,nix]
+----
+{
+  # Use agenix as the default backend
+  artifacts.default.backend.serialization = "agenix";
+  
+  # Configure agenix (see nixos-artifacts-agenix docs for all options)
+  artifacts.config.agenix = {
+    # Your agenix configuration here
+  };
+}
+----
+
+== Step 3: Define an Artifact
+
+Define your first artifact. This example creates a WireGuard key pair:
+
+[source,nix]
+----
+{ config, pkgs, ... }:
+{
+  artifacts.store.wireguard = {
+    # Define the files this artifact produces
+    files.priv_key = { };  # Private key
+    files.pub_key = { };   # Public key
+    
+    # Generator script that creates the files
+    generator = pkgs.writeShellApplication {
+      name = "generate_wireguard";
+      runtimeInputs = [ pkgs.wireguard-tools ];
+      text = ''
+        # Generate private key
+        wg genkey > "$out/priv_key"
+        
+        # Derive public key from private key
+        cat "$out/priv_key" | wg pubkey > "$out/pub_key"
+        
+        # Print public key for reference
+        echo "WireGuard public key for $machine:"
+        echo "$(cat "$out/pub_key")"
+      '';
+    };
+  };
+}
+----
+
+=== With User Prompts
+
+For artifacts that need user input (like tokens or passwords), use the `prompts` option:
+
+[source,nix]
+----
+{ config, pkgs, ... }:
+{
+  artifacts.store.gitea-runner = {
+    files.auth_token = { };
+    
+    # Prompt the user during generation
+    prompts.auth_token.description = "Enter auth token for gitea runner (from website)";
+    
+    # Generator receives prompt input in $prompts/
+    generator = pkgs.writeShellApplication {
+      name = "generate-gitea-auth-token";
+      text = ''
+        TOKEN="$(cat $prompts/auth_token)"
+        echo "TOKEN=$TOKEN" > "$out/auth_token"
+      '';
+    };
+  };
+}
+----
+
+The generator script receives:
+
+* `$out/` — Directory where you write generated files (keys must match `files` names)
+* `$machine` — Machine name from the NixOS configuration
+* `$prompts/` — Directory containing prompt inputs (if `prompts` is defined)
+
+== Step 4: Generate Artifacts
+
+Run the artifacts CLI to generate your secrets:
+
+[source,shell]
+----
+# Generate all artifacts
+nix run .#artifacts generate
+
+# Or target a specific machine
+nix run .#artifacts generate --machine my-host
+
+# Or target a specific artifact
+nix run .#artifacts generate --artifact wireguard
+----
+
+The CLI will:
+
+1. Check if artifacts already exist (skip if present)
+2. Prompt for any required inputs
+3. Run generator scripts
+4. Serialize artifacts via the backend (agenix)
+
+== Next Steps
+
+* xref:artifact-definition-example.adoc[Artifact definition examples] — More artifact configurations
+* xref:options-nixos.adoc[NixOS options reference] — All available options
+* xref:backend-quickstart.adoc[Backend Quickstart] — Creating custom backends
+* xref:latest@nixos-artifacts-agenix:ROOT:index.adoc[agenix backend docs] — Agenix-specific configuration

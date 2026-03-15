@@ -1,0 +1,141 @@
+= Backend Concepts
+:description: Understand backend architecture, NixOS modules, and scripts
+
+A backend provides the glue between nixos-artifacts and an existing secret management system. This page explains the architecture and responsibilities of each component.
+
+== Artifact Types
+
+Your backend handles three artifact types:
+
+NixOS machines:: Per-machine secrets for NixOS configurations
+Home Manager users:: Per-user secrets for home-manager configurations
+Shared artifacts:: Secrets shared across multiple machines/users (set `shared = true`)
+
+== Backend Architecture
+
+NOTE: This section uses a simplified version of the `agenix` backend as an example. For the complete implementation, see the xref:latest@nixos-artifacts-agenix:ROOT:index.adoc[nixos-artifacts-agenix] documentation.
+
+A backend has two independent parts that work together:
+
+1. **NixOS modules** — Configure and connect to an existing secret management system
+2. **Scripts** — Populate the secret store at generation time
+
+The modules define how secrets are deployed to the target system. The scripts populate the secret store that the modules will use.
+
+=== NixOS Modules
+
+The NixOS modules integrate with an existing secret management backend like agenix or sops-nix.
+
+==== Configuration Options (config.nix)
+
+Define `artifacts.config.<backend-name>` options for backend-specific settings (using agenix as an example):
+
+[source,nix]
+----
+{ lib, ... }:
+{
+  options.artifacts.config.agenix = {
+    storeDir = lib.mkOption {
+      type = lib.types.str;
+      default = "secrets";
+    };
+    publicKey = lib.mkOption {
+      type = lib.types.str;
+      description = "Public key for encryption";
+    };
+  };
+}
+----
+
+These settings are passed to scripts via `$config` as JSON.
+
+==== Render Module (store.nix)
+
+Transform `artifacts.store` definitions to your backend's native configuration. The agenix backend populates `age.secrets`:
+
+[source,nix]
+----
+{ config, lib, ... }:
+{
+  age.secrets = lib.mapAttrs' (name: artifact:
+    # transform artifact.files to age.secrets entries
+  ) config.artifacts.store;
+}
+----
+
+The render module is backend-specific:
+
+- agenix backend populates `age.secrets`
+- sops-nix backend would populate `sops.secrets`
+- Other backends define their own target options
+
+=== Scripts
+
+Scripts populate the secret store at generation time. They run before deployment to prepare secrets for the NixOS modules to consume.
+
+==== Execution Flow
+
+[mermaid]
+----
+flowchart TD
+    Start([TUI starts]) --> Check[Run check_serialization]
+    Check --> Status{Exit code?}
+    Status --"needs_generation"--> RunGen[User triggers generate]
+    Status --"up_to_date"--> RunRegen[User triggers regenerate]
+    RunRegen --> Dialog{Confirm\nregeneration?}
+    Dialog --"Yes"--> Gen[Run generator]
+    Dialog --"No"--> Done([Cancel])
+    RunGen --> Gen
+    Gen --> Store[Run serialize]
+    Store --> Done2([Complete])
+
+    style Start fill:#e8f5e9
+    style Check fill:#fff8e1
+    style Status fill:#fce4ec
+    style RunGen fill:#e8f5e9
+    style RunRegen fill:#e8f5e9
+    style Dialog fill:#fce4ec
+    style Gen fill:#fff8e1
+    style Store fill:#fff8e1
+    style Done fill:#e8f5e9
+    style Done2 fill:#e8f5e9
+----
+
+==== Script Types
+
+`nixos_serialize` / `home_serialize`:: Store generated artifact files in your backend's secret store (e.g., encrypt and write to `.age` files for agenix).
+
+`nixos_check_serialization` / `home_check_serialization`:: Check if an artifact already exists in the secret store. Return exit code 0 to skip generation, non-zero to trigger generation.
+
+`shared_serialize` / `shared_check_serialization`:: Optional. Handle artifacts shared across multiple machines/users. Called once per artifact instead of once per target.
+
+For environment variables and implementation details, see xref:backend-scripts-reference.adoc[Scripts Reference].
+
+=== Module Structure
+
+A backend package typically includes (using agenix as an example):
+
+[source]
+----
+agenix/
+├── flake.nix        # Flake outputs
+├── config.nix       # artifacts.config.agenix options
+├── store.nix        # Render artifacts.store → age.secrets
+├── nixos-check.sh
+├── nixos-serialize.sh
+├── home-check.sh
+└── home-serialize.sh
+----
+
+The flake exposes three outputs:
+
+`packages.<system>.default`:: Package created by xref:reference-mkbackend.adoc[mkBackend] containing scripts and configuration. Used as input to xref:reference-mkartifactcli.adoc[mkArtifactCli].
+
+`nixosModules.default`:: NixOS module with `config.nix` and `store.nix` for NixOS machines.
+
+`homeModules.default`:: Home Manager module for user-level secrets.
+
+== Next Steps
+
+* xref:backend-scripts-reference.adoc[Scripts Reference] — environment variables, exit codes, examples
+* xref:reference-mkbackend.adoc[mkBackend Reference] — create backend packages
