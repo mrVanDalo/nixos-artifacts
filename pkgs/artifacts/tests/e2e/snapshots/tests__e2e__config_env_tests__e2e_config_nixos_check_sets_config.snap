@@ -1,0 +1,13 @@
+---
+source: tests/e2e/config_env_tests.rs
+expression: redacted
+---
+# BEGIN CONFIG SNAPSHOT
+# config=/tmp/REDACTED/config.json
+# target_type=nixos_or_home
+# machine=test-machine
+# username=
+# artifact=nixos-secret
+# artifact_context=nixos
+# FILE CONTENT:
+{}# END CONFIG SNAPSHOT

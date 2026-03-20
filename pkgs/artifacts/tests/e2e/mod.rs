@@ -12,6 +12,7 @@
 //! - TEST-06: Tests run in CI with meaningful failure messages
 
 pub mod backend_verify;
+pub mod config_env_tests;
 pub mod diagnostics;
 pub mod edge_cases;
 pub mod shared_artifact;
@@ -78,6 +79,41 @@ fn create_test_storage_dir(_test_name: &str) -> Result<TempDir> {
     let storage_dir = temp_dir.path().join("storage");
     fs::create_dir_all(&storage_dir)?;
     Ok(temp_dir)
+}
+
+/// Set up test storage directory with ARTIFACTS_TEST_OUTPUT_DIR.
+///
+/// Returns a TempDir that should be kept alive for the duration of the test
+/// to ensure the storage directory exists.
+fn setup_test_storage() -> Result<(TempDir, PathBuf)> {
+    let temp_dir = TempDir::new()?;
+    let storage_path = temp_dir.path().join("storage");
+    fs::create_dir_all(&storage_path)?;
+
+    // Set the environment variable that the test backend uses
+    // SAFETY: We're in a single-threaded test environment with #[serial]
+    unsafe {
+        std::env::set_var("ARTIFACTS_TEST_OUTPUT_DIR", &storage_path);
+    }
+
+    Ok((temp_dir, storage_path))
+}
+
+/// Clean up environment after test.
+fn cleanup_test_storage() {
+    // SAFETY: We're in a single-threaded test environment with #[serial]
+    unsafe {
+        std::env::remove_var("ARTIFACTS_TEST_OUTPUT_DIR");
+    }
+}
+
+/// RAII guard to ensure environment cleanup even on panic.
+struct CleanupGuard;
+
+impl Drop for CleanupGuard {
+    fn drop(&mut self) {
+        cleanup_test_storage();
+    }
 }
 
 /// Check if a file exists and contains expected content.

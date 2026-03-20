@@ -29,10 +29,9 @@ use serial_test::serial;
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
-use tempfile::TempDir;
 
 // Import helpers from parent module
-use super::load_example;
+use super::{load_example, setup_test_storage, CleanupGuard};
 
 /// Get the expected path for a machine-specific artifact in backend storage.
 ///
@@ -46,41 +45,6 @@ fn get_machine_artifact_path(
         .join("machines")
         .join(machine_name)
         .join(artifact_name)
-}
-
-/// Set up test storage directory for shared artifacts.
-///
-/// Returns a TempDir that should be kept alive for the duration of the test
-/// to ensure the storage directory exists.
-fn setup_test_storage(_test_name: &str) -> Result<(TempDir, PathBuf)> {
-    let temp_dir = TempDir::new()?;
-    let storage_path = temp_dir.path().join("storage");
-    fs::create_dir_all(&storage_path)?;
-
-    // Set the environment variable that the test backend uses
-    // SAFETY: We're in a single-threaded test environment with #[serial]
-    unsafe {
-        std::env::set_var("ARTIFACTS_TEST_OUTPUT_DIR", &storage_path);
-    }
-
-    Ok((temp_dir, storage_path))
-}
-
-/// Clean up environment after test.
-fn cleanup_test_storage() {
-    // SAFETY: We're in a single-threaded test environment with #[serial]
-    unsafe {
-        std::env::remove_var("ARTIFACTS_TEST_OUTPUT_DIR");
-    }
-}
-
-/// RAII guard to ensure environment cleanup even on panic.
-struct CleanupGuard;
-
-impl Drop for CleanupGuard {
-    fn drop(&mut self) {
-        cleanup_test_storage();
-    }
 }
 
 /// Find the shared artifact definition across all machines.
@@ -176,7 +140,7 @@ fn verify_artifact_exists(
 #[serial]
 fn e2e_shared_artifact_generation() -> Result<()> {
     // Set up test storage
-    let (storage_dir, storage_path) = setup_test_storage("shared_generation")?;
+    let (storage_dir, storage_path) = setup_test_storage()?;
     let _cleanup = CleanupGuard;
 
     // Load the shared-artifacts scenario
@@ -262,7 +226,7 @@ fn e2e_shared_artifact_generation() -> Result<()> {
 #[serial]
 fn e2e_shared_artifact_multi_machine() -> Result<()> {
     // Set up test storage
-    let (storage_dir, storage_path) = setup_test_storage("shared_multi_machine")?;
+    let (storage_dir, storage_path) = setup_test_storage()?;
     let _cleanup = CleanupGuard;
 
     // Load the shared-artifacts scenario
@@ -362,7 +326,7 @@ fn e2e_shared_artifact_multi_machine() -> Result<()> {
 #[serial]
 fn e2e_shared_artifact_single_instance() -> Result<()> {
     // Set up test storage
-    let (storage_dir, storage_path) = setup_test_storage("shared_single_instance")?;
+    let (storage_dir, storage_path) = setup_test_storage()?;
     let _cleanup = CleanupGuard;
 
     // Load the shared-artifacts scenario
@@ -421,7 +385,7 @@ fn e2e_shared_artifact_single_instance() -> Result<()> {
 #[serial]
 fn e2e_shared_vs_machine_artifacts() -> Result<()> {
     // Set up test storage
-    let (storage_dir, storage_path) = setup_test_storage("shared_vs_machine")?;
+    let (storage_dir, storage_path) = setup_test_storage()?;
     let _cleanup = CleanupGuard;
 
     // Load the shared-artifacts scenario
@@ -569,7 +533,7 @@ fn e2e_shared_vs_machine_artifacts() -> Result<()> {
 #[serial]
 fn e2e_shared_artifact_consistency() -> Result<()> {
     // Set up test storage
-    let (storage_dir, storage_path) = setup_test_storage("shared_consistency")?;
+    let (storage_dir, storage_path) = setup_test_storage()?;
     let _cleanup = CleanupGuard;
 
     // Load the shared-artifacts scenario

@@ -481,7 +481,7 @@ pub fn run_serialize(
             "run_serialize called with Shared target type - use run_shared_serialize instead"
         )
     })?;
-    let (_, config_file) = build_config_json(make, target_name, backend_name, &artifact.name)?;
+    let (_config_dir, config_file) = build_config_json(make, target_name, backend_name, &artifact.name)?;
 
     let mut cmd =
         build_serialize_command(&script_abs, out, &config_file, target_type, &artifact.name);
@@ -564,8 +564,8 @@ pub fn run_shared_serialize(
         shared_ser,
     )?;
 
-    let (_, machines_file) = build_machines_json(make, nixos_targets, backend_name)?;
-    let (_, users_file) = build_users_json(make, home_targets, backend_name)?;
+    let (_machines_dir, machines_file) = build_machines_json(make, nixos_targets, backend_name)?;
+    let (_users_dir, users_file) = build_users_json(make, home_targets, backend_name)?;
 
     log_debug!(
         "running shared_serialize: artifact=\"{}\" out=\"{}\" machines=\"{}\" users=\"{}\"",
@@ -644,7 +644,7 @@ pub fn run_check_serialization(
         anyhow::anyhow!("run_check_serialization called with Shared target type - use run_shared_check_serialization instead")
     })?;
     let inputs = TempFile::new_dir_with_name(&format!("inputs-{}", artifact.name))?;
-    let (_, config_file) = build_config_json(make, target, backend_name, &artifact.name)?;
+    let (_config_dir, config_file) = build_config_json(make, target, backend_name, &artifact.name)?;
 
     write_check_input_files(artifact, &inputs, make)?;
 
@@ -747,8 +747,8 @@ pub fn run_shared_check_serialization(
         check_script,
     )?;
 
-    let (_, machines_file) = build_machines_json(make, nixos_targets, backend_name)?;
-    let (_, users_file) = build_users_json(make, home_targets, backend_name)?;
+    let (_machines_dir, machines_file) = build_machines_json(make, nixos_targets, backend_name)?;
+    let (_users_dir, users_file) = build_users_json(make, home_targets, backend_name)?;
 
     log_debug!(
         "running shared_check_serialization: artifact=\"{}\" machines=\"{}\" users=\"{}\"",
