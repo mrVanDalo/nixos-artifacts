@@ -899,11 +899,9 @@ fn start_generation_for_selected_internal(
         };
         match entry {
             ListEntry::Single(single) => {
-                let prompt_state = create_prompt_state(artifact_index, single);
+                let _prompt_state = create_prompt_state(artifact_index, single);
                 let artifact_name = single.artifact.name.clone();
-                let target_type = single.target_type.clone();
                 let exists_before = matches!(single.status, ArtifactStatus::UpToDate);
-                let prompts_empty = prompt_state.prompts.is_empty();
                 // Store what we need for the branches
                 Some((
                     exists_before,
@@ -989,10 +987,10 @@ fn start_generation_for_selected_internal(
         }
         ListEntry::Shared(_) => {
             if generators.len() == 1 {
-                if let Some(generator_path) = generator_path {
-                    if let Some(ListEntry::Shared(shared)) = model.entries.get_mut(artifact_index) {
-                        shared.selected_generator = Some(generator_path);
-                    }
+                if let Some(generator_path) = generator_path
+                    && let Some(ListEntry::Shared(shared)) = model.entries.get_mut(artifact_index)
+                {
+                    shared.selected_generator = Some(generator_path);
                 }
 
                 if prompts.is_empty() {
@@ -1060,15 +1058,15 @@ fn handle_shared_check_result(
 
     if let Some(entry) = model.entries.get_mut(artifact_index) {
         // Add captured script output to logs using first output if available
-        if let Some(check_output) = outputs.first() {
-            if !check_output.stdout_lines.is_empty() || !check_output.stderr_lines.is_empty() {
-                entry
-                    .step_logs_mut()
-                    .append_stdout(LogStep::Check, &check_output.stdout_lines);
-                entry
-                    .step_logs_mut()
-                    .append_stderr(LogStep::Check, &check_output.stderr_lines);
-            }
+        if let Some(check_output) = outputs.first()
+            && (!check_output.stdout_lines.is_empty() || !check_output.stderr_lines.is_empty())
+        {
+            entry
+                .step_logs_mut()
+                .append_stdout(LogStep::Check, &check_output.stdout_lines);
+            entry
+                .step_logs_mut()
+                .append_stderr(LogStep::Check, &check_output.stderr_lines);
         }
 
         // Set status based on aggregated result

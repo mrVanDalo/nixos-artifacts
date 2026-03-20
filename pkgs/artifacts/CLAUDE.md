@@ -27,25 +27,64 @@ interactive user prompts for secret generation.
 
 ### backend.toml Structure
 
-```toml
-[backend_name]
-check_serialization = "/path/to/check/script"
-deserialize = "/path/to/deserialize/script"
-serialize = "/path/to/serialize/script"
-shared_serialize = "/path/to/shared/serialize/script"  # Optional - for shared artifacts
+The `backend.toml` file uses a nested, target-centric structure with per-target
+`enabled` capabilities:
 
-[backend_name.settings]
+```toml
+[backend_name.nixos]
+enabled = true                    # Optional, defaults to true if scripts set
+check = "./check.sh"              # Optional, must pair with serialize
+serialize = "./serialize.sh"     # Optional, must pair with check
+
+[backend_name.home]
+enabled = true
+check = "./check.sh"
+serialize = "./serialize.sh"
+
+[backend_name.shared]
+enabled = true
+check = "./shared_check.sh"
+serialize = "./shared_serialize.sh"
+
+[backend_name.settings]            # Optional backend-specific config
 key = "value"
 another_key = 123
 ```
 
-**Shared Artifact Scripts**:
+**Validation Rules:**
 
-- `shared_serialize`: Called instead of `serialize` for shared artifacts
-  - Environment: `$artifact`, `$out`, `$machines` (JSON file), `$users` (JSON
-    file)
-  - The `$machines` and `$users` files contain mappings from target names to
-    their backend configs
+| `check` | `serialize` | Result                                         |
+| ------- | ----------- | ---------------------------------------------- |
+| absent  | absent      | Valid: `serializes = false` (passthrough mode) |
+| present | present     | Valid: `serializes = true`                     |
+| present | absent      | **ERROR**: "check requires serialize"          |
+| absent  | present     | **ERROR**: "serialize requires check"          |
+
+**`enabled` Inference Rules:**
+
+| Condition                                        | Inferred `enabled` | Inferred `serializes`  |
+| ------------------------------------------------ | ------------------ | ---------------------- |
+| Section absent                                   | `false`            | N/A                    |
+| Section present, no scripts, no `enabled`        | `false` (implicit) | `false`                |
+| Section present, no scripts, `enabled = true`    | `true` (explicit)  | `false`                |
+| Section present, both scripts, no `enabled`      | `true` (default)   | `true`                 |
+| Section present, both scripts, `enabled = true`  | `true` (explicit)  | `true`                 |
+| Section present, both scripts, `enabled = false` | `false` (explicit) | `true` (scripts exist) |
+
+**Supported Targets:**
+
+- `nixos`: NixOS machine configuration scripts
+- `home`: Home-manager user configuration scripts
+- `shared`: Shared artifact scripts (multi-machine artifacts)
+
+**Shared Artifact Scripts:**
+
+- `shared.serialize`: Called instead of `nixos.serialize` for shared artifacts
+- `shared.check`: Called instead of `nixos.check` for shared artifacts
+- Environment: `$artifact`, `$out`, `$machines` (JSON file), `$users` (JSON
+  file)
+- The `$machines` and `$users` files contain mappings from target names to their
+  backend configs
 
 ### Splitting backend.toml with Includes
 
@@ -56,18 +95,24 @@ directive. Paths are relative to the file containing the include.
 # backend.toml
 include = ["./backends/agenix.toml", "./backends/sops.toml"]
 
-[test]
-check_serialization = "./test_check.sh"
+[test.nixos]
+check = "./test_check.sh"
 serialize = "./test_serialize.sh"
-deserialize = "./test_deserialize.sh"
+
+[test.home]
+check = "./test_check.sh"
+serialize = "./test_serialize.sh"
 ```
 
 ```toml
 # backends/agenix.toml
-[agenix]
-check_serialization = "./agenix_check.sh"
+[agenix.nixos]
+check = "./agenix_check.sh"
 serialize = "./agenix_serialize.sh"
-deserialize = "./agenix_deserialize.sh"
+
+[agenix.home]
+check = "./agenix_check.sh"
+serialize = "./agenix_serialize.sh"
 ```
 
 **Include behavior:**

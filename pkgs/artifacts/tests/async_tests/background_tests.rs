@@ -6,7 +6,7 @@
 use std::collections::{BTreeMap, HashMap};
 
 use artifacts::app::effect::Effect;
-use artifacts::app::message::{Message, ScriptOutput};
+use artifacts::app::message::Message;
 use artifacts::app::model::{ArtifactStatus, TargetType};
 use artifacts::config::backend::BackendConfiguration;
 use artifacts::config::make::MakeConfiguration;
@@ -42,7 +42,12 @@ async fn test_background_processes_check_command() {
     let make = create_test_make_config();
     let shutdown_token = CancellationToken::new();
 
-    let (tx_cmd, mut rx_res) = spawn_background_task(backend, make, shutdown_token);
+    let (tx_cmd, mut rx_res) = spawn_background_task(
+        backend,
+        make,
+        artifacts::logging::LogLevel::Info,
+        shutdown_token,
+    );
 
     // Send a CheckSerialization command
     tx_cmd
@@ -94,7 +99,12 @@ async fn test_background_processes_generator_command() {
     let make = create_test_make_config();
     let shutdown_token = CancellationToken::new();
 
-    let (tx_cmd, mut rx_res) = spawn_background_task(backend, make, shutdown_token);
+    let (tx_cmd, mut rx_res) = spawn_background_task(
+        backend,
+        make,
+        artifacts::logging::LogLevel::Info,
+        shutdown_token,
+    );
 
     // Send a RunGenerator command
     tx_cmd
@@ -142,7 +152,12 @@ async fn test_timeout_behavior() {
     let make = create_test_make_config();
     let shutdown_token = CancellationToken::new();
 
-    let (tx_cmd, mut rx_res) = spawn_background_task(backend, make, shutdown_token);
+    let (tx_cmd, mut rx_res) = spawn_background_task(
+        backend,
+        make,
+        artifacts::logging::LogLevel::Info,
+        shutdown_token,
+    );
 
     // Send a command that will fail fast with empty config
     tx_cmd
@@ -177,7 +192,12 @@ async fn test_graceful_shutdown_on_channel_close() {
     let make = create_test_make_config();
     let shutdown_token = CancellationToken::new();
 
-    let (tx_cmd, mut rx_res) = spawn_background_task(backend, make, shutdown_token);
+    let (tx_cmd, mut rx_res) = spawn_background_task(
+        backend,
+        make,
+        artifacts::logging::LogLevel::Info,
+        shutdown_token,
+    );
 
     // Send one command before closing
     tx_cmd
@@ -215,7 +235,12 @@ async fn test_fifo_ordering_with_real_background() {
     let make = create_test_make_config();
     let shutdown_token = CancellationToken::new();
 
-    let (tx_cmd, mut rx_res) = spawn_background_task(backend, make, shutdown_token);
+    let (tx_cmd, mut rx_res) = spawn_background_task(
+        backend,
+        make,
+        artifacts::logging::LogLevel::Info,
+        shutdown_token,
+    );
 
     // Send 5 CheckSerialization commands with sequential indices
     let num_commands = 5;
@@ -257,7 +282,8 @@ async fn test_background_effect_handler_new() {
     let backend = create_test_backend_config();
     let make = create_test_make_config();
 
-    let mut handler = BackgroundEffectHandler::new(backend, make);
+    let mut handler =
+        BackgroundEffectHandler::new(backend, make, artifacts::logging::LogLevel::Info);
 
     // Verify handler was created (we can't check internals directly,
     // but we can verify it compiles and accepts commands)
@@ -287,7 +313,12 @@ async fn test_cancellation_token_shutdown() {
     let make = create_test_make_config();
     let shutdown_token = CancellationToken::new();
 
-    let (tx_cmd, mut rx_res) = spawn_background_task(backend, make, shutdown_token.clone());
+    let (tx_cmd, mut rx_res) = spawn_background_task(
+        backend,
+        make,
+        artifacts::logging::LogLevel::Info,
+        shutdown_token.clone(),
+    );
 
     // Send a few commands
     for i in 0..3 {

@@ -1,8 +1,5 @@
-[test]
-nixos_check_serialization = "./test_check.sh"
-nixos_serialize = "./test_serialize.sh"
-home_check_serialization = "./test_check.sh"
-home_serialize = "./test_serialize.sh"
+[test.nixos]
+enabled = true
 
-[test.capabilities]
-serializes = false
+[test.home]
+enabled = true

@@ -67,6 +67,16 @@ impl LogLevel {
             CliLevel::Error => LogLevel::Error,
         }
     }
+
+    /// Convert LogLevel to a lowercase string for environment variable use.
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            LogLevel::Debug => "debug",
+            LogLevel::Info => "info",
+            LogLevel::Warn => "warn",
+            LogLevel::Error => "error",
+        }
+    }
 }
 
 /// Logger that writes structured log entries to a file.
@@ -292,6 +302,20 @@ pub fn init(_log_file: Option<&Path>, _log_level: LogLevel) -> anyhow::Result<()
 /// Returns `None` if logging is disabled or not yet initialized.
 pub fn global() -> Option<&'static Logger> {
     GLOBAL_LOGGER.get()?.as_ref()
+}
+
+/// Get the current log level from the global logger.
+///
+/// Returns the configured log level if logging is initialized,
+/// or LogLevel::Info as a default if not.
+#[cfg(feature = "logging")]
+pub fn current_level() -> LogLevel {
+    global().map(|l| l.min_level()).unwrap_or(LogLevel::Info)
+}
+
+#[cfg(not(feature = "logging"))]
+pub fn current_level() -> LogLevel {
+    LogLevel::Info
 }
 
 // ============================================================================

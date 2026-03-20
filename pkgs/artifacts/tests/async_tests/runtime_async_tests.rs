@@ -284,6 +284,7 @@ async fn test_run_async_sends_effects_to_background() {
     let (cmd_tx, mut res_rx) = spawn_background_task(
         backend_config.clone(),
         make_config.clone(),
+        artifacts::logging::LogLevel::Info,
         shutdown_token.child_token(),
     );
 
@@ -324,7 +325,12 @@ async fn test_run_async_handles_results() {
     let make = create_test_make_config();
     let shutdown_token = CancellationToken::new();
 
-    let (cmd_tx, mut res_rx) = spawn_background_task(backend, make, shutdown_token.child_token());
+    let (cmd_tx, mut res_rx) = spawn_background_task(
+        backend,
+        make,
+        artifacts::logging::LogLevel::Info,
+        shutdown_token.child_token(),
+    );
 
     // Send CheckSerialization command
     cmd_tx
@@ -408,7 +414,12 @@ async fn test_select_shutdown_branch() {
     let make = create_test_make_config();
     let shutdown_token = CancellationToken::new();
 
-    let (cmd_tx, mut res_rx) = spawn_background_task(backend, make, shutdown_token.clone());
+    let (cmd_tx, mut res_rx) = spawn_background_task(
+        backend,
+        make,
+        artifacts::logging::LogLevel::Info,
+        shutdown_token.clone(),
+    );
 
     // Send a command
     cmd_tx
@@ -452,7 +463,12 @@ async fn test_select_result_branch() {
     let make = create_test_make_config();
     let shutdown_token = CancellationToken::new();
 
-    let (cmd_tx, mut res_rx) = spawn_background_task(backend, make, shutdown_token.child_token());
+    let (cmd_tx, mut res_rx) = spawn_background_task(
+        backend,
+        make,
+        artifacts::logging::LogLevel::Info,
+        shutdown_token.child_token(),
+    );
 
     // Send multiple commands
     for i in 0..3 {
@@ -494,7 +510,12 @@ async fn test_select_command_branch() {
     let make = create_test_make_config();
     let shutdown_token = CancellationToken::new();
 
-    let (cmd_tx, mut res_rx) = spawn_background_task(backend, make, shutdown_token.child_token());
+    let (cmd_tx, mut res_rx) = spawn_background_task(
+        backend,
+        make,
+        artifacts::logging::LogLevel::Info,
+        shutdown_token.child_token(),
+    );
 
     // Send command - exercises cmd_tx.send()
     cmd_tx
@@ -532,7 +553,12 @@ async fn test_select_channel_closed() {
     let make = create_test_make_config();
     let shutdown_token = CancellationToken::new();
 
-    let (cmd_tx, mut res_rx) = spawn_background_task(backend, make, shutdown_token.child_token());
+    let (cmd_tx, mut res_rx) = spawn_background_task(
+        backend,
+        make,
+        artifacts::logging::LogLevel::Info,
+        shutdown_token.child_token(),
+    );
 
     // Send one command
     cmd_tx
@@ -579,7 +605,12 @@ async fn test_channel_disconnect_graceful() {
     let make = create_test_make_config();
     let shutdown_token = CancellationToken::new();
 
-    let (cmd_tx, mut res_rx) = spawn_background_task(backend, make, shutdown_token.child_token());
+    let (cmd_tx, mut res_rx) = spawn_background_task(
+        backend,
+        make,
+        artifacts::logging::LogLevel::Info,
+        shutdown_token.child_token(),
+    );
 
     // Send commands
     for i in 0..2 {
@@ -627,7 +658,12 @@ async fn test_result_channel_disconnect() {
     let make = create_test_make_config();
     let shutdown_token = CancellationToken::new();
 
-    let (cmd_tx, rx_res) = spawn_background_task(backend, make, shutdown_token.child_token());
+    let (cmd_tx, rx_res) = spawn_background_task(
+        backend,
+        make,
+        artifacts::logging::LogLevel::Info,
+        shutdown_token.child_token(),
+    );
 
     // Drop receiver
     drop(rx_res);
@@ -659,7 +695,12 @@ async fn test_graceful_shutdown_with_in_flight_commands() {
     let make = create_test_make_config();
     let shutdown_token = CancellationToken::new();
 
-    let (cmd_tx, mut res_rx) = spawn_background_task(backend, make, shutdown_token.child_token());
+    let (cmd_tx, mut res_rx) = spawn_background_task(
+        backend,
+        make,
+        artifacts::logging::LogLevel::Info,
+        shutdown_token.child_token(),
+    );
 
     // Send multiple commands
     for i in 0..5 {
@@ -736,7 +777,12 @@ async fn test_shutdown_drain_timeout() {
     let make = create_test_make_config();
     let shutdown_token = CancellationToken::new();
 
-    let (cmd_tx, mut res_rx) = spawn_background_task(backend, make, shutdown_token.child_token());
+    let (cmd_tx, mut res_rx) = spawn_background_task(
+        backend,
+        make,
+        artifacts::logging::LogLevel::Info,
+        shutdown_token.child_token(),
+    );
 
     // Send some commands
     for i in 0..3 {

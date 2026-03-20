@@ -7,8 +7,6 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
     treefmt-nix.url = "github:numtide/treefmt-nix";
-    antora-flake.url = "github:mrvandalo/antora-flake";
-    antora-flake.inputs.nixpkgs.follows = "nixpkgs";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
     home-manager.url = "github:nix-community/home-manager";
   };
@@ -18,14 +16,23 @@
     flake-parts.lib.mkFlake { inherit inputs; } {
       imports = [
         inputs.devshell.flakeModule
+        inputs.flake-parts.flakeModules.partitions
         ./backends
         ./nix/devshells.nix
-        ./nix/docs.nix
         ./nix/formatter.nix
         ./nix/options.nix
         ./nix/rust-docs.nix
         ./pkgs/artifacts
       ];
+
+      partitionedAttrs = {
+        apps = "dev";
+      };
+
+      partitions.dev.extraInputsFlake = ./dev;
+      partitions.dev.module = {
+        imports = [ ./nix/docs.nix ];
+      };
       perSystem =
         {
           self',

@@ -1,11 +1,11 @@
-[test]
-nixos_check_serialization = "./test_check.sh"
-nixos_serialize = "./test_serialize.sh"
-home_check_serialization = "./test_check.sh"
-home_serialize = "./test_serialize.sh"
-shared_check_serialization = "./test_check.sh"
-shared_serialize = "./test_serialize.sh"
+[test.nixos]
+check = "./test_check.sh"
+serialize = "./test_serialize.sh"
 
-[test.capabilities]
-serializes = true
-shared = true
+[test.home]
+check = "./test_check.sh"
+serialize = "./test_serialize.sh"
+
+[test.shared]
+check = "./test_check.sh"
+serialize = "./test_serialize.sh"

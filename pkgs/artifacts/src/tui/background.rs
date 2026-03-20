@@ -65,19 +65,26 @@ pub struct BackgroundEffectHandler {
     current_prompts: Option<HashMap<String, String>>,
     /// Channel sender for streaming output during script execution
     result_tx: Option<UnboundedSender<Message>>,
+    /// Log level to pass to executed scripts
+    log_level: crate::logging::LogLevel,
 }
 
 impl BackgroundEffectHandler {
     /// Create a new handler with the given configuration.
     ///
     /// The configuration is moved into the handler and owned by the background task.
-    pub fn new(backend: BackendConfiguration, make: MakeConfiguration) -> Self {
+    pub fn new(
+        backend: BackendConfiguration,
+        make: MakeConfiguration,
+        log_level: crate::logging::LogLevel,
+    ) -> Self {
         Self {
             backend,
             make,
             current_output_dir: None,
             current_prompts: None,
             result_tx: None,
+            log_level,
         }
     }
 
@@ -253,6 +260,7 @@ impl BackgroundEffectHandler {
         let backend = self.backend.clone();
         let make = self.make.clone();
         let target_type_enum = Self::target_type_from_str(&target_type, &target);
+        let log_level = self.log_level.as_str().to_string();
 
         let result = Self::run_with_timeout(&artifact_name, "CheckSerialization", move || {
             backend::serialization::run_check_serialization(
@@ -260,6 +268,7 @@ impl BackgroundEffectHandler {
                 &target_type_enum,
                 &backend,
                 &make,
+                &log_level,
             )
         })
         .await;
@@ -366,6 +375,7 @@ impl BackgroundEffectHandler {
         let target_type_enum = Self::target_type_from_str(&target_type, &target);
         let prompts_path = prompts_dir.path().to_path_buf();
         let make_base = self.make.make_base.clone();
+        let log_level = self.log_level.as_str().to_string();
         let artifact_for_verify = artifact.clone();
         let output_path_for_verify = output_path.clone();
 
@@ -376,6 +386,7 @@ impl BackgroundEffectHandler {
                 &make_base,
                 &prompts_path,
                 &output_path,
+                &log_level,
             )
         })
         .await;
@@ -461,6 +472,7 @@ impl BackgroundEffectHandler {
         let target_type_enum = Self::target_type_from_str(&target_type, &target);
         let backend = self.backend.clone();
         let make = self.make.clone();
+        let log_level = self.log_level.as_str().to_string();
 
         let result = Self::run_with_timeout(&artifact_name, "Serialize", move || {
             backend::serialization::run_serialize(
@@ -469,6 +481,7 @@ impl BackgroundEffectHandler {
                 &output_path,
                 &target_type_enum,
                 &make,
+                &log_level,
             )
         })
         .await;
@@ -542,6 +555,7 @@ impl BackgroundEffectHandler {
         };
 
         let artifact_name_for_closure = artifact_name.clone();
+        let log_level = self.log_level.as_str().to_string();
         let result =
             Self::run_with_timeout(&artifact_name, "SharedCheckSerialization", move || {
                 backend::serialization::run_shared_check_serialization(
@@ -551,6 +565,7 @@ impl BackgroundEffectHandler {
                     &make,
                     &nixos_targets,
                     &home_targets,
+                    &log_level,
                 )
             })
             .await;
@@ -694,6 +709,7 @@ impl BackgroundEffectHandler {
         let generator_path_clone = generator_path.clone();
         let artifact_name_for_verify = artifact_name.clone();
         let out_path_for_verify = out_path.clone();
+        let log_level = self.log_level.as_str().to_string();
 
         let result = Self::run_with_timeout(&artifact_name, "SharedGenerator", move || {
             backend::generator::run_generator_script_with_path(
@@ -701,6 +717,7 @@ impl BackgroundEffectHandler {
                 &make_base,
                 &prompts_path,
                 &out_path,
+                &log_level,
             )
         })
         .await;
@@ -815,6 +832,7 @@ impl BackgroundEffectHandler {
         let artifact_name_clone = artifact_name.clone();
         let nixos_targets = machine_targets.clone();
         let home_targets = user_targets.clone();
+        let log_level = self.log_level.as_str().to_string();
 
         let result = Self::run_with_timeout(&artifact_name, "SharedSerialize", move || {
             backend::serialization::run_shared_serialize(
@@ -825,6 +843,7 @@ impl BackgroundEffectHandler {
                 &make,
                 &nixos_targets,
                 &home_targets,
+                &log_level,
             )
         })
         .await;
@@ -1026,6 +1045,7 @@ impl BackgroundEffectHandler {
 ///
 /// * `backend` - Backend configuration for effect execution
 /// * `make` - Make configuration for effect execution
+/// * `log_level` - Log level to pass to executed scripts
 /// * `shutdown_token` - CancellationToken for graceful shutdown
 ///
 /// # Returns
@@ -1036,6 +1056,7 @@ impl BackgroundEffectHandler {
 pub fn spawn_background_task(
     backend: BackendConfiguration,
     make: MakeConfiguration,
+    log_level: crate::logging::LogLevel,
     shutdown_token: CancellationToken,
 ) -> (UnboundedSender<Effect>, UnboundedReceiver<Message>) {
     let (tx_cmd, mut rx_cmd) = unbounded_channel::<Effect>();
@@ -1045,7 +1066,7 @@ pub fn spawn_background_task(
 
     tokio::spawn(async move {
         log_component("BACKGROUND", "Task started");
-        let mut handler = BackgroundEffectHandler::new(backend, make);
+        let mut handler = BackgroundEffectHandler::new(backend, make, log_level);
         handler.set_result_sender(tx_res.clone());
         log_component("BACKGROUND", "Handler initialized");
 
@@ -1123,7 +1144,12 @@ mod tests {
         };
 
         let shutdown_token = CancellationToken::new();
-        let (tx, mut rx) = spawn_background_task(backend_config, make_config, shutdown_token);
+        let (tx, mut rx) = spawn_background_task(
+            backend_config,
+            make_config,
+            crate::logging::LogLevel::Info,
+            shutdown_token,
+        );
 
         // Send a command and verify we can receive the result
         let cmd = Effect::CheckSerialization {
@@ -1168,7 +1194,12 @@ mod tests {
         };
 
         let shutdown_token = CancellationToken::new();
-        let (tx, mut rx) = spawn_background_task(backend_config, make_config, shutdown_token);
+        let (tx, mut rx) = spawn_background_task(
+            backend_config,
+            make_config,
+            crate::logging::LogLevel::Info,
+            shutdown_token,
+        );
 
         // Send 3 commands with sequential indices
         for i in 0..3 {
@@ -1213,7 +1244,12 @@ mod tests {
         };
 
         let shutdown_token = CancellationToken::new();
-        let (tx, rx) = spawn_background_task(backend_config, make_config, shutdown_token);
+        let (tx, rx) = spawn_background_task(
+            backend_config,
+            make_config,
+            crate::logging::LogLevel::Info,
+            shutdown_token,
+        );
 
         // Drop the receiver (simulating TUI closing)
         drop(rx);

@@ -15,15 +15,15 @@
 //! - Specific test: cargo test --test tests e2e_config_nixos_check_sets_config
 
 use anyhow::Result;
+use artifacts::app::model::TargetType;
 use artifacts::backend::serialization::{
     run_check_serialization, run_serialize, run_shared_check_serialization, run_shared_serialize,
 };
-use artifacts::app::model::TargetType;
-use tempfile::TempDir;
 use serial_test::serial;
+use tempfile::TempDir;
 
 // Re-use helpers from parent module
-use super::{load_example, setup_test_storage, CleanupGuard};
+use super::{CleanupGuard, load_example, setup_test_storage};
 
 fn find_first_nixos_artifact(
     make_config: &artifacts::config::make::MakeConfiguration,
@@ -79,19 +79,22 @@ macro_rules! assert_snapshot_redacted {
 fn e2e_config_nixos_check_sets_config() -> Result<()> {
     let _cleanup = CleanupGuard;
     let (backend, make_config) = load_example("scenarios/config-verify")?;
-    
+
     let (_artifact_name, artifact_def) = find_first_nixos_artifact(&make_config, "test-machine")
         .ok_or_else(|| anyhow::anyhow!("No NixOS artifact found"))?;
-    
+
     let result = run_check_serialization(
         &artifact_def,
-        &TargetType::NixOS { machine: "test-machine".to_string() },
+        &TargetType::NixOS {
+            machine: "test-machine".to_string(),
+        },
         &backend,
         &make_config,
+        "info",
     )?;
-    
+
     assert_snapshot_redacted!(result.output.to_string());
-    
+
     Ok(())
 }
 
@@ -107,24 +110,27 @@ fn e2e_config_nixos_serialize_sets_config() -> Result<()> {
     let (_temp_dir, _storage_path) = setup_test_storage()?;
     let _cleanup = CleanupGuard;
     let (backend, make_config) = load_example("scenarios/config-verify")?;
-    
+
     let (_artifact_name, artifact_def) = find_first_nixos_artifact(&make_config, "test-machine")
         .ok_or_else(|| anyhow::anyhow!("No NixOS artifact found"))?;
-    
+
     // Create temp output directory with generated files
     let out_dir = TempDir::new()?;
     std::fs::write(out_dir.path().join("secret-file"), "test-secret-content")?;
-    
+
     let result = run_serialize(
         &artifact_def,
         &backend,
         out_dir.path(),
-        &TargetType::NixOS { machine: "test-machine".to_string() },
+        &TargetType::NixOS {
+            machine: "test-machine".to_string(),
+        },
         &make_config,
+        "info",
     )?;
-    
+
     assert_snapshot_redacted!(result.to_string());
-    
+
     Ok(())
 }
 
@@ -139,17 +145,13 @@ fn e2e_config_nixos_serialize_sets_config() -> Result<()> {
 fn e2e_config_shared_check_sets_machines_users() -> Result<()> {
     let _cleanup = CleanupGuard;
     let (backend, make_config) = load_example("scenarios/config-verify")?;
-    
+
     let (artifact_name, artifact_def) = find_shared_artifact(&make_config, "shared-config-secret")
         .ok_or_else(|| anyhow::anyhow!("No shared artifact found"))?;
-    
+
     // Get all machines that have this shared artifact
-    let nixos_targets: Vec<String> = make_config
-        .nixos_map
-        .keys()
-        .cloned()
-        .collect();
-    
+    let nixos_targets: Vec<String> = make_config.nixos_map.keys().cloned().collect();
+
     let result = run_shared_check_serialization(
         &artifact_name,
         &artifact_def.serialization,
@@ -157,10 +159,11 @@ fn e2e_config_shared_check_sets_machines_users() -> Result<()> {
         &make_config,
         &nixos_targets,
         &[], // No home targets in this test
+        "info",
     )?;
-    
+
     assert_snapshot_redacted!(result.output.to_string());
-    
+
     Ok(())
 }
 
@@ -176,21 +179,17 @@ fn e2e_config_shared_serialize_sets_machines_users() -> Result<()> {
     let (_temp_dir, _storage_path) = setup_test_storage()?;
     let _cleanup = CleanupGuard;
     let (backend, make_config) = load_example("scenarios/config-verify")?;
-    
+
     let (artifact_name, artifact_def) = find_shared_artifact(&make_config, "shared-config-secret")
         .ok_or_else(|| anyhow::anyhow!("No shared artifact found"))?;
-    
+
     // Get all machines that have this shared artifact
-    let nixos_targets: Vec<String> = make_config
-        .nixos_map
-        .keys()
-        .cloned()
-        .collect();
-    
+    let nixos_targets: Vec<String> = make_config.nixos_map.keys().cloned().collect();
+
     // Create temp output directory with generated files
     let out_dir = TempDir::new()?;
     std::fs::write(out_dir.path().join("shared-file"), "shared-content")?;
-    
+
     let result = run_shared_serialize(
         &artifact_name,
         &artifact_def.serialization,
@@ -199,9 +198,10 @@ fn e2e_config_shared_serialize_sets_machines_users() -> Result<()> {
         &make_config,
         &nixos_targets,
         &[], // No home targets in this test
+        "info",
     )?;
-    
+
     assert_snapshot_redacted!(result.to_string());
-    
+
     Ok(())
 }

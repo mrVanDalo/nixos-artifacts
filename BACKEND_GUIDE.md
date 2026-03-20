@@ -1,7 +1,7 @@
 # Backend Developer Guide for nixos-artifacts
 
-**Version:** 2.0\
-**Last Updated:** 2026-03-11\
+**Version:** 3.0\
+**Last Updated:** 2026-03-20\
 **Status:** Complete reference for backend implementation
 
 This guide provides everything needed to implement a custom serialization
@@ -13,15 +13,14 @@ repositories.
 - [Overview](#overview)
 - [Backend Interface](#backend-interface)
 - [Backend Scripts](#backend-scripts)
-  - [check_serialization](#check_serialization)
-    - [nixos_check_serialization](#nixos_check_serialization)
-    - [home_check_serialization](#home_check_serialization)
-    - [shared_check_serialization](#shared_check_serialization)
+  - [check](#check)
+    - [nixos.check](#nixoscheck)
+    - [home.check](#homecheck)
+    - [shared.check](#sharedcheck)
   - [serialize](#serialize)
-    - [nixos_serialize](#nixos_serialize)
-    - [home_serialize](#home_serialize)
-    - [shared_serialize](#shared_serialize)
-  - [deserialize](#deserialize)
+    - [nixos.serialize](#nixosserialize)
+    - [home.serialize](#homeserialize)
+    - [shared.serialize](#sharedserialize)
 - [Backend Configuration (backend.toml)](#backend-configuration-backendtoml)
 - [Environment Variables Reference](#environment-variables-reference)
 - [File Format Reference](#file-format-reference)
@@ -49,13 +48,12 @@ backends. It separates the concerns of:
 A **backend** is a set of shell scripts that implement the storage contract for
 artifact files. When you run `artifacts generate`, the CLI orchestrates:
 
-1. **Check Phase**: Calls `check_serialization` to see if the artifact already
-   exists
+1. **Check Phase**: Calls `check` to see if the artifact already exists
 2. **Generation Phase**: Runs generator scripts to create files (if needed)
 3. **Serialization Phase**: Calls your backend's `serialize` script to store the
    files
-4. **Deserialization Phase** (later): Calls `deserialize` during system
-   activation
+4. **Deserialization Phase** (later): Happens during system activation via NixOS
+   modules
 
 ### Backend Types
 
@@ -65,7 +63,7 @@ Backends handle three types of targets:
 | ---------------------- | ---------------------------------------- | ------------------------------------- |
 | **NixOS Machines**     | Full system configurations               | Has `owner` and `group` fields        |
 | **Home Manager Users** | User-level configurations                | `owner` and `group` are `null`        |
-| **Shared Artifacts**   | Identical across multiple machines/users | Requires dedicated `shared_*` scripts |
+| **Shared Artifacts**   | Identical across multiple machines/users | Requires dedicated `shared.*` scripts |
 
 ### When to Write a Custom Backend
 
@@ -91,19 +89,19 @@ backend serialization scripts run directly on the host system.
 ### Script Lifecycle
 
 ```
-check_serialization
+check
     ↓ (if artifact doesn't exist)
 generator runs → creates files in $out
     ↓
 serialize stores files from $out
 ```
 
-For shared artifacts, the lifecycle uses `shared_check_serialization` and
-`shared_serialize` instead.
+For shared artifacts, the lifecycle uses `shared.check` and `shared.serialize`
+instead of per-target scripts.
 
 ## Backend Scripts
 
-### check_serialization
+### check
 
 **Purpose:** Determine whether an artifact already exists in your backend's
 storage. This prevents accidental overwrites of existing secrets.
@@ -118,7 +116,7 @@ storage. This prevents accidental overwrites of existing secrets.
 | 0         | Artifact exists           | Skip generation for this artifact |
 | Non-zero  | Artifact needs generation | Continue to generator phase       |
 
-#### nixos_check_serialization
+#### nixos.check
 
 Called for NixOS machine targets.
 
@@ -163,7 +161,7 @@ fi
 exit 1
 ```
 
-#### home_check_serialization
+#### home.check
 
 Called for Home Manager user targets.
 
@@ -208,10 +206,10 @@ fi
 exit 1
 ```
 
-#### shared_check_serialization
+#### shared.check
 
-Called for shared artifacts (required if `capabilities.shared = true`). Must
-check if the artifact exists for ALL targets that share it.
+Called for shared artifacts (required if `[backend.shared]` section exists).
+Must check if the artifact exists for ALL targets that share it.
 
 **Environment Variables:**
 
@@ -318,7 +316,7 @@ Then `$out` will contain:
 - Return exit code 0 on success, non-zero on failure
 - The CLI aborts if this script fails
 
-#### nixos_serialize
+#### nixos.serialize
 
 Called for NixOS machine targets.
 
@@ -354,7 +352,7 @@ for file in "$out"/*; do
 done
 ```
 
-#### home_serialize
+#### home.serialize
 
 Called for Home Manager user targets.
 
@@ -390,178 +388,10 @@ for file in "$out"/*; do
 done
 ```
 
-#### shared_serialize
+#### shared.serialize
 
-Called for shared artifacts (required if `capabilities.shared = true`). Must
-store the artifact for ALL targets that share it.
-
-**Environment Variables:**
-
-| Variable    | Type      | Description                                      | Example                  |
-| ----------- | --------- | ------------------------------------------------ | ------------------------ |
-| `$out`      | Directory | Path to directory containing all generated files | `/tmp/artifacts-out-xxx` |
-| `$artifact` | String    | Artifact name being processed                    | `wireguard-key`          |
-| `$machines` | File      | JSON file mapping machine names to their configs | `/tmp/machines-xxx.json` |
-| `$users`    | File      | JSON file mapping user@host to their configs     | `/tmp/users-xxx.json`    |
-
-Note: Unlike per-target scripts, `$config` is not available. Read per-target
-configuration from `$machines` and `$users`.
-
-**Expected Behavior:**
-
-- Store the artifact for all machines listed in `$machines`
-- Store the artifact for all users listed in `$users`
-- Handle the case where one or both files may be empty (no targets of that type)
-- Return exit code 0 on success
-
-**Example:**
-
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-
-# Function to store files for a target
-store_files() {
-    local target="$1"
-    local config="$2"
-    local storage_path=$(echo "$config" | jq -r '.storage_path // "/var/lib/mybackend"')
-    
-    mkdir -p "$storage_path/$target"
-    
-    for file in "$out"/*; do
-        if [[ -f "$file" ]]; then
-            local filename=$(basename "$file")
-            cp "$file" "$storage_path/$target/$artifact-$filename"
-            echo "Stored for $target: $artifact-$filename"
-        fi
-    done
-}
-
-# Store for all machines
-if [[ -f "$machines" ]] && [[ "$(jq 'length' "$machines")" -gt 0 ]]; then
-    for machine in $(jq -r 'keys[]' "$machines"); do
-        machine_config=$(jq -c ".\"$machine\"" "$machines")
-        store_files "$machine" "$machine_config"
-    done
-fi
-
-# Store for all users
-if [[ -f "$users" ]] && [[ "$(jq 'length' "$users")" -gt 0 ]]; then
-    for user in $(jq -r 'keys[]' "$users"); do
-        user_config=$(jq -c ".\"$user\"" "$users")
-        store_files "$user" "$user_config"
-    done
-fi
-```
-
-### serialize
-
-**Purpose:** Store the files generated by the generator script in your backend's
-storage.
-
-**When Called:** After the generator script successfully completes, for each
-target that needs the artifact.
-
-**$out Directory Contents:**
-
-The `$out` directory contains files created by the generator script. Filenames
-match the keys in the artifact's `files` attribute. For example, if your
-artifact defines:
-
-```nix
-files = {
-  cert = { path = "/etc/ssl/cert.pem"; owner = "root"; };
-  key = { path = "/etc/ssl/key.pem"; owner = "root"; };
-};
-```
-
-Then `$out` will contain:
-
-- `$out/cert` - The certificate content
-- `$out/key` - The private key content
-
-**Expected Behavior:**
-
-- Store all files from `$out` in your backend
-- Return exit code 0 on success, non-zero on failure
-- The CLI aborts if this script fails
-
-#### nixos_serialize
-
-Called for NixOS machine targets.
-
-**Environment Variables:**
-
-| Variable            | Type      | Description                                      | Example                  |
-| ------------------- | --------- | ------------------------------------------------ | ------------------------ |
-| `$out`              | Directory | Path to directory containing all generated files | `/tmp/artifacts-out-xxx` |
-| `$config`           | File      | Path to JSON file with backend configuration     | `/tmp/config-xxx.json`   |
-| `$artifact_context` | String    | Context type: always `"nixos"`                   | `nixos`                  |
-| `$machine`          | String    | Target machine name                              | `server-one`             |
-| `$artifact`         | String    | Artifact name being processed                    | `api-key`                |
-
-**Example:**
-
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-
-# Read storage path from config
-STORAGE_PATH=$(jq -r '.storage_path // "/var/lib/mybackend"' "$config")
-
-# Create storage directory if it doesn't exist
-mkdir -p "$STORAGE_PATH/$machine"
-
-# Store each generated file
-for file in "$out"/*; do
-    if [[ -f "$file" ]]; then
-        filename=$(basename "$file")
-        cp "$file" "$STORAGE_PATH/$machine/$artifact-$filename"
-        echo "Stored: $machine/$artifact-$filename"
-    fi
-done
-```
-
-#### home_serialize
-
-Called for Home Manager user targets.
-
-**Environment Variables:**
-
-| Variable            | Type      | Description                                      | Example                  |
-| ------------------- | --------- | ------------------------------------------------ | ------------------------ |
-| `$out`              | Directory | Path to directory containing all generated files | `/tmp/artifacts-out-xxx` |
-| `$config`           | File      | Path to JSON file with backend configuration     | `/tmp/config-xxx.json`   |
-| `$artifact_context` | String    | Context type: always `"homemanager"`             | `homemanager`            |
-| `$username`         | String    | Target user identifier                           | `alice@workstation`      |
-| `$artifact`         | String    | Artifact name being processed                    | `api-key`                |
-
-**Example:**
-
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-
-# Read storage path from config
-STORAGE_PATH=$(jq -r '.storage_path // "/var/lib/mybackend"' "$config")
-
-# Create storage directory if it doesn't exist
-mkdir -p "$STORAGE_PATH/$username"
-
-# Store each generated file
-for file in "$out"/*; do
-    if [[ -f "$file" ]]; then
-        filename=$(basename "$file")
-        cp "$file" "$STORAGE_PATH/$username/$artifact-$filename"
-        echo "Stored: $username/$artifact-$filename"
-    fi
-done
-```
-
-#### shared_serialize
-
-Called for shared artifacts (required if `capabilities.shared = true`). Must
-store the artifact for ALL targets that share it.
+Called for shared artifacts (required if `[backend.shared]` section exists).
+Must store the artifact for ALL targets that share it.
 
 **Environment Variables:**
 
@@ -643,72 +473,85 @@ if [[ -f "$users" ]] && [[ "$(jq 'length' "$users")" -gt 0 ]]; then
 fi
 ```
 
-### deserialize
-
-**Note:** The `deserialize` script is defined as part of the backend interface
-but is not currently used by the artifacts CLI. Deserialization happens during
-NixOS system activation via NixOS module integration, which is managed
-separately by backend implementations (e.g., agenix, sops-nix).
-
-If you're implementing a backend, you may define a `deserialize` script for
-documentation purposes, but it won't be called by this CLI tool.
-
 ## Backend Configuration (backend.toml)
 
-The `backend.toml` file defines your backend's scripts and capabilities.
+The `backend.toml` file defines your backend's scripts using a nested,
+target-centric structure.
 
 ### Complete TOML Structure
 
 ```toml
-[mybackend]
-# NixOS-specific scripts (required if serializes = true, default)
-nixos_check_serialization = "./scripts/nixos-check.sh"
-nixos_serialize = "./scripts/nixos-serialize.sh"
+# NixOS target configuration (required)
+[mybackend.nixos]
+enabled = true                    # Optional, inferred from scripts presence
+check = "./scripts/nixos_check.sh"
+serialize = "./scripts/nixos_serialize.sh"
 
-# Home Manager-specific scripts (required if serializes = true, default)
-home_check_serialization = "./scripts/home-check.sh"
-home_serialize = "./scripts/home-serialize.sh"
+# Home Manager target configuration (required)
+[mybackend.home]
+enabled = true
+check = "./scripts/home_check.sh"
+serialize = "./scripts/home_serialize.sh"
 
-# Shared artifact scripts (required if capabilities.shared = true)
-shared_check_serialization = "./scripts/shared-check.sh"
-shared_serialize = "./scripts/shared-serialize.sh"
+# Shared artifact configuration (optional - for shared artifacts)
+[mybackend.shared]
+enabled = true
+check = "./scripts/shared_check.sh"
+serialize = "./scripts/shared_serialize.sh"
 
-[mybackend.capabilities]
-# Whether this backend supports shared artifacts
-shared = true
-
-# Whether this backend actually serializes (vs being a test/mock)
-serializes = true
-
+# Backend-specific settings (optional)
 [mybackend.settings]
-# Default settings available in $config JSON
 storage_path = "/var/lib/mybackend"
 encryption = "aes256-gcm"
 ```
+
+### Validation Rules
+
+The `check` and `serialize` scripts must be provided together or both omitted:
+
+| `check` | `serialize` | Result                                |
+| ------- | ----------- | ------------------------------------- |
+| absent  | absent      | Valid: `enabled = true` (passthrough) |
+| present | present     | Valid: `enabled = true`, `serializes` |
+| present | absent      | **ERROR**: "check requires serialize" |
+| absent  | present     | **ERROR**: "serialize requires check" |
+
+### enabled Inference
+
+The `enabled` field is inferred if not explicitly set:
+
+| Condition                                        | Inferred `enabled` | Inferred `serializes` |
+| ------------------------------------------------ | ------------------ | --------------------- |
+| Section absent                                   | `false`            | N/A                   |
+| Section present, no scripts, no `enabled`        | `false` (implicit) | `false`               |
+| Section present, no scripts, `enabled = true`    | `true` (explicit)  | `false`               |
+| Section present, both scripts, no `enabled`      | `true` (default)   | `true`                |
+| Section present, both scripts, `enabled = true`  | `true` (explicit)  | `true`                |
+| Section present, both scripts, `enabled = false` | `false` (explicit) | `true`                |
+
+### supports_shared Inference
+
+A backend supports shared artifacts if:
+
+- The `[backend.shared]` section exists AND
+- `enabled = true` (explicit or inferred)
 
 ### Target-Specific Scripts
 
 You can define different scripts for NixOS and Home Manager targets:
 
 ```toml
-[mybackend]
-nixos_check_serialization = "./nixos-check.sh"  # Has $machine env var
-home_check_serialization = "./home-check.sh"    # Has $username env var
+[mybackend.nixos]
+check = "./nixos_check.sh"    # Has $machine env var
+serialize = "./nixos_serialize.sh"
+
+[mybackend.home]
+check = "./home_check.sh"      # Has $username env var
+serialize = "./home_serialize.sh"
 ```
 
-If you define both, the CLI calls the appropriate one based on the target type.
-If you only define one type (e.g., only `nixos_*`), that backend only works with
-NixOS configurations.
-
-### Capabilities Section
-
-| Capability   | Default | Description                                                                               |
-| ------------ | ------- | ----------------------------------------------------------------------------------------- |
-| `shared`     | `false` | Set to `true` if your backend supports `shared_serialize`. Required for shared artifacts. |
-| `serializes` | `true`  | Set to `false` for test backends that don't actually store anything.                      |
-
-When `serializes = false`, no scripts are required. This is useful for test/mock
-backends.
+If you only define one target type, that backend only works with that
+configuration type.
 
 ### Include Directive
 
@@ -718,11 +561,13 @@ Backend configurations can be split across multiple files:
 # backend.toml
 include = ["./backends/agenix.toml", "./backends/sops.toml"]
 
-[my-custom]
-nixos_check_serialization = "./check.sh"
-nixos_serialize = "./serialize.sh"
-home_check_serialization = "./check.sh"
-home_serialize = "./serialize.sh"
+[my-custom.nixos]
+check = "./check.sh"
+serialize = "./serialize.sh"
+
+[my-custom.home]
+check = "./check.sh"
+serialize = "./serialize.sh"
 ```
 
 Paths in `include` are resolved relative to the file containing the directive.
@@ -732,7 +577,7 @@ Nested includes are supported, and circular includes are detected and rejected.
 
 ### Environment Variables by Script Type
 
-| Variable            | nixos_check / nixos_serialize | home_check / home_serialize | shared_check | shared_serialize |
+| Variable            | nixos.check / nixos.serialize | home.check / home.serialize | shared.check | shared.serialize |
 | ------------------- | ----------------------------- | --------------------------- | ------------ | ---------------- |
 | `$out`              | ✅ (serialize only)           | ✅ (serialize only)         | ❌           | ✅               |
 | `$inputs`           | ✅ (check only)               | ✅ (check only)             | ❌           | ❌               |
@@ -828,26 +673,25 @@ archives.
 ```
 my-backend/
 ├── backend.toml
-├── nixos-check.sh        # Called for NixOS machine checks
-├── nixos-serialize.sh    # Called for NixOS machine serialization
-├── home-check.sh         # Called for Home Manager checks
-└── home-serialize.sh     # Called for Home Manager serialization
+├── nixos_check.sh        # Called for NixOS machine checks
+├── nixos_serialize.sh    # Called for NixOS machine serialization
+├── home_check.sh         # Called for Home Manager checks
+└── home_serialize.sh     # Called for Home Manager serialization
 ```
 
 ### backend.toml
 
 ```toml
-[my-backend]
-nixos_check_serialization = "./nixos-check.sh"
-nixos_serialize = "./nixos-serialize.sh"
-home_check_serialization = "./home-check.sh"
-home_serialize = "./home-serialize.sh"
+[mybackend.nixos]
+check = "./nixos_check.sh"
+serialize = "./nixos_serialize.sh"
 
-[my-backend.capabilities]
-shared = false
+[mybackend.home]
+check = "./home_check.sh"
+serialize = "./home_serialize.sh"
 ```
 
-### nixos-check.sh
+### nixos_check.sh
 
 ```bash
 #!/usr/bin/env bash
@@ -872,7 +716,7 @@ else
 fi
 ```
 
-### nixos-serialize.sh
+### nixos_serialize.sh
 
 ```bash
 #!/usr/bin/env bash
@@ -894,7 +738,7 @@ tar -czf "$STORAGE_DIR/$machine/$artifact.tar.gz" -C "$out" .
 echo "Serialized: $machine/$artifact.tar.gz"
 ```
 
-### home-check.sh
+### home_check.sh
 
 ```bash
 #!/usr/bin/env bash
@@ -919,7 +763,7 @@ else
 fi
 ```
 
-### home-serialize.sh
+### home_serialize.sh
 
 ```bash
 #!/usr/bin/env bash
@@ -1010,16 +854,15 @@ NIXOS_ARTIFACTS_BACKEND_CONFIG=/path/to/my-backend/backend.toml \
 
 ## Troubleshooting
 
-### "Backend lacks shared_serialize support"
+### "Backend does not support shared artifacts"
 
 **Cause:** You tried to generate a shared artifact with a backend that doesn't
-have `shared_serialize` defined.
+have a `[backend.shared]` section.
 
 **Solution:** Either:
 
-1. Add `shared_serialize` to your backend.toml
-2. Set `capabilities.shared = false` if you don't need shared artifacts
-3. Use a different backend for shared artifacts
+1. Add a `[backend.shared]` section with `check` and `serialize` scripts
+2. Use a different backend for shared artifacts
 
 ### Exit Code Confusion
 
@@ -1091,15 +934,14 @@ quickly. When working with an AI assistant:
 
 Example prompt:
 
-> "I want to create a backend that stores artifacts as encrypted files in
-> a `secrets/` directory using age encryption. Using the BACKEND_GUIDE.md
-> specification, generate the check_serialization and serialize scripts for
-> NixOS machines. Each secret should be encrypted with the machine's age
-> public key stored in the config."
+> "I want to create a backend that stores artifacts as encrypted files in a
+> `secrets/` directory using age encryption. Using the BACKEND_GUIDE.md
+> specification, generate the check and serialize scripts for NixOS machines.
+> Each secret should be encrypted with the machine's age public key stored in
+> the config."
 
-The AI can help you generate correct script implementations, handle edge
-cases, and ensure proper error handling while following the interface
-specification.
+The AI can help you generate correct script implementations, handle edge cases,
+and ensure proper error handling while following the interface specification.
 
 ---
 

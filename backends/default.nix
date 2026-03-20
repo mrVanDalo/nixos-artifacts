@@ -8,18 +8,16 @@
         pkgs ? null,
         system ? null,
         name,
-        nixos_check_serialization,
+        nixos_check,
         nixos_serialize,
-        home_check_serialization,
+        home_check,
         home_serialize,
-        shared_check_serialization ? null,
+        shared_check ? null,
         shared_serialize ? null,
         settings ? { },
-        capabilities ? {
-          shared = false;
-          serializes = true;
-        },
-        enabled ? true,
+        nixos_enabled ? true,
+        home_enabled ? true,
+        shared_enabled ? true,
       }:
       let
         actualPkgs =
@@ -32,24 +30,34 @@
         inherit (actualPkgs) lib;
         toml = actualPkgs.formats.toml { };
 
+        nixosConfig = {
+          enabled = nixos_enabled;
+          check = "./nixos_check.sh";
+          serialize = "./nixos_serialize.sh";
+        };
+
+        homeConfig = {
+          enabled = home_enabled;
+          check = "./home_check.sh";
+          serialize = "./home_serialize.sh";
+        };
+
+        sharedConfig = lib.optionalAttrs (shared_check != null && shared_serialize != null) {
+          enabled = shared_enabled;
+          check = "./shared_check.sh";
+          serialize = "./shared_serialize.sh";
+        };
+
         backendToml = {
           ${name} = {
-            nixos_check_serialization = "./nixos_check_serialization.sh";
-            nixos_serialize = "./nixos_serialize.sh";
-            home_check_serialization = "./home_check_serialization.sh";
-            home_serialize = "./home_serialize.sh";
+            nixos = nixosConfig;
+            home = homeConfig;
           }
-          // lib.optionalAttrs (shared_check_serialization != null) {
-            shared_check_serialization = "./shared_check_serialization.sh";
-          }
-          // lib.optionalAttrs (shared_serialize != null) {
-            shared_serialize = "./shared_serialize.sh";
+          // lib.optionalAttrs (shared_check != null && shared_serialize != null) {
+            shared = sharedConfig;
           }
           // lib.optionalAttrs (settings != { }) {
             inherit settings;
-          }
-          // {
-            inherit capabilities enabled;
           };
         };
 
@@ -60,21 +68,21 @@
 
         cp ${backendConfigFile} $out/backend.toml
 
-        cp ${nixos_check_serialization} $out/nixos_check_serialization.sh
-        chmod +x $out/nixos_check_serialization.sh
+        cp ${nixos_check} $out/nixos_check.sh
+        chmod +x $out/nixos_check.sh
 
         cp ${nixos_serialize} $out/nixos_serialize.sh
         chmod +x $out/nixos_serialize.sh
 
-        cp ${home_check_serialization} $out/home_check_serialization.sh
-        chmod +x $out/home_check_serialization.sh
+        cp ${home_check} $out/home_check.sh
+        chmod +x $out/home_check.sh
 
         cp ${home_serialize} $out/home_serialize.sh
         chmod +x $out/home_serialize.sh
 
-        ${lib.optionalString (shared_check_serialization != null) ''
-          cp ${shared_check_serialization} $out/shared_check_serialization.sh
-          chmod +x $out/shared_check_serialization.sh
+        ${lib.optionalString (shared_check != null) ''
+          cp ${shared_check} $out/shared_check.sh
+          chmod +x $out/shared_check.sh
         ''}
 
         ${lib.optionalString (shared_serialize != null) ''

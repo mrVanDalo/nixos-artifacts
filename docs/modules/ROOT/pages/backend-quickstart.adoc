@@ -9,28 +9,32 @@ Create a custom backend with minimal boilerplate. A backend is a set of scripts 
 ----
 my-backend/
 ├── backend.toml           # Backend configuration
-├── nixos-check.sh         # Check if NixOS artifact exists
-├── nixos-serialize.sh     # Store NixOS artifact files
-├── home-check.sh          # Check if Home Manager artifact exists
-└── home-serialize.sh     # Store Home Manager artifact files
+├── nixos_check.sh         # Check if NixOS artifact exists
+├── nixos_serialize.sh     # Store NixOS artifact files
+├── home_check.sh          # Check if Home Manager artifact exists
+└── home_serialize.sh     # Store Home Manager artifact files
 ----
 
 == backend.toml
 
 [source,toml]
 ----
-[mybackend]
-nixos_check_serialization = "./nixos-check.sh"
-nixos_serialize = "./nixos-serialize.sh"
-home_check_serialization = "./home-check.sh"
-home_serialize = "./home-serialize.sh"
+[mybackend.nixos]
+enabled = true
+check = "./nixos_check.sh"
+serialize = "./nixos_serialize.sh"
+
+[mybackend.home]
+enabled = true
+check = "./home_check.sh"
+serialize = "./home_serialize.sh"
 
 [mybackend.settings]
 # Optional: backend-specific configuration (available in $config JSON)
 storage_path = "/var/lib/secrets"
 ----
 
-== nixos-check.sh
+== nixos_check.sh
 
 Check if a NixOS machine artifact already exists (skip generation if it does):
 
@@ -63,7 +67,7 @@ Exit codes:
 * `0` — Artifact exists, skip generation
 * Non-zero — Needs generation
 
-== nixos-serialize.sh
+== nixos_serialize.sh
 
 Store files for a NixOS machine:
 
@@ -89,7 +93,7 @@ for file in "$out"/*; do
 done
 ----
 
-== home-check.sh
+== home_check.sh
 
 Check if a Home Manager artifact already exists:
 
@@ -117,7 +121,7 @@ echo "EXISTS"
 exit 0
 ----
 
-== home-serialize.sh
+== home_serialize.sh
 
 Store files for a Home Manager user:
 
@@ -184,11 +188,25 @@ Then in `backend.toml`:
 
 [source,toml]
 ----
-[mybackend]
-nixos_check_serialization = "./check.sh"
-nixos_serialize = "./serialize.sh"
-home_check_serialization = "./check.sh"
-home_serialize = "./serialize.sh"
+[mybackend.nixos]
+check = "./check.sh"
+serialize = "./serialize.sh"
+
+[mybackend.home]
+check = "./check.sh"
+serialize = "./serialize.sh"
+----
+
+== Shared Artifacts
+
+To support shared artifacts (secrets shared across multiple machines), add a `[backend.shared]` section:
+
+[source,toml]
+----
+[mybackend.shared]
+enabled = true
+check = "./shared_check.sh"
+serialize = "./shared_serialize.sh"
 ----
 
 == Next Steps
@@ -196,4 +214,3 @@ home_serialize = "./serialize.sh"
 * xref:backend-concepts.adoc[Concepts] — Understand when each script runs
 * xref:backend-scripts-reference.adoc[Scripts Reference] — All environment variables and examples
 * xref:reference-mkbackend.adoc[mkBackend Reference] — Package backends (creates a Nix derivation)
-* link:BACKEND_GUIDE.md[Backend Guide] — Complete reference for AI-assisted implementation

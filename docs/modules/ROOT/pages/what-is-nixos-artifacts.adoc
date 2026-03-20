@@ -85,7 +85,7 @@ artifacts.store.cluster-token = {
 
 All definitions with the same name and `shared = true` are aggregated. The TUI displays shared artifacts as a single entry showing all targets. See xref:artifact-definition-example.adoc#shared-artifacts[Shared artifact example] for more details.
 
-NOTE: The backend must support shared serialization via a `shared_serialize` script. See xref:backend-scripts-reference.adoc#_shared_serialize[Scripts Reference] for backend requirements.
+NOTE: The backend must support shared serialization via a `[backend.shared]` section with `serialize` script. See xref:backend-scripts-reference.adoc#_shared_serialize[Scripts Reference] for backend requirements.
 
 == Planned features
 

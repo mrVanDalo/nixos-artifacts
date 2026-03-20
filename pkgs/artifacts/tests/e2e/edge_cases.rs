@@ -517,11 +517,16 @@ fn e2e_backend_config_validation() -> Result<()> {
         // Each backend should have required operations
         assert!(!backend_name.is_empty(), "Backend name should not be empty");
 
-        // Config should have serialize script defined (using config field, not backends)
-        // The BackendEntry struct uses Option<String> for scripts
+        // Config should have serialize script defined (nested under nixos.serialize)
+        // The BackendEntry struct uses nested TargetConfig
+        let has_serialize = config
+            .nixos
+            .as_ref()
+            .and_then(|n| n.serialize.as_ref())
+            .is_some();
         assert!(
-            config.nixos_serialize.is_some(),
-            "Backend {} should have nixos_serialize script",
+            has_serialize,
+            "Backend {} should have nixos.serialize script",
             backend_name
         );
     }

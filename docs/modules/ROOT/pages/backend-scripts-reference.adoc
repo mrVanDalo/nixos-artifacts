@@ -5,7 +5,7 @@ Detailed reference for implementing backend scripts. For a quick introduction, s
 
 == Environment Variables by Script
 
-=== nixos_check_serialization / nixos_serialize
+=== nixos.check / nixos.serialize
 
 [cols="1,2,3"]
 |===
@@ -19,7 +19,7 @@ Detailed reference for implementing backend scripts. For a quick introduction, s
 | `$artifact` | String | Artifact name
 |===
 
-=== home_check_serialization / home_serialize
+=== home.check / home.serialize
 
 [cols="1,2,3"]
 |===
@@ -33,7 +33,7 @@ Detailed reference for implementing backend scripts. For a quick introduction, s
 | `$artifact` | String | Artifact name
 |===
 
-=== shared_serialize
+=== shared.serialize
 
 [cols="1,2,3"]
 |===
@@ -47,18 +47,34 @@ Detailed reference for implementing backend scripts. For a quick introduction, s
 
 Note: `$config` is not available in shared scripts. Read per-target config from `$machines` and `$users`.
 
-=== shared_check_serialization
+=== shared.check
 
-[cols="1,2,3"]
-|===
-| Variable | Type | Description
+Check if a shared artifact already exists for all targets.
 
-| `$artifact` | String | Artifact name
-| `$machines` | File | JSON mapping machine names to configs
-| `$users` | File | JSON mapping user identifiers to configs
-|===
+.Purpose
+Prevent accidental regeneration of existing shared secrets.
 
-== nixos_check_serialization
+.Example
+----
+#!/usr/bin/env bash
+set -euo pipefail
+
+# $artifact contains the artifact name
+# $machines contains JSON mapping of machine names to configs
+# $users contains JSON mapping of user identifiers to configs
+
+# Check all targets
+for target in $(jq -r 'keys[]' "$machines" 2>/dev/null || true); do
+    config=$(jq -c ".\"$target\"" "$machines")
+    storage_path=$(echo "$config" | jq -r '.storage_path')
+    [ -f "$storage_path/$target/$artifact-secret" ] || exit 1
+done
+
+echo "EXISTS"
+exit 0
+----
+
+== nixos.check
 
 Check if a NixOS machine artifact already exists. Return exit code 0 to skip generation.
 
@@ -129,7 +145,7 @@ for file in "$out"/*; do
 done
 ----
 
-== home_check_serialization
+== home.check
 
 Check if a Home Manager artifact already exists.
 
@@ -321,11 +337,13 @@ Then in `backend.toml`:
 
 [source,toml]
 ----
-[mybackend]
-nixos_check_serialization = "./check.sh"
-nixos_serialize = "./serialize.sh"
-home_check_serialization = "./check.sh"
-home_serialize = "./serialize.sh"
+[mybackend.nixos]
+check = "./check.sh"
+serialize = "./serialize.sh"
+
+[mybackend.home]
+check = "./check.sh"
+serialize = "./serialize.sh"
 ----
 
 === Version Control Storage (agenix-style)

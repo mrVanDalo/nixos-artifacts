@@ -31,7 +31,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 // Import helpers from parent module
-use super::{load_example, setup_test_storage, CleanupGuard};
+use super::{CleanupGuard, load_example, setup_test_storage};
 
 /// Get the expected path for a machine-specific artifact in backend storage.
 ///

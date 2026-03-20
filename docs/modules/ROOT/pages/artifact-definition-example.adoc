@@ -124,7 +124,7 @@ When you run the TUI:
 
 1. The CLI aggregates all definitions of `oidc-secret` with `shared = true`.
 2. The TUI displays a single entry for `oidc-secret` showing both targets (server-one, server-two).
-3. When generated, the secret is created once and serialized for all targets using the backend's `shared_serialize` script.
+3. When generated, the secret is created once and serialized for all targets using the backend's shared serialize script.
 
 === Generator selection
 

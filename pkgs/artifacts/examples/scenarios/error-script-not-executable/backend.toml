@@ -1,6 +1,8 @@
-[test]
 # check.sh exists but is NOT executable - should fail with "is not executable" error
-nixos_check_serialization = "./check.sh"
-nixos_serialize = "./serialize.sh"
-home_check_serialization = "./check.sh"
-home_serialize = "./serialize.sh"
+[test.nixos]
+check = "./check.sh"
+serialize = "./serialize.sh"
+
+[test.home]
+check = "./check.sh"
+serialize = "./serialize.sh"

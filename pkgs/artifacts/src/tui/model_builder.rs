@@ -120,8 +120,8 @@ pub fn build_model_with_validation(
                 warnings.push(Warning {
                         artifact_name: shared.info.artifact_name.clone(),
                         message: format!(
-                            "Backend '{}' does not support shared artifacts (missing shared_serialize script)",
-                            backend_name
+                            "Backend '{}' does not support shared artifacts (missing or disabled [{}.shared] target)",
+                            backend_name, backend_name
                         ),
                     });
             }
@@ -146,8 +146,8 @@ pub fn validate_model_capabilities(model: &mut Model, backend: &BackendConfigura
                 warnings.push(Warning {
                         artifact_name: shared.info.artifact_name.clone(),
                         message: format!(
-                            "Backend '{}' does not support shared artifacts (missing shared_serialize script)",
-                            backend_name
+                            "Backend '{}' does not support shared artifacts (missing or disabled [{}.shared] target)",
+                            backend_name, backend_name
                         ),
                     });
             }

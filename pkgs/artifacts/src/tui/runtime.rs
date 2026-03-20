@@ -161,8 +161,9 @@ where
     );
     let shutdown_token = CancellationToken::new();
     let child_token = shutdown_token.child_token();
+    let log_level = crate::logging::current_level();
     let (cmd_tx, mut res_rx) =
-        crate::tui::background::spawn_background_task(backend, make, child_token);
+        crate::tui::background::spawn_background_task(backend, make, log_level, child_token);
     log_component("RUNTIME", "Background task spawned");
 
     // Setup Ctrl+C signal handler for graceful shutdown
@@ -790,8 +791,12 @@ mod tests {
         };
 
         let shutdown_token = CancellationToken::new();
-        let (cmd_tx, mut res_rx) =
-            spawn_background_task(backend_config, make_config, shutdown_token);
+        let (cmd_tx, mut res_rx) = spawn_background_task(
+            backend_config,
+            make_config,
+            crate::logging::LogLevel::Info,
+            shutdown_token,
+        );
 
         // Send a command through the channel
         let cmd = Effect::CheckSerialization {
@@ -888,8 +893,12 @@ mod tests {
         };
 
         let shutdown_token = CancellationToken::new();
-        let (cmd_tx, mut res_rx) =
-            spawn_background_task(backend_config, make_config, shutdown_token.clone());
+        let (cmd_tx, mut res_rx) = spawn_background_task(
+            backend_config,
+            make_config,
+            crate::logging::LogLevel::Info,
+            shutdown_token.clone(),
+        );
 
         // Send multiple commands
         for i in 0..3 {

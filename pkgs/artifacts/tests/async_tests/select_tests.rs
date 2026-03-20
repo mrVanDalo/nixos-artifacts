@@ -49,7 +49,12 @@ async fn test_select_shutdown_branch() {
     let make = create_test_make_config();
     let shutdown_token = CancellationToken::new();
 
-    let (tx_cmd, mut rx_res) = spawn_background_task(backend, make, shutdown_token.clone());
+    let (tx_cmd, mut rx_res) = spawn_background_task(
+        backend,
+        make,
+        artifacts::logging::LogLevel::Info,
+        shutdown_token.clone(),
+    );
 
     // Send one command that will be processed before shutdown
     tx_cmd
@@ -106,7 +111,12 @@ async fn test_select_command_branch() {
     let make = create_test_make_config();
     let shutdown_token = CancellationToken::new();
 
-    let (tx_cmd, mut rx_res) = spawn_background_task(backend, make, shutdown_token);
+    let (tx_cmd, mut rx_res) = spawn_background_task(
+        backend,
+        make,
+        artifacts::logging::LogLevel::Info,
+        shutdown_token,
+    );
 
     // Send multiple commands and verify each is processed
     let num_commands = 3;
@@ -158,7 +168,12 @@ async fn test_select_channel_closed_branch() {
     let make = create_test_make_config();
     let shutdown_token = CancellationToken::new();
 
-    let (tx_cmd, mut rx_res) = spawn_background_task(backend, make, shutdown_token.clone());
+    let (tx_cmd, mut rx_res) = spawn_background_task(
+        backend,
+        make,
+        artifacts::logging::LogLevel::Info,
+        shutdown_token.clone(),
+    );
 
     // Send one command before closing
     tx_cmd
@@ -223,7 +238,12 @@ async fn test_select_with_in_flight_command() {
     let make = create_test_make_config();
     let shutdown_token = CancellationToken::new();
 
-    let (tx_cmd, mut rx_res) = spawn_background_task(backend, make, shutdown_token.clone());
+    let (tx_cmd, mut rx_res) = spawn_background_task(
+        backend,
+        make,
+        artifacts::logging::LogLevel::Info,
+        shutdown_token.clone(),
+    );
 
     // Send multiple commands
     let num_commands = 5;

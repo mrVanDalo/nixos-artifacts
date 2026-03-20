@@ -274,6 +274,7 @@ pub fn generate_single_artifact(
         &make_config.make_base,
         &prompts_dir,
         &out_dir,
+        "info",
     )
     .with_context(|| format!("Generator failed for artifact '{}'", artifact.name))?;
 
@@ -306,7 +307,14 @@ pub fn generate_single_artifact(
     }
 
     // Run serialize - this stores the artifact in the backend
-    let serialize_result = run_serialize(artifact, backend, &out_dir, &target_type, make_config);
+    let serialize_result = run_serialize(
+        artifact,
+        backend,
+        &out_dir,
+        &target_type,
+        make_config,
+        "info",
+    );
 
     let success = serialize_result.is_ok();
     let error = serialize_result.err().map(|e| e.to_string());
@@ -444,6 +452,7 @@ pub fn generate_single_artifact_with_diagnostics(
         &make_config.make_base,
         &prompts_dir,
         &out_dir,
+        "info",
     );
 
     // Note: run_generator_script currently doesn't capture output, so we
@@ -497,7 +506,14 @@ pub fn generate_single_artifact_with_diagnostics(
     }
 
     // Run serialize
-    let serialize_result = run_serialize(artifact, backend, &out_dir, &target_type, make_config);
+    let serialize_result = run_serialize(
+        artifact,
+        backend,
+        &out_dir,
+        &target_type,
+        make_config,
+        "info",
+    );
 
     // Note: run_serialize doesn't currently capture stdout/stderr, but we
     // could enhance it in the future to return CapturedOutput

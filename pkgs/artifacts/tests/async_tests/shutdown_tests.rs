@@ -50,7 +50,12 @@ async fn test_graceful_shutdown_completes_in_flight() {
     let make = create_test_make_config();
     let shutdown_token = CancellationToken::new();
 
-    let (tx_cmd, mut rx_res) = spawn_background_task(backend, make, shutdown_token.clone());
+    let (tx_cmd, mut rx_res) = spawn_background_task(
+        backend,
+        make,
+        artifacts::logging::LogLevel::Info,
+        shutdown_token.clone(),
+    );
 
     // Send one command
     tx_cmd
@@ -105,7 +110,12 @@ async fn test_shutdown_with_queued_commands() {
     let make = create_test_make_config();
     let shutdown_token = CancellationToken::new();
 
-    let (tx_cmd, mut rx_res) = spawn_background_task(backend, make, shutdown_token.clone());
+    let (tx_cmd, mut rx_res) = spawn_background_task(
+        backend,
+        make,
+        artifacts::logging::LogLevel::Info,
+        shutdown_token.clone(),
+    );
 
     // Send multiple commands
     let num_commands = 5;
@@ -196,7 +206,12 @@ async fn test_result_channel_disconnect() {
     let make = create_test_make_config();
     let shutdown_token = CancellationToken::new();
 
-    let (tx_cmd, rx_res) = spawn_background_task(backend, make, shutdown_token);
+    let (tx_cmd, rx_res) = spawn_background_task(
+        backend,
+        make,
+        artifacts::logging::LogLevel::Info,
+        shutdown_token,
+    );
 
     // Drop the result receiver (simulates TUI closing)
     drop(rx_res);
@@ -235,7 +250,12 @@ async fn test_command_timeout() {
     let make = create_test_make_config();
     let shutdown_token = CancellationToken::new();
 
-    let (tx_cmd, mut rx_res) = spawn_background_task(backend, make, shutdown_token);
+    let (tx_cmd, mut rx_res) = spawn_background_task(
+        backend,
+        make,
+        artifacts::logging::LogLevel::Info,
+        shutdown_token,
+    );
 
     // Send a command that will fail quickly (not timeout, just fail open)
     // This verifies the background task is running and responding

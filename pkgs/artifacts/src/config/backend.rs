@@ -6,19 +6,55 @@
 //!
 //! ## TOML Structure
 //!
-//! A backend.toml file defines one or more backends:
+//! A backend.toml file defines one or more backends with per-target configuration:
 //!
 //! ```toml
-//! [agenix]
-//! nixos_check_serialization = "./agenix_nixos_check.sh"
-//! nixos_serialize = "./agenix_nixos_serialize.sh"
-//! home_check_serialization = "./agenix_home_check.sh"
-//! home_serialize = "./agenix_home_serialize.sh"
+//! [agenix.nixos]
+//! enabled = true                    # Optional, defaults to true if scripts set
+//! check = "./agenix_nixos_check.sh"
+//! serialize = "./agenix_nixos_serialize.sh"
 //!
-//! [agenix.capabilities]
-//! shared = true
-//! serializes = true
+//! [agenix.home]
+//! enabled = true
+//! check = "./agenix_home_check.sh"
+//! serialize = "./agenix_home_serialize.sh"
+//!
+//! [agenix.shared]
+//! enabled = true
+//! check = "./agenix_shared_check.sh"
+//! serialize = "./agenix_shared_serialize.sh"
+//!
+//! [agenix.settings]
+//! key = "value"
 //! ```
+//!
+//! ## Validation Rules
+//!
+//! ### check and serialize Pairing
+//!
+//! | `check` | `serialize` | Result |
+//! | ------- | ----------- | ------ |
+//! | absent  | absent      | Valid: `serializes = false` (passthrough mode) |
+//! | present | present     | Valid: `serializes = true` |
+//! | present | absent      | **ERROR**: "check requires serialize" |
+//! | absent  | present     | **ERROR**: "serialize requires check" |
+//!
+//! ### enabled Inference Rules
+//!
+//! | Condition | Inferred `enabled` | Inferred `serializes` |
+//! | --------- | ------------------ | ---------------------- |
+//! | Section absent | `false` | N/A |
+//! | Section present, no scripts, no `enabled` | `false` (implicit) | `false` |
+//! | Section present, no scripts, `enabled = true` | `true` (explicit) | `false` |
+//! | Section present, both scripts, no `enabled` | `true` (default) | `true` |
+//! | Section present, both scripts, `enabled = true` | `true` (explicit) | `true` |
+//! | Section present, both scripts, `enabled = false` | `false` (explicit) | `true` |
+//! | Section present, one script only | **ERROR** | — |
+//!
+//! ### supports_shared Inference
+//!
+//! - `true` if `[backend.shared]` section exists AND `enabled = true` (explicit or inferred)
+//! - `false` otherwise
 //!
 //! ## Include Directive
 //!
@@ -28,9 +64,8 @@
 //! include = ["./backends/agenix.toml", "./backends/sops.toml"]
 //!
 //! [test]
-//! check_serialization = "./test_check.sh"
-//! serialize = "./test_serialize.sh"
-//! deserialize = "./test_deserialize.sh"
+//! nixos_check_serialization = "./test_check.sh"
+//! nixos_serialize = "./test_serialize.sh"
 //! ```
 //!
 //! Paths in `include` are resolved relative to the file containing the directive.
@@ -41,16 +76,8 @@
 //! Script paths can be absolute or relative to the backend.toml file:
 //! - `"./scripts/check.sh"` - relative to the TOML file
 //! - `"/usr/local/bin/check.sh"` - absolute path
-//!
-//! ## Backend Capabilities
-//!
-//! Backends can declare capabilities:
-//! - `shared`: Whether backend supports shared artifacts (multi-machine)
-//! - `serializes`: Whether backend actually persists secrets (false for passthrough)
-//!
-//! Capabilities can be explicitly declared or inferred from script presence.
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::fs;
@@ -63,88 +90,168 @@ use std::path::{Path, PathBuf};
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct BackendSettings(pub HashMap<String, serde_json::Value>);
 
-/// Explicit capability declarations for a backend
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BackendCapabilities {
-    /// Whether backend supports shared artifacts (multi-machine serialization).
-    /// If not specified, inferred from presence of `shared_serialize` script.
-    #[serde(default)]
-    pub shared: Option<bool>,
-
-    /// Whether backend actually serializes/persists secrets.
-    /// False means passthrough mode (e.g., for testing or plaintext backends).
-    /// Defaults to true if not specified.
-    #[serde(default = "default_true")]
-    pub serializes: bool,
+/// Target type for configuration sections (nixos, home, shared).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum TargetType {
+    NixOS,
+    Home,
+    Shared,
 }
 
-impl Default for BackendCapabilities {
-    fn default() -> Self {
-        Self {
-            shared: None,
-            serializes: true,
+impl std::fmt::Display for TargetType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TargetType::NixOS => write!(f, "nixos"),
+            TargetType::Home => write!(f, "home"),
+            TargetType::Shared => write!(f, "shared"),
         }
     }
 }
 
-fn default_true() -> bool {
-    true
+/// Configuration for a single target (nixos, home, or shared).
+///
+/// Each target can have:
+/// - `enabled`: Optional boolean to explicitly enable/disable the target
+/// - `check`: Script to check if serialization is needed
+/// - `serialize`: Script to serialize artifacts
+///
+/// The `check` and `serialize` scripts must be provided together or both omitted.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct TargetConfig {
+    /// Whether this target is enabled. None = infer from scripts presence.
+    #[serde(default)]
+    pub enabled: Option<bool>,
+    /// Script to check if serialization is needed.
+    #[serde(default)]
+    pub check: Option<String>,
+    /// Script to serialize artifacts.
+    #[serde(default)]
+    pub serialize: Option<String>,
 }
 
-/// Complete backend definition with all script paths and capabilities.
+impl TargetConfig {
+    /// Returns true if this target is enabled.
+    ///
+    /// Enabled status is determined by:
+    /// 1. Explicit `enabled` field if set
+    /// 2. Inferred from presence of both check and serialize scripts
+    /// 3. Default: false if section exists with no scripts
+    pub fn is_enabled(&self) -> bool {
+        match self.enabled {
+            Some(explicit) => explicit,
+            None => self.check.is_some() && self.serialize.is_some(),
+        }
+    }
+
+    /// Returns true if this target has both check and serialize scripts (serializes).
+    ///
+    /// A target serializes if both `check` and `serialize` scripts are present.
+    /// If only one is present, it's a configuration error.
+    pub fn serializes(&self) -> bool {
+        self.check.is_some() && self.serialize.is_some()
+    }
+
+    /// Validates that check and serialize are properly paired.
+    ///
+    /// Returns an error if:
+    /// - `check` is present without `serialize`
+    /// - `serialize` is present without `check`
+    pub fn validate(&self, target_type: TargetType, backend_name: &str) -> Result<()> {
+        match (&self.check, &self.serialize) {
+            (Some(_), None) => {
+                bail!(
+                    "backend '{}.{}': 'check' requires 'serialize' to be defined",
+                    backend_name,
+                    target_type
+                );
+            }
+            (None, Some(_)) => {
+                bail!(
+                    "backend '{}.{}': 'serialize' requires 'check' to be defined",
+                    backend_name,
+                    target_type
+                );
+            }
+            _ => Ok(()),
+        }
+    }
+}
+
+/// Complete backend definition with per-target configuration.
 ///
 /// A backend defines the complete lifecycle for artifact serialization:
 /// - Check: Determine if serialization is needed
 /// - Serialize: Store generated artifacts
-/// - Shared variants: For multi-machine artifacts
+/// - Shared: For multi-machine artifacts
 ///
-/// ## Script Variants
-///
-/// Backends define separate scripts for different target types:
-/// - NixOS: `nixos_check_serialization`, `nixos_serialize`
-/// - Home Manager: `home_check_serialization`, `home_serialize`
-/// - Shared: `shared_check_serialization`, `shared_serialize` (optional)
-///
-/// ## Required Scripts
-///
-/// If `capabilities.serializes` is true (the default), all target-specific
-/// scripts are required except shared scripts which are only required when
-/// `capabilities.shared` is true.
+/// Each target (nixos, home, shared) is independently configurable.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct BackendEntry {
-    /// Script to check if NixOS serialization is needed. Required if serializes=true.
+    /// NixOS target configuration.
     #[serde(default)]
-    pub nixos_check_serialization: Option<String>,
-    /// Script to serialize NixOS secrets. Required if serializes=true.
+    pub nixos: Option<TargetConfig>,
+    /// Home Manager target configuration.
     #[serde(default)]
-    pub nixos_serialize: Option<String>,
-    /// Script to check if home-manager serialization is needed. Required if serializes=true.
+    pub home: Option<TargetConfig>,
+    /// Shared artifacts configuration (for multi-machine artifacts).
     #[serde(default)]
-    pub home_check_serialization: Option<String>,
-    /// Script to serialize home-manager secrets. Required if serializes=true.
-    #[serde(default)]
-    pub home_serialize: Option<String>,
-    /// Script to check if shared serialization is needed. Required if shared=true and serializes=true.
-    #[serde(default)]
-    pub shared_check_serialization: Option<String>,
-    /// Script to serialize shared secrets. Required if shared=true and serializes=true.
-    #[serde(default)]
-    pub shared_serialize: Option<String>,
+    pub shared: Option<TargetConfig>,
     /// Backend-specific settings from `[backend_name.settings]` table.
     #[serde(default)]
     pub settings: BackendSettings,
-    /// Capability declarations for this backend.
-    #[serde(default)]
-    pub capabilities: BackendCapabilities,
 }
 
 impl BackendEntry {
     /// Check if this backend supports shared artifacts.
-    /// Uses explicit capability if declared, otherwise infers from shared_serialize presence.
+    ///
+    /// Returns true if:
+    /// - The `[backend.shared]` section exists
+    /// - AND the shared target is enabled
     pub fn supports_shared(&self) -> bool {
-        self.capabilities
-            .shared
-            .unwrap_or_else(|| self.shared_serialize.is_some())
+        self.shared
+            .as_ref()
+            .is_some_and(|s| s.is_enabled() && s.serializes())
+    }
+
+    /// Check if a specific target is enabled.
+    pub fn target_enabled(&self, target: TargetType) -> bool {
+        match target {
+            TargetType::NixOS => self.nixos.as_ref().is_some_and(|t| t.is_enabled()),
+            TargetType::Home => self.home.as_ref().is_some_and(|t| t.is_enabled()),
+            TargetType::Shared => self.shared.as_ref().is_some_and(|t| t.is_enabled()),
+        }
+    }
+
+    /// Get check script for a target type.
+    pub fn check_script(&self, target: TargetType) -> Option<&String> {
+        match target {
+            TargetType::NixOS => self.nixos.as_ref()?.check.as_ref(),
+            TargetType::Home => self.home.as_ref()?.check.as_ref(),
+            TargetType::Shared => self.shared.as_ref()?.check.as_ref(),
+        }
+    }
+
+    /// Get serialize script for a target type.
+    pub fn serialize_script(&self, target: TargetType) -> Option<&String> {
+        match target {
+            TargetType::NixOS => self.nixos.as_ref()?.serialize.as_ref(),
+            TargetType::Home => self.home.as_ref()?.serialize.as_ref(),
+            TargetType::Shared => self.shared.as_ref()?.serialize.as_ref(),
+        }
+    }
+
+    /// Validate all target configurations.
+    pub fn validate(&self, backend_name: &str) -> Result<()> {
+        if let Some(ref nixos) = self.nixos {
+            nixos.validate(TargetType::NixOS, backend_name)?;
+        }
+        if let Some(ref home) = self.home {
+            home.validate(TargetType::Home, backend_name)?;
+        }
+        if let Some(ref shared) = self.shared {
+            shared.validate(TargetType::Shared, backend_name)?;
+        }
+        Ok(())
     }
 }
 
@@ -246,7 +353,7 @@ impl BackendConfiguration {
             .with_context(|| format!("resolving path {}", toml_path.display()))?;
 
         if !visited.insert(canonical.clone()) {
-            anyhow::bail!("circular include detected: {}", toml_path.display());
+            bail!("circular include detected: {}", toml_path.display());
         }
 
         let text = fs::read_to_string(&canonical)
@@ -255,89 +362,22 @@ impl BackendConfiguration {
         let raw: BackendFileRaw = toml::from_str(&text)
             .with_context(|| format!("parsing backend config {}", toml_path.display()))?;
 
-        // Get the directory containing this file for relative path resolution
         let base_dir = canonical.parent().unwrap_or(Path::new("."));
 
-        // Resolve script paths relative to this file's directory
         let mut result: HashMap<String, BackendEntry> = HashMap::new();
 
         for (name, entry) in raw.backends {
-            let serializes = entry.capabilities.serializes;
-
-            // Validate: if serializes=true (default), require serialization scripts
-            if serializes {
-                // NixOS scripts required
-                if entry.nixos_check_serialization.is_none() {
-                    anyhow::bail!(
-                        "backend '{}' requires 'nixos_check_serialization' script (serializes=true) in {}",
-                        name,
-                        toml_path.display()
-                    );
-                }
-                if entry.nixos_serialize.is_none() {
-                    anyhow::bail!(
-                        "backend '{}' requires 'nixos_serialize' script (serializes=true) in {}",
-                        name,
-                        toml_path.display()
-                    );
-                }
-
-                // Home-manager scripts required
-                if entry.home_check_serialization.is_none() {
-                    anyhow::bail!(
-                        "backend '{}' requires 'home_check_serialization' script (serializes=true) in {}",
-                        name,
-                        toml_path.display()
-                    );
-                }
-                if entry.home_serialize.is_none() {
-                    anyhow::bail!(
-                        "backend '{}' requires 'home_serialize' script (serializes=true) in {}",
-                        name,
-                        toml_path.display()
-                    );
-                }
-
-                // If shared=true and serializes=true, require shared scripts
-                if entry.capabilities.shared == Some(true) {
-                    if entry.shared_check_serialization.is_none() {
-                        anyhow::bail!(
-                            "backend '{}' declares shared=true but missing 'shared_check_serialization' script in {}",
-                            name,
-                            toml_path.display()
-                        );
-                    }
-                    if entry.shared_serialize.is_none() {
-                        anyhow::bail!(
-                            "backend '{}' declares shared=true but missing 'shared_serialize' script in {}",
-                            name,
-                            toml_path.display()
-                        );
-                    }
-                }
-            }
+            entry.validate(&name)?;
 
             let resolved_entry = BackendEntry {
-                nixos_check_serialization: entry
-                    .nixos_check_serialization
-                    .map(|p| Self::resolve_script_path(base_dir, &p)),
-                nixos_serialize: entry
-                    .nixos_serialize
-                    .map(|p| Self::resolve_script_path(base_dir, &p)),
-                home_check_serialization: entry
-                    .home_check_serialization
-                    .map(|p| Self::resolve_script_path(base_dir, &p)),
-                home_serialize: entry
-                    .home_serialize
-                    .map(|p| Self::resolve_script_path(base_dir, &p)),
-                shared_check_serialization: entry
-                    .shared_check_serialization
-                    .map(|p| Self::resolve_script_path(base_dir, &p)),
-                shared_serialize: entry
-                    .shared_serialize
-                    .map(|p| Self::resolve_script_path(base_dir, &p)),
+                nixos: entry
+                    .nixos
+                    .map(|t| Self::resolve_target_config(base_dir, t)),
+                home: entry.home.map(|t| Self::resolve_target_config(base_dir, t)),
+                shared: entry
+                    .shared
+                    .map(|t| Self::resolve_target_config(base_dir, t)),
                 settings: entry.settings,
-                capabilities: entry.capabilities,
             };
             result.insert(name, resolved_entry);
         }
@@ -348,7 +388,7 @@ impl BackendConfiguration {
 
             for (key, value) in included {
                 if result.contains_key(&key) {
-                    anyhow::bail!(
+                    bail!(
                         "duplicate backend '{}' found when including {} from {}",
                         key,
                         include_path,
@@ -360,6 +400,18 @@ impl BackendConfiguration {
         }
 
         Ok(result)
+    }
+
+    fn resolve_target_config(base_dir: &Path, target: TargetConfig) -> TargetConfig {
+        TargetConfig {
+            enabled: target.enabled,
+            check: target
+                .check
+                .map(|p| Self::resolve_script_path(base_dir, &p)),
+            serialize: target
+                .serialize
+                .map(|p| Self::resolve_script_path(base_dir, &p)),
+        }
     }
 
     /// Resolve a script path relative to the given base directory.
@@ -396,19 +448,10 @@ impl BackendConfiguration {
             )
         })?;
 
-        if backend.shared_serialize.is_none() {
-            anyhow::bail!(
+        if !backend.supports_shared() {
+            bail!(
                 "backend '{}' does not support shared artifacts: \
-                 missing 'shared_serialize' script in {}",
-                backend_name,
-                self.backend_toml.display()
-            );
-        }
-
-        if backend.shared_check_serialization.is_none() {
-            anyhow::bail!(
-                "backend '{}' does not support shared artifacts: \
-                 missing 'shared_check_serialization' script in {}",
+                 missing or disabled shared target in {}",
                 backend_name,
                 self.backend_toml.display()
             );
@@ -433,294 +476,451 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_backend_without_shared_scripts() {
+    fn test_new_format_full_serializing_backend() {
         let content = r#"
-[test]
-nixos_check_serialization = "./nixos_check.sh"
-nixos_serialize = "./nixos_serialize.sh"
-home_check_serialization = "./home_check.sh"
-home_serialize = "./home_serialize.sh"
+[test.nixos]
+check = "./check.sh"
+serialize = "./serialize.sh"
+
+[test.home]
+check = "./check.sh"
+serialize = "./serialize.sh"
 "#;
         let (_temp_dir, toml_path) = create_temp_backend_toml(content);
         let config = BackendConfiguration::read_backend_config(&toml_path).unwrap();
 
         let backend = config.get_backend(&"test".to_string()).unwrap();
-        assert!(backend.shared_serialize.is_none());
-        assert!(backend.shared_check_serialization.is_none());
+        assert!(backend.nixos.is_some());
+        assert!(backend.home.is_some());
+        assert!(backend.shared.is_none());
+
+        let nixos = backend.nixos.unwrap();
+        assert!(nixos.check.is_some());
+        assert!(nixos.serialize.is_some());
+        assert!(nixos.is_enabled());
+        assert!(nixos.serializes());
     }
 
     #[test]
-    fn test_parse_backend_with_shared_scripts() {
+    fn test_new_format_backend_with_shared() {
         let content = r#"
-[test]
-nixos_check_serialization = "./nixos_check.sh"
-nixos_serialize = "./nixos_serialize.sh"
-home_check_serialization = "./home_check.sh"
-home_serialize = "./home_serialize.sh"
-shared_check_serialization = "./shared_check.sh"
-shared_serialize = "./shared_serialize.sh"
+[test.nixos]
+check = "./check.sh"
+serialize = "./serialize.sh"
+
+[test.home]
+check = "./check.sh"
+serialize = "./serialize.sh"
+
+[test.shared]
+check = "./shared_check.sh"
+serialize = "./shared_serialize.sh"
 "#;
         let (_temp_dir, toml_path) = create_temp_backend_toml(content);
         let config = BackendConfiguration::read_backend_config(&toml_path).unwrap();
 
         let backend = config.get_backend(&"test".to_string()).unwrap();
-        assert!(backend.shared_serialize.is_some());
-        assert!(backend.shared_check_serialization.is_some());
+        assert!(backend.supports_shared());
+
+        let shared = backend.shared.unwrap();
+        assert!(shared.is_enabled());
+        assert!(shared.serializes());
+    }
+
+    #[test]
+    fn test_new_format_enabled_inference_with_scripts() {
+        let content = r#"
+[test.nixos]
+check = "./check.sh"
+serialize = "./serialize.sh"
+"#;
+        let (_temp_dir, toml_path) = create_temp_backend_toml(content);
+        let config = BackendConfiguration::read_backend_config(&toml_path).unwrap();
+
+        let backend = config.get_backend(&"test".to_string()).unwrap();
+        assert!(backend.target_enabled(TargetType::NixOS));
+        assert!(!backend.target_enabled(TargetType::Home));
+        assert!(!backend.target_enabled(TargetType::Shared));
+    }
+
+    #[test]
+    fn test_new_format_explicit_enabled_false_with_scripts() {
+        let content = r#"
+[test.nixos]
+enabled = false
+check = "./check.sh"
+serialize = "./serialize.sh"
+"#;
+        let (_temp_dir, toml_path) = create_temp_backend_toml(content);
+        let config = BackendConfiguration::read_backend_config(&toml_path).unwrap();
+
+        let backend = config.get_backend(&"test".to_string()).unwrap();
+        assert!(!backend.target_enabled(TargetType::NixOS));
+
+        let nixos = backend.nixos.unwrap();
+        assert!(!nixos.is_enabled());
+        assert!(nixos.serializes());
+    }
+
+    #[test]
+    fn test_new_format_passthrough_mode_no_scripts() {
+        let content = r#"
+[test.nixos]
+enabled = true
+
+[test.home]
+enabled = true
+"#;
+        let (_temp_dir, toml_path) = create_temp_backend_toml(content);
+        let config = BackendConfiguration::read_backend_config(&toml_path).unwrap();
+
+        let backend = config.get_backend(&"test".to_string()).unwrap();
+        assert!(backend.target_enabled(TargetType::NixOS));
+        assert!(backend.target_enabled(TargetType::Home));
+
+        let nixos = backend.nixos.unwrap();
+        assert!(nixos.is_enabled());
+        assert!(!nixos.serializes());
+    }
+
+    #[test]
+    fn test_new_format_check_without_serialize_error() {
+        let content = r#"
+[test.nixos]
+check = "./check.sh"
+"#;
+        let (_temp_dir, toml_path) = create_temp_backend_toml(content);
+        let result = BackendConfiguration::read_backend_config(&toml_path);
+
+        assert!(result.is_err());
+        let error_message = result.unwrap_err().to_string();
+        assert!(error_message.contains("'check' requires 'serialize'"));
+    }
+
+    #[test]
+    fn test_new_format_serialize_without_check_error() {
+        let content = r#"
+[test.nixos]
+serialize = "./serialize.sh"
+"#;
+        let (_temp_dir, toml_path) = create_temp_backend_toml(content);
+        let result = BackendConfiguration::read_backend_config(&toml_path);
+
+        assert!(result.is_err());
+        let error_message = result.unwrap_err().to_string();
+        assert!(error_message.contains("'serialize' requires 'check'"));
+    }
+
+    #[test]
+    fn test_new_format_inferred_enabled_from_scripts() {
+        let content = r#"
+[test.nixos]
+check = "./check.sh"
+serialize = "./serialize.sh"
+
+[test.home]
+enabled = true
+"#;
+        let (_temp_dir, toml_path) = create_temp_backend_toml(content);
+        let config = BackendConfiguration::read_backend_config(&toml_path).unwrap();
+
+        let backend = config.get_backend(&"test".to_string()).unwrap();
+        assert!(backend.target_enabled(TargetType::NixOS));
+        assert!(backend.target_enabled(TargetType::Home));
+
+        let nixos = backend.nixos.as_ref().unwrap();
+        assert_eq!(nixos.enabled, None);
+        assert!(nixos.is_enabled());
+
+        let home = backend.home.as_ref().unwrap();
+        assert_eq!(home.enabled, Some(true));
+        assert!(home.is_enabled());
+        assert!(!home.serializes());
+    }
+
+    #[test]
+    fn test_new_format_disabled_shared_target() {
+        let content = r#"
+[test.nixos]
+check = "./check.sh"
+serialize = "./serialize.sh"
+
+[test.shared]
+enabled = false
+check = "./shared_check.sh"
+serialize = "./shared_serialize.sh"
+"#;
+        let (_temp_dir, toml_path) = create_temp_backend_toml(content);
+        let config = BackendConfiguration::read_backend_config(&toml_path).unwrap();
+
+        let backend = config.get_backend(&"test".to_string()).unwrap();
+        assert!(!backend.supports_shared());
+        assert!(!backend.target_enabled(TargetType::Shared));
+    }
+
+    #[test]
+    fn test_new_format_validate_shared_serialize_missing() {
+        let content = r#"
+[test.nixos]
+check = "./check.sh"
+serialize = "./serialize.sh"
+"#;
+        let (_temp_dir, toml_path) = create_temp_backend_toml(content);
+        let config = BackendConfiguration::read_backend_config(&toml_path).unwrap();
+
+        let result = config.validate_shared_serialize("test");
+        assert!(result.is_err());
+        let error_message = result.unwrap_err().to_string();
+        assert!(error_message.contains("does not support shared artifacts"));
+    }
+
+    #[test]
+    fn test_new_format_validate_shared_serialize_present() {
+        let content = r#"
+[test.nixos]
+check = "./check.sh"
+serialize = "./serialize.sh"
+
+[test.shared]
+check = "./shared_check.sh"
+serialize = "./shared_serialize.sh"
+"#;
+        let (_temp_dir, toml_path) = create_temp_backend_toml(content);
+        let config = BackendConfiguration::read_backend_config(&toml_path).unwrap();
+
+        let result = config.validate_shared_serialize("test");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_new_format_partial_backend_nixos_only() {
+        let content = r#"
+[test.nixos]
+check = "./check.sh"
+serialize = "./serialize.sh"
+"#;
+        let (_temp_dir, toml_path) = create_temp_backend_toml(content);
+        let config = BackendConfiguration::read_backend_config(&toml_path).unwrap();
+
+        let backend = config.get_backend(&"test".to_string()).unwrap();
+        assert!(backend.nixos.is_some());
+        assert!(backend.home.is_none());
+        assert!(backend.shared.is_none());
+    }
+
+    #[test]
+    fn test_new_format_partial_backend_home_only() {
+        let content = r#"
+[test.home]
+check = "./check.sh"
+serialize = "./serialize.sh"
+"#;
+        let (_temp_dir, toml_path) = create_temp_backend_toml(content);
+        let config = BackendConfiguration::read_backend_config(&toml_path).unwrap();
+
+        let backend = config.get_backend(&"test".to_string()).unwrap();
+        assert!(backend.nixos.is_none());
+        assert!(backend.home.is_some());
+        assert!(backend.shared.is_none());
+    }
+
+    #[test]
+    fn test_new_format_backend_with_settings() {
+        let content = r#"
+[test.nixos]
+check = "./check.sh"
+serialize = "./serialize.sh"
+
+[test.settings]
+key = "value"
+another = 123
+"#;
+        let (_temp_dir, toml_path) = create_temp_backend_toml(content);
+        let config = BackendConfiguration::read_backend_config(&toml_path).unwrap();
+
+        let backend = config.get_backend(&"test".to_string()).unwrap();
+        assert!(backend.settings.0.contains_key("key"));
+        assert!(backend.settings.0.contains_key("another"));
+    }
+
+    #[test]
+    fn test_new_format_empty_backend_section() {
+        let content = r#"
+[test]
+"#;
+        let (_temp_dir, toml_path) = create_temp_backend_toml(content);
+        let config = BackendConfiguration::read_backend_config(&toml_path).unwrap();
+
+        let backend = config.get_backend(&"test".to_string()).unwrap();
+        assert!(backend.nixos.is_none());
+        assert!(backend.home.is_none());
+        assert!(backend.shared.is_none());
+    }
+
+    #[test]
+    fn test_new_format_multiple_backends() {
+        let content = r#"
+[backend1.nixos]
+check = "./check1.sh"
+serialize = "./serialize1.sh"
+
+[backend2.nixos]
+check = "./check2.sh"
+serialize = "./serialize2.sh"
+
+[backend2.home]
+check = "./check2.sh"
+serialize = "./serialize2.sh"
+"#;
+        let (_temp_dir, toml_path) = create_temp_backend_toml(content);
+        let config = BackendConfiguration::read_backend_config(&toml_path).unwrap();
+
+        assert!(config.config.contains_key("backend1"));
+        assert!(config.config.contains_key("backend2"));
+
+        let backend1 = config.get_backend(&"backend1".to_string()).unwrap();
+        assert!(backend1.nixos.is_some());
+        assert!(backend1.home.is_none());
+
+        let backend2 = config.get_backend(&"backend2".to_string()).unwrap();
+        assert!(backend2.nixos.is_some());
+        assert!(backend2.home.is_some());
+    }
+
+    #[test]
+    fn test_new_format_include_directive() {
+        let temp_dir = TempDir::new().unwrap();
+
+        let included_content = r#"
+[included.nixos]
+check = "./included_check.sh"
+serialize = "./included_serialize.sh"
+"#;
+        let included_path = temp_dir.path().join("included.toml");
+        let mut file = fs::File::create(&included_path).unwrap();
+        file.write_all(included_content.as_bytes()).unwrap();
+
+        let main_content = r#"
+include = ["./included.toml"]
+
+[main.nixos]
+check = "./main_check.sh"
+serialize = "./main_serialize.sh"
+"#;
+        let main_path = temp_dir.path().join("backend.toml");
+        let mut file = fs::File::create(&main_path).unwrap();
+        file.write_all(main_content.as_bytes()).unwrap();
+
+        let config = BackendConfiguration::read_backend_config(&main_path).unwrap();
+
+        assert!(config.config.contains_key("main"));
+        assert!(config.config.contains_key("included"));
+    }
+
+    #[test]
+    fn test_script_path_resolution_relative() {
+        let content = r#"
+[test.nixos]
+check = "./check.sh"
+serialize = "./serialize.sh"
+"#;
+        let temp_dir = TempDir::new().unwrap();
+        let toml_path = temp_dir.path().join("backend.toml");
+        let mut file = fs::File::create(&toml_path).unwrap();
+        file.write_all(content.as_bytes()).unwrap();
+
+        let config = BackendConfiguration::read_backend_config(&toml_path).unwrap();
+        let backend = config.get_backend(&"test".to_string()).unwrap();
+
+        let nixos = backend.nixos.unwrap();
+        assert!(nixos.check.unwrap().ends_with("check.sh"));
+    }
+
+    #[test]
+    fn test_target_config_serializes_true_with_both_scripts() {
+        let target = TargetConfig {
+            enabled: None,
+            check: Some("./check.sh".to_string()),
+            serialize: Some("./serialize.sh".to_string()),
+        };
+        assert!(target.serializes());
+        assert!(target.is_enabled());
+    }
+
+    #[test]
+    fn test_target_config_serializes_false_without_scripts() {
+        let target = TargetConfig {
+            enabled: Some(true),
+            check: None,
+            serialize: None,
+        };
+        assert!(!target.serializes());
+        assert!(target.is_enabled());
+    }
+
+    #[test]
+    fn test_target_config_disabled_explicit() {
+        let target = TargetConfig {
+            enabled: Some(false),
+            check: Some("./check.sh".to_string()),
+            serialize: Some("./serialize.sh".to_string()),
+        };
+        assert!(target.serializes());
+        assert!(!target.is_enabled());
+    }
+
+    #[test]
+    fn test_target_config_validation_success() {
+        let target = TargetConfig {
+            enabled: None,
+            check: Some("./check.sh".to_string()),
+            serialize: Some("./serialize.sh".to_string()),
+        };
+        assert!(target.validate(TargetType::NixOS, "test").is_ok());
+
+        let target_passthrough = TargetConfig {
+            enabled: Some(true),
+            check: None,
+            serialize: None,
+        };
         assert!(
-            backend
-                .shared_serialize
-                .unwrap()
-                .ends_with("shared_serialize.sh")
+            target_passthrough
+                .validate(TargetType::Home, "test")
+                .is_ok()
         );
     }
 
     #[test]
-    fn test_validate_shared_serialize_missing() {
-        let content = r#"
-[test]
-nixos_check_serialization = "./nixos_check.sh"
-nixos_serialize = "./nixos_serialize.sh"
-home_check_serialization = "./home_check.sh"
-home_serialize = "./home_serialize.sh"
-"#;
-        let (_temp_dir, toml_path) = create_temp_backend_toml(content);
-        let config = BackendConfiguration::read_backend_config(&toml_path).unwrap();
-
-        let validation_result = config.validate_shared_serialize("test");
-        assert!(validation_result.is_err());
-        let error_message = validation_result.unwrap_err().to_string();
-        assert!(error_message.contains("does not support shared artifacts"));
-        assert!(error_message.contains("missing 'shared_serialize'"));
+    fn test_target_config_validation_check_without_serialize() {
+        let target = TargetConfig {
+            enabled: None,
+            check: Some("./check.sh".to_string()),
+            serialize: None,
+        };
+        let result = target.validate(TargetType::NixOS, "test");
+        assert!(result.is_err());
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("'check' requires 'serialize'")
+        );
     }
 
     #[test]
-    fn test_validate_shared_serialize_present() {
-        let content = r#"
-[test]
-nixos_check_serialization = "./nixos_check.sh"
-nixos_serialize = "./nixos_serialize.sh"
-home_check_serialization = "./home_check.sh"
-home_serialize = "./home_serialize.sh"
-shared_check_serialization = "./shared_check.sh"
-shared_serialize = "./shared_serialize.sh"
-"#;
-        let (_temp_dir, toml_path) = create_temp_backend_toml(content);
-        let config = BackendConfiguration::read_backend_config(&toml_path).unwrap();
-
-        let validation_result = config.validate_shared_serialize("test");
-        assert!(validation_result.is_ok());
-    }
-
-    #[test]
-    fn test_validate_shared_serialize_backend_not_found() {
-        let content = r#"
-[test]
-nixos_check_serialization = "./nixos_check.sh"
-nixos_serialize = "./nixos_serialize.sh"
-home_check_serialization = "./home_check.sh"
-home_serialize = "./home_serialize.sh"
-"#;
-        let (_temp_dir, toml_path) = create_temp_backend_toml(content);
-        let config = BackendConfiguration::read_backend_config(&toml_path).unwrap();
-
-        let validation_result = config.validate_shared_serialize("nonexistent");
-        assert!(validation_result.is_err());
-        let error_message = validation_result.unwrap_err().to_string();
-        assert!(error_message.contains("not found"));
-    }
-
-    #[test]
-    fn test_parse_backend_with_explicit_capabilities() {
-        let content = r#"
-[test]
-shared_serialize = "./shared_serialize.sh"
-shared_check_serialization = "./shared_check.sh"
-
-[test.capabilities]
-shared = true
-serializes = false
-"#;
-        let (_temp_dir, toml_path) = create_temp_backend_toml(content);
-        let config = BackendConfiguration::read_backend_config(&toml_path).unwrap();
-
-        let backend = config.get_backend(&"test".to_string()).unwrap();
-        assert_eq!(backend.capabilities.shared, Some(true));
-        assert!(!backend.capabilities.serializes);
-        assert!(backend.supports_shared());
-    }
-
-    #[test]
-    fn test_infer_shared_capability_from_script() {
-        let content = r#"
-[test]
-nixos_check_serialization = "./nixos_check.sh"
-nixos_serialize = "./nixos_serialize.sh"
-home_check_serialization = "./home_check.sh"
-home_serialize = "./home_serialize.sh"
-shared_serialize = "./shared_serialize.sh"
-shared_check_serialization = "./shared_check.sh"
-"#;
-        let (_temp_dir, toml_path) = create_temp_backend_toml(content);
-        let config = BackendConfiguration::read_backend_config(&toml_path).unwrap();
-
-        let backend = config.get_backend(&"test".to_string()).unwrap();
-        // No explicit capability set
-        assert_eq!(backend.capabilities.shared, None);
-        // But supports_shared infers from shared_serialize presence
-        assert!(backend.supports_shared());
-    }
-
-    #[test]
-    fn test_shared_not_inferred_without_script() {
-        let content = r#"
-[test]
-nixos_check_serialization = "./nixos_check.sh"
-nixos_serialize = "./nixos_serialize.sh"
-home_check_serialization = "./home_check.sh"
-home_serialize = "./home_serialize.sh"
-"#;
-        let (_temp_dir, toml_path) = create_temp_backend_toml(content);
-        let config = BackendConfiguration::read_backend_config(&toml_path).unwrap();
-
-        let backend = config.get_backend(&"test".to_string()).unwrap();
-        assert_eq!(backend.capabilities.shared, None);
-        assert!(!backend.supports_shared());
-    }
-
-    #[test]
-    fn test_serializes_defaults_to_true() {
-        let content = r#"
-[test]
-nixos_check_serialization = "./nixos_check.sh"
-nixos_serialize = "./nixos_serialize.sh"
-home_check_serialization = "./home_check.sh"
-home_serialize = "./home_serialize.sh"
-"#;
-        let (_temp_dir, toml_path) = create_temp_backend_toml(content);
-        let config = BackendConfiguration::read_backend_config(&toml_path).unwrap();
-
-        let backend = config.get_backend(&"test".to_string()).unwrap();
-        assert!(backend.capabilities.serializes);
-    }
-
-    #[test]
-    fn test_explicit_shared_overrides_script_inference() {
-        // Even with shared_serialize script, explicit shared=false takes precedence
-        let content = r#"
-[test]
-nixos_check_serialization = "./nixos_check.sh"
-nixos_serialize = "./nixos_serialize.sh"
-home_check_serialization = "./home_check.sh"
-home_serialize = "./home_serialize.sh"
-shared_serialize = "./shared_serialize.sh"
-shared_check_serialization = "./shared_check.sh"
-
-[test.capabilities]
-shared = false
-"#;
-        let (_temp_dir, toml_path) = create_temp_backend_toml(content);
-        let config = BackendConfiguration::read_backend_config(&toml_path).unwrap();
-
-        let backend = config.get_backend(&"test".to_string()).unwrap();
-        assert_eq!(backend.capabilities.shared, Some(false));
-        assert!(!backend.supports_shared());
-    }
-
-    #[test]
-    fn test_shared_true_requires_shared_scripts() {
-        // If capabilities.shared=true is explicit, shared scripts must be defined
-        let content = r#"
-[test]
-nixos_check_serialization = "./nixos_check.sh"
-nixos_serialize = "./nixos_serialize.sh"
-home_check_serialization = "./home_check.sh"
-home_serialize = "./home_serialize.sh"
-
-[test.capabilities]
-shared = true
-"#;
-        let (_temp_dir, toml_path) = create_temp_backend_toml(content);
-        let read_result = BackendConfiguration::read_backend_config(&toml_path);
-
-        assert!(read_result.is_err());
-        let error_message = read_result.unwrap_err().to_string();
-        assert!(error_message.contains("declares shared=true but missing"));
-    }
-
-    #[test]
-    fn test_shared_true_with_scripts_is_valid() {
-        // If capabilities.shared=true and shared scripts exist, it's valid
-        let content = r#"
-[test]
-nixos_check_serialization = "./nixos_check.sh"
-nixos_serialize = "./nixos_serialize.sh"
-home_check_serialization = "./home_check.sh"
-home_serialize = "./home_serialize.sh"
-shared_check_serialization = "./shared_check.sh"
-shared_serialize = "./shared_serialize.sh"
-
-[test.capabilities]
-shared = true
-"#;
-        let (_temp_dir, toml_path) = create_temp_backend_toml(content);
-        let config = BackendConfiguration::read_backend_config(&toml_path).unwrap();
-
-        let backend = config.get_backend(&"test".to_string()).unwrap();
-        assert_eq!(backend.capabilities.shared, Some(true));
-        assert!(backend.supports_shared());
-    }
-
-    #[test]
-    fn test_serializes_false_scripts_optional() {
-        // If serializes=false, no scripts are required
-        let content = r#"
-[test]
-
-[test.capabilities]
-serializes = false
-"#;
-        let (_temp_dir, toml_path) = create_temp_backend_toml(content);
-        let config = BackendConfiguration::read_backend_config(&toml_path).unwrap();
-
-        let backend = config.get_backend(&"test".to_string()).unwrap();
-        assert!(!backend.capabilities.serializes);
-        assert!(backend.nixos_check_serialization.is_none());
-        assert!(backend.nixos_serialize.is_none());
-        assert!(backend.home_check_serialization.is_none());
-        assert!(backend.home_serialize.is_none());
-    }
-
-    #[test]
-    fn test_serializes_false_shared_true_no_script_required() {
-        // If serializes=false and shared=true, shared scripts are not required
-        let content = r#"
-[test]
-
-[test.capabilities]
-serializes = false
-shared = true
-"#;
-        let (_temp_dir, toml_path) = create_temp_backend_toml(content);
-        let config = BackendConfiguration::read_backend_config(&toml_path).unwrap();
-
-        let backend = config.get_backend(&"test".to_string()).unwrap();
-        assert!(!backend.capabilities.serializes);
-        assert_eq!(backend.capabilities.shared, Some(true));
-        assert!(backend.shared_serialize.is_none());
-        assert!(backend.shared_check_serialization.is_none());
-    }
-
-    #[test]
-    fn test_serializes_true_requires_scripts() {
-        // If serializes=true (default), scripts are required
-        let content = r#"
-[test]
-"#;
-        let (_temp_dir, toml_path) = create_temp_backend_toml(content);
-        let read_result = BackendConfiguration::read_backend_config(&toml_path);
-
-        assert!(read_result.is_err());
-        let error_message = read_result.unwrap_err().to_string();
-        assert!(error_message.contains("requires 'nixos_check_serialization' script"));
+    fn test_target_config_validation_serialize_without_check() {
+        let target = TargetConfig {
+            enabled: None,
+            check: None,
+            serialize: Some("./serialize.sh".to_string()),
+        };
+        let result = target.validate(TargetType::Home, "test");
+        assert!(result.is_err());
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("'serialize' requires 'check'")
+        );
     }
 }

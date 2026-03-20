@@ -37,7 +37,7 @@ use crate::backend::output_capture::{
 use crate::backend::tempfile::TempFile;
 use crate::config::backend::{BackendConfiguration, BackendEntry};
 use crate::config::make::{ArtifactDef, MakeConfiguration};
-use crate::log_debug;
+use crate::{log_debug, log_info};
 use anyhow::{Context, Result, bail};
 use serde_json::{Map, Value, json, to_string_pretty};
 use std::fs;
@@ -179,11 +179,11 @@ fn build_config_json(
 fn get_serialize_script<'a>(entry: &'a BackendEntry, target_type: &TargetType) -> ScriptInfo<'a> {
     match target_type {
         TargetType::HomeManager { .. } => ScriptInfo {
-            script_path: entry.home_serialize.as_ref(),
+            script_path: entry.serialize_script(crate::config::backend::TargetType::Home),
             script_name: "home_serialize",
         },
         TargetType::NixOS { .. } | TargetType::Shared { .. } => ScriptInfo {
-            script_path: entry.nixos_serialize.as_ref(),
+            script_path: entry.serialize_script(crate::config::backend::TargetType::NixOS),
             script_name: "nixos_serialize",
         },
     }
@@ -193,11 +193,11 @@ fn get_serialize_script<'a>(entry: &'a BackendEntry, target_type: &TargetType) -
 fn get_check_script<'a>(entry: &'a BackendEntry, target_type: &TargetType) -> ScriptInfo<'a> {
     match target_type {
         TargetType::HomeManager { .. } => ScriptInfo {
-            script_path: entry.home_check_serialization.as_ref(),
+            script_path: entry.check_script(crate::config::backend::TargetType::Home),
             script_name: "home_check_serialization",
         },
         TargetType::NixOS { .. } | TargetType::Shared { .. } => ScriptInfo {
-            script_path: entry.nixos_check_serialization.as_ref(),
+            script_path: entry.check_script(crate::config::backend::TargetType::NixOS),
             script_name: "nixos_check_serialization",
         },
     }
@@ -210,6 +210,7 @@ fn build_serialize_command(
     config_path: &Path,
     target_type: &TargetType,
     artifact_name: &str,
+    log_level: &str,
 ) -> Command {
     let mut cmd = Command::new("sh");
     cmd.arg(script_path)
@@ -217,6 +218,7 @@ fn build_serialize_command(
         .env("config", config_path)
         .env("artifact_context", target_type.context_str())
         .env("artifact", artifact_name)
+        .env("LOG_LEVEL", log_level)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
 
@@ -247,12 +249,14 @@ fn build_check_command(
     config_path: &Path,
     target_type: &TargetType,
     artifact_name: &str,
+    log_level: &str,
 ) -> Command {
     let mut cmd = Command::new(script_path);
     cmd.env("inputs", inputs_dir)
         .env("config", config_path)
         .env("artifact_context", target_type.context_str())
         .env("artifact", artifact_name)
+        .env("LOG_LEVEL", log_level)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
 
@@ -278,6 +282,7 @@ fn build_shared_serialize_command(
     machines_path: &Path,
     users_path: &Path,
     artifact_name: &str,
+    log_level: &str,
 ) -> Command {
     let mut cmd = Command::new("sh");
     cmd.arg(script_path)
@@ -285,6 +290,7 @@ fn build_shared_serialize_command(
         .env("out", out_dir)
         .env("machines", machines_path)
         .env("users", users_path)
+        .env("LOG_LEVEL", log_level)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
 
@@ -302,11 +308,13 @@ fn build_shared_check_command(
     machines_path: &Path,
     users_path: &Path,
     artifact_name: &str,
+    log_level: &str,
 ) -> Command {
     let mut cmd = Command::new(script_path);
     cmd.env("artifact", artifact_name)
         .env("machines", machines_path)
         .env("users", users_path)
+        .env("LOG_LEVEL", log_level)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
     cmd
@@ -433,6 +441,7 @@ fn write_check_input_files(
 /// * `out` - Directory containing the generated files to serialize
 /// * `target_type` - Target type with name (Nixos { machine } or HomeManager { username })
 /// * `make` - The make configuration for backend settings
+/// * `log_level` - Log level string to pass to the script
 ///
 /// # Returns
 ///
@@ -456,6 +465,7 @@ pub fn run_serialize(
     out: &Path,
     target_type: &TargetType,
     make: &MakeConfiguration,
+    log_level: &str,
 ) -> Result<CapturedOutput> {
     let backend_name = &artifact.serialization;
     let entry = backend.get_backend(backend_name)?;
@@ -481,10 +491,40 @@ pub fn run_serialize(
             "run_serialize called with Shared target type - use run_shared_serialize instead"
         )
     })?;
-    let (_config_dir, config_file) = build_config_json(make, target_name, backend_name, &artifact.name)?;
+    let (_config_dir, config_file) =
+        build_config_json(make, target_name, backend_name, &artifact.name)?;
 
-    let mut cmd =
-        build_serialize_command(&script_abs, out, &config_file, target_type, &artifact.name);
+    log_debug!(
+        "running {}: script=\"{}\"",
+        script_info.script_name,
+        script_abs.display()
+    );
+    log_debug!(
+        "  environment: out=\"{}\" config=\"{}\" artifact=\"{}\" artifact_context=\"{}\" LOG_LEVEL=\"{}\"",
+        out.display(),
+        config_file.display(),
+        artifact.name,
+        target_type.context_str(),
+        log_level
+    );
+    match target_type {
+        TargetType::HomeManager { .. } => {
+            log_debug!("  environment: username=\"{}\"", target_name);
+        }
+        TargetType::NixOS { .. } => {
+            log_debug!("  environment: machine=\"{}\"", target_name);
+        }
+        TargetType::Shared { .. } => {}
+    }
+
+    let mut cmd = build_serialize_command(
+        &script_abs,
+        out,
+        &config_file,
+        target_type,
+        &artifact.name,
+        log_level,
+    );
 
     let child = cmd.spawn().with_context(|| {
         format!(
@@ -502,6 +542,13 @@ pub fn run_serialize(
             script_info.script_name
         );
     }
+
+    log_info!(
+        "{} output for '{}':\n{}",
+        script_info.script_name,
+        artifact.name,
+        output
+    );
 
     Ok(output)
 }
@@ -522,6 +569,7 @@ pub fn run_serialize(
 /// * `make` - The make configuration for backend settings
 /// * `nixos_targets` - List of NixOS machine names for this shared artifact
 /// * `home_targets` - List of home-manager user names for this shared artifact
+/// * `log_level` - Log level string to pass to the script
 ///
 /// # Returns
 ///
@@ -548,14 +596,17 @@ pub fn run_shared_serialize(
     make: &MakeConfiguration,
     nixos_targets: &[String],
     home_targets: &[String],
+    log_level: &str,
 ) -> Result<CapturedOutput> {
     let entry = backend.get_backend(&backend_name.to_string())?;
-    let shared_ser = entry.shared_serialize.as_ref().ok_or_else(|| {
-        anyhow::anyhow!(
-            "backend '{}' does not support shared artifacts: missing 'shared_serialize'",
-            backend_name
-        )
-    })?;
+    let shared_ser = entry
+        .serialize_script(crate::config::backend::TargetType::Shared)
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "backend '{}' does not support shared artifacts: missing 'shared.serialize'",
+                backend_name
+            )
+        })?;
 
     let ser_abs = validate_backend_script(
         backend_name,
@@ -567,16 +618,24 @@ pub fn run_shared_serialize(
     let (_machines_dir, machines_file) = build_machines_json(make, nixos_targets, backend_name)?;
     let (_users_dir, users_file) = build_users_json(make, home_targets, backend_name)?;
 
+    log_debug!("running shared_serialize: script=\"{}\"", ser_abs.display());
     log_debug!(
-        "running shared_serialize: artifact=\"{}\" out=\"{}\" machines=\"{}\" users=\"{}\"",
+        "  environment: artifact=\"{}\" out=\"{}\" machines=\"{}\" users=\"{}\" LOG_LEVEL=\"{}\"",
         artifact_name,
         out.display(),
         machines_file.display(),
-        users_file.display()
+        users_file.display(),
+        log_level
     );
 
-    let mut cmd =
-        build_shared_serialize_command(&ser_abs, out, &machines_file, &users_file, artifact_name);
+    let mut cmd = build_shared_serialize_command(
+        &ser_abs,
+        out,
+        &machines_file,
+        &users_file,
+        artifact_name,
+        log_level,
+    );
 
     let child = cmd
         .spawn()
@@ -587,6 +646,12 @@ pub fn run_shared_serialize(
     if !output.exit_success {
         bail!("shared_serialize script failed with non-zero exit status");
     }
+
+    log_info!(
+        "shared_serialize output for '{}':\n{}",
+        artifact_name,
+        output
+    );
 
     Ok(output)
 }
@@ -609,6 +674,7 @@ pub fn run_shared_serialize(
 /// * `target_type` - Target type with name (Nixos { machine } or HomeManager { username })
 /// * `backend` - The backend configuration with script paths
 /// * `make` - The make configuration for backend settings
+/// * `log_level` - Log level string to pass to the script
 ///
 /// # Returns
 ///
@@ -627,6 +693,7 @@ pub fn run_check_serialization(
     target_type: &TargetType,
     backend: &BackendConfiguration,
     make: &MakeConfiguration,
+    log_level: &str,
 ) -> Result<CheckResult> {
     let backend_name = &artifact.serialization;
     let entry = backend.get_backend(backend_name)?;
@@ -640,11 +707,12 @@ pub fn run_check_serialization(
         )
     })?;
 
-    let target = target_type.target_name().ok_or_else(|| {
+    let target_name = target_type.target_name().ok_or_else(|| {
         anyhow::anyhow!("run_check_serialization called with Shared target type - use run_shared_check_serialization instead")
     })?;
     let inputs = TempFile::new_dir_with_name(&format!("inputs-{}", artifact.name))?;
-    let (_config_dir, config_file) = build_config_json(make, target, backend_name, &artifact.name)?;
+    let (_config_dir, config_file) =
+        build_config_json(make, target_name, backend_name, &artifact.name)?;
 
     write_check_input_files(artifact, &inputs, make)?;
 
@@ -655,20 +723,28 @@ pub fn run_check_serialization(
         script_path,
     )?;
 
-    #[allow(unused_variables)]
-    let target_label = match target_type {
-        TargetType::HomeManager { .. } => "username",
-        TargetType::NixOS { .. } | TargetType::Shared { .. } => "machine",
-    };
     log_debug!(
-        "running {}: env inputs=\"{}\" {}=\"{}\" artifact=\"{}\" {}",
+        "running {}: script=\"{}\"",
         script_info.script_name,
-        inputs.display(),
-        target_label,
-        target,
-        artifact.name,
         script_abs.display()
     );
+    log_debug!(
+        "  environment: inputs=\"{}\" config=\"{}\" artifact=\"{}\" artifact_context=\"{}\" LOG_LEVEL=\"{}\"",
+        inputs.display(),
+        config_file.display(),
+        artifact.name,
+        target_type.context_str(),
+        log_level
+    );
+    match target_type {
+        TargetType::HomeManager { .. } => {
+            log_debug!("  environment: username=\"{}\"", target_name);
+        }
+        TargetType::NixOS { .. } => {
+            log_debug!("  environment: machine=\"{}\"", target_name);
+        }
+        TargetType::Shared { .. } => {}
+    }
 
     let mut cmd = build_check_command(
         &script_abs,
@@ -676,6 +752,7 @@ pub fn run_check_serialization(
         &config_file,
         target_type,
         &artifact.name,
+        log_level,
     );
 
     let child = cmd.spawn().with_context(|| {
@@ -688,7 +765,17 @@ pub fn run_check_serialization(
 
     let result =
         run_with_captured_output_and_timeout(child, script_info.script_name, SERIALIZATION_TIMEOUT);
-    handle_check_output(result, &artifact.name)
+
+    let check_result = handle_check_output(result, &artifact.name)?;
+
+    log_info!(
+        "{} output for '{}':\n{}",
+        script_info.script_name,
+        artifact.name,
+        check_result.output
+    );
+
+    Ok(check_result)
 }
 
 /// Check if shared serialization is up to date for a shared artifact.
@@ -711,6 +798,7 @@ pub fn run_check_serialization(
 /// * `make` - The make configuration for backend settings
 /// * `nixos_targets` - List of NixOS machine names for this shared artifact
 /// * `home_targets` - List of home-manager user names for this shared artifact
+/// * `log_level` - Log level string to pass to the script
 ///
 /// # Returns
 ///
@@ -721,7 +809,7 @@ pub fn run_check_serialization(
 /// # Errors
 ///
 /// Returns an error if:
-/// - The backend doesn't support shared artifacts (missing `shared_check_serialization`)
+/// - The backend doesn't support shared artifacts (missing `shared.check`)
 /// - The script cannot be found or executed
 /// - The script times out (after 30 seconds)
 pub fn run_shared_check_serialization(
@@ -731,14 +819,17 @@ pub fn run_shared_check_serialization(
     make: &MakeConfiguration,
     nixos_targets: &[String],
     home_targets: &[String],
+    log_level: &str,
 ) -> Result<CheckResult> {
     let entry = backend.get_backend(&backend_name.to_string())?;
-    let check_script = entry.shared_check_serialization.as_ref().ok_or_else(|| {
-        anyhow::anyhow!(
-            "backend '{}' does not support shared artifacts: missing 'shared_check_serialization'",
-            backend_name
-        )
-    })?;
+    let check_script = entry
+        .check_script(crate::config::backend::TargetType::Shared)
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "backend '{}' does not support shared artifacts: missing 'shared.check'",
+                backend_name
+            )
+        })?;
 
     let script_abs = validate_backend_script(
         backend_name,
@@ -751,14 +842,24 @@ pub fn run_shared_check_serialization(
     let (_users_dir, users_file) = build_users_json(make, home_targets, backend_name)?;
 
     log_debug!(
-        "running shared_check_serialization: artifact=\"{}\" machines=\"{}\" users=\"{}\"",
+        "running shared_check_serialization: script=\"{}\"",
+        script_abs.display()
+    );
+    log_debug!(
+        "  environment: artifact=\"{}\" machines=\"{}\" users=\"{}\" LOG_LEVEL=\"{}\"",
         artifact_name,
         machines_file.display(),
-        users_file.display()
+        users_file.display(),
+        log_level
     );
 
-    let mut cmd =
-        build_shared_check_command(&script_abs, &machines_file, &users_file, artifact_name);
+    let mut cmd = build_shared_check_command(
+        &script_abs,
+        &machines_file,
+        &users_file,
+        artifact_name,
+        log_level,
+    );
 
     let child = cmd.spawn().with_context(|| {
         format!(
@@ -772,5 +873,13 @@ pub fn run_shared_check_serialization(
         "shared_check_serialization",
         SERIALIZATION_TIMEOUT,
     );
-    handle_check_output(result, artifact_name)
+    let check_result = handle_check_output(result, artifact_name)?;
+
+    log_info!(
+        "shared_check_serialization output for '{}':\n{}",
+        artifact_name,
+        check_result.output
+    );
+
+    Ok(check_result)
 }

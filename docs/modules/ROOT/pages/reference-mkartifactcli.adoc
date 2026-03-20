@@ -89,9 +89,9 @@ Complete example showing both functions together:
       myBackend = self.lib.mkBackend {
         inherit system;
         name = "my-backend";
-        nixos_check_serialization = ./check.sh;
+        nixos_check = ./check.sh;
         nixos_serialize = ./serialize.sh;
-        home_check_serialization = ./check.sh;
+        home_check = ./check.sh;
         home_serialize = ./serialize.sh;
       };
     in

@@ -1,11 +1,8 @@
 # This file includes the main backend.toml, creating a circular dependency
 include = ["../backend.toml"]
 
-[other]
-nixos_check_serialization = "../test_check.sh"
-nixos_serialize = "../test_serialize.sh"
-home_check_serialization = "../test_check.sh"
-home_serialize = "../test_serialize.sh"
+[other.nixos]
+enabled = true
 
-[other.capabilities]
-serializes = false
+[other.home]
+enabled = true

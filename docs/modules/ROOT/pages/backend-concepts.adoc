@@ -103,11 +103,11 @@ flowchart TD
 
 ==== Script Types
 
-`nixos_serialize` / `home_serialize`:: Store generated artifact files in your backend's secret store (e.g., encrypt and write to `.age` files for agenix).
+`check` / `serialize`:: Store generated artifact files in your backend's secret store (e.g., encrypt and write to `.age` files for agenix). Each target (nixos, home, shared) has its own pair.
 
-`nixos_check_serialization` / `home_check_serialization`:: Check if an artifact already exists in the secret store. Return exit code 0 to skip generation, non-zero to trigger generation.
+`check`:: Check if an artifact already exists in the secret store. Return exit code 0 to skip generation, non-zero to trigger generation.
 
-`shared_serialize` / `shared_check_serialization`:: Optional. Handle artifacts shared across multiple machines/users. Called once per artifact instead of once per target.
+`shared.serialize` / `shared.check`:: Optional. Handle artifacts shared across multiple machines/users. Called once per artifact instead of once per target.
 
 For environment variables and implementation details, see xref:backend-scripts-reference.adoc[Scripts Reference].
 

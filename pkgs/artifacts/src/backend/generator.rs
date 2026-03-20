@@ -108,43 +108,56 @@ fn build_env_exports(
     prompts: &Path,
     target_type: &TargetType,
     artifact_name: &str,
+    log_level: &str,
 ) -> String {
     let out_quoted = escape_single_quoted(&out.display().to_string());
     let prompts_quoted = escape_single_quoted(&prompts.display().to_string());
     let artifact_quoted = escape_single_quoted(artifact_name);
     let context_quoted = escape_single_quoted(target_type.context_str());
+    let log_level_quoted = escape_single_quoted(log_level);
 
     match target_type {
         TargetType::HomeManager { username } => {
             let username_quoted = escape_single_quoted(username);
             format!(
-                "export out='{}'; export prompts='{}'; export artifact_context='{}'; export username='{}'; export artifact='{}';",
-                out_quoted, prompts_quoted, context_quoted, username_quoted, artifact_quoted
+                "export out='{}'; export prompts='{}'; export artifact_context='{}'; export username='{}'; export artifact='{}'; export LOG_LEVEL='{}';",
+                out_quoted,
+                prompts_quoted,
+                context_quoted,
+                username_quoted,
+                artifact_quoted,
+                log_level_quoted
             )
         }
         TargetType::NixOS { machine } => {
             let machine_quoted = escape_single_quoted(machine);
             format!(
-                "export out='{}'; export prompts='{}'; export artifact_context='{}'; export machine='{}'; export artifact='{}';",
-                out_quoted, prompts_quoted, context_quoted, machine_quoted, artifact_quoted
+                "export out='{}'; export prompts='{}'; export artifact_context='{}'; export machine='{}'; export artifact='{}'; export LOG_LEVEL='{}';",
+                out_quoted,
+                prompts_quoted,
+                context_quoted,
+                machine_quoted,
+                artifact_quoted,
+                log_level_quoted
             )
         }
         TargetType::Shared { .. } => {
             format!(
-                "export out='{}'; export prompts='{}'; export artifact_context='{}'; export artifact='{}';",
-                out_quoted, prompts_quoted, context_quoted, artifact_quoted
+                "export out='{}'; export prompts='{}'; export artifact_context='{}'; export artifact='{}'; export LOG_LEVEL='{}';",
+                out_quoted, prompts_quoted, context_quoted, artifact_quoted, log_level_quoted
             )
         }
     }
 }
 
 /// Build environment exports for shared artifact generators.
-fn build_shared_env_exports(out: &Path, prompts: &Path) -> String {
+fn build_shared_env_exports(out: &Path, prompts: &Path, log_level: &str) -> String {
     let out_quoted = escape_single_quoted(&out.display().to_string());
     let prompts_quoted = escape_single_quoted(&prompts.display().to_string());
+    let log_level_quoted = escape_single_quoted(log_level);
     format!(
-        "export out='{}'; export prompts='{}'; export artifact_context='shared';",
-        out_quoted, prompts_quoted
+        "export out='{}'; export prompts='{}'; export artifact_context='shared'; export LOG_LEVEL='{}';",
+        out_quoted, prompts_quoted, log_level_quoted
     )
 }
 
@@ -266,6 +279,7 @@ pub fn verify_generated_files(artifact: &ArtifactDef, out_path: &Path) -> Result
 /// * `$artifact_context` - Context string: "nixos", "homemanager", or "shared"
 /// * `$machine` - Machine name (for nixos context) or `$username` (for homemanager context)
 /// * `$artifact` - Name of the artifact being generated
+/// * `$LOG_LEVEL` - Log level for script verbosity ("debug", "info", "warn", "error")
 ///
 /// # Arguments
 ///
@@ -274,6 +288,7 @@ pub fn verify_generated_files(artifact: &ArtifactDef, out_path: &Path) -> Result
 /// * `make_base` - Base path for resolving relative script paths
 /// * `prompts` - Directory containing prompt values as files
 /// * `out` - Directory where generator should create output files
+/// * `log_level` - Log level string to pass to the script
 ///
 /// # Returns
 ///
@@ -291,6 +306,7 @@ pub fn run_generator_script(
     make_base: &Path,
     prompts: &Path,
     out: &Path,
+    log_level: &str,
 ) -> Result<CapturedOutput> {
     let generator_path = resolve_generator_path(make_base, artifact.generator.as_ref());
     let nix_shell = which::which("nix-shell")
@@ -301,7 +317,7 @@ pub fn run_generator_script(
     log_debug!("run bwrap with command {}", generator_path.display());
     log_bwrap_command(&arguments);
 
-    let env_exports = build_env_exports(out, prompts, target_type, &artifact.name);
+    let env_exports = build_env_exports(out, prompts, target_type, &artifact.name, log_level);
     let output = execute_generator_in_bwrap(&nix_shell, &arguments, &env_exports)?;
 
     let _ = fs::remove_file(&temp_passwd);
@@ -323,6 +339,7 @@ pub fn run_generator_script(
 /// * `$out` - Path to the output directory where files should be created
 /// * `$prompts` - Path to directory containing prompt values as files
 /// * `$artifact_context` - Always set to "shared" for this function
+/// * `$LOG_LEVEL` - Log level for script verbosity ("debug", "info", "warn", "error")
 ///
 /// # Arguments
 ///
@@ -330,6 +347,7 @@ pub fn run_generator_script(
 /// * `make_base` - Base path for resolving relative script paths
 /// * `prompts` - Directory containing prompt values as files
 /// * `out` - Directory where generator should create output files
+/// * `log_level` - Log level string to pass to the script
 ///
 /// # Returns
 ///
@@ -350,6 +368,7 @@ pub fn run_generator_script(
 ///     Path::new("/project"),
 ///     Path::new("/tmp/prompts"),
 ///     Path::new("/tmp/out"),
+///     "debug",
 /// )?;
 /// assert!(output.exit_success);
 /// ```
@@ -358,6 +377,7 @@ pub fn run_generator_script_with_path(
     make_base: &Path,
     prompts: &Path,
     out: &Path,
+    log_level: &str,
 ) -> Result<CapturedOutput> {
     let resolved_generator_path = resolve_generator_path(make_base, generator_path);
     let nix_shell = which::which("nix-shell")
@@ -371,7 +391,7 @@ pub fn run_generator_script_with_path(
     );
     log_bwrap_command(&arguments);
 
-    let env_exports = build_shared_env_exports(out, prompts);
+    let env_exports = build_shared_env_exports(out, prompts, log_level);
     let output = execute_generator_in_bwrap(&nix_shell, &arguments, &env_exports)?;
 
     let _ = fs::remove_file(&temp_passwd);

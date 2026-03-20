@@ -10,15 +10,16 @@ self.lib.mkBackend {
   pkgs ? null,        # Package set (alternative to system)
   system ? null,      # System architecture (alternative to pkgs)
   name,                # Backend name
-  nixos_check_serialization,
+  nixos_check,
   nixos_serialize,
-  home_check_serialization,
+  home_check,
   home_serialize,
-  shared_check_serialization ? null,
+  shared_check ? null,
   shared_serialize ? null,
   settings ? { },
-  capabilities ? { shared = false; serializes = true; },
-  enabled ? true,
+  nixos_enabled ? true,
+  home_enabled ? true,
+  shared_enabled ? true,
 }
 ----
 
@@ -40,7 +41,7 @@ self.lib.mkBackend {
 | Yes
 | Backend name. This is the identifier used in `artifacts.store.<name>.serialization`.
 
-| `nixos_check_serialization`
+| `nixos_check`
 | Yes
 | Path to script that checks if a NixOS artifact already exists. See xref:backend-scripts-reference.adoc#_check_serialization[check_serialization script].
 
@@ -48,7 +49,7 @@ self.lib.mkBackend {
 | Yes
 | Path to script that serializes a NixOS artifact. See xref:backend-scripts-reference.adoc#_serialize[serialize script].
 
-| `home_check_serialization`
+| `home_check`
 | Yes
 | Path to script that checks if a Home Manager artifact already exists.
 
@@ -56,42 +57,67 @@ self.lib.mkBackend {
 | Yes
 | Path to script that serializes a Home Manager artifact.
 
-| `shared_check_serialization`
+| `shared_check`
 | No
-| Path to script that checks if a shared artifact exists. Required if `capabilities.shared = true`.
+| Path to script that checks if a shared artifact exists. Required if `shared_serialize` is provided.
 
 | `shared_serialize`
 | No
-| Path to script that serializes shared artifacts for all targets. Required if `capabilities.shared = true`.
+| Path to script that serializes shared artifacts for all targets. Required if `shared_check` is provided.
 
 | `settings`
 | No
 | Attribute set of backend-specific settings. These are available in the `$config` JSON file at runtime. Default: `{ }`
 
-| `capabilities.shared`
+| `nixos_enabled`
 | No
-| Set to `true` if the backend supports shared artifacts. Default: `false`
+| Whether the NixOS target is enabled. Default: `true`
 
-| `capabilities.serializes`
+| `home_enabled`
 | No
-| Set to `false` for test backends that don't actually persist data. Default: `true`
+| Whether the Home Manager target is enabled. Default: `true`
 
-| `enabled`
+| `shared_enabled`
 | No
-| Whether the backend is enabled. Default: `true`
+| Whether the shared target is enabled. Default: `true`. Only applies when `shared_check` and `shared_serialize` are provided.
 |===
 
 == Output
 
 Returns a derivation that produces a directory containing:
 
-- `backend.toml` - Generated backend configuration
-- `nixos_check_serialization.sh` - NixOS check script
+- `backend.toml` - Generated backend configuration (nested TOML format)
+- `nixos_check.sh` - NixOS check script
 - `nixos_serialize.sh` - NixOS serialize script
-- `home_check_serialization.sh` - Home Manager check script
+- `home_check.sh` - Home Manager check script
 - `home_serialize.sh` - Home Manager serialize script
-- `shared_check_serialization.sh` - (optional) Shared check script
+- `shared_check.sh` - (optional) Shared check script
 - `shared_serialize.sh` - (optional) Shared serialize script
+
+== Generated TOML Format
+
+The generated `backend.toml` uses the nested target-centric format:
+
+[source,toml]
+----
+[<name>.nixos]
+enabled = true
+check = "./nixos_check.sh"
+serialize = "./nixos_serialize.sh"
+
+[<name>.home]
+enabled = true
+check = "./home_check.sh"
+serialize = "./home_serialize.sh"
+
+[<name>.shared]  # Only when shared_check/shared_serialize are provided
+enabled = true
+check = "./shared_check.sh"
+serialize = "./shared_serialize.sh"
+
+[<name>.settings]  # Only when settings are provided
+key = "value"
+----
 
 == Example
 
@@ -106,12 +132,16 @@ Returns a derivation that produces a directory containing:
         inherit system;
         name = "my-backend";
 
-        nixos_check_serialization = ./check.sh;
+        nixos_check = ./check.sh;
         nixos_serialize = ./serialize.sh;
-        home_check_serialization = ./check.sh;
+        home_check = ./check.sh;
         home_serialize = ./serialize.sh;
 
-        capabilities.shared = false;
+        # Optional: shared artifact support
+        shared_check = ./check.sh;
+        shared_serialize = ./serialize.sh;
+
+        # Optional: backend-specific settings
         settings.storage_path = "/var/lib/my-backend";
       };
     in
