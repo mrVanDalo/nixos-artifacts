@@ -3,21 +3,69 @@
   imports = [ ./test/default.nix ];
 
   flake.lib = {
+    # creates a backend package for the artifacts system.
+    #
+    # Parameters (excluding pkgs and system):
+    #
+    #   name :: string
+    #     Backend identifier used in artifact declarations
+    #     (artifacts.store.<name>.serialization = "<name>")
+    #
+    #   settings :: attribute set (default: { })
+    #     Backend-specific configuration passed to scripts via environment.
+    #     Arbitrary key-value pairs.
+    #
+    #   home_enabled :: bool (default: true)
+    #     Whether the backend is active for homeConfigurations.
+    #
+    #   home_check :: path
+    #     Script to check if serialization is needed for home-manager artifacts.
+    #     Exit 0 = up-to-date, non-zero = needs regeneration.
+    #
+    #   home_serialize :: path
+    #     Script to serialize home-manager artifact files to backend storage.
+    #
+    #   nixos_enabled :: bool (default: true)
+    #     Whether the backend is active for nixosConfigurations.
+    #
+    #   nixos_check :: path
+    #     Script to check if serialization is needed for NixOS artifacts.
+    #     Exit 0 = up-to-date, non-zero = needs regeneration.
+    #
+    #   nixos_serialize :: path
+    #     Script to serialize NixOS artifact files to backend storage.
+    #
+    #   shared_enabled :: bool (default: true)
+    #     Whether the backend handles shared artifacts (multi-machine).
+    #
+    #   shared_check :: path? (default: null)
+    #     Script to check serialization for shared artifacts.
+    #     Must pair with shared_serialize.
+    #
+    #   shared_serialize :: path? (default: null)
+    #     Script to serialize shared artifacts.
+    #     Must pair with shared_check.
+    #
+    # Notes:
+    #   - shared_check and shared_serialize must both be provided or both be null
+    #   - Scripts are copied to output and made executable
+    #   - Output is a directory with backend.toml and all script files
+    #
     mkBackend =
       {
         pkgs ? null,
         system ? null,
         name,
-        nixos_check,
-        nixos_serialize,
+        settings ? { },
+        home_enabled ? true,
         home_check,
         home_serialize,
+        nixos_enabled ? true,
+        nixos_check,
+        nixos_serialize,
+        shared_enabled ? true,
         shared_check ? null,
         shared_serialize ? null,
-        settings ? { },
-        nixos_enabled ? true,
-        home_enabled ? true,
-        shared_enabled ? true,
       }:
       let
         actualPkgs =
@@ -91,6 +139,28 @@
         ''}
       '';
 
+    # creates a CLI wrapper package for the artifacts command.
+    #
+    # This function generates a bash script that wraps the artifacts-bin binary
+    # with the proper backend configuration. The wrapper sets the
+    # NIXOS_ARTIFACTS_BACKEND_CONFIG environment variable to point to a merged
+    # backend configuration file.
+    #
+    # Parameters:
+    #
+    #   system :: string
+    #     The system architecture (e.g., "x86_64-linux")
+    #
+    #   backends :: list of paths
+    #     List of backend package paths. Each path should point to a directory
+    #     containing a backend.toml file (as produced by mkBackend).
+    #
+    # Output:
+    #   A bash script named "artifacts" that:
+    #     - Sets NIXOS_ARTIFACTS_BACKEND_CONFIG to a generated config file
+    #     - The config file uses the include directive to merge all backend.toml files
+    #     - Delegates to the artifacts-bin binary with all arguments
+    #
     mkArtifactCli =
       { system, backends }:
       withSystem system (
