@@ -1,6 +1,6 @@
 = Getting Started
 
-This guide gets you up and running with nixos-artifacts using agenix as the backend.
+This guide gets you up and running with nixos-artifacts using xref:latest@nixos-artifacts-agenix:ROOT:index.adoc[agenix] as the backend.
 
 WARNING: This project is experimental. Interfaces and option structures may change without notice.
 
@@ -37,7 +37,7 @@ Add `nixos-artifacts` and `nixos-artifacts-agenix` to your flake inputs:
 
 == Step 2: Configure Backend
 
-Set agenix as your default backend and configure the agenix-specific options:
+Set xref:latest@nixos-artifacts-agenix:ROOT:index.adoc[agenix] as your default backend and configure the agenix-specific options:
 
 [source,nix]
 ----
@@ -119,26 +119,26 @@ The generator script receives:
 
 == Step 4: Generate Artifacts
 
-Run the artifacts CLI to generate your secrets:
+Run the artifacts TUI to generate your secrets:
 
 [source,shell]
 ----
-# Generate all artifacts
-nix run .#artifacts generate
+# Launch TUI showing all artifacts
+nix run .#artifacts
 
-# Or target a specific machine
-nix run .#artifacts generate --machine my-host
+# Or filter to a specific machine
+nix run .#artifacts --machine my-host
 
-# Or target a specific artifact
-nix run .#artifacts generate --artifact wireguard
+# Or filter to a specific artifact
+nix run .#artifacts --artifact wireguard
 ----
 
-The CLI will:
+The TUI will:
 
-1. Check if artifacts already exist (skip if present)
-2. Prompt for any required inputs
-3. Run generator scripts
-4. Serialize artifacts via the backend (agenix)
+1. Show a list of artifacts (filtered by your arguments)
+2. Let you select artifacts to generate
+3. Prompt for any required inputs
+4. Run generator scripts and serialize via the backend (xref:latest@nixos-artifacts-agenix:ROOT:index.adoc[agenix])
 
 == Next Steps
 

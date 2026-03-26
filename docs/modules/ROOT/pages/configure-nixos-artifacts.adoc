@@ -4,7 +4,7 @@ This page explains how to configure `artifacts`, choose backends, and run the to
 
 == Configure backends
 
-The `artifacts` CLI package is configured by passing backend packages. Use `mkArtifactCli` to create a CLI configured with your backends.
+The `artifacts` TUI package is configured by passing backend packages. Use `mkArtifactCli` to create a TUI configured with your backends.
 
 [source,nix]
 ----
@@ -17,7 +17,7 @@ packages.default = self.lib.mkArtifactCli { <1>
   ];
 };
 ----
-<1> xref:reference-mkartifactcli.adoc[mkArtifactCli] creates a CLI package configured with the specified backends.
+<1> xref:reference-mkartifactcli.adoc[mkArtifactCli] creates a TUI package configured with the specified backends.
 <2> Each backend is created via xref:reference-mkbackend.adoc[mkBackend].
 
 Now you can install this package system-wide or in a dev shell.

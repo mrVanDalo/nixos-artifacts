@@ -153,5 +153,5 @@ key = "value"
 
 == See also
 
-- xref:reference-mkartifactcli.adoc[mkArtifactCli Reference] — Create a CLI package configured with backend packages
+- xref:reference-mkartifactcli.adoc[mkArtifactCli Reference] — Create a TUI package configured with backend packages
 - xref:backend-quickstart.adoc[Backend Quickstart] — Quick introduction to creating backends

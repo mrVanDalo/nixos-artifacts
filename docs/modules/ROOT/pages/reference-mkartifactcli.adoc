@@ -1,6 +1,6 @@
 = mkArtifactCli Reference
 
-`mkArtifactCli` creates a CLI package configured with backend packages.
+`mkArtifactCli` creates a TUI package configured with backend packages.
 
 == Function Signature
 
@@ -54,7 +54,7 @@ perSystem = { self', system, ... }:
 
 == Using with Flake Outputs
 
-The CLI is commonly configured in the `perSystem` block and exposes backends created by `mkBackend`:
+The TUI is commonly configured in the `perSystem` block and exposes backends created by `mkBackend`:
 
 [source,nix]
 ----

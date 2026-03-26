@@ -70,10 +70,10 @@ nix run .#build-docs
 
 1. **What is NixOS Artifacts** - Core concepts, architecture, and design
    philosophy
-2. **Getting Started** - Three-step setup: flake setup, CLI configuration,
+2. **Getting Started** - Three-step setup: flake setup, TUI configuration,
    artifact definition
 3. **Artifact Definition** - How to declare artifacts using NixOS options
-4. **CLI Usage** - Commands for generating and rotating artifacts
+4. **TUI Usage** - Commands for generating and rotating artifacts
 5. **Backend Development** - Four-part guide: quickstart, concepts, scripts
    reference, and Nix integration
 6. **Workflow Diagrams** - Visual representation of the generation/rotation flow
@@ -126,9 +126,9 @@ root.
 - **Backends**: Pluggable storage engines (agenix, sops-nix, etc.)
 - **Store**: High-level NixOS option tree for artifact declarations
 - **Generator**: Tool that produces artifact files from prompts
-- **CLI**: Command-line tool for orchestrating generation and rotation
+- **TUI**: Terminal UI for managing generation and rotation
 - **mkBackend**: Nix function to create backend packages (`self.lib.mkBackend`)
-- **mkArtifactCli**: Nix function to configure the CLI with backends
+- **mkArtifactCli**: Nix function to configure the TUI with backends
   (`self.lib.mkArtifactCli`)
 
 ## Common Tasks

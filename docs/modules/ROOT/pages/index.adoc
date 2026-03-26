@@ -6,6 +6,8 @@ WARNING: This project is experimental. Interfaces and option structures may chan
 NixOS Artifacts is a framework to unify artifacts and secrets in NixOS flakes.
 It provides a standardized interface for generation, rotation, and multi-backend storage.
 
+image::showcase.gif[TUI demonstration]
+
 == Quick Start
 
 _New to nixos-artifacts?_ Start with xref:getting-started.adoc[Getting Started] for a guided tutorial using agenix as the backend.
@@ -25,6 +27,6 @@ _New to nixos-artifacts?_ Start with xref:getting-started.adoc[Getting Started] 
 == Reference
 
 * xref:reference-mkbackend.adoc[mkBackend] — Create backend packages
-* xref:reference-mkartifactcli.adoc[mkArtifactCli] — Create CLI packages
+* xref:reference-mkartifactcli.adoc[mkArtifactCli] — Create TUI packages
 * xref:options-nixos.adoc[NixOS options] — Full NixOS module options
 * xref:options-homemanager.adoc[Home Manager options] — Home Manager module options
