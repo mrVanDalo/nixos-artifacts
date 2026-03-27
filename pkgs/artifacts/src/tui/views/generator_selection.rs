@@ -3,20 +3,17 @@ use crate::config::make::TargetType;
 use ratatui::{
     Frame,
     layout::Rect,
-    style::{Color, Modifier, Style},
+    style::{Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, ListState},
 };
 
-/// Truncate a Nix store path with ellipsis in the middle
-/// Example: "/nix/store/abc123...xyz789/generator.sh"
 fn truncate_path(path: &str, max_len: usize) -> String {
     if path.len() <= max_len {
         return path.to_string();
     }
-    // Keep start (/nix/store/) and end (filename), ellipsis in middle
-    let prefix_len = max_len / 3; // First third
-    let suffix_len = max_len / 3; // Last third
+    let prefix_len = max_len / 3;
+    let suffix_len = max_len / 3;
     let ellipsis = "...";
     format!(
         "{}{}{}",
@@ -26,11 +23,9 @@ fn truncate_path(path: &str, max_len: usize) -> String {
     )
 }
 
-/// Format targets as vertical list with type prefixes, sorted alphabetically
-/// Returns lines like ["nixos: server-1", "nixos: server-2", "+3 more"]
 fn format_targets_with_prefix(targets: &[String], prefix: &str, max_display: usize) -> Vec<String> {
     let mut sorted = targets.to_vec();
-    sorted.sort(); // Alphabetical sorting
+    sorted.sort();
 
     let mut result = Vec::new();
     let display_count = sorted.len().min(max_display);
@@ -46,7 +41,6 @@ fn format_targets_with_prefix(targets: &[String], prefix: &str, max_display: usi
     result
 }
 
-/// Format all targets combining nixos and home targets with proper prefixes
 fn format_all_targets(
     nixos_targets: &[String],
     home_targets: &[String],
@@ -54,14 +48,12 @@ fn format_all_targets(
 ) -> Vec<String> {
     let mut lines = Vec::new();
 
-    // Add nixos targets with "nixos:" prefix
     lines.extend(format_targets_with_prefix(
         nixos_targets,
         "nixos",
         max_display,
     ));
 
-    // Add home targets with "home:" prefix
     lines.extend(format_targets_with_prefix(
         home_targets,
         "home",
@@ -71,17 +63,14 @@ fn format_all_targets(
     lines
 }
 
-/// Render a horizontal line separator as a Span
 fn separator_line(width: usize) -> Span<'static> {
-    Span::styled("─".repeat(width), Style::default().fg(Color::DarkGray))
+    Span::raw("─".repeat(width))
 }
 
-/// Render the generator selection screen for shared artifacts
 pub fn render_generator_selection(frame: &mut Frame, state: &SelectGeneratorState, area: Rect) {
     let mut items: Vec<ListItem> = Vec::new();
-    let block_inner_width = area.width.saturating_sub(2) as usize; // Account for borders
+    let block_inner_width = area.width.saturating_sub(2) as usize;
 
-    // Section 1: Artifact type indicator
     let type_indicator = if state.nixos_targets.len() + state.home_targets.len() > 1 {
         "Shared artifact"
     } else {
@@ -89,56 +78,46 @@ pub fn render_generator_selection(frame: &mut Frame, state: &SelectGeneratorStat
     };
     items.push(ListItem::new(Line::from(type_indicator)));
 
-    // Separator line
     items.push(ListItem::new(Line::from(vec![separator_line(
         block_inner_width,
     )])));
 
-    // Section 2: Title with artifact name
     let title_text = format!("Select generator for {}", state.artifact_name);
     items.push(ListItem::new(Line::from(Span::styled(
         title_text,
         Style::default().add_modifier(Modifier::BOLD),
     ))));
 
-    // Separator line
     items.push(ListItem::new(Line::from(vec![separator_line(
         block_inner_width,
     )])));
 
-    // Section 3: Description
     let description_text = state
         .description
         .as_deref()
         .unwrap_or("No description provided");
     items.push(ListItem::new(Line::from(description_text)));
 
-    // Separator line
     items.push(ListItem::new(Line::from(vec![separator_line(
         block_inner_width,
     )])));
 
-    // Section 4: Prompt descriptions (if any)
     if !state.prompts.is_empty() {
         for (idx, prompt) in state.prompts.iter().enumerate() {
             let prompt_line = match &prompt.description {
                 Some(desc) => format!("{}. {}: {}", idx + 1, prompt.name, desc),
                 None => format!("{}. {}", idx + 1, prompt.name),
             };
-            let style = Style::default().fg(Color::Gray);
-            items.push(ListItem::new(Line::from(Span::styled(prompt_line, style))));
+            items.push(ListItem::new(Line::from(Span::raw(prompt_line))));
         }
-        // Separator line after prompts
         items.push(ListItem::new(Line::from(vec![separator_line(
             block_inner_width,
         )])));
     }
 
-    // Section 5: Generator selection
     for (idx, gen_info) in state.generators.iter().enumerate() {
         let is_selected = idx == state.selected_index;
 
-        // Calculate source counts
         let nixos_count = gen_info
             .sources
             .iter()
@@ -150,41 +129,32 @@ pub fn render_generator_selection(frame: &mut Frame, state: &SelectGeneratorStat
             .filter(|s| matches!(s.target_type, TargetType::HomeManager))
             .count();
 
-        // Truncate path if needed (leave room for count)
         let count_str = format_count_summary(nixos_count, home_count);
-        let available_width = block_inner_width.saturating_sub(4 + count_str.len()); // 4 for "> " + "  "
+        let available_width = block_inner_width.saturating_sub(4 + count_str.len());
         let display_path = truncate_path(&gen_info.path, available_width);
 
-        // Selection indicator
         let indicator = if is_selected { "> " } else { "  " };
 
-        // Build the generator line
         let path_style = if is_selected {
-            Style::default()
-                .fg(Color::Cyan)
-                .add_modifier(Modifier::BOLD)
+            Style::default().add_modifier(Modifier::BOLD)
         } else {
-            Style::default().fg(Color::Gray)
+            Style::default()
         };
 
         items.push(ListItem::new(Line::from(vec![
-            Span::styled(indicator, Style::default().fg(Color::Cyan)),
+            Span::raw(indicator),
             Span::styled(display_path.clone(), path_style),
             Span::styled(
                 format!("  {}", count_str),
-                Style::default()
-                    .fg(Color::DarkGray)
-                    .add_modifier(Modifier::ITALIC),
+                Style::default().add_modifier(Modifier::ITALIC),
             ),
         ])));
     }
 
-    // Separator line before targets
     items.push(ListItem::new(Line::from(vec![separator_line(
         block_inner_width,
     )])));
 
-    // Section 6: All targets
     items.push(ListItem::new(Line::from(Span::styled(
         "All targets:",
         Style::default().add_modifier(Modifier::BOLD),
@@ -192,32 +162,22 @@ pub fn render_generator_selection(frame: &mut Frame, state: &SelectGeneratorStat
 
     let target_lines = format_all_targets(&state.nixos_targets, &state.home_targets, 10);
     if target_lines.is_empty() {
-        items.push(ListItem::new(Line::from(Span::styled(
+        items.push(ListItem::new(Line::from(Span::raw(
             "  (none)",
-            Style::default().fg(Color::DarkGray),
         ))));
     } else {
         for line in target_lines {
-            items.push(ListItem::new(Line::from(Span::styled(
-                line,
-                Style::default().fg(Color::White),
-            ))));
+            items.push(ListItem::new(Line::from(Span::raw(line))));
         }
     }
 
-    // Final separator line before help
     items.push(ListItem::new(Line::from(vec![separator_line(
         block_inner_width,
     )])));
 
-    // Help text at the bottom
     let help_text = "j/k: move, Enter: select, Esc: cancel";
-    items.push(ListItem::new(Line::from(Span::styled(
-        help_text,
-        Style::default().fg(Color::DarkGray),
-    ))));
+    items.push(ListItem::new(Line::from(Span::raw(help_text))));
 
-    // Create the block with title
     let title = format!("Artifact: {}", state.artifact_name);
     let block = Block::default()
         .borders(Borders::ALL)
@@ -225,12 +185,9 @@ pub fn render_generator_selection(frame: &mut Frame, state: &SelectGeneratorStat
         .title_style(Style::default().add_modifier(Modifier::BOLD));
 
     let list = List::new(items).block(block).highlight_style(
-        Style::default()
-            .bg(Color::DarkGray)
-            .add_modifier(Modifier::BOLD),
+        Style::default().add_modifier(Modifier::BOLD),
     );
 
-    // Calculate the visual index based on where the selected generator is
     let visual_index = calculate_visual_index(state, block_inner_width);
 
     let mut list_state = ListState::default();
@@ -239,7 +196,6 @@ pub fn render_generator_selection(frame: &mut Frame, state: &SelectGeneratorStat
     frame.render_stateful_widget(list, area, &mut list_state);
 }
 
-/// Format source counts into a human-readable summary
 fn format_count_summary(nixos_count: usize, home_count: usize) -> String {
     let mut parts = Vec::new();
 
@@ -264,21 +220,16 @@ fn format_count_summary(nixos_count: usize, home_count: usize) -> String {
     }
 }
 
-/// Calculate the visual list index from the logical generator index.
-/// This accounts for all the new sections: type indicator, separators, title, description, prompts, etc.
 fn calculate_visual_index(state: &SelectGeneratorState, _width: usize) -> usize {
     let mut idx = 0;
 
-    // Fixed sections: type indicator (1) + sep (1) + title (1) + sep (1) + desc (1) + sep (1) = 6
     idx += 6;
 
-    // Prompts section
     if !state.prompts.is_empty() {
-        idx += state.prompts.len(); // Prompt lines
-        idx += 1; // Separator
+        idx += state.prompts.len();
+        idx += 1;
     }
 
-    // Generators up to selected one
     idx += state.selected_index;
 
     idx
