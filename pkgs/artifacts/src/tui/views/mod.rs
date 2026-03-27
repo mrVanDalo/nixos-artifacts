@@ -17,11 +17,9 @@ pub use progress::render_progress;
 pub use prompt::render_prompt;
 pub use regenerate_dialog::render_confirm_regenerate;
 
-/// Top-level view dispatcher - renders the appropriate screen based on model state
 pub fn render(frame: &mut Frame, model: &Model) {
     let area = frame.area();
 
-    // If there are warnings, reserve space at the bottom for the banner
     let (content_area, warning_area) = if !model.warnings.is_empty() {
         let banner_height = std::cmp::min(model.warnings.len() as u16 + 2, 6);
         let chunks =
@@ -43,12 +41,10 @@ pub fn render(frame: &mut Frame, model: &Model) {
         }
     }
 
-    // Render warning banner if there are warnings
     if let Some(warning_area) = warning_area {
         render_warning_banner_to_area(frame, &model.warnings, warning_area);
     }
 
-    // Render error popup if present (renders on top, after everything else)
     if let Some(ref error) = model.error {
         render_error_popup(frame, error);
     }
@@ -60,7 +56,7 @@ fn render_done(
     area: ratatui::layout::Rect,
 ) {
     use ratatui::{
-        style::{Color, Modifier, Style},
+        style::{Modifier, Style},
         text::Line,
         widgets::{Block, Borders, Paragraph},
     };
@@ -69,9 +65,7 @@ fn render_done(
         Line::from(""),
         Line::styled(
             "Generation Complete",
-            Style::default()
-                .fg(Color::Green)
-                .add_modifier(Modifier::BOLD),
+            Style::default().add_modifier(Modifier::BOLD),
         ),
         Line::from(""),
     ];
@@ -91,21 +85,18 @@ fn render_done(
     if !state.failed.is_empty() {
         lines.push(Line::styled(
             format!("  Failed:    {} artifact(s)", state.failed.len()),
-            Style::default().fg(Color::Red),
+            Style::default(),
         ));
         for name in &state.failed {
             lines.push(Line::styled(
                 format!("    - {}", name),
-                Style::default().fg(Color::Red),
+                Style::default(),
             ));
         }
     }
 
     lines.push(Line::from(""));
-    lines.push(Line::styled(
-        "Press q to exit",
-        Style::default().fg(Color::DarkGray),
-    ));
+    lines.push(Line::raw("Press q to exit"));
 
     let paragraph =
         Paragraph::new(lines).block(Block::default().borders(Borders::ALL).title("Done"));
@@ -114,38 +105,28 @@ fn render_done(
 
 fn render_error_popup(frame: &mut Frame, error: &str) {
     use ratatui::{
-        style::{Color, Style},
         widgets::{Block, Borders, Clear, Paragraph, Wrap},
     };
 
     let area = frame.area();
 
-    // Center a popup
     let popup_area = centered_rect(60, 20, area);
 
-    // Clear the area behind the popup
     frame.render_widget(Clear, popup_area);
 
     let error_block = Block::default()
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Red))
         .title("Error");
 
     let error_text = Paragraph::new(error)
-        .style(Style::default().fg(Color::Red))
         .wrap(Wrap { trim: true })
         .block(error_block);
 
     frame.render_widget(error_text, popup_area);
 }
 
-/// Render a warning banner using the full frame area.
-/// Legacy function kept for backward compatibility with existing callers.
-/// Main render() now uses render_warning_banner_to_area which allows specifying the area.
 #[allow(dead_code)]
 fn render_warning_banner(frame: &mut Frame, warnings: &[Warning]) {
-    // Legacy function - uses full frame area
-    // Kept for backward compatibility, but main render() now uses render_warning_banner_to_area
     let area = frame.area();
     let banner_height = std::cmp::min(warnings.len() as u16 + 2, 6);
     let chunks =
@@ -159,32 +140,27 @@ fn render_warning_banner_to_area(
     area: ratatui::layout::Rect,
 ) {
     use ratatui::{
-        style::{Color, Style},
         text::Line,
         widgets::{Block, Borders, Paragraph},
     };
 
     let mut lines: Vec<Line> = warnings
         .iter()
-        .take(4) // Show max 4 warnings
+        .take(4)
         .map(|w| {
-            Line::styled(
-                format!(" {} - {}", w.artifact_name, w.message),
-                Style::default().fg(Color::Yellow),
-            )
+            Line::raw(format!(" {} - {}", w.artifact_name, w.message))
         })
         .collect();
 
     if warnings.len() > 4 {
-        lines.push(Line::styled(
-            format!(" ... and {} more warning(s)", warnings.len() - 4),
-            Style::default().fg(Color::Yellow),
-        ));
+        lines.push(Line::raw(format!(
+            " ... and {} more warning(s)",
+            warnings.len() - 4
+        )));
     }
 
     let warning_block = Block::default()
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Yellow))
         .title("Warnings");
 
     let warning_text = Paragraph::new(lines).block(warning_block);
@@ -192,7 +168,6 @@ fn render_warning_banner_to_area(
     frame.render_widget(warning_text, area);
 }
 
-/// Helper function to create a centered rect
 fn centered_rect(
     percent_x: u16,
     percent_y: u16,

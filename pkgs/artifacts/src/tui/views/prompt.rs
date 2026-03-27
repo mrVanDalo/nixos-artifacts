@@ -2,12 +2,11 @@ use crate::app::model::{InputMode, PromptState};
 use ratatui::{
     Frame,
     layout::{Constraint, Layout, Rect},
-    style::{Color, Modifier, Style},
+    style::{Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph},
 };
 
-/// Render the prompt input view
 pub fn render_prompt(frame: &mut Frame, state: &PromptState, area: Rect) {
     let input_height = if state.input_mode == InputMode::Multiline {
         Constraint::Min(5)
@@ -34,11 +33,7 @@ fn render_header(frame: &mut Frame, state: &PromptState, area: Rect) {
     let header_text = format!("Prompt: {} [{}/{}]", state.artifact_name, current, total);
 
     let header = Paragraph::new(header_text)
-        .style(
-            Style::default()
-                .fg(Color::Cyan)
-                .add_modifier(Modifier::BOLD),
-        )
+        .style(Style::default().add_modifier(Modifier::BOLD))
         .block(Block::default().borders(Borders::BOTTOM));
 
     frame.render_widget(header, area);
@@ -64,12 +59,6 @@ fn render_description(frame: &mut Frame, state: &PromptState, area: Rect) {
 }
 
 fn render_input(frame: &mut Frame, state: &PromptState, area: Rect) {
-    let mode_style = match state.input_mode {
-        InputMode::Line => Style::default().fg(Color::Green),
-        InputMode::Multiline => Style::default().fg(Color::Yellow),
-        InputMode::Hidden => Style::default().fg(Color::Red),
-    };
-
     let display_buffer = if state.input_mode == InputMode::Hidden {
         "*".repeat(state.buffer.len())
     } else {
@@ -86,15 +75,14 @@ fn render_input(frame: &mut Frame, state: &PromptState, area: Rect) {
             .collect();
 
         let input = Paragraph::new(lines)
-            .block(Block::default().borders(Borders::ALL).title(title))
-            .style(mode_style);
+            .block(Block::default().borders(Borders::ALL).title(title));
 
         frame.render_widget(input, area);
     } else {
         let input_line = Line::from(vec![
-            Span::styled("> ", mode_style),
+            Span::raw("> "),
             Span::raw(&display_buffer),
-            Span::styled("█", Style::default().fg(Color::Gray)),
+            Span::raw("█"),
         ]);
 
         let input = Paragraph::new(vec![input_line])
@@ -129,7 +117,7 @@ fn render_help(frame: &mut Frame, state: &PromptState, area: Rect) {
         }
     };
 
-    let help = Paragraph::new(help_text).style(Style::default().fg(Color::DarkGray));
+    let help = Paragraph::new(help_text);
 
     frame.render_widget(help, area);
 }
