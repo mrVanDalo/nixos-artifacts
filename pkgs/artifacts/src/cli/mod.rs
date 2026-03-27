@@ -114,7 +114,6 @@ pub async fn run() -> Result<()> {
 
     // Run TUI
     run_tui(
-        &cli,
         &backend_path,
         &make_path,
         &cli.machine,
@@ -125,7 +124,6 @@ pub async fn run() -> Result<()> {
 }
 
 async fn run_tui(
-    cli: &args::Cli,
     backend_path: &Path,
     make_path: &Path,
     machines: &[String],
@@ -152,16 +150,8 @@ async fn run_tui(
 
     // STEP 4: Check for empty entries BEFORE terminal setup (UI-03)
     if model.entries.is_empty() {
-        // Check if logging is enabled via --log-file
-        let log_file_enabled = cli.is_logging_enabled();
-
-        if log_file_enabled {
-            log_info!("No artifacts found matching the specified filters");
-            // No stdout output when logging to file
-        } else {
-            // No log file, print to stdout
-            println!("No artifacts found matching the specified filters.");
-        }
+        log_info!("No artifacts found matching the specified filters");
+        println!("No artifacts found matching the specified filters.");
         return Ok(());
     }
 
