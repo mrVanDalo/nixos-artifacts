@@ -10,18 +10,6 @@
 //! # Run TUI with default settings
 //! artifacts
 //!
-//! # Filter by machine
-//! artifacts --machine server-1
-//!
-//! # Filter by home-manager user
-//! artifacts --home alice@host
-//!
-//! # Filter by artifact name
-//! artifacts --artifact ssh-key
-//!
-//! # Combined filters
-//! artifacts --machine server-1 --artifact ssh-key
-//!
 //! # Specify flake directory
 //! artifacts /path/to/flake
 //! ```
@@ -55,18 +43,6 @@ pub enum LogLevel {
 pub struct Cli {
     /// Path to flake directory (default: current directory)
     pub flake: Option<PathBuf>,
-
-    /// Filter by machine name (repeatable)
-    #[arg(long = "machine")]
-    pub machine: Vec<String>,
-
-    /// Filter by home-manager user (repeatable)
-    #[arg(long = "home")]
-    pub home: Vec<String>,
-
-    /// Filter by artifact name (repeatable)
-    #[arg(long = "artifact")]
-    pub artifact: Vec<String>,
 
     /// Path to log file for debug output
     #[arg(long = "log-file", value_name = "PATH")]

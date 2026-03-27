@@ -54,14 +54,3 @@ fn cli_with_log_level() {
         assert_cmd_snapshot!(cli().args(["--log-level", "debug"]));
     });
 }
-
-/// CLI with machine filter.
-#[test]
-#[serial]
-fn cli_with_machine_filter() {
-    insta::with_settings!({
-        filters => [(r"flake directory: [^\n]+", "flake directory: <REDACTED_PATH>")]
-    }, {
-        assert_cmd_snapshot!(cli().args(["--machine", "test-machine"]));
-    });
-}

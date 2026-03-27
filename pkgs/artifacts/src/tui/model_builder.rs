@@ -157,84 +157,6 @@ pub fn validate_model_capabilities(model: &mut Model, backend: &BackendConfigura
     model.warnings = warnings;
 }
 
-/// Build a model with only specific artifacts (for filtered commands).
-pub fn build_filtered_model(
-    make: &MakeConfiguration,
-    machines: &[String],
-    home_users: &[String],
-    artifact_names: &[String],
-) -> Model {
-    let mut model = build_model(make);
-
-    // If no filters specified, return full model
-    if machines.is_empty() && home_users.is_empty() && artifact_names.is_empty() {
-        return model;
-    }
-
-    // Filter entries
-    model.entries.retain(|entry| match entry {
-        ListEntry::Single(single) => {
-            let target_matches = match &single.target_type {
-                TargetType::NixOS { machine } => {
-                    if !machines.is_empty() {
-                        machines.contains(machine)
-                    } else {
-                        home_users.is_empty()
-                    }
-                }
-                TargetType::HomeManager { username } => {
-                    if !home_users.is_empty() {
-                        home_users.contains(username)
-                    } else {
-                        machines.is_empty()
-                    }
-                }
-                TargetType::Shared { .. } => false, // Handled separately
-            };
-
-            let artifact_matches =
-                artifact_names.is_empty() || artifact_names.contains(&single.artifact.name);
-
-            target_matches && artifact_matches
-        }
-        ListEntry::Shared(shared) => {
-            // Shared artifacts match if:
-            // - artifact name matches (if filter specified), AND
-            // - at least one of its targets matches the machine/home filters
-            let artifact_matches =
-                artifact_names.is_empty() || artifact_names.contains(&shared.info.artifact_name);
-
-            if !artifact_matches {
-                return false;
-            }
-
-            // If no target filters, include all shared artifacts
-            if machines.is_empty() && home_users.is_empty() {
-                return true;
-            }
-
-            // Check if any target matches
-            let has_matching_nixos = !machines.is_empty()
-                && shared
-                    .info
-                    .nixos_targets
-                    .iter()
-                    .any(|t| machines.contains(t));
-
-            let has_matching_home = !home_users.is_empty()
-                && shared
-                    .info
-                    .home_targets
-                    .iter()
-                    .any(|u| home_users.contains(u));
-
-            has_matching_nixos || has_matching_home
-        }
-    });
-
-    model
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -361,50 +283,6 @@ mod tests {
             model.entries[2].target_type().target_name().unwrap(),
             "machine-two"
         );
-    }
-
-    #[test]
-    fn test_build_filtered_model_by_machine() {
-        let config = make_test_config();
-        let model = build_filtered_model(&config, &["machine-one".to_string()], &[], &[]);
-
-        assert_eq!(model.entries.len(), 1);
-        match &model.entries[0] {
-            ListEntry::Single(entry) => assert_eq!(entry.artifact.name, "ssh-key"),
-            _ => panic!("Expected Single entry"),
-        }
-    }
-
-    #[test]
-    fn test_build_filtered_model_by_home_user() {
-        let config = make_test_config();
-        let model = build_filtered_model(&config, &[], &["alice@desktop".to_string()], &[]);
-
-        assert_eq!(model.entries.len(), 1);
-        match &model.entries[0] {
-            ListEntry::Single(entry) => assert_eq!(entry.artifact.name, "gpg-key"),
-            _ => panic!("Expected Single entry"),
-        }
-    }
-
-    #[test]
-    fn test_build_filtered_model_by_artifact_name() {
-        let config = make_test_config();
-        let model = build_filtered_model(&config, &[], &[], &["ssh-key".to_string()]);
-
-        assert_eq!(model.entries.len(), 1);
-        assert_eq!(
-            model.entries[0].target_type().target_name().unwrap(),
-            "machine-one"
-        );
-    }
-
-    #[test]
-    fn test_build_filtered_model_no_filters_returns_all() {
-        let config = make_test_config();
-        let model = build_filtered_model(&config, &[], &[], &[]);
-
-        assert_eq!(model.entries.len(), 3);
     }
 
     fn make_shared_artifact(name: &str) -> ArtifactDef {

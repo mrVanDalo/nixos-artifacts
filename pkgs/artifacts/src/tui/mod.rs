@@ -23,9 +23,7 @@ pub mod terminal;
 pub mod views;
 
 pub use events::{EventSource, ScriptedEventSource, TerminalEventSource};
-pub use model_builder::{
-    build_filtered_model, build_model, build_model_with_validation, validate_model_capabilities,
-};
+pub use model_builder::{build_model, build_model_with_validation, validate_model_capabilities};
 pub use runtime::{EffectHandler, NoOpEffectHandler, RunResult, run, run_async, simulate};
 pub use terminal::{AppTerminal, TerminalGuard, install_panic_hook, restore_terminal};
 pub use views::render;
