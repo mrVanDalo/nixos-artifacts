@@ -10,8 +10,7 @@
 //! 2. Resolve flake directory path (default: current directory)
 //! 3. Resolve backend.toml path (env var or flake directory)
 //! 4. Build make configuration from Nix flake evaluation
-//! 5. Filter artifacts based on CLI filters (--machine, --home, --artifact)
-//! 6. Initialize terminal and run TUI
+//! 5. Initialize terminal and run TUI
 //!
 //! # Environment Variables
 //!
@@ -30,7 +29,7 @@ use crate::config::make::MakeConfiguration;
 use crate::config::nix::build_make_from_flake;
 use crate::log_info;
 use crate::tui::{
-    TerminalEventSource, TerminalGuard, build_filtered_model, install_panic_hook, run_async,
+    TerminalEventSource, TerminalGuard, build_model, install_panic_hook, run_async,
     validate_model_capabilities,
 };
 use anyhow::{Context, Result};
@@ -113,23 +112,10 @@ pub async fn run() -> Result<()> {
     let make_path = build_make_from_flake(&flake_path)?;
 
     // Run TUI
-    run_tui(
-        &backend_path,
-        &make_path,
-        &cli.machine,
-        &cli.home,
-        &cli.artifact,
-    )
-    .await
+    run_tui(&backend_path, &make_path).await
 }
 
-async fn run_tui(
-    backend_path: &Path,
-    make_path: &Path,
-    machines: &[String],
-    home_users: &[String],
-    artifacts: &[String],
-) -> Result<()> {
+async fn run_tui(backend_path: &Path, make_path: &Path) -> Result<()> {
     // STEP 1: Load all configurations BEFORE terminal setup (ERR-01)
     // Errors here print to stderr and exit non-zero
     let backend = BackendConfiguration::read_backend_config(backend_path).with_context(|| {
@@ -143,15 +129,15 @@ async fn run_tui(
         .with_context(|| "Failed to load artifact definitions from nix evaluation".to_string())?;
 
     // Build the initial model
-    let mut model = build_filtered_model(&make, machines, home_users, artifacts);
+    let mut model = build_model(&make);
 
     // Validate backend capabilities and add warnings
     validate_model_capabilities(&mut model, &backend);
 
     // STEP 4: Check for empty entries BEFORE terminal setup (UI-03)
     if model.entries.is_empty() {
-        log_info!("No artifacts found matching the specified filters");
-        println!("No artifacts found matching the specified filters.");
+        log_info!("No artifacts found");
+        println!("No artifacts found.");
         return Ok(());
     }
 

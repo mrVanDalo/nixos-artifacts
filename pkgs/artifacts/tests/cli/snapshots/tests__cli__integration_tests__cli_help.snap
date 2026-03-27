@@ -17,15 +17,6 @@ Arguments:
           Path to flake directory (default: current directory)
 
 Options:
-      --machine <MACHINE>
-          Filter by machine name (repeatable)
-
-      --home <HOME>
-          Filter by home-manager user (repeatable)
-
-      --artifact <ARTIFACT>
-          Filter by artifact name (repeatable)
-
       --log-file <PATH>
           Path to log file for debug output
 
