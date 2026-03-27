@@ -1,0 +1,117 @@
+---
+source: tests/e2e/mod.rs
+expression: "(nixos_config, home_config)"
+---
+(
+    MakeConfiguration {
+        nixos_map: {
+            "machine-name": {
+                "test-artifact": ArtifactDef {
+                    name: "test-artifact",
+                    description: None,
+                    shared: false,
+                    files: {
+                        "simple-secrets": FileDef {
+                            name: "simple-secrets",
+                            path: Some(
+                                "/run/secrets/simple-secrets",
+                            ),
+                            owner: Some(
+                                "deployer",
+                            ),
+                            group: Some(
+                                "deployer",
+                            ),
+                        },
+                        "very-simple-secrets": FileDef {
+                            name: "very-simple-secrets",
+                            path: Some(
+                                "/run/secrets/very-simple-secrets",
+                            ),
+                            owner: Some(
+                                "root",
+                            ),
+                            group: Some(
+                                "root",
+                            ),
+                        },
+                    },
+                    prompts: {
+                        "secret1": PromptDef {
+                            name: "secret1",
+                            description: Some(
+                                "secret number 1",
+                            ),
+                        },
+                        "secret2": PromptDef {
+                            name: "secret2",
+                            description: Some(
+                                "secret number 2",
+                            ),
+                        },
+                    },
+                    generator: "/nix/store/HASH-test_generator.sh",
+                    serialization: "test",
+                },
+            },
+        },
+        home_map: {},
+        nixos_config: {
+            "machine-name": {
+                "test": {
+                    "key": String("example-key"),
+                },
+            },
+        },
+        home_config: {},
+        make_base: "/nix/store",
+        make_json: "/nix/store/HASH-test.json",
+    },
+    MakeConfiguration {
+        nixos_map: {},
+        home_map: {
+            "test-user": {
+                "home-config": ArtifactDef {
+                    name: "home-config",
+                    description: None,
+                    shared: false,
+                    files: {
+                        "app-config": FileDef {
+                            name: "app-config",
+                            path: Some(
+                                "${XDG_RUNTIME_DIR}/artifacts/home-config/app-config",
+                            ),
+                            owner: None,
+                            group: None,
+                        },
+                    },
+                    prompts: {},
+                    generator: "/nix/store/HASH-test_generator_config.sh",
+                    serialization: "test",
+                },
+                "home-secret": ArtifactDef {
+                    name: "home-secret",
+                    description: None,
+                    shared: false,
+                    files: {
+                        "secret-file": FileDef {
+                            name: "secret-file",
+                            path: Some(
+                                "${XDG_RUNTIME_DIR}/artifacts/home-secret/secret-file",
+                            ),
+                            owner: None,
+                            group: None,
+                        },
+                    },
+                    prompts: {},
+                    generator: "/nix/store/HASH-test_generator_home.sh",
+                    serialization: "test",
+                },
+            },
+        },
+        nixos_config: {},
+        home_config: {},
+        make_base: "/nix/store",
+        make_json: "/nix/store/HASH-test.json",
+    },
+)

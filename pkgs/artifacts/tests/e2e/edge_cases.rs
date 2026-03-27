@@ -22,7 +22,8 @@
 
 use super::*;
 use anyhow::Result;
-use artifacts::cli::headless::{PromptValues, generate_single_artifact};
+use artifacts::app::model::TargetType;
+use artifacts::cli::headless::{PromptValues, generate_single_artifact_with_target_type};
 use serial_test::serial;
 use std::collections::BTreeMap;
 
@@ -107,12 +108,15 @@ fn e2e_generator_failure() -> Result<()> {
     // Attempt generation - this should fail because files are missing
     let prompt_values: PromptValues = BTreeMap::new();
 
-    let result = generate_single_artifact(
+    let result = generate_single_artifact_with_target_type(
         "missing-files",
         &artifact_def,
         &prompt_values,
         &backend,
         &make_config,
+        TargetType::NixOS {
+            machine: "missing-files".to_string(),
+        },
     );
 
     // We expect this to fail due to missing files verification
@@ -163,12 +167,15 @@ fn e2e_serialization_failure() -> Result<()> {
     ]);
 
     // This should succeed with valid configuration
-    let result = generate_single_artifact(
+    let result = generate_single_artifact_with_target_type(
         "machine-name",
         &artifact_def,
         &prompt_values,
         &backend,
         &make_config,
+        TargetType::NixOS {
+            machine: "machine-name".to_string(),
+        },
     )?;
 
     // Generation should succeed
@@ -293,12 +300,15 @@ fn e2e_error_message_contains_context() -> Result<()> {
 
     let prompt_values: PromptValues = BTreeMap::new();
 
-    let result = generate_single_artifact(
+    let result = generate_single_artifact_with_target_type(
         "missing-files",
         &artifact_def,
         &prompt_values,
         &backend,
         &make_config,
+        TargetType::NixOS {
+            machine: "missing-files".to_string(),
+        },
     );
 
     // Check error message quality
@@ -341,12 +351,15 @@ fn e2e_error_message_actionable() -> Result<()> {
 
     let prompt_values: PromptValues = BTreeMap::new();
 
-    let result = generate_single_artifact(
+    let result = generate_single_artifact_with_target_type(
         "missing-files",
         &artifact_def,
         &prompt_values,
         &backend,
         &make_config,
+        TargetType::NixOS {
+            machine: "missing-files".to_string(),
+        },
     );
 
     // If there's an error, check it's actionable
@@ -390,12 +403,15 @@ fn e2e_error_message_not_internal() -> Result<()> {
                 if let Some((_, artifact_def)) = find_first_artifact(&make_config, "machine-name") {
                     let prompt_values: PromptValues = BTreeMap::new();
 
-                    if let Err(e) = generate_single_artifact(
+                    if let Err(e) = generate_single_artifact_with_target_type(
                         "machine-name",
                         &artifact_def,
                         &prompt_values,
                         &backend,
                         &make_config,
+                        TargetType::NixOS {
+                            machine: "machine-name".to_string(),
+                        },
                     ) {
                         let error_msg = e.to_string();
 
@@ -460,12 +476,15 @@ fn e2e_multiple_failures_reported() -> Result<()> {
         for (artifact_name, artifact_def) in artifacts {
             let prompt_values: PromptValues = BTreeMap::new();
 
-            let result = generate_single_artifact(
+            let result = generate_single_artifact_with_target_type(
                 machine,
                 artifact_def,
                 &prompt_values,
                 &backend,
                 &make_config,
+                TargetType::NixOS {
+                    machine: machine.clone(),
+                },
             );
 
             // Each result should have its own context
@@ -597,12 +616,15 @@ fn e2e_prompt_value_validation() -> Result<()> {
     let empty_prompts: PromptValues = BTreeMap::new();
 
     // Should handle empty prompts gracefully
-    let result = generate_single_artifact(
+    let result = generate_single_artifact_with_target_type(
         "machine-name",
         &artifact_def,
         &empty_prompts,
         &backend,
         &make_config,
+        TargetType::NixOS {
+            machine: "machine-name".to_string(),
+        },
     );
 
     // Result should be handled gracefully (may succeed or fail cleanly)
@@ -629,12 +651,15 @@ fn e2e_prompt_value_validation() -> Result<()> {
     ]);
 
     // Should handle special characters
-    let result = generate_single_artifact(
+    let result = generate_single_artifact_with_target_type(
         "machine-name",
         &artifact_def,
         &special_prompts,
         &backend,
         &make_config,
+        TargetType::NixOS {
+            machine: "machine-name".to_string(),
+        },
     );
 
     // Should handle gracefully
@@ -727,12 +752,15 @@ fn e2e_generator_script_validation() -> Result<()> {
             if let Some((_, artifact_def)) = find_first_artifact(&make_config, "machine-name") {
                 let prompt_values: PromptValues = BTreeMap::new();
 
-                let gen_result = generate_single_artifact(
+                let gen_result = generate_single_artifact_with_target_type(
                     "machine-name",
                     &artifact_def,
                     &prompt_values,
                     &backend,
                     &make_config,
+                    TargetType::NixOS {
+                        machine: "machine-name".to_string(),
+                    },
                 );
 
                 // Result should have context

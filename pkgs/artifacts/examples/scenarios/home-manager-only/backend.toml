@@ -1,0 +1,6 @@
+# Backend configuration for home-manager only test scenario
+# This backend is configured for home target (no nixos target needed)
+
+[test.home]
+check = "./test_check.sh"
+serialize = "./test_serialize.sh"

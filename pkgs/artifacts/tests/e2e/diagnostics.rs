@@ -17,12 +17,13 @@
 //! To capture diagnostics on test failure:
 //!
 //! ```rust
-//! let (result, diagnostics) = generate_single_artifact_with_diagnostics(
+//! let (result, diagnostics) = generate_single_artifact_with_diagnostics_and_target_type(
 //!     "machine-name",
 //!     &artifact_def,
 //!     &prompt_values,
 //!     &backend,
 //!     &make_config,
+//!     TargetType::NixOS { machine: "machine-name".to_string() },
 //! );
 //!
 //! if let Err(e) = &result {
@@ -31,8 +32,9 @@
 //! ```
 
 use anyhow::{Context, Result};
+use artifacts::app::model::TargetType;
 use artifacts::cli::headless::{
-    DiagnosticInfo, PromptValues, generate_single_artifact_with_diagnostics,
+    DiagnosticInfo, PromptValues, generate_single_artifact_with_diagnostics_and_target_type,
 };
 use artifacts::config::backend::BackendConfiguration;
 use artifacts::config::make::{ArtifactDef, MakeConfiguration};
@@ -227,12 +229,15 @@ fn e2e_diagnostic_capture_complete() -> Result<()> {
     ]);
 
     // Generate with diagnostics
-    let (result, diagnostics) = generate_single_artifact_with_diagnostics(
+    let (result, diagnostics) = generate_single_artifact_with_diagnostics_and_target_type(
         "machine-name",
         &artifact_def,
         &prompt_values,
         &backend,
         &make_config,
+        TargetType::NixOS {
+            machine: "machine-name".to_string(),
+        },
     );
 
     // Verify generation succeeded
@@ -296,12 +301,15 @@ fn e2e_diagnostic_capture_on_failure() -> Result<()> {
     ]);
 
     // Generate with diagnostics (this will fail due to invalid generator)
-    let (result, diagnostics) = generate_single_artifact_with_diagnostics(
+    let (result, diagnostics) = generate_single_artifact_with_diagnostics_and_target_type(
         "machine-name",
         &invalid_artifact,
         &prompt_values,
         &backend,
         &make_config,
+        TargetType::NixOS {
+            machine: "machine-name".to_string(),
+        },
     );
 
     // Verify generation failed (expected)
@@ -353,12 +361,15 @@ fn e2e_diagnostic_dump_functionality() -> Result<()> {
         ("secret2".to_string(), "test-secret-two".to_string()),
     ]);
 
-    let (result, diagnostics) = generate_single_artifact_with_diagnostics(
+    let (result, diagnostics) = generate_single_artifact_with_diagnostics_and_target_type(
         "machine-name",
         &artifact_def,
         &prompt_values,
         &backend,
         &make_config,
+        TargetType::NixOS {
+            machine: "machine-name".to_string(),
+        },
     );
 
     assert!(result.is_ok(), "Generation failed: {:?}", result.err());

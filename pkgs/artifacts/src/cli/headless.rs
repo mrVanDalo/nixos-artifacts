@@ -214,7 +214,7 @@ impl DiagnosticInfo {
 /// Keys are prompt names, values are the user input.
 pub type PromptValues = BTreeMap<String, String>;
 
-/// Generate a single artifact in headless mode.
+/// Generate a single artifact in headless mode with explicit target type.
 ///
 /// This executes the full pipeline:
 /// 1. Run check_serialization to see if generation is needed
@@ -227,15 +227,17 @@ pub type PromptValues = BTreeMap<String, String>;
 /// * `prompt_values` - Values for each prompt (empty if no prompts)
 /// * `backend` - The backend configuration
 /// * `make_config` - The make configuration for paths
+/// * `target_type` - The target type (NixOS or HomeManager)
 ///
 /// # Returns
 /// The result of the generation attempt
-pub fn generate_single_artifact(
+pub fn generate_single_artifact_with_target_type(
     target: &str,
     artifact: &ArtifactDef,
     prompt_values: &PromptValues,
     backend: &BackendConfiguration,
     make_config: &MakeConfiguration,
+    target_type: TargetType,
 ) -> Result<HeadlessArtifactResult> {
     // For now, always assume generation is needed (fail-open behavior)
     // TODO: Implement proper check_serialization when backend supports it
@@ -258,9 +260,6 @@ pub fn generate_single_artifact(
     }
 
     // Run generator using the artifact's generator script
-    let target_type = TargetType::NixOS {
-        machine: target.to_string(),
-    };
     let artifact_entry = ArtifactEntry {
         target_type: target_type.clone(),
         artifact: artifact.clone(),
@@ -328,12 +327,10 @@ pub fn generate_single_artifact(
     })
 }
 
-/// Generate a single artifact in headless mode with diagnostic capture.
+/// Generate a single artifact in headless mode with diagnostic capture and explicit target type.
 ///
-/// This function has the same behavior as `generate_single_artifact` but captures
-/// detailed diagnostic information throughout the process. It returns both the
-/// generation result and a `DiagnosticInfo` structure containing all captured
-/// information.
+/// This captures detailed diagnostic information throughout the process. It returns both the
+/// generation result and a `DiagnosticInfo` structure containing all captured information.
 ///
 /// # Arguments
 /// * `target` - Machine or user name (e.g., "machine-one" or "alice@host")
@@ -341,32 +338,19 @@ pub fn generate_single_artifact(
 /// * `prompt_values` - Values for each prompt (empty if no prompts)
 /// * `backend` - The backend configuration
 /// * `make_config` - The make configuration for paths
+/// * `target_type` - The target type (NixOS or HomeManager)
 ///
 /// # Returns
 /// Tuple of (result, diagnostics):
 /// - result: `Result<HeadlessArtifactResult>` - The generation result
 /// - diagnostics: `DiagnosticInfo` - Captured diagnostic information (always populated)
-///
-/// # Example
-/// ```rust,ignore
-/// let (result, diagnostics) = generate_single_artifact_with_diagnostics(
-///     "machine-name",
-///     &artifact_def,
-///     &prompt_values,
-///     &backend,
-///     &make_config,
-/// )?;
-///
-/// if result.is_err() {
-///     eprintln!("{}", diagnostics.format());
-/// }
-/// ```
-pub fn generate_single_artifact_with_diagnostics(
+pub fn generate_single_artifact_with_diagnostics_and_target_type(
     target: &str,
     artifact: &ArtifactDef,
     prompt_values: &PromptValues,
     backend: &BackendConfiguration,
     make_config: &MakeConfiguration,
+    target_type: TargetType,
 ) -> (Result<HeadlessArtifactResult>, DiagnosticInfo) {
     // Initialize diagnostic info
     let mut diagnostics = DiagnosticInfo::new(artifact.name.clone(), target.to_string());
@@ -436,9 +420,6 @@ pub fn generate_single_artifact_with_diagnostics(
     }
 
     // Run generator script with output capture
-    let target_type = TargetType::NixOS {
-        machine: target.to_string(),
-    };
     let artifact_entry = ArtifactEntry {
         target_type: target_type.clone(),
         artifact: artifact.clone(),
@@ -563,8 +544,16 @@ pub fn generate_artifacts_for_target(
             .cloned()
             .unwrap_or_default();
 
-        let result =
-            generate_single_artifact(target, artifact, &artifact_prompts, backend, make_config)?;
+        let result = generate_single_artifact_with_target_type(
+            target,
+            artifact,
+            &artifact_prompts,
+            backend,
+            make_config,
+            TargetType::NixOS {
+                machine: target.to_string(),
+            },
+        )?;
 
         results.push(result);
     }
