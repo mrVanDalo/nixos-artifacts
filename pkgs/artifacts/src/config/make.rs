@@ -249,7 +249,7 @@ pub struct SharedArtifactInfo {
 /// - `home_config`: user-name → (backend-name → config-map)
 /// - `make_base`: Directory containing the make.json file
 /// - `make_json`: Path to the make.json file
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct MakeConfiguration {
     /// NixOS machines: machine-name → (artifact-name → artifact)
     pub nixos_map: BTreeMap<String, BTreeMap<String, ArtifactDef>>,

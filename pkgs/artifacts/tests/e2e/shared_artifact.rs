@@ -23,7 +23,8 @@
 //! - Shared artifact scenarios in examples/scenarios/shared-artifacts
 
 use anyhow::{Context, Result};
-use artifacts::cli::headless::{PromptValues, generate_single_artifact};
+use artifacts::app::model::TargetType;
+use artifacts::cli::headless::{PromptValues, generate_single_artifact_with_target_type};
 use artifacts::config::make::ArtifactDef;
 use serial_test::serial;
 use std::collections::BTreeMap;
@@ -156,12 +157,15 @@ fn e2e_shared_artifact_generation() -> Result<()> {
     // Generate the artifact for machine-one
     let prompt_values: PromptValues = BTreeMap::new();
 
-    let result = generate_single_artifact(
+    let result = generate_single_artifact_with_target_type(
         &machine_one,
         &shared_def,
         &prompt_values,
         &backend,
         &make_config,
+        TargetType::NixOS {
+            machine: machine_one.clone(),
+        },
     )?;
 
     // Verify generation succeeded
@@ -258,12 +262,15 @@ fn e2e_shared_artifact_multi_machine() -> Result<()> {
     // Generate for machine-one
     let prompt_values: PromptValues = BTreeMap::new();
 
-    let result1 = generate_single_artifact(
+    let result1 = generate_single_artifact_with_target_type(
         &machine_one,
         &shared_def,
         &prompt_values,
         &backend,
         &make_config,
+        TargetType::NixOS {
+            machine: machine_one.clone(),
+        },
     )?;
 
     assert!(
@@ -272,12 +279,15 @@ fn e2e_shared_artifact_multi_machine() -> Result<()> {
     );
 
     // Generate for machine-two
-    let result2 = generate_single_artifact(
+    let result2 = generate_single_artifact_with_target_type(
         &machine_two,
         &shared_def,
         &prompt_values,
         &backend,
         &make_config,
+        TargetType::NixOS {
+            machine: machine_two.clone(),
+        },
     )?;
 
     assert!(
@@ -347,12 +357,15 @@ fn e2e_shared_artifact_single_instance() -> Result<()> {
     // Generate
     let prompt_values: PromptValues = BTreeMap::new();
 
-    let result = generate_single_artifact(
+    let result = generate_single_artifact_with_target_type(
         &machine_one,
         &shared_def,
         &prompt_values,
         &backend,
         &make_config,
+        TargetType::NixOS {
+            machine: machine_one.clone(),
+        },
     )?;
 
     assert!(result.success, "Generation should succeed");
@@ -437,12 +450,15 @@ fn e2e_shared_vs_machine_artifacts() -> Result<()> {
     let prompt_values: PromptValues = BTreeMap::new();
 
     // Generate shared artifact for machine-one
-    let shared_result = generate_single_artifact(
+    let shared_result = generate_single_artifact_with_target_type(
         &machine_one,
         &shared_def,
         &prompt_values,
         &backend,
         &make_config,
+        TargetType::NixOS {
+            machine: machine_one.clone(),
+        },
     )?;
     assert!(
         shared_result.success,
@@ -450,24 +466,30 @@ fn e2e_shared_vs_machine_artifacts() -> Result<()> {
     );
 
     // Generate machine-specific artifacts
-    let local_one_result = generate_single_artifact(
+    let local_one_result = generate_single_artifact_with_target_type(
         &machine_one,
         &local_one,
         &prompt_values,
         &backend,
         &make_config,
+        TargetType::NixOS {
+            machine: machine_one.clone(),
+        },
     )?;
     assert!(
         local_one_result.success,
         "Machine-one specific artifact generation should succeed"
     );
 
-    let local_two_result = generate_single_artifact(
+    let local_two_result = generate_single_artifact_with_target_type(
         &machine_two,
         &local_two,
         &prompt_values,
         &backend,
         &make_config,
+        TargetType::NixOS {
+            machine: machine_two.clone(),
+        },
     )?;
     assert!(
         local_two_result.success,
@@ -560,21 +582,27 @@ fn e2e_shared_artifact_consistency() -> Result<()> {
     // Generate for both machines
     let prompt_values: PromptValues = BTreeMap::new();
 
-    let result1 = generate_single_artifact(
+    let result1 = generate_single_artifact_with_target_type(
         &machine_one,
         &shared_def,
         &prompt_values,
         &backend,
         &make_config,
+        TargetType::NixOS {
+            machine: machine_one.clone(),
+        },
     )?;
     assert!(result1.success, "Generation for machine-one should succeed");
 
-    let result2 = generate_single_artifact(
+    let result2 = generate_single_artifact_with_target_type(
         &machine_two,
         &shared_def,
         &prompt_values,
         &backend,
         &make_config,
+        TargetType::NixOS {
+            machine: machine_two.clone(),
+        },
     )?;
     assert!(result2.success, "Generation for machine-two should succeed");
 

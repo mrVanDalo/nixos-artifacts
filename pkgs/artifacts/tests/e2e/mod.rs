@@ -21,9 +21,11 @@ pub mod shared_artifact;
 pub use diagnostics::dump_test_diagnostics;
 
 use anyhow::{Context, Result};
+use artifacts::app::model::TargetType;
 use artifacts::cli::headless::{
-    HeadlessArtifactResult, PromptValues, generate_single_artifact,
-    generate_single_artifact_with_diagnostics,
+    HeadlessArtifactResult, PromptValues,
+    generate_single_artifact_with_diagnostics_and_target_type,
+    generate_single_artifact_with_target_type,
 };
 use artifacts::config::backend::BackendConfiguration;
 use artifacts::config::make::{ArtifactDef, MakeConfiguration};
@@ -65,6 +67,22 @@ fn find_first_artifact(
     make_config
         .nixos_map
         .get(machine_name)
+        .and_then(|artifacts| {
+            artifacts
+                .iter()
+                .next()
+                .map(|(name, def)| (name.clone(), def.clone()))
+        })
+}
+
+/// Find the first artifact for a given home-manager user.
+fn find_first_home_artifact(
+    make_config: &MakeConfiguration,
+    user_name: &str,
+) -> Option<(String, ArtifactDef)> {
+    make_config
+        .home_map
+        .get(user_name)
         .and_then(|artifacts| {
             artifacts
                 .iter()
@@ -303,7 +321,6 @@ fn cleanup_test_artifacts(storage_dir: &Path, artifact_names: &[&str]) -> Result
 #[serial]
 fn e2e_single_artifact_is_created() -> Result<()> {
     // TEST-01: Programmatic invocation via headless API
-    // The headless module provides generate_single_artifact() for non-TUI use
 
     // Load the example configuration
     let (backend, make_config) = load_example("scenarios/single-artifact-with-prompts")?;
@@ -321,12 +338,15 @@ fn e2e_single_artifact_is_created() -> Result<()> {
 
     // Generate the artifact using headless API with diagnostic capture
     // Using the diagnostics version to capture info on failure
-    let (result, diagnostics) = generate_single_artifact_with_diagnostics(
+    let (result, diagnostics) = generate_single_artifact_with_diagnostics_and_target_type(
         "machine-name",
         &artifact_def,
         &prompt_values,
         &backend,
         &make_config,
+        TargetType::NixOS {
+            machine: "machine-name".to_string(),
+        },
     );
 
     // Handle result with diagnostic dump on failure
@@ -427,12 +447,15 @@ fn e2e_multiple_machines_artifacts_created() -> Result<()> {
             // This scenario has no prompts
             let prompt_values: PromptValues = BTreeMap::new();
 
-            let result = generate_single_artifact(
+            let result = generate_single_artifact_with_target_type(
                 machine_name,
                 &artifact_def,
                 &prompt_values,
                 &backend,
                 &make_config,
+                TargetType::NixOS {
+                    machine: machine_name.clone(),
+                },
             )?;
 
             if !result.success {
@@ -484,12 +507,15 @@ fn e2e_no_prompts_artifact_creation() -> Result<()> {
     // Generate with empty prompts
     let prompt_values: PromptValues = BTreeMap::new();
 
-    let result = generate_single_artifact(
+    let result = generate_single_artifact_with_target_type(
         &machine_name,
         &artifact_def,
         &prompt_values,
         &backend,
         &make_config,
+        TargetType::NixOS {
+            machine: machine_name.clone(),
+        },
     )?;
 
     assert!(
@@ -518,12 +544,15 @@ fn e2e_missing_prompts_fails() -> Result<()> {
     let empty_prompts: PromptValues = BTreeMap::new();
 
     // This should fail because prompts are required
-    let result = generate_single_artifact(
+    let result = generate_single_artifact_with_target_type(
         "machine-name",
         &artifact_def,
         &empty_prompts,
         &backend,
         &make_config,
+        TargetType::NixOS {
+            machine: "machine-name".to_string(),
+        },
     );
 
     // We expect this to either fail during generation or produce empty results
@@ -553,16 +582,101 @@ fn e2e_headless_programmatic_invocation() -> Result<()> {
 
     let (_, artifact_def) = find_first_artifact(&make_config, &machine_name).unwrap();
 
-    // This test verifies we can call the function directly without TUI
-    let result = generate_single_artifact(
+    let result = generate_single_artifact_with_target_type(
         &machine_name,
         &artifact_def,
         &BTreeMap::new(),
         &backend,
         &make_config,
+        TargetType::NixOS {
+            machine: machine_name.clone(),
+        },
     )?;
 
     assert!(result.success, "Headless generation should work");
 
+    Ok(())
+}
+
+// =============================================================================
+// Home-Manager Only Tests
+// =============================================================================
+
+/// Test that home-manager-only configuration loads correctly.
+#[test]
+#[serial]
+fn e2e_home_manager_only_config_loads() -> Result<()> {
+    let (_backend, make_config) = load_example("scenarios/home-manager-only")?;
+    insta::with_settings!({
+        filters => [
+            (r"/nix/store/[a-z0-9]+-", "/nix/store/HASH-"),
+        ]
+    }, {
+        insta::assert_debug_snapshot!(make_config);
+    });
+    Ok(())
+}
+
+/// Test that home-manager artifacts can be generated using headless API.
+#[test]
+#[serial]
+fn e2e_home_manager_artifact_generation() -> Result<()> {
+    let (backend, make_config) = load_example("scenarios/home-manager-only")?;
+
+    let user_name = make_config
+        .home_map
+        .keys()
+        .next()
+        .cloned()
+        .expect("Should have at least one user");
+
+    let (_artifact_name, artifact_def) = find_first_home_artifact(&make_config, &user_name)
+        .expect("Should have at least one artifact");
+
+    let prompt_values: PromptValues = BTreeMap::new();
+
+    let (result, diagnostics) = generate_single_artifact_with_diagnostics_and_target_type(
+        &user_name,
+        &artifact_def,
+        &prompt_values,
+        &backend,
+        &make_config,
+        TargetType::HomeManager {
+            username: user_name.clone(),
+        },
+    );
+
+    insta::with_settings!({
+        filters => [
+            (r"/nix/store/[a-z0-9]+-", "/nix/store/HASH-"),
+            (r"/tmp/artifacts-headless_[a-z0-9]+", "/tmp/artifacts-headless-TMP"),
+            (r"CARGO_[A-Z_]+: [^\n]+,\n\s*", ""),
+            (r"CARGO_[A-Z_]+: [^\n]+\n", ""),
+        ]
+    }, {
+        let env_vars: std::collections::BTreeMap<_, _> = diagnostics.environment_vars.iter()
+            .filter(|(k, _)| !k.starts_with("CARGO_"))
+            .collect();
+        let mut diag = diagnostics.clone();
+        diag.environment_vars = env_vars.into_iter().map(|(k, v)| (k.clone(), v.clone())).collect();
+        insta::assert_debug_snapshot!((make_config, result, diag));
+    });
+
+    Ok(())
+}
+
+/// Test configuration structure comparison between nixos-only and home-manager-only.
+#[test]
+#[serial]
+fn e2e_config_structure_comparison() -> Result<()> {
+    let (_nixos_backend, nixos_config) = load_example("scenarios/single-artifact-with-prompts")?;
+    let (_home_backend, home_config) = load_example("scenarios/home-manager-only")?;
+    insta::with_settings!({
+        filters => [
+            (r"/nix/store/[a-z0-9]+-", "/nix/store/HASH-"),
+        ]
+    }, {
+        insta::assert_debug_snapshot!((nixos_config, home_config));
+    });
     Ok(())
 }

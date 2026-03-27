@@ -111,17 +111,21 @@ The diagnostic system automatically redacts:
 To capture diagnostics on test failure:
 
 ```rust
-use artifacts::cli::headless::generate_single_artifact_with_diagnostics;
+use artifacts::app::model::TargetType;
+use artifacts::cli::headless::generate_single_artifact_with_diagnostics_and_target_type;
 use crate::e2e::dump_test_diagnostics;
 
 #[test]
 fn my_test() -> Result<()> {
-    let (result, diagnostics) = generate_single_artifact_with_diagnostics(
+    let (result, diagnostics) = generate_single_artifact_with_diagnostics_and_target_type(
         "machine-name",
         &artifact_def,
         &prompt_values,
         &backend,
         &make_config,
+        TargetType::NixOS {
+            machine: "machine-name".to_string(),
+        },
     );
 
     match result {
@@ -251,9 +255,10 @@ Tests are configured to run in CI with:
 ### E2E Test Template
 
 ```rust
-#[test]
-#[serial]
-fn e2e_my_new_test() -> Result<()> {
+use artifacts::app::model::TargetType;
+use artifacts::cli::headless::{
+    generate_single_artifact_with_diagnostics_and_target_type, PromptValues,
+};
     // Load example configuration
     let (backend, make_config) = load_example("scenarios/my-scenario")?;
 
@@ -267,12 +272,15 @@ fn e2e_my_new_test() -> Result<()> {
     ]);
 
     // Generate with diagnostics
-    let (result, diagnostics) = generate_single_artifact_with_diagnostics(
+    let (result, diagnostics) = generate_single_artifact_with_diagnostics_and_target_type(
         "machine-name",
         &artifact_def,
         &prompt_values,
         &backend,
         &make_config,
+        TargetType::NixOS {
+            machine: "machine-name".to_string(),
+        },
     );
 
     // Handle with diagnostic dump on failure

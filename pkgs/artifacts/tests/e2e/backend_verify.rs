@@ -17,7 +17,8 @@
 //! - Scenarios in examples/scenarios/ directory
 
 use anyhow::{Context, Result};
-use artifacts::cli::headless::{PromptValues, generate_single_artifact};
+use artifacts::app::model::TargetType;
+use artifacts::cli::headless::{PromptValues, generate_single_artifact_with_target_type};
 use serial_test::serial;
 use std::collections::BTreeMap;
 use std::fs;
@@ -192,12 +193,15 @@ fn e2e_backend_storage_single_artifact() -> Result<()> {
     ]);
 
     // Generate the artifact using headless API
-    let result = generate_single_artifact(
+    let result = generate_single_artifact_with_target_type(
         "machine-name",
         &artifact_def,
         &prompt_values,
         &backend,
         &make_config,
+        TargetType::NixOS {
+            machine: "machine-name".to_string(),
+        },
     )?;
 
     // Verify generation succeeded
@@ -259,12 +263,15 @@ fn e2e_backend_storage_content_format() -> Result<()> {
     ]);
 
     // Generate the artifact
-    let result = generate_single_artifact(
+    let result = generate_single_artifact_with_target_type(
         "machine-name",
         &artifact_def,
         &prompt_values,
         &backend,
         &make_config,
+        TargetType::NixOS {
+            machine: "machine-name".to_string(),
+        },
     )?;
 
     assert!(result.success, "Artifact generation should succeed");
@@ -314,12 +321,15 @@ fn e2e_backend_storage_multiple_files() -> Result<()> {
     ]);
 
     // Generate the artifact
-    let result = generate_single_artifact(
+    let result = generate_single_artifact_with_target_type(
         "machine-name",
         &artifact_def,
         &prompt_values,
         &backend,
         &make_config,
+        TargetType::NixOS {
+            machine: "machine-name".to_string(),
+        },
     )?;
 
     assert!(result.success, "Artifact generation should succeed");
@@ -388,12 +398,15 @@ fn e2e_backend_storage_persists() -> Result<()> {
     ]);
 
     // Generate
-    let result = generate_single_artifact(
+    let result = generate_single_artifact_with_target_type(
         "machine-name",
         &artifact_def,
         &prompt_values,
         &backend,
         &make_config,
+        TargetType::NixOS {
+            machine: "machine-name".to_string(),
+        },
     )?;
 
     assert!(result.success, "Generation should succeed");
@@ -451,12 +464,15 @@ fn e2e_backend_storage_no_prompts() -> Result<()> {
     // Generate with empty prompts
     let prompt_values: PromptValues = BTreeMap::new();
 
-    let result = generate_single_artifact(
+    let result = generate_single_artifact_with_target_type(
         &machine_name,
         &artifact_def,
         &prompt_values,
         &backend,
         &make_config,
+        TargetType::NixOS {
+            machine: machine_name.clone(),
+        },
     )?;
 
     assert!(result.success, "Artifact without prompts should succeed");

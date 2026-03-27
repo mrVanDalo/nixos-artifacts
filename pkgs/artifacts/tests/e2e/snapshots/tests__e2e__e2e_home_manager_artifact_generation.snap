@@ -1,0 +1,81 @@
+---
+source: tests/e2e/mod.rs
+expression: "(make_config, result, diag)"
+---
+(
+    MakeConfiguration {
+        nixos_map: {},
+        home_map: {
+            "test-user": {
+                "home-config": ArtifactDef {
+                    name: "home-config",
+                    description: None,
+                    shared: false,
+                    files: {
+                        "app-config": FileDef {
+                            name: "app-config",
+                            path: Some(
+                                "${XDG_RUNTIME_DIR}/artifacts/home-config/app-config",
+                            ),
+                            owner: None,
+                            group: None,
+                        },
+                    },
+                    prompts: {},
+                    generator: "/nix/store/HASH-test_generator_config.sh",
+                    serialization: "test",
+                },
+                "home-secret": ArtifactDef {
+                    name: "home-secret",
+                    description: None,
+                    shared: false,
+                    files: {
+                        "secret-file": FileDef {
+                            name: "secret-file",
+                            path: Some(
+                                "${XDG_RUNTIME_DIR}/artifacts/home-secret/secret-file",
+                            ),
+                            owner: None,
+                            group: None,
+                        },
+                    },
+                    prompts: {},
+                    generator: "/nix/store/HASH-test_generator_home.sh",
+                    serialization: "test",
+                },
+            },
+        },
+        nixos_config: {},
+        home_config: {},
+        make_base: "/nix/store",
+        make_json: "/nix/store/HASH-test.json",
+    },
+    Ok(
+        HeadlessArtifactResult {
+            target: "test-user",
+            artifact_name: "home-config",
+            success: true,
+            error: None,
+            generated_file_contents: {
+                "app-config": "setting=value\n",
+            },
+        },
+    ),
+    DiagnosticInfo {
+        artifact_name: "home-config",
+        target: "test-user",
+        backend_config: "# Backend configuration for home-manager only test scenario\n# This backend is configured for home target (no nixos target needed)\n\n[test.home]\ncheck = \"./test_check.sh\"\nserialize = \"./test_serialize.sh\"",
+        make_config: "make_base: /nix/store\nnixos_map keys: []\nhome_map keys: [\"test-user\"]",
+        environment_vars: {},
+        temp_input_contents: {},
+        temp_prompt_contents: {},
+        generator_stdout: None,
+        generator_stderr: None,
+        backend_stdout: None,
+        backend_stderr: None,
+        generated_files: [
+            "/tmp/artifacts-headless-TMP/out/app-config",
+        ],
+        error: None,
+    },
+)
