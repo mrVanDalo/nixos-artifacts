@@ -17,16 +17,9 @@ pub mod diagnostics;
 pub mod edge_cases;
 pub mod shared_artifact;
 
-// Re-export diagnostic utilities for use in tests
-pub use diagnostics::dump_test_diagnostics;
-
+use crate::common::{TestHarness, dump_test_diagnostics};
 use anyhow::{Context, Result};
 use artifacts::app::model::TargetType;
-use artifacts::cli::headless::{
-    HeadlessArtifactResult, PromptValues,
-    generate_single_artifact_with_diagnostics_and_target_type,
-    generate_single_artifact_with_target_type,
-};
 use artifacts::config::backend::BackendConfiguration;
 use artifacts::config::make::{ArtifactDef, MakeConfiguration};
 use artifacts::config::nix::build_make_from_flake;
@@ -36,15 +29,10 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use tempfile::TempDir;
 
-// =============================================================================
-// Test helpers
-// =============================================================================
-
 fn project_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
 }
 
-/// Load an example scenario's backend and make configuration.
 fn load_example(name: &str) -> Result<(BackendConfiguration, MakeConfiguration)> {
     let example_dir = project_root().join("examples").join(name);
 
@@ -59,7 +47,6 @@ fn load_example(name: &str) -> Result<(BackendConfiguration, MakeConfiguration)>
     Ok((backend, make))
 }
 
-/// Find the first artifact for a given machine.
 fn find_first_artifact(
     make_config: &MakeConfiguration,
     machine_name: &str,
@@ -75,23 +62,18 @@ fn find_first_artifact(
         })
 }
 
-/// Find the first artifact for a given home-manager user.
 fn find_first_home_artifact(
     make_config: &MakeConfiguration,
     user_name: &str,
 ) -> Option<(String, ArtifactDef)> {
-    make_config
-        .home_map
-        .get(user_name)
-        .and_then(|artifacts| {
-            artifacts
-                .iter()
-                .next()
-                .map(|(name, def)| (name.clone(), def.clone()))
-        })
+    make_config.home_map.get(user_name).and_then(|artifacts| {
+        artifacts
+            .iter()
+            .next()
+            .map(|(name, def)| (name.clone(), def.clone()))
+    })
 }
 
-/// Create a temporary directory for test artifacts.
 fn create_test_storage_dir(_test_name: &str) -> Result<TempDir> {
     let temp_dir = TempDir::new()?;
     let storage_dir = temp_dir.path().join("storage");
@@ -99,17 +81,11 @@ fn create_test_storage_dir(_test_name: &str) -> Result<TempDir> {
     Ok(temp_dir)
 }
 
-/// Set up test storage directory with ARTIFACTS_TEST_OUTPUT_DIR.
-///
-/// Returns a TempDir that should be kept alive for the duration of the test
-/// to ensure the storage directory exists.
 fn setup_test_storage() -> Result<(TempDir, PathBuf)> {
     let temp_dir = TempDir::new()?;
     let storage_path = temp_dir.path().join("storage");
     fs::create_dir_all(&storage_path)?;
 
-    // Set the environment variable that the test backend uses
-    // SAFETY: We're in a single-threaded test environment with #[serial]
     unsafe {
         std::env::set_var("ARTIFACTS_TEST_OUTPUT_DIR", &storage_path);
     }
@@ -117,24 +93,12 @@ fn setup_test_storage() -> Result<(TempDir, PathBuf)> {
     Ok((temp_dir, storage_path))
 }
 
-/// Clean up environment after test.
 fn cleanup_test_storage() {
-    // SAFETY: We're in a single-threaded test environment with #[serial]
     unsafe {
         std::env::remove_var("ARTIFACTS_TEST_OUTPUT_DIR");
     }
 }
 
-/// RAII guard to ensure environment cleanup even on panic.
-struct CleanupGuard;
-
-impl Drop for CleanupGuard {
-    fn drop(&mut self) {
-        cleanup_test_storage();
-    }
-}
-
-/// Check if a file exists and contains expected content.
 #[allow(dead_code)]
 fn verify_file_content(path: &Path, expected_content: &str) -> Result<()> {
     if !path.exists() {
@@ -159,39 +123,11 @@ fn verify_file_content(path: &Path, expected_content: &str) -> Result<()> {
     Ok(())
 }
 
-/// Get the expected path for an artifact in backend storage.
-///
-/// The test backend stores artifacts in a flat structure where the artifact name
-/// is used as the filename directly.
-///
-/// # Arguments
-/// * `storage_dir` - Base directory where artifacts are stored
-/// * `artifact_name` - Name of the artifact to locate
-///
-/// # Returns
-/// The full path where the artifact should exist
-/// Get the expected path for an artifact in backend storage.
 #[allow(dead_code)]
 fn get_artifact_path(storage_dir: &Path, artifact_name: &str) -> PathBuf {
-    // Test backend uses flat storage - artifact name as filename
     storage_dir.join(artifact_name)
 }
 
-/// Verify that an artifact exists in the backend storage directory.
-///
-/// # Arguments
-/// * `storage_dir` - The backend storage directory path
-/// * `artifact_name` - Name of the artifact to check for
-///
-/// # Returns
-/// * `Ok(())` if the artifact exists
-/// * `Err` with a descriptive message if the artifact is missing
-///
-/// # Example
-/// ```
-/// let storage = Path::new("/path/to/storage");
-/// verify_artifact_exists(&storage, "my-secret")?;
-/// ```
 #[allow(dead_code)]
 fn verify_artifact_exists(storage_dir: &Path, artifact_name: &str) -> Result<()> {
     let artifact_path = get_artifact_path(storage_dir, artifact_name);
@@ -218,31 +154,10 @@ fn verify_artifact_exists(storage_dir: &Path, artifact_name: &str) -> Result<()>
     Ok(())
 }
 
-/// Verify that an artifact exists and contains the expected content.
-///
-/// This combines an existence check with content verification, providing
-/// detailed error messages if either check fails.
-///
-/// # Arguments
-/// * `storage_dir` - The backend storage directory path
-/// * `artifact_name` - Name of the artifact to verify
-/// * `expected` - Expected content of the artifact
-///
-/// # Returns
-/// * `Ok(())` if the artifact exists and content matches
-/// * `Err` with details about what failed (missing file or content mismatch)
-///
-/// # Example
-/// ```
-/// let storage = Path::new("/path/to/storage");
-/// verify_artifact_content(&storage, "my-secret", "expected-value")?;
-/// ```
 #[allow(dead_code)]
 fn verify_artifact_content(storage_dir: &Path, artifact_name: &str, expected: &str) -> Result<()> {
-    // First verify the artifact exists
     verify_artifact_exists(storage_dir, artifact_name)?;
 
-    // Then verify its content
     let artifact_path = get_artifact_path(storage_dir, artifact_name);
     let actual_content = fs::read_to_string(&artifact_path).with_context(|| {
         format!(
@@ -265,24 +180,6 @@ fn verify_artifact_content(storage_dir: &Path, artifact_name: &str, expected: &s
     Ok(())
 }
 
-/// Remove specified artifacts from backend storage for test isolation.
-///
-/// This helper is useful for cleaning up between tests or ensuring
-/// a clean state before running tests that require no pre-existing artifacts.
-///
-/// # Arguments
-/// * `storage_dir` - The backend storage directory path
-/// * `artifact_names` - List of artifact names to remove
-///
-/// # Returns
-/// * `Ok(())` if all specified artifacts were removed (or didn't exist)
-/// * `Err` if removal failed for any artifact
-///
-/// # Example
-/// ```
-/// let storage = Path::new("/path/to/storage");
-/// cleanup_test_artifacts(&storage, &["artifact-1", "artifact-2"])?;
-/// ```
 #[allow(dead_code)]
 fn cleanup_test_artifacts(storage_dir: &Path, artifact_names: &[&str]) -> Result<()> {
     for artifact_name in artifact_names {
@@ -300,60 +197,31 @@ fn cleanup_test_artifacts(storage_dir: &Path, artifact_names: &[&str]) -> Result
     Ok(())
 }
 
-// =============================================================================
-// End-to-end tests
-// =============================================================================
-
-/// TEST-01: Programmatic invocation without TUI
-/// TEST-02: Single artifact creation with simple configuration
-/// TEST-03: Verify single artifact is actually created
-///
-/// This test demonstrates the complete end-to-end flow:
-/// - Load example configuration from flake.nix and backend.toml
-/// - Invoke headless API to generate a single artifact
-/// - Verify artifact files are generated correctly
-/// - Verify artifacts exist in backend storage
-///
-/// Uses the single-artifact-with-prompts scenario which has:
-/// - One NixOS machine with one artifact
-/// - Two prompts that populate two files
 #[test]
 #[serial]
 fn e2e_single_artifact_is_created() -> Result<()> {
-    // TEST-01: Programmatic invocation via headless API
+    let harness = TestHarness::load_example("scenarios/single-artifact-with-prompts")?;
 
-    // Load the example configuration
-    let (backend, make_config) = load_example("scenarios/single-artifact-with-prompts")?;
-
-    // TEST-02: Single artifact creation with simple configuration
-    // This scenario has exactly one artifact on one machine
-    let (artifact_name, artifact_def) = find_first_artifact(&make_config, "machine-name")
+    let (artifact_name, artifact_def) = harness.find_artifact("machine-name", None)
         .ok_or_else(|| anyhow::anyhow!("No artifacts found for machine-name"))?;
 
-    // Prepare prompt values
-    let prompt_values: PromptValues = BTreeMap::from([
+    let target_type = TargetType::NixOS { machine: "machine-name".to_string() };
+
+    let prompt_values: BTreeMap<String, String> = BTreeMap::from([
         ("secret1".to_string(), "test-secret-one".to_string()),
         ("secret2".to_string(), "test-secret-two".to_string()),
     ]);
 
-    // Generate the artifact using headless API with diagnostic capture
-    // Using the diagnostics version to capture info on failure
-    let (result, diagnostics) = generate_single_artifact_with_diagnostics_and_target_type(
+    let (result, diagnostics) = harness.generate_artifact_with_diagnostics(
         "machine-name",
         &artifact_def,
+        target_type.clone(),
         &prompt_values,
-        &backend,
-        &make_config,
-        TargetType::NixOS {
-            machine: "machine-name".to_string(),
-        },
-    );
+    )?;
 
-    // Handle result with diagnostic dump on failure
-    let result = match result {
-        Ok(r) => r,
-        Err(e) => {
-            // Dump diagnostics on failure
+    let result = match result.success {
+        true => result,
+        false => {
             let diag_dir = std::path::PathBuf::from("/tmp/artifacts_test_failures");
             let _ = std::fs::create_dir_all(&diag_dir);
             let diag_path = diag_dir.join(format!(
@@ -365,14 +233,13 @@ fn e2e_single_artifact_is_created() -> Result<()> {
             ));
             let _ = dump_test_diagnostics(&diagnostics, &diag_path);
             return Err(anyhow::anyhow!(
-                "Artifact generation failed: {}. Diagnostics dumped to: {}",
-                e,
+                "Artifact generation failed: {:?}. Diagnostics dumped to: {}",
+                result.error,
                 diag_path.display()
             ));
         }
     };
 
-    // Verify generation succeeded
     assert!(
         result.success,
         "Artifact generation should succeed. Error: {:?}",
@@ -381,27 +248,20 @@ fn e2e_single_artifact_is_created() -> Result<()> {
     assert_eq!(result.target, "machine-name");
     assert_eq!(result.artifact_name, artifact_name);
 
-    // Verify generated files exist (TEST-03: artifact actually created)
     assert!(
         !result.generated_file_contents.is_empty(),
         "Generated files should not be empty"
     );
 
-    // Verify the expected files were generated
     assert!(
-        result
-            .generated_file_contents
-            .contains_key("very-simple-secrets"),
+        result.generated_file_contents.contains_key("very-simple-secrets"),
         "Should generate very-simple-secrets file"
     );
     assert!(
-        result
-            .generated_file_contents
-            .contains_key("simple-secrets"),
+        result.generated_file_contents.contains_key("simple-secrets"),
         "Should generate simple-secrets file"
     );
 
-    // Verify file contents
     assert_eq!(
         result.generated_file_contents.get("very-simple-secrets"),
         Some(&"test-secret-one".to_string()),
@@ -413,49 +273,33 @@ fn e2e_single_artifact_is_created() -> Result<()> {
         "simple-secrets content should match expected value"
     );
 
-    // TEST-03 continued: Verify artifacts exist in backend storage
-    // The test backend stores artifacts in a flat structure
-    // For the test backend, we verify by checking the generator output was successful
-    // In a real backend (agenix, sops-nix), we would verify the encrypted file exists
-
     Ok(())
 }
 
-/// TEST-05: Verify artifact generation for multiple targets.
-/// Uses the multiple-machines scenario.
 #[test]
 #[serial]
 fn e2e_multiple_machines_artifacts_created() -> Result<()> {
-    let (backend, make_config) = load_example("scenarios/multiple-machines")?;
+    let harness = TestHarness::load_example("scenarios/multiple-machines")?;
 
-    // Get all machines
-    let machines: Vec<String> = make_config.nixos_map.keys().cloned().collect();
+    let machines: Vec<String> = harness.make.nixos_map.keys().cloned().collect();
     assert!(
         machines.len() >= 2,
         "Should have multiple machines for this test"
     );
 
-    // Track all results
     let mut all_succeeded = true;
-    let mut all_results: Vec<HeadlessArtifactResult> = Vec::new();
 
-    // Generate artifacts for each machine
     for machine_name in &machines {
         if let Some((_artifact_name, artifact_def)) =
-            find_first_artifact(&make_config, machine_name)
+            find_first_artifact(&harness.make, machine_name)
         {
-            // This scenario has no prompts
-            let prompt_values: PromptValues = BTreeMap::new();
+            let prompt_values: BTreeMap<String, String> = BTreeMap::new();
 
-            let result = generate_single_artifact_with_target_type(
+            let result = harness.generate_artifact(
                 machine_name,
                 &artifact_def,
+                TargetType::NixOS { machine: machine_name.clone() },
                 &prompt_values,
-                &backend,
-                &make_config,
-                TargetType::NixOS {
-                    machine: machine_name.clone(),
-                },
             )?;
 
             if !result.success {
@@ -465,57 +309,39 @@ fn e2e_multiple_machines_artifacts_created() -> Result<()> {
                     machine_name, result.error
                 );
             }
-
-            all_results.push(result);
         }
     }
 
-    // Verify all succeeded (TEST-06 - CI failure on artifact creation failure)
     assert!(
         all_succeeded,
-        "All artifacts should be created successfully. Had {} failures.",
-        all_results.iter().filter(|r| !r.success).count()
-    );
-
-    // Verify each machine has its artifact
-    assert!(
-        all_results.len() >= 2,
-        "Should generate artifacts for multiple machines"
+        "All artifacts should be created successfully"
     );
 
     Ok(())
 }
 
-/// Verify that artifacts without prompts work correctly.
 #[test]
 #[serial]
 fn e2e_no_prompts_artifact_creation() -> Result<()> {
-    let (backend, make_config) = load_example("scenarios/two-artifacts-no-prompts")?;
+    let harness = TestHarness::load_example("scenarios/two-artifacts-no-prompts")?;
 
-    // Get first machine
-    let machine_name = make_config
+    let machine_name = harness.make
         .nixos_map
         .keys()
         .next()
         .cloned()
         .ok_or_else(|| anyhow::anyhow!("No machines found"))?;
 
-    // Get first artifact (this scenario has no prompts)
-    let (_artifact_name, artifact_def) = find_first_artifact(&make_config, &machine_name)
+    let (_artifact_name, artifact_def) = harness.find_artifact(&machine_name, None)
         .ok_or_else(|| anyhow::anyhow!("No artifacts found"))?;
 
-    // Generate with empty prompts
-    let prompt_values: PromptValues = BTreeMap::new();
+    let prompt_values: BTreeMap<String, String> = BTreeMap::new();
 
-    let result = generate_single_artifact_with_target_type(
+    let result = harness.generate_artifact(
         &machine_name,
         &artifact_def,
+        TargetType::NixOS { machine: machine_name.clone() },
         &prompt_values,
-        &backend,
-        &make_config,
-        TargetType::NixOS {
-            machine: machine_name.clone(),
-        },
     )?;
 
     assert!(
@@ -531,66 +357,49 @@ fn e2e_no_prompts_artifact_creation() -> Result<()> {
     Ok(())
 }
 
-/// Verify artifact creation fails appropriately with missing prompts.
 #[test]
 #[serial]
 fn e2e_missing_prompts_fails() -> Result<()> {
-    let (backend, make_config) = load_example("scenarios/single-artifact-with-prompts")?;
+    let harness = TestHarness::load_example("scenarios/single-artifact-with-prompts")?;
 
-    let (_artifact_name, artifact_def) = find_first_artifact(&make_config, "machine-name")
+    let (_artifact_name, artifact_def) = harness.find_artifact("machine-name", None)
         .ok_or_else(|| anyhow::anyhow!("No artifacts found"))?;
 
-    // Try to generate without required prompts
-    let empty_prompts: PromptValues = BTreeMap::new();
+    let empty_prompts: BTreeMap<String, String> = BTreeMap::new();
 
-    // This should fail because prompts are required
-    let result = generate_single_artifact_with_target_type(
+    let result = harness.generate_artifact(
         "machine-name",
         &artifact_def,
+        TargetType::NixOS { machine: "machine-name".to_string() },
         &empty_prompts,
-        &backend,
-        &make_config,
-        TargetType::NixOS {
-            machine: "machine-name".to_string(),
-        },
-    );
+    )?;
 
-    // We expect this to either fail during generation or produce empty results
-    // The exact behavior depends on the generator script implementation
-    match result {
-        Ok(_artifact_result) => {
-            // If it succeeded, the files might be empty
-            // This is acceptable behavior - the generator reads from non-existent files
+    match result.success {
+        true => {
             eprintln!("Note: Generator succeeded with empty prompts (expected behavior)");
         }
-        Err(e) => {
-            eprintln!("Generation failed as expected with missing prompts: {}", e);
+        false => {
+            eprintln!("Generation failed as expected with missing prompts: {:?}", result.error);
         }
     }
 
     Ok(())
 }
 
-/// TEST-01: Programmatic invocation without TUI.
-/// Verify headless mode works without any terminal interaction.
 #[test]
 #[serial]
 fn e2e_headless_programmatic_invocation() -> Result<()> {
-    let (backend, make_config) = load_example("scenarios/two-artifacts-no-prompts")?;
+    let harness = TestHarness::load_example("scenarios/two-artifacts-no-prompts")?;
 
-    let machine_name = make_config.nixos_map.keys().next().cloned().unwrap();
+    let machine_name = harness.make.nixos_map.keys().next().cloned().unwrap();
 
-    let (_, artifact_def) = find_first_artifact(&make_config, &machine_name).unwrap();
+    let (_, artifact_def) = harness.find_artifact(&machine_name, None).unwrap();
 
-    let result = generate_single_artifact_with_target_type(
+    let result = harness.generate_artifact(
         &machine_name,
         &artifact_def,
+        TargetType::NixOS { machine: machine_name.clone() },
         &BTreeMap::new(),
-        &backend,
-        &make_config,
-        TargetType::NixOS {
-            machine: machine_name.clone(),
-        },
     )?;
 
     assert!(result.success, "Headless generation should work");
@@ -598,11 +407,6 @@ fn e2e_headless_programmatic_invocation() -> Result<()> {
     Ok(())
 }
 
-// =============================================================================
-// Home-Manager Only Tests
-// =============================================================================
-
-/// Test that home-manager-only configuration loads correctly.
 #[test]
 #[serial]
 fn e2e_home_manager_only_config_loads() -> Result<()> {
@@ -617,39 +421,34 @@ fn e2e_home_manager_only_config_loads() -> Result<()> {
     Ok(())
 }
 
-/// Test that home-manager artifacts can be generated using headless API.
 #[test]
 #[serial]
 fn e2e_home_manager_artifact_generation() -> Result<()> {
-    let (backend, make_config) = load_example("scenarios/home-manager-only")?;
+    let harness = TestHarness::load_example("scenarios/home-manager-only")?;
 
-    let user_name = make_config
+    let user_name = harness.make
         .home_map
         .keys()
         .next()
         .cloned()
         .expect("Should have at least one user");
 
-    let (_artifact_name, artifact_def) = find_first_home_artifact(&make_config, &user_name)
+    let (_artifact_name, artifact_def) = harness.find_artifact(&user_name, None)
         .expect("Should have at least one artifact");
 
-    let prompt_values: PromptValues = BTreeMap::new();
+    let prompt_values: BTreeMap<String, String> = BTreeMap::new();
 
-    let (result, diagnostics) = generate_single_artifact_with_diagnostics_and_target_type(
+    let (result, diagnostics) = harness.generate_artifact_with_diagnostics(
         &user_name,
         &artifact_def,
+        TargetType::HomeManager { username: user_name.clone() },
         &prompt_values,
-        &backend,
-        &make_config,
-        TargetType::HomeManager {
-            username: user_name.clone(),
-        },
-    );
+    )?;
 
     insta::with_settings!({
         filters => [
             (r"/nix/store/[a-z0-9]+-", "/nix/store/HASH-"),
-            (r"/tmp/artifacts-headless_[a-z0-9]+", "/tmp/artifacts-headless-TMP"),
+            (r"/tmp/[^/]+/storage", "/tmp/REDACTED/storage"),
             (r"CARGO_[A-Z_]+: [^\n]+,\n\s*", ""),
             (r"CARGO_[A-Z_]+: [^\n]+\n", ""),
         ]
@@ -659,13 +458,12 @@ fn e2e_home_manager_artifact_generation() -> Result<()> {
             .collect();
         let mut diag = diagnostics.clone();
         diag.environment_vars = env_vars.into_iter().map(|(k, v)| (k.clone(), v.clone())).collect();
-        insta::assert_debug_snapshot!((make_config, result, diag));
+        insta::assert_debug_snapshot!((&harness.make, result, diag));
     });
 
     Ok(())
 }
 
-/// Test configuration structure comparison between nixos-only and home-manager-only.
 #[test]
 #[serial]
 fn e2e_config_structure_comparison() -> Result<()> {

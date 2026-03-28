@@ -14,16 +14,32 @@
 //! - These tests: cargo test --test tests e2e_config
 //! - Specific test: cargo test --test tests e2e_config_nixos_check_sets_config
 
+use crate::common::{setup_test_storage, CleanupGuard};
 use anyhow::Result;
 use artifacts::app::model::TargetType;
 use artifacts::backend::serialization::{
     run_check_serialization, run_serialize, run_shared_check_serialization, run_shared_serialize,
 };
+use artifacts::config::backend::BackendConfiguration;
+use artifacts::config::nix::build_make_from_flake;
 use serial_test::serial;
+use std::path::PathBuf;
 use tempfile::TempDir;
 
-// Re-use helpers from parent module
-use super::{CleanupGuard, load_example, setup_test_storage};
+fn project_root() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+}
+
+fn load_example(name: &str) -> Result<(BackendConfiguration, artifacts::config::make::MakeConfiguration)> {
+    let example_dir = project_root().join("examples").join(name);
+
+    let backend = BackendConfiguration::read_backend_config(&example_dir.join("backend.toml"))?;
+
+    let make_path = build_make_from_flake(&example_dir)?;
+    let make = artifacts::config::make::MakeConfiguration::read_make_config(&make_path)?;
+
+    Ok((backend, make))
+}
 
 fn find_first_nixos_artifact(
     make_config: &artifacts::config::make::MakeConfiguration,
