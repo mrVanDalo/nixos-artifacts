@@ -26,7 +26,7 @@ use tokio_util::sync::CancellationToken;
 
 use crate::app::effect::Effect;
 use crate::app::message::{Message, ScriptOutput};
-use crate::app::model::{ArtifactStatus, OutputStream, TargetType};
+use crate::app::model::{ArtifactStatus, TargetType};
 use crate::backend;
 use crate::config::backend::BackendConfiguration;
 use crate::config::make::{ArtifactDef, MakeConfiguration};
@@ -92,28 +92,6 @@ impl BackgroundEffectHandler {
     /// This allows the handler to send OutputLine messages during script execution.
     pub fn set_result_sender(&mut self, sender: UnboundedSender<Message>) {
         self.result_tx = Some(sender);
-    }
-
-    /// Send an output line to the TUI via the result channel.
-    /// Kept for future use - currently output is batched at end of script execution
-    /// but we may switch to streaming output in a future phase (see Phase 20: Output Streaming)
-    #[allow(dead_code)]
-    fn send_output_line(
-        &self,
-        artifact_index: usize,
-        stream: OutputStream,
-        content: String,
-    ) -> bool {
-        if let Some(ref tx) = self.result_tx {
-            tx.send(Message::OutputLine {
-                artifact_index,
-                stream,
-                content,
-            })
-            .is_ok()
-        } else {
-            false
-        }
     }
 
     // -------------------------------------------------------------------------

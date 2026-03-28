@@ -14,7 +14,6 @@ pub enum MockCommand {
 }
 
 /// Mock result for testing channel communication
-#[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq)]
 pub enum MockResult {
     CheckFinished {

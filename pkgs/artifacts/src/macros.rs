@@ -40,7 +40,3 @@ macro_rules! string_vec {
         vec![$($x.to_string()),*]
     };
 }
-
-// Allow the file to compile even if not directly referenced besides the macro export
-#[allow(dead_code)]
-const _MACROS_RS: () = ();

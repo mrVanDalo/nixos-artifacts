@@ -76,10 +76,9 @@ struct ScriptInfo<'a> {
 }
 
 /// Handle the output from a script execution, converting ScriptErrors to CheckResults
-#[allow(unused_variables)]
 fn handle_check_output(
     result: Result<CapturedOutput, ScriptError>,
-    artifact_name: &str,
+    _artifact_name: &str,
 ) -> Result<CheckResult> {
     match result {
         Ok(out) => {
@@ -385,17 +384,6 @@ fn make_failed_result(stderr: String) -> CheckResult {
         needs_generation: true,
         output,
     }
-}
-
-/// Verify output succeeded, bail on failure.
-/// Helper function for ergonomic Result propagation in scripts.
-/// Kept for future use - Phase 22 will refactor serialization to use this pattern.
-#[allow(dead_code)]
-fn verify_output_succeeded(output: &CapturedOutput, script_name: &str) -> Result<()> {
-    if !output.exit_success {
-        bail!("{} script failed with non-zero exit status", script_name);
-    }
-    Ok(())
 }
 
 /// Write input files for check_serialization
