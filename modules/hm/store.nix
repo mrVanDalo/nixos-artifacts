@@ -20,6 +20,12 @@ with types;
               description = "The name of the artifact";
             };
 
+            description = mkOption {
+              type = nullOr str;
+              default = null;
+              description = "Optional description of the artifact for documentation purposes.";
+            };
+
             files = mkOption {
               type = attrsOf (
                 submodule (
