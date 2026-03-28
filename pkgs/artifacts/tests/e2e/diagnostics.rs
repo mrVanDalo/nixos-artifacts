@@ -44,18 +44,22 @@ use tempfile::TempDir;
 fn e2e_diagnostic_capture_complete() -> Result<()> {
     let harness = TestHarness::load_example("scenarios/single-artifact-with-prompts")?;
 
-    let (artifact_name, artifact_def) = harness.find_artifact("machine-name", None)
+    let (artifact_name, artifact_def) = harness
+        .find_artifact("machine-name", None)
         .ok_or_else(|| anyhow::anyhow!("No artifacts found"))?;
 
-    let prompt_values: std::collections::BTreeMap<String, String> = std::collections::BTreeMap::from([
-        ("secret1".to_string(), "test-secret-one".to_string()),
-        ("secret2".to_string(), "test-secret-two".to_string()),
-    ]);
+    let prompt_values: std::collections::BTreeMap<String, String> =
+        std::collections::BTreeMap::from([
+            ("secret1".to_string(), "test-secret-one".to_string()),
+            ("secret2".to_string(), "test-secret-two".to_string()),
+        ]);
 
     let (result, diagnostics) = harness.generate_artifact_with_diagnostics(
         "machine-name",
         &artifact_def,
-        TargetType::NixOS { machine: "machine-name".to_string() },
+        TargetType::NixOS {
+            machine: "machine-name".to_string(),
+        },
         &prompt_values,
     )?;
 
@@ -96,21 +100,25 @@ fn e2e_diagnostic_capture_complete() -> Result<()> {
 fn e2e_diagnostic_capture_on_failure() -> Result<()> {
     let harness = TestHarness::load_example("scenarios/single-artifact-with-prompts")?;
 
-    let (_, artifact_def) = harness.find_artifact("machine-name", None)
+    let (_, artifact_def) = harness
+        .find_artifact("machine-name", None)
         .ok_or_else(|| anyhow::anyhow!("No artifacts found"))?;
 
     let mut invalid_artifact = artifact_def.clone();
     invalid_artifact.generator = "/nonexistent/generator.sh".to_string();
 
-    let prompt_values: std::collections::BTreeMap<String, String> = std::collections::BTreeMap::from([
-        ("secret1".to_string(), "test-secret-one".to_string()),
-        ("secret2".to_string(), "test-secret-two".to_string()),
-    ]);
+    let prompt_values: std::collections::BTreeMap<String, String> =
+        std::collections::BTreeMap::from([
+            ("secret1".to_string(), "test-secret-one".to_string()),
+            ("secret2".to_string(), "test-secret-two".to_string()),
+        ]);
 
     let (result, diagnostics) = harness.generate_artifact_with_diagnostics(
         "machine-name",
         &invalid_artifact,
-        TargetType::NixOS { machine: "machine-name".to_string() },
+        TargetType::NixOS {
+            machine: "machine-name".to_string(),
+        },
         &prompt_values,
     )?;
 
@@ -147,18 +155,22 @@ fn e2e_diagnostic_dump_functionality() -> Result<()> {
     let diag_path = temp_dir.path().join("diagnostics.txt");
 
     let harness = TestHarness::load_example("scenarios/single-artifact-with-prompts")?;
-    let (_, artifact_def) = harness.find_artifact("machine-name", None)
+    let (_, artifact_def) = harness
+        .find_artifact("machine-name", None)
         .ok_or_else(|| anyhow::anyhow!("No artifacts found"))?;
 
-    let prompt_values: std::collections::BTreeMap<String, String> = std::collections::BTreeMap::from([
-        ("secret1".to_string(), "test-secret-one".to_string()),
-        ("secret2".to_string(), "test-secret-two".to_string()),
-    ]);
+    let prompt_values: std::collections::BTreeMap<String, String> =
+        std::collections::BTreeMap::from([
+            ("secret1".to_string(), "test-secret-one".to_string()),
+            ("secret2".to_string(), "test-secret-two".to_string()),
+        ]);
 
     let (result, diagnostics) = harness.generate_artifact_with_diagnostics(
         "machine-name",
         &artifact_def,
-        TargetType::NixOS { machine: "machine-name".to_string() },
+        TargetType::NixOS {
+            machine: "machine-name".to_string(),
+        },
         &prompt_values,
     )?;
 

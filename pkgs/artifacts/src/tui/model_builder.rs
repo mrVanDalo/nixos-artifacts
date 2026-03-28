@@ -80,7 +80,8 @@ pub fn build_model(make: &MakeConfiguration) -> Model {
         (ListEntry::Shared(_), ListEntry::Single(_)) => std::cmp::Ordering::Less,
         (ListEntry::Single(_), ListEntry::Shared(_)) => std::cmp::Ordering::Greater,
         (ListEntry::Single(ea), ListEntry::Single(eb)) => {
-            (ea.target_type.target_name(), &ea.artifact.name).cmp(&(eb.target_type.target_name(), &eb.artifact.name))
+            (ea.target_type.target_name(), &ea.artifact.name)
+                .cmp(&(eb.target_type.target_name(), &eb.artifact.name))
         }
     });
 

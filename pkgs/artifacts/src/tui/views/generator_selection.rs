@@ -162,9 +162,7 @@ pub fn render_generator_selection(frame: &mut Frame, state: &SelectGeneratorStat
 
     let target_lines = format_all_targets(&state.nixos_targets, &state.home_targets, 10);
     if target_lines.is_empty() {
-        items.push(ListItem::new(Line::from(Span::raw(
-            "  (none)",
-        ))));
+        items.push(ListItem::new(Line::from(Span::raw("  (none)"))));
     } else {
         for line in target_lines {
             items.push(ListItem::new(Line::from(Span::raw(line))));
@@ -184,9 +182,9 @@ pub fn render_generator_selection(frame: &mut Frame, state: &SelectGeneratorStat
         .title(title)
         .title_style(Style::default().add_modifier(Modifier::BOLD));
 
-    let list = List::new(items).block(block).highlight_style(
-        Style::default().add_modifier(Modifier::BOLD),
-    );
+    let list = List::new(items)
+        .block(block)
+        .highlight_style(Style::default().add_modifier(Modifier::BOLD));
 
     let visual_index = calculate_visual_index(state, block_inner_width);
 

@@ -13,11 +13,7 @@ pub fn render_chronological_log(
     state: &ChronologicalLogState,
     area: Rect,
 ) {
-    let chunks = Layout::vertical([
-        Constraint::Length(3),
-        Constraint::Min(0),
-    ])
-    .split(area);
+    let chunks = Layout::vertical([Constraint::Length(3), Constraint::Min(0)]).split(area);
 
     render_header(frame, state, chunks[0]);
     render_log_sections(frame, model, state, chunks[1]);
@@ -32,10 +28,7 @@ fn render_header(frame: &mut Frame, state: &ChronologicalLogState, area: Rect) {
         Span::raw("(Press 'q' to return, 'e' to expand all, 'c' to collapse all)"),
     ])];
 
-    let header = Paragraph::new(header_text).block(
-        Block::default()
-            .borders(Borders::ALL),
-    );
+    let header = Paragraph::new(header_text).block(Block::default().borders(Borders::ALL));
 
     frame.render_widget(header, area);
 }
@@ -52,11 +45,7 @@ fn render_log_sections(
         return;
     };
 
-    let chunks = Layout::vertical([
-        Constraint::Min(0),
-        Constraint::Length(1),
-    ])
-    .split(area);
+    let chunks = Layout::vertical([Constraint::Min(0), Constraint::Length(1)]).split(area);
 
     render_scrollable_content(frame, state, step_logs, chunks[0]);
     render_legend(frame, chunks[1]);
@@ -90,30 +79,15 @@ fn render_scrollable_content(
 
 fn render_legend(frame: &mut Frame, area: Rect) {
     let legend_text = Line::from(vec![
-        Span::styled(
-            "Space/Enter",
-            Style::default().add_modifier(Modifier::BOLD),
-        ),
+        Span::styled("Space/Enter", Style::default().add_modifier(Modifier::BOLD)),
         Span::raw(": Toggle  "),
-        Span::styled(
-            "+/-",
-            Style::default().add_modifier(Modifier::BOLD),
-        ),
+        Span::styled("+/-", Style::default().add_modifier(Modifier::BOLD)),
         Span::raw(": Expand/Collapse  "),
-        Span::styled(
-            "j/k",
-            Style::default().add_modifier(Modifier::BOLD),
-        ),
+        Span::styled("j/k", Style::default().add_modifier(Modifier::BOLD)),
         Span::raw(": Navigate  "),
-        Span::styled(
-            "PgUp/PgDn",
-            Style::default().add_modifier(Modifier::BOLD),
-        ),
+        Span::styled("PgUp/PgDn", Style::default().add_modifier(Modifier::BOLD)),
         Span::raw(": Scroll  "),
-        Span::styled(
-            "Esc/q",
-            Style::default().add_modifier(Modifier::BOLD),
-        ),
+        Span::styled("Esc/q", Style::default().add_modifier(Modifier::BOLD)),
         Span::raw(": Back"),
     ]);
 

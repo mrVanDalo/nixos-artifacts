@@ -61,7 +61,8 @@ fn find_machine_artifact(
     machine_name: &str,
     artifact_name: &str,
 ) -> Option<ArtifactDef> {
-    harness.make
+    harness
+        .make
         .nixos_map
         .get(machine_name)
         .and_then(|artifacts| artifacts.get(artifact_name))
@@ -128,7 +129,9 @@ fn e2e_shared_artifact_generation() -> Result<()> {
     let result = harness.generate_artifact(
         &machine_one,
         &shared_def,
-        TargetType::NixOS { machine: machine_one.clone() },
+        TargetType::NixOS {
+            machine: machine_one.clone(),
+        },
         &prompt_values,
     )?;
 
@@ -157,13 +160,18 @@ fn e2e_shared_artifact_generation() -> Result<()> {
     );
 
     let storage_path = harness.temp_dir.path().join("storage");
-    let artifact_file = verify_artifact_exists(&storage_path, &machine_one, "shared-secret", "shared-key")
-        .with_context(|| {
-            format!(
-                "Shared artifact 'shared-secret' should exist in backend storage for machine '{}'",
-                machine_one
-            )
-        })?;
+    let artifact_file = verify_artifact_exists(
+        &storage_path,
+        &machine_one,
+        "shared-secret",
+        "shared-key",
+    )
+    .with_context(|| {
+        format!(
+            "Shared artifact 'shared-secret' should exist in backend storage for machine '{}'",
+            machine_one
+        )
+    })?;
 
     let content = fs::read_to_string(&artifact_file)?;
     assert_eq!(
@@ -206,7 +214,9 @@ fn e2e_shared_artifact_multi_machine() -> Result<()> {
     let result1 = harness.generate_artifact(
         &machine_one,
         &shared_def,
-        TargetType::NixOS { machine: machine_one.clone() },
+        TargetType::NixOS {
+            machine: machine_one.clone(),
+        },
         &prompt_values,
     )?;
 
@@ -218,7 +228,9 @@ fn e2e_shared_artifact_multi_machine() -> Result<()> {
     let result2 = harness.generate_artifact(
         &machine_two,
         &shared_def,
-        TargetType::NixOS { machine: machine_two.clone() },
+        TargetType::NixOS {
+            machine: machine_two.clone(),
+        },
         &prompt_values,
     )?;
 
@@ -258,7 +270,8 @@ fn e2e_shared_artifact_multi_machine() -> Result<()> {
 fn e2e_shared_artifact_single_instance() -> Result<()> {
     let harness = TestHarness::load_example("scenarios/shared-artifacts")?;
 
-    let machine_one = harness.make
+    let machine_one = harness
+        .make
         .nixos_map
         .keys()
         .find(|k| *k == "machine-one")
@@ -273,7 +286,9 @@ fn e2e_shared_artifact_single_instance() -> Result<()> {
     let result = harness.generate_artifact(
         &machine_one,
         &shared_def,
-        TargetType::NixOS { machine: machine_one.clone() },
+        TargetType::NixOS {
+            machine: machine_one.clone(),
+        },
         &prompt_values,
     )?;
 
@@ -298,14 +313,16 @@ fn e2e_shared_artifact_single_instance() -> Result<()> {
 fn e2e_shared_vs_machine_artifacts() -> Result<()> {
     let harness = TestHarness::load_example("scenarios/shared-artifacts")?;
 
-    let machine_one = harness.make
+    let machine_one = harness
+        .make
         .nixos_map
         .keys()
         .find(|k| *k == "machine-one")
         .cloned()
         .ok_or_else(|| anyhow::anyhow!("machine-one not found"))?;
 
-    let machine_two = harness.make
+    let machine_two = harness
+        .make
         .nixos_map
         .keys()
         .find(|k| *k == "machine-two")
@@ -341,7 +358,9 @@ fn e2e_shared_vs_machine_artifacts() -> Result<()> {
     let shared_result = harness.generate_artifact(
         &machine_one,
         &shared_def,
-        TargetType::NixOS { machine: machine_one.clone() },
+        TargetType::NixOS {
+            machine: machine_one.clone(),
+        },
         &prompt_values,
     )?;
     assert!(
@@ -352,7 +371,9 @@ fn e2e_shared_vs_machine_artifacts() -> Result<()> {
     let local_one_result = harness.generate_artifact(
         &machine_one,
         &local_one,
-        TargetType::NixOS { machine: machine_one.clone() },
+        TargetType::NixOS {
+            machine: machine_one.clone(),
+        },
         &prompt_values,
     )?;
     assert!(
@@ -363,7 +384,9 @@ fn e2e_shared_vs_machine_artifacts() -> Result<()> {
     let local_two_result = harness.generate_artifact(
         &machine_two,
         &local_two,
-        TargetType::NixOS { machine: machine_two.clone() },
+        TargetType::NixOS {
+            machine: machine_two.clone(),
+        },
         &prompt_values,
     )?;
     assert!(
@@ -441,7 +464,9 @@ fn e2e_shared_artifact_consistency() -> Result<()> {
     let result1 = harness.generate_artifact(
         &machine_one,
         &shared_def,
-        TargetType::NixOS { machine: machine_one.clone() },
+        TargetType::NixOS {
+            machine: machine_one.clone(),
+        },
         &prompt_values,
     )?;
     assert!(result1.success, "Generation for machine-one should succeed");
@@ -449,7 +474,9 @@ fn e2e_shared_artifact_consistency() -> Result<()> {
     let result2 = harness.generate_artifact(
         &machine_two,
         &shared_def,
-        TargetType::NixOS { machine: machine_two.clone() },
+        TargetType::NixOS {
+            machine: machine_two.clone(),
+        },
         &prompt_values,
     )?;
     assert!(result2.success, "Generation for machine-two should succeed");

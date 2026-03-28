@@ -135,7 +135,10 @@ fn render_log_panel(frame: &mut Frame, model: &Model, area: Rect) {
             } else {
                 lines.push(Line::from(vec![
                     Span::styled("⚠ ", Style::default().add_modifier(Modifier::BOLD)),
-                    Span::styled("CONFIGURATION ERROR", Style::default().add_modifier(Modifier::BOLD)),
+                    Span::styled(
+                        "CONFIGURATION ERROR",
+                        Style::default().add_modifier(Modifier::BOLD),
+                    ),
                 ]));
             }
             lines.push(Line::from(vec![
@@ -150,17 +153,12 @@ fn render_log_panel(frame: &mut Frame, model: &Model, area: Rect) {
                 )]));
                 for line in output.lines() {
                     if !line.is_empty() {
-                        lines.push(Line::from(vec![
-                            Span::raw("  "),
-                            Span::raw(line),
-                        ]));
+                        lines.push(Line::from(vec![Span::raw("  "), Span::raw(line)]));
                     }
                 }
             }
 
-            lines.push(Line::from(Span::raw(
-                "─".repeat(area.width as usize),
-            )));
+            lines.push(Line::from(Span::raw("─".repeat(area.width as usize))));
         }
     }
 

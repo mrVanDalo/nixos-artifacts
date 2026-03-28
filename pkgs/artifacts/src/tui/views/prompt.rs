@@ -74,8 +74,8 @@ fn render_input(frame: &mut Frame, state: &PromptState, area: Rect) {
             .map(|line| Line::from(line.to_string()))
             .collect();
 
-        let input = Paragraph::new(lines)
-            .block(Block::default().borders(Borders::ALL).title(title));
+        let input =
+            Paragraph::new(lines).block(Block::default().borders(Borders::ALL).title(title));
 
         frame.render_widget(input, area);
     } else {
