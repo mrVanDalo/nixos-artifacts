@@ -170,7 +170,7 @@ async fn run_tui(backend_path: &Path, make_path: &Path) -> Result<()> {
                 .filter_map(|entry| match entry {
                     crate::app::model::ListEntry::Single(a) => match &a.status {
                         crate::app::model::ArtifactStatus::Failed { error, .. } => {
-                            let target = a.target_type.target_name().unwrap_or("unknown");
+                            let target = a.target_type.target_name();
                             Some(format!("{}/{}: {}", target, a.artifact.name, error))
                         }
                         _ => None,

@@ -55,11 +55,7 @@ impl ModelState {
                 .iter()
                 .map(|entry| match entry {
                     ListEntry::Single(single) => ArtifactState {
-                        target: single
-                            .target_type
-                            .target_name()
-                            .unwrap_or("shared")
-                            .to_string(),
+                        target: single.target_type.target_name().to_string(),
                         name: single.artifact.name.clone(),
                         status: normalize_status(format!("{:?}", single.status)),
                         target_type: single.target_type.context_str(),

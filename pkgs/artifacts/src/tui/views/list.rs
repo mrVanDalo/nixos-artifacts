@@ -34,9 +34,8 @@ fn render_artifact_list_panel(frame: &mut Frame, model: &Model, area: Rect) {
                     let target_type_icon = match &single.target_type {
                         TargetType::NixOS { .. } => "N",
                         TargetType::HomeManager { .. } => "H",
-                        TargetType::Shared { .. } => "S",
                     };
-                    let target_name = single.target_type.target_name().unwrap_or("unknown");
+                    let target_name = single.target_type.target_name();
                     let mut spans = vec![
                         Span::styled(icon, style),
                         Span::raw(" "),
@@ -111,7 +110,7 @@ fn render_log_panel(frame: &mut Frame, model: &Model, area: Rect) {
     let title = match selected_entry {
         Some(ListEntry::Single(entry)) => format!(
             "Logs: {}/{}",
-            entry.target_type.target_name().unwrap_or("unknown"),
+            entry.target_type.target_name(),
             entry.artifact.name
         ),
         Some(ListEntry::Shared(entry)) => format!("Logs: {}", entry.info.artifact_name),

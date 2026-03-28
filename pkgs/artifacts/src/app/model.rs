@@ -81,22 +81,18 @@ pub struct ArtifactEntry {
     pub step_logs: StepLogs,
 }
 
-/// Target type for artifact entries.
+/// Target type for single artifact entries.
 ///
-/// Determines the context (NixOS vs home-manager vs shared) and affects
+/// Determines the context (NixOS vs home-manager) and affects
 /// how artifacts are serialized and which environment variables
-/// are passed to scripts.
+/// are passed to scripts. Shared artifacts are handled separately
+/// via `SharedEntry` which contains target lists.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum TargetType {
     /// NixOS machine configuration
     NixOS { machine: String },
     /// Home-manager user configuration
     HomeManager { username: String },
-    /// Shared artifact across multiple machines/users
-    Shared {
-        nixos_targets: Vec<String>,
-        home_targets: Vec<String>,
-    },
 }
 
 impl TargetType {
@@ -104,19 +100,13 @@ impl TargetType {
         match self {
             Self::NixOS { .. } => "nixos",
             Self::HomeManager { .. } => "homemanager",
-            Self::Shared { .. } => "shared",
         }
     }
 
-    pub fn is_shared(&self) -> bool {
-        matches!(self, Self::Shared { .. })
-    }
-
-    pub fn target_name(&self) -> Option<&str> {
+    pub fn target_name(&self) -> &str {
         match self {
-            Self::NixOS { machine } => Some(machine),
-            Self::HomeManager { username } => Some(username),
-            Self::Shared { .. } => None,
+            Self::NixOS { machine } => machine,
+            Self::HomeManager { username } => username,
         }
     }
 }
@@ -633,10 +623,10 @@ impl ListEntry {
         matches!(self, ListEntry::Shared(_))
     }
 
-    pub fn target_type(&self) -> &TargetType {
+    pub fn target_type(&self) -> Option<&TargetType> {
         match self {
-            ListEntry::Single(entry) => &entry.target_type,
-            ListEntry::Shared(entry) => &entry.target_type,
+            ListEntry::Single(entry) => Some(&entry.target_type),
+            ListEntry::Shared(_) => None,
         }
     }
 }
@@ -644,8 +634,6 @@ impl ListEntry {
 /// A shared artifact entry in the list
 #[derive(Debug, Clone)]
 pub struct SharedEntry {
-    /// Target type containing nixos_targets and home_targets
-    pub target_type: TargetType,
     /// Shared artifact info (artifact name, generators, backend, prompts, files)
     pub info: SharedArtifactInfo,
     pub status: ArtifactStatus,
@@ -739,13 +727,18 @@ mod tests {
             .context_str(),
             "homemanager"
         );
-        assert_eq!(
-            TargetType::Shared {
-                nixos_targets: vec![],
-                home_targets: vec![]
-            }
-            .context_str(),
-            "shared"
-        );
+    }
+
+    #[test]
+    fn test_target_type_target_name() {
+        let nixos = TargetType::NixOS {
+            machine: "my-machine".to_string(),
+        };
+        assert_eq!(nixos.target_name(), "my-machine");
+
+        let home = TargetType::HomeManager {
+            username: "alice@host".to_string(),
+        };
+        assert_eq!(home.target_name(), "alice@host");
     }
 }

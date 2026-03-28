@@ -182,7 +182,7 @@ fn get_serialize_script<'a>(entry: &'a BackendEntry, target_type: &TargetType) -
             script_path: entry.serialize_script(crate::config::backend::TargetType::Home),
             script_name: "home_serialize",
         },
-        TargetType::NixOS { .. } | TargetType::Shared { .. } => ScriptInfo {
+        TargetType::NixOS { .. } => ScriptInfo {
             script_path: entry.serialize_script(crate::config::backend::TargetType::NixOS),
             script_name: "nixos_serialize",
         },
@@ -196,7 +196,7 @@ fn get_check_script<'a>(entry: &'a BackendEntry, target_type: &TargetType) -> Sc
             script_path: entry.check_script(crate::config::backend::TargetType::Home),
             script_name: "home_check_serialization",
         },
-        TargetType::NixOS { .. } | TargetType::Shared { .. } => ScriptInfo {
+        TargetType::NixOS { .. } => ScriptInfo {
             script_path: entry.check_script(crate::config::backend::TargetType::NixOS),
             script_name: "nixos_check_serialization",
         },
@@ -228,9 +228,6 @@ fn build_serialize_command(
         }
         TargetType::NixOS { machine } => {
             cmd.env("machine", machine);
-        }
-        TargetType::Shared { .. } => {
-            // Shared artifacts use shared_serialize, not this path
         }
     }
 
@@ -266,9 +263,6 @@ fn build_check_command(
         }
         TargetType::NixOS { machine } => {
             cmd.env("machine", machine);
-        }
-        TargetType::Shared { .. } => {
-            // Shared artifacts use shared_check_serialization, not this path
         }
     }
 
@@ -486,11 +480,7 @@ pub fn run_serialize(
         script_path,
     )?;
 
-    let target_name = target_type.target_name().ok_or_else(|| {
-        anyhow::anyhow!(
-            "run_serialize called with Shared target type - use run_shared_serialize instead"
-        )
-    })?;
+    let target_name = target_type.target_name();
     let (_config_dir, config_file) =
         build_config_json(make, target_name, backend_name, &artifact.name)?;
 
@@ -514,7 +504,6 @@ pub fn run_serialize(
         TargetType::NixOS { .. } => {
             log_debug!("  environment: machine=\"{}\"", target_name);
         }
-        TargetType::Shared { .. } => {}
     }
 
     let mut cmd = build_serialize_command(
@@ -707,9 +696,7 @@ pub fn run_check_serialization(
         )
     })?;
 
-    let target_name = target_type.target_name().ok_or_else(|| {
-        anyhow::anyhow!("run_check_serialization called with Shared target type - use run_shared_check_serialization instead")
-    })?;
+    let target_name = target_type.target_name();
     let inputs = TempFile::new_dir_with_name(&format!("inputs-{}", artifact.name))?;
     let (_config_dir, config_file) =
         build_config_json(make, target_name, backend_name, &artifact.name)?;
@@ -743,7 +730,6 @@ pub fn run_check_serialization(
         TargetType::NixOS { .. } => {
             log_debug!("  environment: machine=\"{}\"", target_name);
         }
-        TargetType::Shared { .. } => {}
     }
 
     let mut cmd = build_check_command(

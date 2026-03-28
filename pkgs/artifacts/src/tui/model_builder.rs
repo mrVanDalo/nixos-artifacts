@@ -65,10 +65,6 @@ pub fn build_model(make: &MakeConfiguration) -> Model {
         };
 
         entries.push(ListEntry::Shared(SharedEntry {
-            target_type: TargetType::Shared {
-                nixos_targets: shared_info.nixos_targets.clone(),
-                home_targets: shared_info.home_targets.clone(),
-            },
             info: shared_info,
             status,
             step_logs: StepLogs::default(),
@@ -84,9 +80,7 @@ pub fn build_model(make: &MakeConfiguration) -> Model {
         (ListEntry::Shared(_), ListEntry::Single(_)) => std::cmp::Ordering::Less,
         (ListEntry::Single(_), ListEntry::Shared(_)) => std::cmp::Ordering::Greater,
         (ListEntry::Single(ea), ListEntry::Single(eb)) => {
-            let a_target = ea.target_type.target_name().unwrap_or("shared");
-            let b_target = eb.target_type.target_name().unwrap_or("shared");
-            (a_target, &ea.artifact.name).cmp(&(b_target, &eb.artifact.name))
+            (ea.target_type.target_name(), &ea.artifact.name).cmp(&(eb.target_type.target_name(), &eb.artifact.name))
         }
     });
 
@@ -272,15 +266,15 @@ mod tests {
 
         // Should be sorted: alice@desktop/gpg-key, machine-one/ssh-key, machine-two/api-token
         assert_eq!(
-            model.entries[0].target_type().target_name().unwrap(),
+            model.entries[0].target_type().unwrap().target_name(),
             "alice@desktop"
         );
         assert_eq!(
-            model.entries[1].target_type().target_name().unwrap(),
+            model.entries[1].target_type().unwrap().target_name(),
             "machine-one"
         );
         assert_eq!(
-            model.entries[2].target_type().target_name().unwrap(),
+            model.entries[2].target_type().unwrap().target_name(),
             "machine-two"
         );
     }

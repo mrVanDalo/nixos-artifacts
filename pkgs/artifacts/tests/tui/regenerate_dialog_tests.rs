@@ -91,10 +91,6 @@ fn make_test_model_with_new_artifact() -> Model {
 
 fn make_shared_entry(status: ArtifactStatus) -> SharedEntry {
     SharedEntry {
-        target_type: TargetType::Shared {
-            nixos_targets: vec!["machine-one".to_string(), "machine-two".to_string()],
-            home_targets: vec![],
-        },
         info: SharedArtifactInfo {
             artifact_name: "shared-secret".to_string(),
             description: None,
