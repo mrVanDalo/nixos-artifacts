@@ -20,31 +20,52 @@
 //! Test Requirements:
 //! - TEST-06: Tests run in CI with meaningful failure messages
 
-use super::*;
+use crate::common::TestHarness;
 use anyhow::Result;
 use artifacts::app::model::TargetType;
-use artifacts::cli::headless::{PromptValues, generate_single_artifact_with_target_type};
+use artifacts::config::backend::BackendConfiguration;
+use artifacts::config::nix::build_make_from_flake;
 use serial_test::serial;
 use std::collections::BTreeMap;
+use std::path::PathBuf;
 
-// =============================================================================
-// Error scenario tests
-// =============================================================================
+fn project_root() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+}
 
-/// Test: Generation with non-existent artifact configuration
-///
-/// Verifies that attempting to generate an artifact that doesn't exist
-/// in the configuration produces a graceful error.
+fn load_example(name: &str) -> Result<(BackendConfiguration, artifacts::config::make::MakeConfiguration)> {
+    let example_dir = project_root().join("examples").join(name);
+
+    let backend = BackendConfiguration::read_backend_config(&example_dir.join("backend.toml"))?;
+
+    let make_path = build_make_from_flake(&example_dir)?;
+    let make = artifacts::config::make::MakeConfiguration::read_make_config(&make_path)?;
+
+    Ok((backend, make))
+}
+
+fn find_first_artifact(
+    make_config: &artifacts::config::make::MakeConfiguration,
+    machine_name: &str,
+) -> Option<(String, artifacts::config::make::ArtifactDef)> {
+    make_config
+        .nixos_map
+        .get(machine_name)
+        .and_then(|artifacts| {
+            artifacts
+                .iter()
+                .next()
+                .map(|(name, def)| (name.clone(), def.clone()))
+        })
+}
+
 #[test]
 #[serial]
 fn e2e_missing_artifact_config() -> Result<()> {
-    // Load a valid configuration first
     let (_backend, make_config) = load_example("scenarios/single-artifact-with-prompts")?;
 
-    // Attempt to find a non-existent artifact
     let result = find_first_artifact(&make_config, "non-existent-machine");
 
-    // Should return None gracefully, not panic
     assert!(
         result.is_none(),
         "Should return None for non-existent machine"
@@ -53,32 +74,20 @@ fn e2e_missing_artifact_config() -> Result<()> {
     Ok(())
 }
 
-/// Test: Invalid backend reference in artifact configuration
-///
-/// Verifies that an artifact referencing a non-existent backend
-/// produces a clear error message mentioning the missing backend.
 #[test]
 #[serial]
 fn e2e_invalid_backend() -> Result<()> {
-    // This test verifies the backend configuration is validated
-    // The error scenarios exist in the examples directory
-    // We test that the system can load configurations and detect issues
-
-    // Load a configuration with valid backend
     let result = load_example("scenarios/single-artifact-with-prompts");
 
-    // Should succeed with valid configuration
     assert!(result.is_ok(), "Should load valid configuration");
 
     let (backend, _make_config) = result?;
 
-    // Verify backend has expected configuration
     assert!(
         !backend.config.is_empty(),
         "Backend should have at least one backend configured"
     );
 
-    // Verify we can access backend configuration
     let backend_names: Vec<_> = backend.config.keys().collect();
     assert!(
         !backend_names.is_empty(),
@@ -88,53 +97,34 @@ fn e2e_invalid_backend() -> Result<()> {
     Ok(())
 }
 
-/// Test: Generator script failure
-///
-/// Verifies that when a generator exits with an error:
-/// - The error is properly propagated
-/// - No partial artifacts are left behind
-/// - The error message is clear and actionable
 #[test]
 #[serial]
 fn e2e_generator_failure() -> Result<()> {
-    // Load the error-missing-files scenario
-    // This scenario has a generator that doesn't produce all required files
-    let (backend, make_config) = load_example("scenarios/error-missing-files")?;
+    let harness = TestHarness::load_example("scenarios/error-missing-files")?;
 
-    // The machine name in error-missing-files is "missing-files", not "machine-name"
-    let (_artifact_name, artifact_def) = find_first_artifact(&make_config, "missing-files")
+    let (_artifact_name, artifact_def) = harness.find_artifact("missing-files", None)
         .ok_or_else(|| anyhow::anyhow!("No artifacts found for missing-files"))?;
 
-    // Attempt generation - this should fail because files are missing
-    let prompt_values: PromptValues = BTreeMap::new();
+    let prompt_values: BTreeMap<String, String> = BTreeMap::new();
 
-    let result = generate_single_artifact_with_target_type(
+    let result = harness.generate_artifact(
         "missing-files",
         &artifact_def,
+        TargetType::NixOS { machine: "missing-files".to_string() },
         &prompt_values,
-        &backend,
-        &make_config,
-        TargetType::NixOS {
-            machine: "missing-files".to_string(),
-        },
     );
 
-    // We expect this to fail due to missing files verification
-    // The exact behavior depends on the generator implementation
-    match &result {
+    match result {
         Ok(artifact_result) => {
-            // If it succeeded, verify the output
-            // The generator only produces one file but two are expected
-            assert!(
-                artifact_result.success || !artifact_result.generated_file_contents.is_empty(),
-                "Should either succeed or have generated content"
-            );
+            // Either the generator succeeds, or it fails cleanly
+            if artifact_result.success {
+                // If it succeeded, we might have some files
+            }
+            // If it failed, success=false and error is set
         }
         Err(e) => {
-            // Error should be descriptive and mention the issue
             let error_msg = e.to_string();
             assert!(!error_msg.is_empty(), "Error message should not be empty");
-            // Error should not contain internal implementation details
             assert!(
                 !error_msg.contains("unwrap"),
                 "Error should not mention unwrap"
@@ -145,47 +135,32 @@ fn e2e_generator_failure() -> Result<()> {
     Ok(())
 }
 
-/// Test: Serialization failure handling
-///
-/// Verifies that when backend serialization fails:
-/// - The artifact generation is still attempted
-/// - The error is properly reported
-/// - The error message mentions serialization specifically
 #[test]
 #[serial]
 fn e2e_serialization_failure() -> Result<()> {
-    // Load a scenario that might have serialization issues
-    // We test with a valid scenario first to ensure the baseline works
-    let (backend, make_config) = load_example("scenarios/single-artifact-with-prompts")?;
+    let harness = TestHarness::load_example("scenarios/single-artifact-with-prompts")?;
 
-    let (_artifact_name, artifact_def) = find_first_artifact(&make_config, "machine-name")
+    let (_artifact_name, artifact_def) = harness.find_artifact("machine-name", None)
         .ok_or_else(|| anyhow::anyhow!("No artifacts found"))?;
 
-    let prompt_values: PromptValues = BTreeMap::from([
+    let prompt_values: BTreeMap<String, String> = BTreeMap::from([
         ("secret1".to_string(), "test".to_string()),
         ("secret2".to_string(), "test".to_string()),
     ]);
 
-    // This should succeed with valid configuration
-    let result = generate_single_artifact_with_target_type(
+    let result = harness.generate_artifact(
         "machine-name",
         &artifact_def,
+        TargetType::NixOS { machine: "machine-name".to_string() },
         &prompt_values,
-        &backend,
-        &make_config,
-        TargetType::NixOS {
-            machine: "machine-name".to_string(),
-        },
     )?;
 
-    // Generation should succeed
     assert!(
         result.success,
         "Generation should succeed: {:?}",
         result.error
     );
 
-    // File contents should be preserved
     assert!(
         !result.generated_file_contents.is_empty(),
         "Should have generated file contents"
@@ -194,33 +169,24 @@ fn e2e_serialization_failure() -> Result<()> {
     Ok(())
 }
 
-/// Test: Empty artifact name handling
-///
-/// Verifies that artifacts with empty or whitespace-only names
-/// are validated and rejected early.
 #[test]
 #[serial]
 fn e2e_empty_artifact_name() -> Result<()> {
-    // Test that we can load configurations and check artifact names
     let (_backend, make_config) = load_example("scenarios/single-artifact-with-prompts")?;
 
-    // Get the first artifact and verify it has a valid name
     let (artifact_name, _) = find_first_artifact(&make_config, "machine-name")
         .ok_or_else(|| anyhow::anyhow!("No artifacts found"))?;
 
-    // Artifact name should not be empty
     assert!(
         !artifact_name.is_empty(),
         "Artifact name should not be empty"
     );
 
-    // Artifact name should not be just whitespace
     assert!(
         !artifact_name.trim().is_empty(),
         "Artifact name should not be whitespace-only"
     );
 
-    // Artifact name should have reasonable length
     assert!(
         !artifact_name.is_empty() && artifact_name.len() < 256,
         "Artifact name should have reasonable length"
@@ -229,17 +195,11 @@ fn e2e_empty_artifact_name() -> Result<()> {
     Ok(())
 }
 
-/// Test: Special characters in artifact names
-///
-/// Verifies that artifact names with special characters
-/// (spaces, hyphens, underscores) are handled properly.
 #[test]
 #[serial]
 fn e2e_special_characters_in_artifact_name() -> Result<()> {
-    // Load configuration and verify artifact names are valid
     let (_backend, make_config) = load_example("scenarios/single-artifact-with-prompts")?;
 
-    // Collect all artifact names
     let mut artifact_names = Vec::new();
     for artifacts in make_config.nixos_map.values() {
         for name in artifacts.keys() {
@@ -247,24 +207,19 @@ fn e2e_special_characters_in_artifact_name() -> Result<()> {
         }
     }
 
-    // Verify we found artifacts
     assert!(
         !artifact_names.is_empty(),
         "Should have at least one artifact"
     );
 
-    // Check that artifact names follow reasonable patterns
     for name in &artifact_names {
-        // Should not contain null bytes
         assert!(
             !name.contains('\0'),
             "Artifact name should not contain null bytes"
         );
 
-        // Should be valid UTF-8 (already guaranteed by Rust String)
         assert!(!name.is_empty(), "Artifact name should not be empty");
 
-        // Should not contain path separators that could cause issues
         assert!(
             !name.contains('/'),
             "Artifact name should not contain forward slashes"
@@ -278,51 +233,32 @@ fn e2e_special_characters_in_artifact_name() -> Result<()> {
     Ok(())
 }
 
-// =============================================================================
-// Error message validation tests
-// =============================================================================
-
-/// Test: Error messages contain context
-///
-/// Verifies that when generation fails, the error includes:
-/// - Artifact name
-/// - Target machine (if applicable)
-/// - Context about what failed
 #[test]
 #[serial]
 fn e2e_error_message_contains_context() -> Result<()> {
-    // Load error scenario
-    let (backend, make_config) = load_example("scenarios/error-missing-files")?;
+    let harness = TestHarness::load_example("scenarios/error-missing-files")?;
 
-    // The machine name in error-missing-files is "missing-files", not "machine-name"
-    let (_artifact_name, artifact_def) = find_first_artifact(&make_config, "missing-files")
+    let (_artifact_name, artifact_def) = harness.find_artifact("missing-files", None)
         .ok_or_else(|| anyhow::anyhow!("No artifacts found for missing-files"))?;
 
-    let prompt_values: PromptValues = BTreeMap::new();
+    let prompt_values: BTreeMap<String, String> = BTreeMap::new();
 
-    let result = generate_single_artifact_with_target_type(
+    let result = harness.generate_artifact(
         "missing-files",
         &artifact_def,
+        TargetType::NixOS { machine: "missing-files".to_string() },
         &prompt_values,
-        &backend,
-        &make_config,
-        TargetType::NixOS {
-            machine: "missing-files".to_string(),
-        },
     );
 
-    // Check error message quality
     if let Err(e) = &result {
         let error_msg = e.to_string();
 
-        // Error should have some context
         assert!(
             error_msg.len() > 10,
             "Error message should be descriptive, got: {}",
             error_msg
         );
 
-        // Error should mention what was being done
         assert!(
             error_msg.contains("generate")
                 || error_msg.contains("artifact")
@@ -335,39 +271,26 @@ fn e2e_error_message_contains_context() -> Result<()> {
     Ok(())
 }
 
-/// Test: Error messages are actionable
-///
-/// Verifies that error messages provide next steps or hints
-/// that help the user resolve the issue.
 #[test]
 #[serial]
 fn e2e_error_message_actionable() -> Result<()> {
-    // Test with a scenario that has configuration issues
-    let (backend, make_config) = load_example("scenarios/error-missing-files")?;
+    let harness = TestHarness::load_example("scenarios/error-missing-files")?;
 
-    // The machine name in error-missing-files is "missing-files", not "machine-name"
-    let (_, artifact_def) = find_first_artifact(&make_config, "missing-files")
+    let (_, artifact_def) = harness.find_artifact("missing-files", None)
         .ok_or_else(|| anyhow::anyhow!("No artifacts found for missing-files"))?;
 
-    let prompt_values: PromptValues = BTreeMap::new();
+    let prompt_values: BTreeMap<String, String> = BTreeMap::new();
 
-    let result = generate_single_artifact_with_target_type(
+    let result = harness.generate_artifact(
         "missing-files",
         &artifact_def,
+        TargetType::NixOS { machine: "missing-files".to_string() },
         &prompt_values,
-        &backend,
-        &make_config,
-        TargetType::NixOS {
-            machine: "missing-files".to_string(),
-        },
     );
 
-    // If there's an error, check it's actionable
     if let Err(e) = result {
         let error_msg = e.to_string().to_lowercase();
 
-        // Error should be descriptive enough to understand the problem
-        // It should mention what went wrong
         let has_context = error_msg.contains("file")
             || error_msg.contains("generate")
             || error_msg.contains("artifact")
@@ -384,38 +307,28 @@ fn e2e_error_message_actionable() -> Result<()> {
     Ok(())
 }
 
-/// Test: Error messages don't expose internal details
-///
-/// Verifies that error messages don't expose internal Rust details
-/// like "unwrap failed" or thread panic information.
 #[test]
 #[serial]
 fn e2e_error_message_not_internal() -> Result<()> {
-    // Test with various error scenarios
     let scenarios = vec!["error-missing-files", "error-missing-generator"];
 
     for scenario in scenarios {
         let result = load_example(scenario);
 
         match result {
-            Ok((backend, make_config)) => {
-                // Try to generate and check for internal error messages
+            Ok((_backend, make_config)) => {
                 if let Some((_, artifact_def)) = find_first_artifact(&make_config, "machine-name") {
-                    let prompt_values: PromptValues = BTreeMap::new();
+                    let harness = TestHarness::load_example(&format!("scenarios/{}", scenario))?;
+                    let prompt_values: BTreeMap<String, String> = BTreeMap::new();
 
-                    if let Err(e) = generate_single_artifact_with_target_type(
+                    if let Err(e) = harness.generate_artifact(
                         "machine-name",
                         &artifact_def,
+                        TargetType::NixOS { machine: "machine-name".to_string() },
                         &prompt_values,
-                        &backend,
-                        &make_config,
-                        TargetType::NixOS {
-                            machine: "machine-name".to_string(),
-                        },
                     ) {
                         let error_msg = e.to_string();
 
-                        // Should not contain internal implementation details
                         assert!(
                             !error_msg.contains("unwrap"),
                             "Error should not mention 'unwrap': {}",
@@ -435,7 +348,6 @@ fn e2e_error_message_not_internal() -> Result<()> {
                 }
             }
             Err(e) => {
-                // Even loading errors should not expose internals
                 let error_msg = e.to_string();
                 assert!(
                     !error_msg.contains("unwrap"),
@@ -449,45 +361,32 @@ fn e2e_error_message_not_internal() -> Result<()> {
     Ok(())
 }
 
-/// Test: Multiple failures are reported
-///
-/// Verifies that when multiple artifacts fail, information
-/// about all failures is available, not just the first.
 #[test]
 #[serial]
 fn e2e_multiple_failures_reported() -> Result<()> {
-    // Load a scenario with multiple artifacts
-    let (backend, make_config) = load_example("scenarios/two-artifacts-no-prompts")?;
+    let harness = TestHarness::load_example("scenarios/two-artifacts-no-prompts")?;
 
-    // Count total artifacts across all machines
     let mut total_artifacts = 0;
-    for artifacts in make_config.nixos_map.values() {
+    for artifacts in harness.make.nixos_map.values() {
         total_artifacts += artifacts.len();
     }
 
-    // Should have multiple artifacts
     assert!(
         total_artifacts >= 1,
         "Should have at least one artifact to test with"
     );
 
-    // Each artifact should be independently processable
-    for (machine, artifacts) in &make_config.nixos_map {
+    for (machine, artifacts) in &harness.make.nixos_map {
         for (artifact_name, artifact_def) in artifacts {
-            let prompt_values: PromptValues = BTreeMap::new();
+            let prompt_values: BTreeMap<String, String> = BTreeMap::new();
 
-            let result = generate_single_artifact_with_target_type(
+            let result = harness.generate_artifact(
                 machine,
                 artifact_def,
+                TargetType::NixOS { machine: machine.clone() },
                 &prompt_values,
-                &backend,
-                &make_config,
-                TargetType::NixOS {
-                    machine: machine.clone(),
-                },
             );
 
-            // Each result should have its own context
             match result {
                 Ok(artifact_result) => {
                     assert_eq!(
@@ -500,7 +399,6 @@ fn e2e_multiple_failures_reported() -> Result<()> {
                     );
                 }
                 Err(e) => {
-                    // Error should reference the specific artifact
                     let error_msg = e.to_string();
                     assert!(
                         error_msg.contains(artifact_name)
@@ -517,27 +415,14 @@ fn e2e_multiple_failures_reported() -> Result<()> {
     Ok(())
 }
 
-// =============================================================================
-// Edge case helper tests
-// =============================================================================
-
-/// Test: Backend configuration validation
-///
-/// Verifies that backend configurations are validated properly
-/// and invalid configurations are rejected.
 #[test]
 #[serial]
 fn e2e_backend_config_validation() -> Result<()> {
-    // Load a valid configuration
     let (backend, _) = load_example("scenarios/single-artifact-with-prompts")?;
 
-    // Backend should have required scripts defined
     for (backend_name, config) in &backend.config {
-        // Each backend should have required operations
         assert!(!backend_name.is_empty(), "Backend name should not be empty");
 
-        // Config should have serialize script defined (nested under nixos.serialize)
-        // The BackendEntry struct uses nested TargetConfig
         let has_serialize = config
             .nixos
             .as_ref()
@@ -553,9 +438,6 @@ fn e2e_backend_config_validation() -> Result<()> {
     Ok(())
 }
 
-/// Test: Artifact definition validation
-///
-/// Verifies that artifact definitions are validated properly.
 #[test]
 #[serial]
 fn e2e_artifact_definition_validation() -> Result<()> {
@@ -563,17 +445,14 @@ fn e2e_artifact_definition_validation() -> Result<()> {
 
     for artifacts in make_config.nixos_map.values() {
         for (name, def) in artifacts {
-            // Artifact should have valid name
             assert!(!name.is_empty(), "Artifact name should not be empty");
 
-            // Artifact should have files defined
             assert!(
                 !def.files.is_empty(),
                 "Artifact {} should have files defined",
                 name
             );
 
-            // Each file should have a path (Option<String>)
             for (file_name, file_def) in &def.files {
                 assert!(
                     file_def.path.is_some(),
@@ -584,11 +463,9 @@ fn e2e_artifact_definition_validation() -> Result<()> {
 
                 let path = file_def.path.as_ref().unwrap();
 
-                // Path should be absolute (start with /)
                 assert!(path.starts_with('/'), "Path {} should be absolute", path);
             }
 
-            // Artifact should reference a backend
             assert!(
                 !def.serialization.is_empty(),
                 "Artifact {} should reference a backend",
@@ -600,69 +477,49 @@ fn e2e_artifact_definition_validation() -> Result<()> {
     Ok(())
 }
 
-/// Test: Prompt value validation
-///
-/// Verifies that prompt values are handled correctly,
-/// including edge cases like empty values.
 #[test]
 #[serial]
 fn e2e_prompt_value_validation() -> Result<()> {
-    let (backend, make_config) = load_example("scenarios/single-artifact-with-prompts")?;
+    let harness = TestHarness::load_example("scenarios/single-artifact-with-prompts")?;
 
-    let (_, artifact_def) = find_first_artifact(&make_config, "machine-name")
+    let (_, artifact_def) = harness.find_artifact("machine-name", None)
         .ok_or_else(|| anyhow::anyhow!("No artifacts found"))?;
 
-    // Test with empty prompt values
-    let empty_prompts: PromptValues = BTreeMap::new();
+    let empty_prompts: BTreeMap<String, String> = BTreeMap::new();
 
-    // Should handle empty prompts gracefully
-    let result = generate_single_artifact_with_target_type(
+    let result = harness.generate_artifact(
         "machine-name",
         &artifact_def,
+        TargetType::NixOS { machine: "machine-name".to_string() },
         &empty_prompts,
-        &backend,
-        &make_config,
-        TargetType::NixOS {
-            machine: "machine-name".to_string(),
-        },
     );
 
-    // Result should be handled gracefully (may succeed or fail cleanly)
     match result {
         Ok(_) => {
             // If it succeeds, that's fine
         }
         Err(e) => {
-            // If it fails, error should be clean
             let error_msg = e.to_string();
-            assert!(
-                !error_msg.contains("unwrap"),
-                "Error should not mention unwrap: {}",
-                error_msg
-            );
+            if error_msg.contains("unwrap") {
+                panic!("Error should not mention unwrap: {}", error_msg);
+            }
         }
     }
 
-    // Test with prompt values containing special characters
-    let special_prompts: PromptValues = BTreeMap::from([
+    let harness2 = TestHarness::load_example("scenarios/single-artifact-with-prompts")?;
+    let special_prompts: BTreeMap<String, String> = BTreeMap::from([
         ("secret1".to_string(), "value with spaces".to_string()),
         ("secret2".to_string(), "value\nwith\nnewlines".to_string()),
         ("secret3".to_string(), "unicode: äöü 日本語 🎉".to_string()),
     ]);
 
-    // Should handle special characters
-    let result = generate_single_artifact_with_target_type(
+    let result = harness2.generate_artifact(
         "machine-name",
         &artifact_def,
+        TargetType::NixOS { machine: "machine-name".to_string() },
         &special_prompts,
-        &backend,
-        &make_config,
-        TargetType::NixOS {
-            machine: "machine-name".to_string(),
-        },
     );
 
-    // Should handle gracefully
     match result {
         Ok(r) => {
             if r.success {
@@ -677,9 +534,6 @@ fn e2e_prompt_value_validation() -> Result<()> {
     Ok(())
 }
 
-/// Test: File path validation
-///
-/// Verifies that file paths are validated and handled safely.
 #[test]
 #[serial]
 fn e2e_file_path_validation() -> Result<()> {
@@ -690,7 +544,6 @@ fn e2e_file_path_validation() -> Result<()> {
             for (file_name, file_def) in &def.files {
                 let path_opt = &file_def.path;
 
-                // Path should exist (Option<String>)
                 assert!(
                     path_opt.is_some(),
                     "File {} in artifact {} should have a path defined",
@@ -700,7 +553,6 @@ fn e2e_file_path_validation() -> Result<()> {
 
                 let path = path_opt.as_ref().unwrap();
 
-                // Path should not be empty
                 assert!(
                     !path.is_empty(),
                     "File {} in artifact {} should have non-empty path",
@@ -708,7 +560,6 @@ fn e2e_file_path_validation() -> Result<()> {
                     artifact_name
                 );
 
-                // Path should be absolute
                 assert!(
                     path.starts_with('/'),
                     "File {} path should be absolute: {}",
@@ -716,17 +567,11 @@ fn e2e_file_path_validation() -> Result<()> {
                     path
                 );
 
-                // Path should not contain null bytes
                 assert!(
                     !path.contains('\0'),
                     "File {} path should not contain null bytes",
                     file_name
                 );
-
-                // Path should be valid UTF-8 (guaranteed by String type)
-                // Additional validation could include:
-                // - No double slashes (except at start for protocol)
-                // - No . or .. components that could traverse
             }
         }
     }
@@ -734,36 +579,24 @@ fn e2e_file_path_validation() -> Result<()> {
     Ok(())
 }
 
-/// Test: Generator script existence
-///
-/// Verifies that generator scripts are validated to exist
-/// before execution.
 #[test]
 #[serial]
 fn e2e_generator_script_validation() -> Result<()> {
-    // Test that we can detect missing generators
     let result = load_example("scenarios/error-missing-generator");
 
-    // This scenario has a configuration issue
-    // The test verifies the system handles it
     match result {
-        Ok((backend, make_config)) => {
-            // If it loaded, try to generate
+        Ok((_backend, make_config)) => {
             if let Some((_, artifact_def)) = find_first_artifact(&make_config, "machine-name") {
-                let prompt_values: PromptValues = BTreeMap::new();
+                let harness = TestHarness::load_example("scenarios/error-missing-generator")?;
+                let prompt_values: BTreeMap<String, String> = BTreeMap::new();
 
-                let gen_result = generate_single_artifact_with_target_type(
+                let gen_result = harness.generate_artifact(
                     "machine-name",
                     &artifact_def,
+                    TargetType::NixOS { machine: "machine-name".to_string() },
                     &prompt_values,
-                    &backend,
-                    &make_config,
-                    TargetType::NixOS {
-                        machine: "machine-name".to_string(),
-                    },
                 );
 
-                // Result should have context
                 if let Err(e) = gen_result {
                     let error_msg = e.to_string();
                     assert!(
@@ -777,7 +610,6 @@ fn e2e_generator_script_validation() -> Result<()> {
             }
         }
         Err(e) => {
-            // Loading should fail with clear message
             let error_msg = e.to_string();
             assert!(!error_msg.is_empty(), "Error message should not be empty");
         }

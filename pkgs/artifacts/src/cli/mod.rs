@@ -22,7 +22,6 @@
 //! - `1` - Error (failed artifacts or configuration error)
 
 pub mod args;
-pub mod headless;
 
 use crate::config::backend::BackendConfiguration;
 use crate::config::make::MakeConfiguration;
