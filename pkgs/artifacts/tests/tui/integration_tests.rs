@@ -180,7 +180,6 @@ fn run_tui(example: &str, events: Events) -> TestResult {
 // Snapshot types (fields are read via Debug formatting in assert_debug_snapshot!)
 // =============================================================================
 
-#[allow(dead_code)]
 #[derive(Debug)]
 struct TestResult {
     events: Vec<String>,

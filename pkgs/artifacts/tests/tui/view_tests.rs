@@ -45,17 +45,9 @@ impl<S: fmt::Debug> fmt::Display for ViewTestResult<S> {
     }
 }
 
-impl<S: fmt::Debug> ViewTestResult<S> {
-    /// Add ModelState capture to this test result.
-    #[allow(dead_code)]
-    fn with_model(mut self, model: &Model) -> Self {
-        self.model = Some(ModelState::from_model(model));
-        self
-    }
-}
+impl<S: fmt::Debug> ViewTestResult<S> {}
 
 /// Snapshot representation of Model for artifact list views
-#[allow(dead_code)]
 #[derive(Debug)]
 struct ArtifactListState {
     selected_index: usize,
@@ -64,7 +56,6 @@ struct ArtifactListState {
     error: Option<String>,
 }
 
-#[allow(dead_code)]
 #[derive(Debug)]
 struct ArtifactSnapshot {
     target: String,
@@ -109,7 +100,6 @@ impl ArtifactListState {
 }
 
 /// Snapshot representation of PromptState
-#[allow(dead_code)]
 #[derive(Debug)]
 struct PromptSnapshot {
     artifact_name: String,
@@ -121,7 +111,6 @@ struct PromptSnapshot {
     collected_count: usize,
 }
 
-#[allow(dead_code)]
 #[derive(Debug)]
 struct PromptSnapshotEntry {
     name: String,
@@ -146,7 +135,6 @@ impl PromptSnapshot {
 }
 
 /// Snapshot representation of GeneratingState
-#[allow(dead_code)]
 #[derive(Debug)]
 struct GeneratingSnapshot {
     artifact_name: String,
@@ -169,7 +157,6 @@ impl GeneratingSnapshot {
 }
 
 /// Snapshot representation of SelectGeneratorState
-#[allow(dead_code)]
 #[derive(Debug)]
 struct GeneratorSelectionSnapshot {
     artifact_name: String,
@@ -181,21 +168,18 @@ struct GeneratorSelectionSnapshot {
     home_targets: Vec<String>,
 }
 
-#[allow(dead_code)]
 #[derive(Debug)]
 struct PromptDefSnapshot {
     name: String,
     description: Option<String>,
 }
 
-#[allow(dead_code)]
 #[derive(Debug)]
 struct GeneratorSnapshot {
     path: String,
     sources: Vec<SourceSnapshot>,
 }
 
-#[allow(dead_code)]
 #[derive(Debug)]
 struct SourceSnapshot {
     target: String,
@@ -1479,7 +1463,6 @@ mod model_tests {
     use artifacts::app::update::update;
 
     /// State capture after running an event sequence
-    #[allow(dead_code)]
     #[derive(Debug)]
     struct StateCapture {
         step_index: usize,

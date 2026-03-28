@@ -10,7 +10,6 @@ use artifacts::app::model::{ListEntry, Model, Screen, TargetType};
 ///
 /// This struct captures the essential state of the Model for testing purposes,
 /// using `#[derive(Debug)]` for automatic field capture in snapshots.
-#[allow(dead_code)]
 #[derive(Debug)]
 pub struct ModelState {
     pub screen: &'static str,
@@ -22,7 +21,6 @@ pub struct ModelState {
 }
 
 /// Snapshot representation of an individual artifact in the list.
-#[allow(dead_code)]
 #[derive(Debug)]
 pub struct ArtifactState {
     pub target: String,

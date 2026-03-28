@@ -118,15 +118,6 @@ fn render_error_popup(frame: &mut Frame, error: &str) {
     frame.render_widget(error_text, popup_area);
 }
 
-#[allow(dead_code)]
-fn render_warning_banner(frame: &mut Frame, warnings: &[Warning]) {
-    let area = frame.area();
-    let banner_height = std::cmp::min(warnings.len() as u16 + 2, 6);
-    let chunks =
-        Layout::vertical([Constraint::Min(0), Constraint::Length(banner_height)]).split(area);
-    render_warning_banner_to_area(frame, warnings, chunks[1]);
-}
-
 fn render_warning_banner_to_area(
     frame: &mut Frame,
     warnings: &[Warning],

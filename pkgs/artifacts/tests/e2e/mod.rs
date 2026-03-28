@@ -99,36 +99,10 @@ fn cleanup_test_storage() {
     }
 }
 
-#[allow(dead_code)]
-fn verify_file_content(path: &Path, expected_content: &str) -> Result<()> {
-    if !path.exists() {
-        return Err(anyhow::anyhow!(
-            "Expected file does not exist: {}",
-            path.display()
-        ));
-    }
-
-    let actual_content = fs::read_to_string(path)
-        .with_context(|| format!("Failed to read file: {}", path.display()))?;
-
-    if actual_content != expected_content {
-        return Err(anyhow::anyhow!(
-            "File content mismatch at {}\nExpected: {:?}\nActual: {:?}",
-            path.display(),
-            expected_content,
-            actual_content
-        ));
-    }
-
-    Ok(())
-}
-
-#[allow(dead_code)]
 fn get_artifact_path(storage_dir: &Path, artifact_name: &str) -> PathBuf {
     storage_dir.join(artifact_name)
 }
 
-#[allow(dead_code)]
 fn verify_artifact_exists(storage_dir: &Path, artifact_name: &str) -> Result<()> {
     let artifact_path = get_artifact_path(storage_dir, artifact_name);
 
@@ -154,7 +128,6 @@ fn verify_artifact_exists(storage_dir: &Path, artifact_name: &str) -> Result<()>
     Ok(())
 }
 
-#[allow(dead_code)]
 fn verify_artifact_content(storage_dir: &Path, artifact_name: &str, expected: &str) -> Result<()> {
     verify_artifact_exists(storage_dir, artifact_name)?;
 
@@ -177,23 +150,6 @@ fn verify_artifact_content(storage_dir: &Path, artifact_name: &str, expected: &s
         ));
     }
 
-    Ok(())
-}
-
-#[allow(dead_code)]
-fn cleanup_test_artifacts(storage_dir: &Path, artifact_names: &[&str]) -> Result<()> {
-    for artifact_name in artifact_names {
-        let artifact_path = get_artifact_path(storage_dir, artifact_name);
-        if artifact_path.exists() {
-            fs::remove_file(&artifact_path).with_context(|| {
-                format!(
-                    "Failed to remove artifact '{}' at {}",
-                    artifact_name,
-                    artifact_path.display()
-                )
-            })?;
-        }
-    }
     Ok(())
 }
 

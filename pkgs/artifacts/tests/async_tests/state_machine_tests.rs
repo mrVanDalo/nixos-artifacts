@@ -18,36 +18,12 @@ use artifacts::app::model::{
     StepLogs, TargetType,
 };
 use artifacts::app::update::update;
-use artifacts::config::backend::BackendConfiguration;
-use artifacts::config::make::{ArtifactDef, FileDef, MakeConfiguration, PromptDef};
+use artifacts::config::make::{ArtifactDef, FileDef, PromptDef};
 use serial_test::serial;
 
 // ============================================================================
 // Test Helpers
 // ============================================================================
-
-/// Create a minimal backend config for testing
-#[allow(dead_code)]
-fn create_test_backend_config() -> BackendConfiguration {
-    BackendConfiguration {
-        config: HashMap::new(),
-        base_path: std::path::PathBuf::from("."),
-        backend_toml: std::path::PathBuf::from("./test.toml"),
-    }
-}
-
-/// Create a minimal make config for testing
-#[allow(dead_code)]
-fn create_test_make_config() -> MakeConfiguration {
-    MakeConfiguration {
-        nixos_map: BTreeMap::new(),
-        home_map: BTreeMap::new(),
-        nixos_config: BTreeMap::new(),
-        home_config: BTreeMap::new(),
-        make_base: std::path::PathBuf::from("."),
-        make_json: std::path::PathBuf::from("./test.json"),
-    }
-}
 
 /// Create a test artifact definition
 fn create_test_artifact(name: &str, has_prompts: bool) -> ArtifactDef {

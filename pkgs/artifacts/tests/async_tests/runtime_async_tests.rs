@@ -160,38 +160,6 @@ impl EventSource for MockEventSource {
     }
 }
 
-/// Tracks commands sent to the background task
-#[allow(dead_code)]
-#[derive(Debug, Default)]
-struct CommandTracker {
-    commands: Vec<Effect>,
-}
-
-#[allow(dead_code)]
-impl CommandTracker {
-    fn new() -> Self {
-        Self::default()
-    }
-
-    fn track(&mut self, cmd: Effect) {
-        self.commands.push(cmd);
-    }
-
-    fn len(&self) -> usize {
-        self.commands.len()
-    }
-
-    fn is_empty(&self) -> bool {
-        self.commands.is_empty()
-    }
-
-    fn contains_check_serialization(&self) -> bool {
-        self.commands
-            .iter()
-            .any(|c| matches!(c, Effect::CheckSerialization { .. }))
-    }
-}
-
 // ============================================================================
 // Core Runtime Tests
 // ============================================================================
