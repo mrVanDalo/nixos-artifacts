@@ -88,10 +88,7 @@ fn render_done(
             Style::default(),
         ));
         for name in &state.failed {
-            lines.push(Line::styled(
-                format!("    - {}", name),
-                Style::default(),
-            ));
+            lines.push(Line::styled(format!("    - {}", name), Style::default()));
         }
     }
 
@@ -104,9 +101,7 @@ fn render_done(
 }
 
 fn render_error_popup(frame: &mut Frame, error: &str) {
-    use ratatui::{
-        widgets::{Block, Borders, Clear, Paragraph, Wrap},
-    };
+    use ratatui::widgets::{Block, Borders, Clear, Paragraph, Wrap};
 
     let area = frame.area();
 
@@ -114,9 +109,7 @@ fn render_error_popup(frame: &mut Frame, error: &str) {
 
     frame.render_widget(Clear, popup_area);
 
-    let error_block = Block::default()
-        .borders(Borders::ALL)
-        .title("Error");
+    let error_block = Block::default().borders(Borders::ALL).title("Error");
 
     let error_text = Paragraph::new(error)
         .wrap(Wrap { trim: true })
@@ -147,9 +140,7 @@ fn render_warning_banner_to_area(
     let mut lines: Vec<Line> = warnings
         .iter()
         .take(4)
-        .map(|w| {
-            Line::raw(format!(" {} - {}", w.artifact_name, w.message))
-        })
+        .map(|w| Line::raw(format!(" {} - {}", w.artifact_name, w.message)))
         .collect();
 
     if warnings.len() > 4 {
@@ -159,9 +150,7 @@ fn render_warning_banner_to_area(
         )));
     }
 
-    let warning_block = Block::default()
-        .borders(Borders::ALL)
-        .title("Warnings");
+    let warning_block = Block::default().borders(Borders::ALL).title("Warnings");
 
     let warning_text = Paragraph::new(lines).block(warning_block);
 

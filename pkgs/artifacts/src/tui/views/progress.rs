@@ -74,11 +74,14 @@ fn render_steps(frame: &mut Frame, state: &GeneratingState, area: Rect) {
                 }),
             ),
             Span::raw(" "),
-            Span::styled("Serializing files", Style::default().add_modifier(if serialize_current {
-                Modifier::BOLD
-            } else {
-                Modifier::empty()
-            })),
+            Span::styled(
+                "Serializing files",
+                Style::default().add_modifier(if serialize_current {
+                    Modifier::BOLD
+                } else {
+                    Modifier::empty()
+                }),
+            ),
         ]),
     ];
 
@@ -94,8 +97,7 @@ fn render_logs(frame: &mut Frame, state: &GeneratingState, area: Rect) {
         .map(|l| Line::from(l.as_str()))
         .collect();
 
-    let logs = Paragraph::new(lines)
-        .block(Block::default().borders(Borders::ALL).title("Output"));
+    let logs = Paragraph::new(lines).block(Block::default().borders(Borders::ALL).title("Output"));
 
     frame.render_widget(logs, area);
 }

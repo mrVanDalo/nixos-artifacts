@@ -33,7 +33,12 @@ fn project_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
 }
 
-fn load_example(name: &str) -> Result<(BackendConfiguration, artifacts::config::make::MakeConfiguration)> {
+fn load_example(
+    name: &str,
+) -> Result<(
+    BackendConfiguration,
+    artifacts::config::make::MakeConfiguration,
+)> {
     let example_dir = project_root().join("examples").join(name);
 
     let backend = BackendConfiguration::read_backend_config(&example_dir.join("backend.toml"))?;
@@ -102,7 +107,8 @@ fn e2e_invalid_backend() -> Result<()> {
 fn e2e_generator_failure() -> Result<()> {
     let harness = TestHarness::load_example("scenarios/error-missing-files")?;
 
-    let (_artifact_name, artifact_def) = harness.find_artifact("missing-files", None)
+    let (_artifact_name, artifact_def) = harness
+        .find_artifact("missing-files", None)
         .ok_or_else(|| anyhow::anyhow!("No artifacts found for missing-files"))?;
 
     let prompt_values: BTreeMap<String, String> = BTreeMap::new();
@@ -110,7 +116,9 @@ fn e2e_generator_failure() -> Result<()> {
     let result = harness.generate_artifact(
         "missing-files",
         &artifact_def,
-        TargetType::NixOS { machine: "missing-files".to_string() },
+        TargetType::NixOS {
+            machine: "missing-files".to_string(),
+        },
         &prompt_values,
     );
 
@@ -140,7 +148,8 @@ fn e2e_generator_failure() -> Result<()> {
 fn e2e_serialization_failure() -> Result<()> {
     let harness = TestHarness::load_example("scenarios/single-artifact-with-prompts")?;
 
-    let (_artifact_name, artifact_def) = harness.find_artifact("machine-name", None)
+    let (_artifact_name, artifact_def) = harness
+        .find_artifact("machine-name", None)
         .ok_or_else(|| anyhow::anyhow!("No artifacts found"))?;
 
     let prompt_values: BTreeMap<String, String> = BTreeMap::from([
@@ -151,7 +160,9 @@ fn e2e_serialization_failure() -> Result<()> {
     let result = harness.generate_artifact(
         "machine-name",
         &artifact_def,
-        TargetType::NixOS { machine: "machine-name".to_string() },
+        TargetType::NixOS {
+            machine: "machine-name".to_string(),
+        },
         &prompt_values,
     )?;
 
@@ -238,7 +249,8 @@ fn e2e_special_characters_in_artifact_name() -> Result<()> {
 fn e2e_error_message_contains_context() -> Result<()> {
     let harness = TestHarness::load_example("scenarios/error-missing-files")?;
 
-    let (_artifact_name, artifact_def) = harness.find_artifact("missing-files", None)
+    let (_artifact_name, artifact_def) = harness
+        .find_artifact("missing-files", None)
         .ok_or_else(|| anyhow::anyhow!("No artifacts found for missing-files"))?;
 
     let prompt_values: BTreeMap<String, String> = BTreeMap::new();
@@ -246,7 +258,9 @@ fn e2e_error_message_contains_context() -> Result<()> {
     let result = harness.generate_artifact(
         "missing-files",
         &artifact_def,
-        TargetType::NixOS { machine: "missing-files".to_string() },
+        TargetType::NixOS {
+            machine: "missing-files".to_string(),
+        },
         &prompt_values,
     );
 
@@ -276,7 +290,8 @@ fn e2e_error_message_contains_context() -> Result<()> {
 fn e2e_error_message_actionable() -> Result<()> {
     let harness = TestHarness::load_example("scenarios/error-missing-files")?;
 
-    let (_, artifact_def) = harness.find_artifact("missing-files", None)
+    let (_, artifact_def) = harness
+        .find_artifact("missing-files", None)
         .ok_or_else(|| anyhow::anyhow!("No artifacts found for missing-files"))?;
 
     let prompt_values: BTreeMap<String, String> = BTreeMap::new();
@@ -284,7 +299,9 @@ fn e2e_error_message_actionable() -> Result<()> {
     let result = harness.generate_artifact(
         "missing-files",
         &artifact_def,
-        TargetType::NixOS { machine: "missing-files".to_string() },
+        TargetType::NixOS {
+            machine: "missing-files".to_string(),
+        },
         &prompt_values,
     );
 
@@ -324,7 +341,9 @@ fn e2e_error_message_not_internal() -> Result<()> {
                     if let Err(e) = harness.generate_artifact(
                         "machine-name",
                         &artifact_def,
-                        TargetType::NixOS { machine: "machine-name".to_string() },
+                        TargetType::NixOS {
+                            machine: "machine-name".to_string(),
+                        },
                         &prompt_values,
                     ) {
                         let error_msg = e.to_string();
@@ -383,7 +402,9 @@ fn e2e_multiple_failures_reported() -> Result<()> {
             let result = harness.generate_artifact(
                 machine,
                 artifact_def,
-                TargetType::NixOS { machine: machine.clone() },
+                TargetType::NixOS {
+                    machine: machine.clone(),
+                },
                 &prompt_values,
             );
 
@@ -482,7 +503,8 @@ fn e2e_artifact_definition_validation() -> Result<()> {
 fn e2e_prompt_value_validation() -> Result<()> {
     let harness = TestHarness::load_example("scenarios/single-artifact-with-prompts")?;
 
-    let (_, artifact_def) = harness.find_artifact("machine-name", None)
+    let (_, artifact_def) = harness
+        .find_artifact("machine-name", None)
         .ok_or_else(|| anyhow::anyhow!("No artifacts found"))?;
 
     let empty_prompts: BTreeMap<String, String> = BTreeMap::new();
@@ -490,7 +512,9 @@ fn e2e_prompt_value_validation() -> Result<()> {
     let result = harness.generate_artifact(
         "machine-name",
         &artifact_def,
-        TargetType::NixOS { machine: "machine-name".to_string() },
+        TargetType::NixOS {
+            machine: "machine-name".to_string(),
+        },
         &empty_prompts,
     );
 
@@ -516,7 +540,9 @@ fn e2e_prompt_value_validation() -> Result<()> {
     let result = harness2.generate_artifact(
         "machine-name",
         &artifact_def,
-        TargetType::NixOS { machine: "machine-name".to_string() },
+        TargetType::NixOS {
+            machine: "machine-name".to_string(),
+        },
         &special_prompts,
     );
 
@@ -593,7 +619,9 @@ fn e2e_generator_script_validation() -> Result<()> {
                 let gen_result = harness.generate_artifact(
                     "machine-name",
                     &artifact_def,
-                    TargetType::NixOS { machine: "machine-name".to_string() },
+                    TargetType::NixOS {
+                        machine: "machine-name".to_string(),
+                    },
                     &prompt_values,
                 );
 

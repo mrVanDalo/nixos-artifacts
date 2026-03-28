@@ -71,28 +71,13 @@ fn render_buttons(frame: &mut Frame, state: &ConfirmRegenerateState, area: Rect)
     let right_button_area = add_margin(right_area, 1, 0);
 
     let leave_selected = state.leave_selected;
-    render_button(
-        frame,
-        "Leave",
-        leave_selected,
-        left_button_area,
-    );
+    render_button(frame, "Leave", leave_selected, left_button_area);
 
     let regenerate_selected = !state.leave_selected;
-    render_button(
-        frame,
-        "Regenerate",
-        regenerate_selected,
-        right_button_area,
-    );
+    render_button(frame, "Regenerate", regenerate_selected, right_button_area);
 }
 
-fn render_button(
-    frame: &mut Frame,
-    label: &str,
-    is_selected: bool,
-    area: Rect,
-) {
+fn render_button(frame: &mut Frame, label: &str, is_selected: bool, area: Rect) {
     let (style, border_style) = if is_selected {
         (
             Style::default().add_modifier(Modifier::BOLD),

@@ -118,7 +118,8 @@ fn verify_file_in_artifact(
 fn e2e_backend_storage_single_artifact() -> Result<()> {
     let harness = TestHarness::load_example("scenarios/single-artifact-with-prompts")?;
 
-    let (artifact_name, artifact_def) = harness.find_artifact("machine-name", None)
+    let (artifact_name, artifact_def) = harness
+        .find_artifact("machine-name", None)
         .ok_or_else(|| anyhow::anyhow!("No artifacts found for machine-name"))?;
 
     let prompt_values: BTreeMap<String, String> = BTreeMap::from([
@@ -129,7 +130,9 @@ fn e2e_backend_storage_single_artifact() -> Result<()> {
     let result = harness.generate_artifact(
         "machine-name",
         &artifact_def,
-        TargetType::NixOS { machine: "machine-name".to_string() },
+        TargetType::NixOS {
+            machine: "machine-name".to_string(),
+        },
         &prompt_values,
     )?;
 
@@ -138,11 +141,11 @@ fn e2e_backend_storage_single_artifact() -> Result<()> {
     let storage_path = harness.temp_dir.path().join("storage");
     let artifact_path = verify_artifact_in_storage(&storage_path, "machine-name", &artifact_name)
         .with_context(|| {
-            format!(
-                "Artifact '{}' should exist in backend storage for machine 'machine-name'",
-                artifact_name
-            )
-        })?;
+        format!(
+            "Artifact '{}' should exist in backend storage for machine 'machine-name'",
+            artifact_name
+        )
+    })?;
 
     let entries: Vec<_> = fs::read_dir(&artifact_path)?
         .filter_map(|e| e.ok())
@@ -160,7 +163,8 @@ fn e2e_backend_storage_single_artifact() -> Result<()> {
 fn e2e_backend_storage_content_format() -> Result<()> {
     let harness = TestHarness::load_example("scenarios/single-artifact-with-prompts")?;
 
-    let (artifact_name, artifact_def) = harness.find_artifact("machine-name", None)
+    let (artifact_name, artifact_def) = harness
+        .find_artifact("machine-name", None)
         .ok_or_else(|| anyhow::anyhow!("No artifacts found for machine-name"))?;
 
     let expected_content1 = "known-secret-value-one";
@@ -174,7 +178,9 @@ fn e2e_backend_storage_content_format() -> Result<()> {
     let result = harness.generate_artifact(
         "machine-name",
         &artifact_def,
-        TargetType::NixOS { machine: "machine-name".to_string() },
+        TargetType::NixOS {
+            machine: "machine-name".to_string(),
+        },
         &prompt_values,
     )?;
 
@@ -197,7 +203,8 @@ fn e2e_backend_storage_content_format() -> Result<()> {
 fn e2e_backend_storage_multiple_files() -> Result<()> {
     let harness = TestHarness::load_example("scenarios/single-artifact-with-prompts")?;
 
-    let (artifact_name, artifact_def) = harness.find_artifact("machine-name", None)
+    let (artifact_name, artifact_def) = harness
+        .find_artifact("machine-name", None)
         .ok_or_else(|| anyhow::anyhow!("No artifacts found"))?;
 
     let prompt_values: BTreeMap<String, String> = BTreeMap::from([
@@ -208,7 +215,9 @@ fn e2e_backend_storage_multiple_files() -> Result<()> {
     let result = harness.generate_artifact(
         "machine-name",
         &artifact_def,
-        TargetType::NixOS { machine: "machine-name".to_string() },
+        TargetType::NixOS {
+            machine: "machine-name".to_string(),
+        },
         &prompt_values,
     )?;
 
@@ -252,18 +261,24 @@ fn e2e_backend_storage_multiple_files() -> Result<()> {
 fn e2e_backend_storage_persists() -> Result<()> {
     let harness = TestHarness::load_example("scenarios/single-artifact-with-prompts")?;
 
-    let (artifact_name, artifact_def) = harness.find_artifact("machine-name", None)
+    let (artifact_name, artifact_def) = harness
+        .find_artifact("machine-name", None)
         .ok_or_else(|| anyhow::anyhow!("No artifacts found"))?;
 
     let prompt_values: BTreeMap<String, String> = BTreeMap::from([
         ("secret1".to_string(), "persistent-value".to_string()),
-        ("secret2".to_string(), "another-persistent-value".to_string()),
+        (
+            "secret2".to_string(),
+            "another-persistent-value".to_string(),
+        ),
     ]);
 
     let result = harness.generate_artifact(
         "machine-name",
         &artifact_def,
-        TargetType::NixOS { machine: "machine-name".to_string() },
+        TargetType::NixOS {
+            machine: "machine-name".to_string(),
+        },
         &prompt_values,
     )?;
 
@@ -295,14 +310,16 @@ fn e2e_backend_storage_persists() -> Result<()> {
 fn e2e_backend_storage_no_prompts() -> Result<()> {
     let harness = TestHarness::load_example("scenarios/two-artifacts-no-prompts")?;
 
-    let machine_name = harness.make
+    let machine_name = harness
+        .make
         .nixos_map
         .keys()
         .next()
         .cloned()
         .ok_or_else(|| anyhow::anyhow!("No machines found"))?;
 
-    let (artifact_name, artifact_def) = harness.find_artifact(&machine_name, None)
+    let (artifact_name, artifact_def) = harness
+        .find_artifact(&machine_name, None)
         .ok_or_else(|| anyhow::anyhow!("No artifacts found"))?;
 
     let prompt_values: BTreeMap<String, String> = BTreeMap::new();
@@ -310,7 +327,9 @@ fn e2e_backend_storage_no_prompts() -> Result<()> {
     let result = harness.generate_artifact(
         &machine_name,
         &artifact_def,
-        TargetType::NixOS { machine: machine_name.clone() },
+        TargetType::NixOS {
+            machine: machine_name.clone(),
+        },
         &prompt_values,
     )?;
 

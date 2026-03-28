@@ -202,10 +202,13 @@ fn cleanup_test_artifacts(storage_dir: &Path, artifact_names: &[&str]) -> Result
 fn e2e_single_artifact_is_created() -> Result<()> {
     let harness = TestHarness::load_example("scenarios/single-artifact-with-prompts")?;
 
-    let (artifact_name, artifact_def) = harness.find_artifact("machine-name", None)
+    let (artifact_name, artifact_def) = harness
+        .find_artifact("machine-name", None)
         .ok_or_else(|| anyhow::anyhow!("No artifacts found for machine-name"))?;
 
-    let target_type = TargetType::NixOS { machine: "machine-name".to_string() };
+    let target_type = TargetType::NixOS {
+        machine: "machine-name".to_string(),
+    };
 
     let prompt_values: BTreeMap<String, String> = BTreeMap::from([
         ("secret1".to_string(), "test-secret-one".to_string()),
@@ -254,11 +257,15 @@ fn e2e_single_artifact_is_created() -> Result<()> {
     );
 
     assert!(
-        result.generated_file_contents.contains_key("very-simple-secrets"),
+        result
+            .generated_file_contents
+            .contains_key("very-simple-secrets"),
         "Should generate very-simple-secrets file"
     );
     assert!(
-        result.generated_file_contents.contains_key("simple-secrets"),
+        result
+            .generated_file_contents
+            .contains_key("simple-secrets"),
         "Should generate simple-secrets file"
     );
 
@@ -298,7 +305,9 @@ fn e2e_multiple_machines_artifacts_created() -> Result<()> {
             let result = harness.generate_artifact(
                 machine_name,
                 &artifact_def,
-                TargetType::NixOS { machine: machine_name.clone() },
+                TargetType::NixOS {
+                    machine: machine_name.clone(),
+                },
                 &prompt_values,
             )?;
 
@@ -325,14 +334,16 @@ fn e2e_multiple_machines_artifacts_created() -> Result<()> {
 fn e2e_no_prompts_artifact_creation() -> Result<()> {
     let harness = TestHarness::load_example("scenarios/two-artifacts-no-prompts")?;
 
-    let machine_name = harness.make
+    let machine_name = harness
+        .make
         .nixos_map
         .keys()
         .next()
         .cloned()
         .ok_or_else(|| anyhow::anyhow!("No machines found"))?;
 
-    let (_artifact_name, artifact_def) = harness.find_artifact(&machine_name, None)
+    let (_artifact_name, artifact_def) = harness
+        .find_artifact(&machine_name, None)
         .ok_or_else(|| anyhow::anyhow!("No artifacts found"))?;
 
     let prompt_values: BTreeMap<String, String> = BTreeMap::new();
@@ -340,7 +351,9 @@ fn e2e_no_prompts_artifact_creation() -> Result<()> {
     let result = harness.generate_artifact(
         &machine_name,
         &artifact_def,
-        TargetType::NixOS { machine: machine_name.clone() },
+        TargetType::NixOS {
+            machine: machine_name.clone(),
+        },
         &prompt_values,
     )?;
 
@@ -362,7 +375,8 @@ fn e2e_no_prompts_artifact_creation() -> Result<()> {
 fn e2e_missing_prompts_fails() -> Result<()> {
     let harness = TestHarness::load_example("scenarios/single-artifact-with-prompts")?;
 
-    let (_artifact_name, artifact_def) = harness.find_artifact("machine-name", None)
+    let (_artifact_name, artifact_def) = harness
+        .find_artifact("machine-name", None)
         .ok_or_else(|| anyhow::anyhow!("No artifacts found"))?;
 
     let empty_prompts: BTreeMap<String, String> = BTreeMap::new();
@@ -370,7 +384,9 @@ fn e2e_missing_prompts_fails() -> Result<()> {
     let result = harness.generate_artifact(
         "machine-name",
         &artifact_def,
-        TargetType::NixOS { machine: "machine-name".to_string() },
+        TargetType::NixOS {
+            machine: "machine-name".to_string(),
+        },
         &empty_prompts,
     )?;
 
@@ -379,7 +395,10 @@ fn e2e_missing_prompts_fails() -> Result<()> {
             eprintln!("Note: Generator succeeded with empty prompts (expected behavior)");
         }
         false => {
-            eprintln!("Generation failed as expected with missing prompts: {:?}", result.error);
+            eprintln!(
+                "Generation failed as expected with missing prompts: {:?}",
+                result.error
+            );
         }
     }
 
@@ -398,7 +417,9 @@ fn e2e_headless_programmatic_invocation() -> Result<()> {
     let result = harness.generate_artifact(
         &machine_name,
         &artifact_def,
-        TargetType::NixOS { machine: machine_name.clone() },
+        TargetType::NixOS {
+            machine: machine_name.clone(),
+        },
         &BTreeMap::new(),
     )?;
 
@@ -426,14 +447,16 @@ fn e2e_home_manager_only_config_loads() -> Result<()> {
 fn e2e_home_manager_artifact_generation() -> Result<()> {
     let harness = TestHarness::load_example("scenarios/home-manager-only")?;
 
-    let user_name = harness.make
+    let user_name = harness
+        .make
         .home_map
         .keys()
         .next()
         .cloned()
         .expect("Should have at least one user");
 
-    let (_artifact_name, artifact_def) = harness.find_artifact(&user_name, None)
+    let (_artifact_name, artifact_def) = harness
+        .find_artifact(&user_name, None)
         .expect("Should have at least one artifact");
 
     let prompt_values: BTreeMap<String, String> = BTreeMap::new();
@@ -441,7 +464,9 @@ fn e2e_home_manager_artifact_generation() -> Result<()> {
     let (result, diagnostics) = harness.generate_artifact_with_diagnostics(
         &user_name,
         &artifact_def,
-        TargetType::HomeManager { username: user_name.clone() },
+        TargetType::HomeManager {
+            username: user_name.clone(),
+        },
         &prompt_values,
     )?;
 

@@ -213,9 +213,7 @@ fn start_generation_for_selected(mut model: Model) -> (Model, Effect) {
             // Extract info needed for the dialog
             let artifact_name = entry.artifact_name().to_string();
             let affected_targets = match entry {
-                ListEntry::Single(single) => vec![
-                    single.target_type.target_name().to_string(),
-                ],
+                ListEntry::Single(single) => vec![single.target_type.target_name().to_string()],
                 ListEntry::Shared(shared) => {
                     let mut targets: Vec<String> = shared
                         .info

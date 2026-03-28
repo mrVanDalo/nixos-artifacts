@@ -14,7 +14,7 @@
 //! - These tests: cargo test --test tests e2e_config
 //! - Specific test: cargo test --test tests e2e_config_nixos_check_sets_config
 
-use crate::common::{setup_test_storage, CleanupGuard};
+use crate::common::{CleanupGuard, setup_test_storage};
 use anyhow::Result;
 use artifacts::app::model::TargetType;
 use artifacts::backend::serialization::{
@@ -30,7 +30,12 @@ fn project_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
 }
 
-fn load_example(name: &str) -> Result<(BackendConfiguration, artifacts::config::make::MakeConfiguration)> {
+fn load_example(
+    name: &str,
+) -> Result<(
+    BackendConfiguration,
+    artifacts::config::make::MakeConfiguration,
+)> {
     let example_dir = project_root().join("examples").join(name);
 
     let backend = BackendConfiguration::read_backend_config(&example_dir.join("backend.toml"))?;

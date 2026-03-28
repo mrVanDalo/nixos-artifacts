@@ -7,7 +7,9 @@
 use anyhow::{Context, Result};
 use artifacts::app::effect::Effect;
 use artifacts::app::message::Message;
-use artifacts::app::model::{ArtifactEntry, ArtifactStatus, ListEntry, Model, StepLogs, TargetType};
+use artifacts::app::model::{
+    ArtifactEntry, ArtifactStatus, ListEntry, Model, StepLogs, TargetType,
+};
 use artifacts::config::backend::BackendConfiguration;
 use artifacts::config::make::{ArtifactDef, MakeConfiguration};
 use artifacts::config::nix::build_make_from_flake;
@@ -222,8 +224,7 @@ impl TestHarness {
         let temp_dir = TempDir::new().context("Failed to create temp directory")?;
 
         let storage_path = temp_dir.path().join("storage");
-        std::fs::create_dir_all(&storage_path)
-            .context("Failed to create storage directory")?;
+        std::fs::create_dir_all(&storage_path).context("Failed to create storage directory")?;
         unsafe {
             std::env::set_var("ARTIFACTS_TEST_OUTPUT_DIR", &storage_path);
         }
@@ -331,7 +332,10 @@ impl TestHarness {
             )
         });
 
-        let prompts_map: HashMap<String, String> = prompts.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
+        let prompts_map: HashMap<String, String> = prompts
+            .iter()
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .collect();
 
         let gen_effect = Effect::RunGenerator {
             artifact_index: 0,
