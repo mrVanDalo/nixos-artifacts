@@ -82,18 +82,25 @@ impl ArtifactListState {
             artifacts: model
                 .entries
                 .iter()
-                .map(|e| ArtifactSnapshot {
-                    target: e
-                        .target_type()
-                        .target_name()
-                        .unwrap_or("shared")
-                        .to_string(),
-                    target_type: e.target_type().context_str(),
-                    name: e.artifact_name().to_string(),
-                    status: format!("{:?}", e.status()),
-                    has_logs: !e.step_logs().check.is_empty()
-                        || !e.step_logs().generate.is_empty()
-                        || !e.step_logs().serialize.is_empty(),
+                .map(|e| match e {
+                    ListEntry::Single(single) => ArtifactSnapshot {
+                        target: single.target_type.target_name().to_string(),
+                        target_type: single.target_type.context_str(),
+                        name: single.artifact.name.clone(),
+                        status: format!("{:?}", single.status),
+                        has_logs: !single.step_logs.check.is_empty()
+                            || !single.step_logs.generate.is_empty()
+                            || !single.step_logs.serialize.is_empty(),
+                    },
+                    ListEntry::Shared(shared) => ArtifactSnapshot {
+                        target: "[shared]".to_string(),
+                        target_type: "shared",
+                        name: shared.info.artifact_name.clone(),
+                        status: format!("{:?}", shared.status),
+                        has_logs: !shared.step_logs.check.is_empty()
+                            || !shared.step_logs.generate.is_empty()
+                            || !shared.step_logs.serialize.is_empty(),
+                    },
                 })
                 .collect(),
             error: model.error.clone(),
@@ -856,10 +863,6 @@ fn test_artifact_list_with_shared_artifacts() {
     };
 
     let shared_entry = SharedEntry {
-        target_type: TargetType::Shared {
-            nixos_targets: vec!["machine-one".to_string(), "machine-two".to_string()],
-            home_targets: vec![],
-        },
         info: SharedArtifactInfo {
             artifact_name: "shared-secret".to_string(),
             description: None,
@@ -910,10 +913,6 @@ fn make_shared_entry_with_status(status: ArtifactStatus) -> SharedEntry {
     use artifacts::config::make::SharedArtifactInfo;
 
     SharedEntry {
-        target_type: TargetType::Shared {
-            nixos_targets: vec!["machine-one".to_string(), "machine-two".to_string()],
-            home_targets: vec![],
-        },
         info: SharedArtifactInfo {
             artifact_name: "shared-secret".to_string(),
             description: None,

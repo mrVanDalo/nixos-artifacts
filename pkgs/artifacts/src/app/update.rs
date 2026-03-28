@@ -214,11 +214,7 @@ fn start_generation_for_selected(mut model: Model) -> (Model, Effect) {
             let artifact_name = entry.artifact_name().to_string();
             let affected_targets = match entry {
                 ListEntry::Single(single) => vec![
-                    single
-                        .target_type
-                        .target_name()
-                        .unwrap_or("unknown")
-                        .to_string(),
+                    single.target_type.target_name().to_string(),
                 ],
                 ListEntry::Shared(shared) => {
                     let mut targets: Vec<String> = shared
@@ -1822,7 +1818,7 @@ mod tests {
     /// Test that single generator skips selection dialog and goes to prompts
     #[test]
     fn test_single_generator_skips_dialog() {
-        use crate::app::model::{SharedEntry, TargetType};
+        use crate::app::model::SharedEntry;
         use crate::config::make::{GeneratorInfo, GeneratorSource, PromptDef, SharedArtifactInfo};
         use std::collections::BTreeMap;
 
@@ -1855,10 +1851,6 @@ mod tests {
         };
 
         let shared_entry = SharedEntry {
-            target_type: TargetType::Shared {
-                nixos_targets: vec!["machine-one".to_string()],
-                home_targets: vec![],
-            },
             info: shared_info,
             status: ArtifactStatus::Pending,
             step_logs: StepLogs::default(),
@@ -1895,7 +1887,7 @@ mod tests {
     /// Test that single generator without prompts goes directly to generating
     #[test]
     fn test_single_generator_no_prompts_goes_to_generating() {
-        use crate::app::model::{SharedEntry, TargetType};
+        use crate::app::model::SharedEntry;
         use crate::config::make::{FileDef, GeneratorInfo, GeneratorSource, SharedArtifactInfo};
         use std::collections::BTreeMap;
 
@@ -1930,10 +1922,6 @@ mod tests {
         };
 
         let shared_entry = SharedEntry {
-            target_type: TargetType::Shared {
-                nixos_targets: vec!["machine-one".to_string()],
-                home_targets: vec![],
-            },
             info: shared_info,
             status: ArtifactStatus::Pending,
             step_logs: StepLogs::default(),
@@ -1971,7 +1959,7 @@ mod tests {
     /// Test that multiple generators shows selection dialog
     #[test]
     fn test_multiple_generators_shows_dialog() {
-        use crate::app::model::{SharedEntry, TargetType};
+        use crate::app::model::SharedEntry;
         use crate::config::make::{GeneratorInfo, GeneratorSource, SharedArtifactInfo};
         use std::collections::BTreeMap;
 
@@ -2004,10 +1992,6 @@ mod tests {
         };
 
         let shared_entry = SharedEntry {
-            target_type: TargetType::Shared {
-                nixos_targets: vec!["machine-one".to_string()],
-                home_targets: vec![],
-            },
             info: shared_info,
             status: ArtifactStatus::Pending,
             step_logs: StepLogs::default(),
@@ -2052,7 +2036,7 @@ mod tests {
     /// Test that selected generator is stored when single generator auto-selected
     #[test]
     fn test_single_generator_stores_selected_path() {
-        use crate::app::model::{SharedEntry, TargetType};
+        use crate::app::model::SharedEntry;
         use crate::config::make::{GeneratorInfo, GeneratorSource, SharedArtifactInfo};
         use std::collections::BTreeMap;
 
@@ -2076,10 +2060,6 @@ mod tests {
         };
 
         let shared_entry = SharedEntry {
-            target_type: TargetType::Shared {
-                nixos_targets: vec!["machine-one".to_string()],
-                home_targets: vec![],
-            },
             info: shared_info,
             status: ArtifactStatus::Pending,
             step_logs: StepLogs::default(),
@@ -2112,7 +2092,7 @@ mod tests {
     }
 
     fn make_test_model_with_shared() -> Model {
-        use crate::app::model::{SharedEntry, TargetType};
+        use crate::app::model::SharedEntry;
         use crate::config::make::{GeneratorInfo, GeneratorSource, SharedArtifactInfo};
         use std::collections::BTreeMap;
 
@@ -2141,10 +2121,6 @@ mod tests {
         };
 
         let shared_entry = SharedEntry {
-            target_type: TargetType::Shared {
-                nixos_targets: vec!["machine-one".to_string()],
-                home_targets: vec![],
-            },
             info: shared_info,
             status: ArtifactStatus::Pending,
             step_logs: StepLogs::default(),

@@ -141,12 +141,6 @@ fn build_env_exports(
                 log_level_quoted
             )
         }
-        TargetType::Shared { .. } => {
-            format!(
-                "export out='{}'; export prompts='{}'; export artifact_context='{}'; export artifact='{}'; export LOG_LEVEL='{}';",
-                out_quoted, prompts_quoted, context_quoted, artifact_quoted, log_level_quoted
-            )
-        }
     }
 }
 

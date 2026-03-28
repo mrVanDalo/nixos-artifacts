@@ -8,7 +8,7 @@ ArtifactListState {
     selected_log_step: "Check",
     artifacts: [
         ArtifactSnapshot {
-            target: "shared",
+            target: "[shared]",
             target_type: "shared",
             name: "shared-secret",
             status: "Failed { error: \"File definition mismatch: 'id_rsa' in machine-one but 'id_ed25519' in machine-two\", output: \"\", retry_available: false }",

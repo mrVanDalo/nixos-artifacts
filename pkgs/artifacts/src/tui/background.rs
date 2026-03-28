@@ -924,7 +924,7 @@ impl BackgroundEffectHandler {
                 artifact_name,
                 target_type,
             } => {
-                let target = target_type.target_name().unwrap_or("shared").to_string();
+                let target = target_type.target_name().to_string();
                 let target_type_str = target_type.to_string();
                 self.execute_check_serialization(
                     artifact_index,
@@ -941,7 +941,7 @@ impl BackgroundEffectHandler {
                 target_type,
                 prompts,
             } => {
-                let target = target_type.target_name().unwrap_or("shared").to_string();
+                let target = target_type.target_name().to_string();
                 let target_type_str = target_type.to_string();
                 self.execute_run_generator(
                     artifact_index,
@@ -958,7 +958,7 @@ impl BackgroundEffectHandler {
                 artifact_name,
                 target_type,
             } => {
-                let target = target_type.target_name().unwrap_or("shared").to_string();
+                let target = target_type.target_name().to_string();
                 let target_type_str = target_type.to_string();
                 self.execute_serialize(artifact_index, artifact_name, target, target_type_str)
                     .await

@@ -8,7 +8,7 @@ ArtifactListState {
     selected_log_step: "Check",
     artifacts: [
         ArtifactSnapshot {
-            target: "shared",
+            target: "[shared]",
             target_type: "shared",
             name: "shared-secret",
             status: "Failed { error: \"Generator script exited with code 1\", output: \"Error: permission denied\", retry_available: true }",
