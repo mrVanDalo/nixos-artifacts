@@ -111,7 +111,7 @@ fn e2e_config_nixos_check_sets_config() -> Result<()> {
         },
         &backend,
         &make_config,
-        "info",
+        artifacts::logging::LogLevel::Info,
     )?;
 
     assert_snapshot_redacted!(result.output.to_string());
@@ -147,7 +147,7 @@ fn e2e_config_nixos_serialize_sets_config() -> Result<()> {
             machine: "test-machine".to_string(),
         },
         &make_config,
-        "info",
+        artifacts::logging::LogLevel::Info,
     )?;
 
     assert_snapshot_redacted!(result.to_string());
@@ -180,7 +180,7 @@ fn e2e_config_shared_check_sets_machines_users() -> Result<()> {
         &make_config,
         &nixos_targets,
         &[], // No home targets in this test
-        "info",
+        artifacts::logging::LogLevel::Info,
     )?;
 
     assert_snapshot_redacted!(result.output.to_string());
@@ -219,7 +219,7 @@ fn e2e_config_shared_serialize_sets_machines_users() -> Result<()> {
         &make_config,
         &nixos_targets,
         &[], // No home targets in this test
-        "info",
+        artifacts::logging::LogLevel::Info,
     )?;
 
     assert_snapshot_redacted!(result.to_string());

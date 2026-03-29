@@ -108,13 +108,12 @@ fn build_env_exports(
     prompts: &Path,
     target_type: &TargetType,
     artifact_name: &str,
-    log_level: &str,
+    log_level: crate::logging::LogLevel,
 ) -> String {
     let out_quoted = escape_single_quoted(&out.display().to_string());
     let prompts_quoted = escape_single_quoted(&prompts.display().to_string());
     let artifact_quoted = escape_single_quoted(artifact_name);
     let context_quoted = escape_single_quoted(target_type.context_str());
-    let log_level_quoted = escape_single_quoted(log_level);
 
     match target_type {
         TargetType::HomeManager { username } => {
@@ -126,7 +125,7 @@ fn build_env_exports(
                 context_quoted,
                 username_quoted,
                 artifact_quoted,
-                log_level_quoted
+                log_level.as_str()
             )
         }
         TargetType::NixOS { machine } => {
@@ -138,20 +137,19 @@ fn build_env_exports(
                 context_quoted,
                 machine_quoted,
                 artifact_quoted,
-                log_level_quoted
+                log_level.as_str()
             )
         }
     }
 }
 
 /// Build environment exports for shared artifact generators.
-fn build_shared_env_exports(out: &Path, prompts: &Path, log_level: &str) -> String {
+fn build_shared_env_exports(out: &Path, prompts: &Path, log_level: crate::logging::LogLevel) -> String {
     let out_quoted = escape_single_quoted(&out.display().to_string());
     let prompts_quoted = escape_single_quoted(&prompts.display().to_string());
-    let log_level_quoted = escape_single_quoted(log_level);
     format!(
         "export out='{}'; export prompts='{}'; export artifact_context='shared'; export LOG_LEVEL='{}';",
-        out_quoted, prompts_quoted, log_level_quoted
+        out_quoted, prompts_quoted, log_level.as_str()
     )
 }
 
@@ -282,7 +280,7 @@ pub fn verify_generated_files(artifact: &ArtifactDef, out_path: &Path) -> Result
 /// * `make_base` - Base path for resolving relative script paths
 /// * `prompts` - Directory containing prompt values as files
 /// * `out` - Directory where generator should create output files
-/// * `log_level` - Log level string to pass to the script
+/// * `log_level` - Log level to pass to the script
 ///
 /// # Returns
 ///
@@ -300,7 +298,7 @@ pub fn run_generator_script(
     make_base: &Path,
     prompts: &Path,
     out: &Path,
-    log_level: &str,
+    log_level: crate::logging::LogLevel,
 ) -> Result<CapturedOutput> {
     let generator_path = resolve_generator_path(make_base, artifact.generator.as_ref());
     let nix_shell = which::which("nix-shell")
@@ -341,7 +339,7 @@ pub fn run_generator_script(
 /// * `make_base` - Base path for resolving relative script paths
 /// * `prompts` - Directory containing prompt values as files
 /// * `out` - Directory where generator should create output files
-/// * `log_level` - Log level string to pass to the script
+/// * `log_level` - Log level to pass to the script
 ///
 /// # Returns
 ///
@@ -362,7 +360,7 @@ pub fn run_generator_script(
 ///     Path::new("/project"),
 ///     Path::new("/tmp/prompts"),
 ///     Path::new("/tmp/out"),
-///     "debug",
+///     LogLevel::Debug,
 /// )?;
 /// assert!(output.exit_success);
 /// ```
@@ -371,7 +369,7 @@ pub fn run_generator_script_with_path(
     make_base: &Path,
     prompts: &Path,
     out: &Path,
-    log_level: &str,
+    log_level: crate::logging::LogLevel,
 ) -> Result<CapturedOutput> {
     let resolved_generator_path = resolve_generator_path(make_base, generator_path);
     let nix_shell = which::which("nix-shell")

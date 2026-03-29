@@ -211,7 +211,7 @@ fn build_serialize_command(
     config_path: &Path,
     target_type: &TargetType,
     artifact_name: &str,
-    log_level: &str,
+    log_level: crate::logging::LogLevel,
 ) -> Command {
     let mut cmd = Command::new("sh");
     cmd.arg(script_path)
@@ -219,7 +219,7 @@ fn build_serialize_command(
         .env("config", config_path)
         .env("artifact_context", target_type.context_str())
         .env("artifact", artifact_name)
-        .env("LOG_LEVEL", log_level)
+        .env("LOG_LEVEL", log_level.as_str())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
 
@@ -247,14 +247,14 @@ fn build_check_command(
     config_path: &Path,
     target_type: &TargetType,
     artifact_name: &str,
-    log_level: &str,
+    log_level: crate::logging::LogLevel,
 ) -> Command {
     let mut cmd = Command::new(script_path);
     cmd.env("inputs", inputs_dir)
         .env("config", config_path)
         .env("artifact_context", target_type.context_str())
         .env("artifact", artifact_name)
-        .env("LOG_LEVEL", log_level)
+        .env("LOG_LEVEL", log_level.as_str())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
 
@@ -277,7 +277,7 @@ fn build_shared_serialize_command(
     machines_path: &Path,
     users_path: &Path,
     artifact_name: &str,
-    log_level: &str,
+    log_level: crate::logging::LogLevel,
 ) -> Command {
     let mut cmd = Command::new("sh");
     cmd.arg(script_path)
@@ -285,7 +285,7 @@ fn build_shared_serialize_command(
         .env("out", out_dir)
         .env("machines", machines_path)
         .env("users", users_path)
-        .env("LOG_LEVEL", log_level)
+        .env("LOG_LEVEL", log_level.as_str())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
 
@@ -303,13 +303,13 @@ fn build_shared_check_command(
     machines_path: &Path,
     users_path: &Path,
     artifact_name: &str,
-    log_level: &str,
+    log_level: crate::logging::LogLevel,
 ) -> Command {
     let mut cmd = Command::new(script_path);
     cmd.env("artifact", artifact_name)
         .env("machines", machines_path)
         .env("users", users_path)
-        .env("LOG_LEVEL", log_level)
+        .env("LOG_LEVEL", log_level.as_str())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
     cmd
@@ -445,7 +445,7 @@ pub fn run_serialize(
     out: &Path,
     target_type: &TargetType,
     make: &MakeConfiguration,
-    log_level: &str,
+    log_level: crate::logging::LogLevel,
 ) -> Result<CapturedOutput> {
     let backend_name = &artifact.serialization;
     let entry = backend.get_backend(backend_name)?;
@@ -476,12 +476,11 @@ pub fn run_serialize(
         script_abs.display()
     );
     log_debug!(
-        "  environment: out=\"{}\" config=\"{}\" artifact=\"{}\" artifact_context=\"{}\" LOG_LEVEL=\"{}\"",
+        "  environment: out=\"{}\" config=\"{}\" artifact=\"{}\" artifact_context=\"{}\"",
         out.display(),
         config_file.display(),
         artifact.name,
-        target_type.context_str(),
-        log_level
+        target_type.context_str()
     );
     match target_type {
         TargetType::HomeManager { .. } => {
@@ -544,7 +543,7 @@ pub fn run_serialize(
 /// * `make` - The make configuration for backend settings
 /// * `nixos_targets` - List of NixOS machine names for this shared artifact
 /// * `home_targets` - List of home-manager user names for this shared artifact
-/// * `log_level` - Log level string to pass to the script
+/// * `log_level` - Log level to pass to the script
 ///
 /// # Returns
 ///
@@ -571,7 +570,7 @@ pub fn run_shared_serialize(
     make: &MakeConfiguration,
     nixos_targets: &[String],
     home_targets: &[String],
-    log_level: &str,
+    log_level: crate::logging::LogLevel,
 ) -> Result<CapturedOutput> {
     let entry = backend.get_backend(&backend_name.to_string())?;
     let shared_ser = entry
@@ -595,12 +594,11 @@ pub fn run_shared_serialize(
 
     log_debug!("running shared_serialize: script=\"{}\"", ser_abs.display());
     log_debug!(
-        "  environment: artifact=\"{}\" out=\"{}\" machines=\"{}\" users=\"{}\" LOG_LEVEL=\"{}\"",
+        "  environment: artifact=\"{}\" out=\"{}\" machines=\"{}\" users=\"{}\"",
         artifact_name,
         out.display(),
         machines_file.display(),
-        users_file.display(),
-        log_level
+        users_file.display()
     );
 
     let mut cmd = build_shared_serialize_command(
@@ -649,7 +647,7 @@ pub fn run_shared_serialize(
 /// * `target_type` - Target type with name (Nixos { machine } or HomeManager { username })
 /// * `backend` - The backend configuration with script paths
 /// * `make` - The make configuration for backend settings
-/// * `log_level` - Log level string to pass to the script
+/// * `log_level` - Log level to pass to the script
 ///
 /// # Returns
 ///
@@ -668,7 +666,7 @@ pub fn run_check_serialization(
     target_type: &TargetType,
     backend: &BackendConfiguration,
     make: &MakeConfiguration,
-    log_level: &str,
+    log_level: crate::logging::LogLevel,
 ) -> Result<CheckResult> {
     let backend_name = &artifact.serialization;
     let entry = backend.get_backend(backend_name)?;
@@ -702,12 +700,11 @@ pub fn run_check_serialization(
         script_abs.display()
     );
     log_debug!(
-        "  environment: inputs=\"{}\" config=\"{}\" artifact=\"{}\" artifact_context=\"{}\" LOG_LEVEL=\"{}\"",
+        "  environment: inputs=\"{}\" config=\"{}\" artifact=\"{}\" artifact_context=\"{}\"",
         inputs.display(),
         config_file.display(),
         artifact.name,
-        target_type.context_str(),
-        log_level
+        target_type.context_str()
     );
     match target_type {
         TargetType::HomeManager { .. } => {
@@ -770,7 +767,7 @@ pub fn run_check_serialization(
 /// * `make` - The make configuration for backend settings
 /// * `nixos_targets` - List of NixOS machine names for this shared artifact
 /// * `home_targets` - List of home-manager user names for this shared artifact
-/// * `log_level` - Log level string to pass to the script
+/// * `log_level` - Log level to pass to the script
 ///
 /// # Returns
 ///
@@ -791,7 +788,7 @@ pub fn run_shared_check_serialization(
     make: &MakeConfiguration,
     nixos_targets: &[String],
     home_targets: &[String],
-    log_level: &str,
+    log_level: crate::logging::LogLevel,
 ) -> Result<CheckResult> {
     let entry = backend.get_backend(&backend_name.to_string())?;
     let check_script = entry
@@ -818,11 +815,10 @@ pub fn run_shared_check_serialization(
         script_abs.display()
     );
     log_debug!(
-        "  environment: artifact=\"{}\" machines=\"{}\" users=\"{}\" LOG_LEVEL=\"{}\"",
+        "  environment: artifact=\"{}\" machines=\"{}\" users=\"{}\"",
         artifact_name,
         machines_file.display(),
-        users_file.display(),
-        log_level
+        users_file.display()
     );
 
     let mut cmd = build_shared_check_command(
