@@ -78,7 +78,7 @@ struct ScriptInfo<'a> {
 /// Handle the output from a script execution, converting ScriptErrors to CheckResults
 fn handle_check_output(
     result: Result<CapturedOutput, ScriptError>,
-    _artifact_name: &str,
+    artifact_name: &str,
 ) -> Result<CheckResult> {
     match result {
         Ok(out) => {
