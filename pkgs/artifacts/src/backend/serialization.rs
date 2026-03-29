@@ -96,6 +96,8 @@ fn handle_check_output(
         Err(ScriptError::Timeout {
             script_name: name,
             timeout_secs,
+            stdout: _,
+            stderr: _,
         }) => {
             log_debug!(
                 "{} timed out after {}s for {}",
@@ -106,7 +108,7 @@ fn handle_check_output(
             Ok(make_timeout_result(&name, timeout_secs))
         }
         Err(ScriptError::Io { message }) => Ok(make_io_result(&message)),
-        Err(ScriptError::Failed { stderr, .. }) => Ok(make_failed_result(stderr)),
+        Err(ScriptError::Failed { stdout, stderr, .. }) => Ok(make_failed_result(stdout, stderr)),
     }
 }
 
@@ -324,13 +326,15 @@ fn run_command_with_timeout(
         Err(ScriptError::Timeout {
             script_name: name,
             timeout_secs,
+            stdout: _,
+            stderr: _,
         }) => {
             bail!("{} timed out after {} seconds", name, timeout_secs);
         }
         Err(ScriptError::Io { message }) => {
             bail!("I/O error during {}: {}", script_name, message);
         }
-        Err(ScriptError::Failed { exit_code, stderr }) => {
+        Err(ScriptError::Failed { exit_code, stdout: _, stderr }) => {
             bail!(
                 "{} failed with exit code {}: {}",
                 script_name,
@@ -343,13 +347,11 @@ fn run_command_with_timeout(
 
 /// Create CheckResult for timeout error
 fn make_timeout_result(script_name: &str, timeout_secs: u64) -> CheckResult {
-    let mut output = CapturedOutput::default();
-    output
-        .lines
-        .push(crate::backend::output_capture::OutputLine {
-            stream: crate::backend::output_capture::OutputStream::Stderr,
-            content: format!("{} timed out after {} seconds", script_name, timeout_secs),
-        });
+    let output = CapturedOutput {
+        stdout: Vec::new(),
+        stderr: vec![format!("{} timed out after {} seconds", script_name, timeout_secs)],
+        exit_success: false,
+    };
     CheckResult {
         needs_generation: true,
         output,
@@ -358,13 +360,11 @@ fn make_timeout_result(script_name: &str, timeout_secs: u64) -> CheckResult {
 
 /// Create CheckResult for I/O error
 fn make_io_result(message: &str) -> CheckResult {
-    let mut output = CapturedOutput::default();
-    output
-        .lines
-        .push(crate::backend::output_capture::OutputLine {
-            stream: crate::backend::output_capture::OutputStream::Stderr,
-            content: format!("I/O error: {}", message),
-        });
+    let output = CapturedOutput {
+        stdout: Vec::new(),
+        stderr: vec![format!("I/O error: {}", message)],
+        exit_success: false,
+    };
     CheckResult {
         needs_generation: true,
         output,
@@ -372,14 +372,12 @@ fn make_io_result(message: &str) -> CheckResult {
 }
 
 /// Create CheckResult for failed script execution
-fn make_failed_result(stderr: String) -> CheckResult {
-    let mut output = CapturedOutput::default();
-    output
-        .lines
-        .push(crate::backend::output_capture::OutputLine {
-            stream: crate::backend::output_capture::OutputStream::Stderr,
-            content: stderr,
-        });
+fn make_failed_result(stdout: String, stderr: String) -> CheckResult {
+    let output = CapturedOutput {
+        stdout: if stdout.is_empty() { Vec::new() } else { vec![stdout] },
+        stderr: if stderr.is_empty() { Vec::new() } else { vec![stderr] },
+        exit_success: false,
+    };
     CheckResult {
         needs_generation: true,
         output,

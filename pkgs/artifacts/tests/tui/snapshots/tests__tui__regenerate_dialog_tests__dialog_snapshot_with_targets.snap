@@ -1,6 +1,5 @@
 ---
 source: tests/tui/regenerate_dialog_tests.rs
-assertion_line: 716
 expression: result.to_string()
 ---
 Dialog State:

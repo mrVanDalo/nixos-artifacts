@@ -1,8 +1,8 @@
 ---
 source: tests/e2e/config_env_tests.rs
-expression: redacted
+expression: result.to_string()
 ---
-# BEGIN SHARED SERIALIZE SNAPSHOT
+stdout: # BEGIN SHARED SERIALIZE SNAPSHOT
 # artifact=shared-config-secret
 # out=/tmp/REDACTED
 # MACHINES FILE:
@@ -10,3 +10,4 @@ expression: redacted
   "test-machine": {}
 }# USERS FILE:
 {}# END SHARED SERIALIZE SNAPSHOT
+stderr: (no output)

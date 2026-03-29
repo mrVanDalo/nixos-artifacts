@@ -1,8 +1,8 @@
 ---
 source: tests/e2e/config_env_tests.rs
-expression: redacted
+expression: result.to_string()
 ---
-# BEGIN SERIALIZE CONFIG SNAPSHOT
+stdout: # BEGIN SERIALIZE CONFIG SNAPSHOT
 # config=/tmp/REDACTED/config.json
 # target_type=nixos_or_home
 # machine=test-machine
@@ -11,3 +11,4 @@ expression: redacted
 # artifact_context=nixos
 # FILE CONTENT:
 {}# END SERIALIZE CONFIG SNAPSHOT
+stderr: (no output)
