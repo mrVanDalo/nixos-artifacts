@@ -1,6 +1,6 @@
 ---
 source: tests/config/make_tests.rs
-expression: snapshot
+expression: "make_snapshot!(input, config)"
 ---
 Input:
 {
@@ -23,14 +23,25 @@ Input:
 }
 
 Parsed:
-ArtifactDef {
-    name: "test-secret",
-    description: Some(
-        "Test artifact description",
-    ),
-    shared: false,
-    files: {},
-    prompts: {},
-    generator: "/nix/store/gen.sh",
-    serialization: "test",
+MakeConfiguration {
+    nixos_map: {
+        "machine-one": {
+            "test-secret": ArtifactDef {
+                name: "test-secret",
+                description: Some(
+                    "Test artifact description",
+                ),
+                shared: false,
+                files: {},
+                prompts: {},
+                generator: "/nix/store/gen.sh",
+                serialization: "test",
+            },
+        },
+    },
+    home_map: {},
+    nixos_config: {},
+    home_config: {},
+    make_base: "",
+    make_json: "make.json",
 }

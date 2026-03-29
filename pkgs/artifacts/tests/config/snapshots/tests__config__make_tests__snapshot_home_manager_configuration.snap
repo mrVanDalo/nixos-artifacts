@@ -1,6 +1,6 @@
 ---
 source: tests/config/make_tests.rs
-expression: artifact_snapshot
+expression: "make_snapshot!(input, config)"
 ---
 Input:
 {
@@ -32,28 +32,39 @@ Input:
 }
 
 Parsed:
-ArtifactDef {
-    name: "user-secret",
-    description: None,
-    shared: false,
-    files: {
-        "config.json": FileDef {
-            name: "config.json",
-            path: Some(
-                "~/.config/app/config.json",
-            ),
-            owner: None,
-            group: None,
+MakeConfiguration {
+    nixos_map: {},
+    home_map: {
+        "alice@workstation": {
+            "user-secret": ArtifactDef {
+                name: "user-secret",
+                description: None,
+                shared: false,
+                files: {
+                    "config.json": FileDef {
+                        name: "config.json",
+                        path: Some(
+                            "~/.config/app/config.json",
+                        ),
+                        owner: None,
+                        group: None,
+                    },
+                },
+                prompts: {
+                    "token": PromptDef {
+                        name: "token",
+                        description: Some(
+                            "API token",
+                        ),
+                    },
+                },
+                generator: "/nix/store/gen.sh",
+                serialization: "test",
+            },
         },
     },
-    prompts: {
-        "token": PromptDef {
-            name: "token",
-            description: Some(
-                "API token",
-            ),
-        },
-    },
-    generator: "/nix/store/gen.sh",
-    serialization: "test",
+    nixos_config: {},
+    home_config: {},
+    make_base: "",
+    make_json: "make.json",
 }
