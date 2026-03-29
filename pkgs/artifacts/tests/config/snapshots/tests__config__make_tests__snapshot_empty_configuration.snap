@@ -1,0 +1,10 @@
+---
+source: tests/config/make_tests.rs
+expression: snapshot
+---
+Input:
+{"nixos": [], "home": []}
+
+nixos_map: {}
+
+home_map: {}

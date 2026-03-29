@@ -1,0 +1,15 @@
+---
+source: tests/config/backend_tests.rs
+expression: snapshot
+---
+TargetConfig:
+TargetConfig {
+    enabled: None,
+    check: Some(
+        "./check.sh",
+    ),
+    serialize: None,
+}
+
+Validation result:
+Err(backend 'test.nixos': 'check' requires 'serialize' to be defined)

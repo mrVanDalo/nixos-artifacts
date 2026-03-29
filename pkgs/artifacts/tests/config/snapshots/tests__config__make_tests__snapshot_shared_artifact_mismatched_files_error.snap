@@ -1,0 +1,103 @@
+---
+source: tests/config/make_tests.rs
+expression: snapshot
+---
+Input:
+{
+    "nixos": [
+        {
+            "machine": "machine-one",
+            "artifacts": {
+                "shared-secret": {
+                    "name": "shared-secret",
+                    "shared": true,
+                    "files": {
+                        "id_ed25519": {
+                            "name": "id_ed25519",
+                            "path": "/run/secrets/id_ed25519",
+                            "owner": "root",
+                            "group": "root"
+                        }
+                    },
+                    "prompts": {},
+                    "generator": "/nix/store/gen.sh",
+                    "serialization": "test"
+                }
+            },
+            "config": {}
+        },
+        {
+            "machine": "machine-two",
+            "artifacts": {
+                "shared-secret": {
+                    "name": "shared-secret",
+                    "shared": true,
+                    "files": {
+                        "id_ed25519": {
+                            "name": "id_ed25519",
+                            "path": "/run/secrets/id_ed25519",
+                            "owner": "root",
+                            "group": "root"
+                        },
+                        "id_ed25519.pub": {
+                            "name": "id_ed25519.pub",
+                            "path": "/run/secrets/id_ed25519.pub",
+                            "owner": "root",
+                            "group": "root"
+                        }
+                    },
+                    "prompts": {},
+                    "generator": "/nix/store/gen.sh",
+                    "serialization": "test"
+                }
+            },
+            "config": {}
+        }
+    ],
+    "home": []
+}
+
+Parsed:
+SharedArtifactInfo {
+    artifact_name: "shared-secret",
+    description: None,
+    generators: [
+        GeneratorInfo {
+            path: "/nix/store/gen.sh",
+            sources: [
+                GeneratorSource {
+                    target: "machine-one",
+                    target_type: Nixos,
+                },
+                GeneratorSource {
+                    target: "machine-two",
+                    target_type: Nixos,
+                },
+            ],
+        },
+    ],
+    nixos_targets: [
+        "machine-one",
+        "machine-two",
+    ],
+    home_targets: [],
+    backend_name: "test",
+    prompts: {},
+    files: {
+        "id_ed25519": FileDef {
+            name: "id_ed25519",
+            path: Some(
+                "/run/secrets/id_ed25519",
+            ),
+            owner: Some(
+                "root",
+            ),
+            group: Some(
+                "root",
+            ),
+        },
+    },
+    error: Some(
+        "File definition mismatch: machine-one defines [id_ed25519], machine-two: extra: [id_ed25519.pub]. Shared artifacts must have identical file definitions.",
+    ),
+}

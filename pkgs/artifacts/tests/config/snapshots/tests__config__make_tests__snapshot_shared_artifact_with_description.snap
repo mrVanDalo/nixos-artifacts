@@ -1,0 +1,72 @@
+---
+source: tests/config/make_tests.rs
+expression: snapshot
+---
+Input:
+{
+    "nixos": [
+        {
+            "machine": "machine-one",
+            "artifacts": {
+                "shared-secret": {
+                    "name": "shared-secret",
+                    "description": "Shared SSH key for all servers",
+                    "shared": true,
+                    "files": {},
+                    "prompts": {},
+                    "generator": "/nix/store/gen.sh",
+                    "serialization": "test"
+                }
+            },
+            "config": {}
+        },
+        {
+            "machine": "machine-two",
+            "artifacts": {
+                "shared-secret": {
+                    "name": "shared-secret",
+                    "description": "Shared SSH key for all servers",
+                    "shared": true,
+                    "files": {},
+                    "prompts": {},
+                    "generator": "/nix/store/gen.sh",
+                    "serialization": "test"
+                }
+            },
+            "config": {}
+        }
+    ],
+    "home": []
+}
+
+Parsed:
+SharedArtifactInfo {
+    artifact_name: "shared-secret",
+    description: Some(
+        "Shared SSH key for all servers",
+    ),
+    generators: [
+        GeneratorInfo {
+            path: "/nix/store/gen.sh",
+            sources: [
+                GeneratorSource {
+                    target: "machine-one",
+                    target_type: Nixos,
+                },
+                GeneratorSource {
+                    target: "machine-two",
+                    target_type: Nixos,
+                },
+            ],
+        },
+    ],
+    nixos_targets: [
+        "machine-one",
+        "machine-two",
+    ],
+    home_targets: [],
+    backend_name: "test",
+    prompts: {},
+    files: {},
+    error: None,
+}

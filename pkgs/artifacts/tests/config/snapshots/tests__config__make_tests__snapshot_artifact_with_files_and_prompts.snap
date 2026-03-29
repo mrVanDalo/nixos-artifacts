@@ -1,0 +1,100 @@
+---
+source: tests/config/make_tests.rs
+expression: artifact_snapshot
+---
+Input:
+{
+    "nixos": [{
+        "machine": "server",
+        "artifacts": {
+            "ssh-key": {
+                "name": "ssh-key",
+                "description": "SSH key for authentication",
+                "shared": false,
+                "files": {
+                    "id_ed25519": {
+                        "name": "id_ed25519",
+                        "path": "/run/secrets/id_ed25519",
+                        "owner": "root",
+                        "group": "root"
+                    },
+                    "id_ed25519.pub": {
+                        "name": "id_ed25519.pub",
+                        "path": "/run/secrets/id_ed25519.pub",
+                        "owner": "root",
+                        "group": "root"
+                    }
+                },
+                "prompts": {
+                    "passphrase": {
+                        "name": "passphrase",
+                        "description": "SSH key passphrase"
+                    },
+                    "comment": {
+                        "name": "comment",
+                        "description": "Key comment"
+                    }
+                },
+                "generator": "/nix/store/gen.sh",
+                "serialization": "agenix"
+            }
+        },
+        "config": {
+            "agenix": {
+                "publicKey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA..."
+            }
+        }
+    }],
+    "home": []
+}
+
+Parsed:
+ArtifactDef {
+    name: "ssh-key",
+    description: Some(
+        "SSH key for authentication",
+    ),
+    shared: false,
+    files: {
+        "id_ed25519": FileDef {
+            name: "id_ed25519",
+            path: Some(
+                "/run/secrets/id_ed25519",
+            ),
+            owner: Some(
+                "root",
+            ),
+            group: Some(
+                "root",
+            ),
+        },
+        "id_ed25519.pub": FileDef {
+            name: "id_ed25519.pub",
+            path: Some(
+                "/run/secrets/id_ed25519.pub",
+            ),
+            owner: Some(
+                "root",
+            ),
+            group: Some(
+                "root",
+            ),
+        },
+    },
+    prompts: {
+        "comment": PromptDef {
+            name: "comment",
+            description: Some(
+                "Key comment",
+            ),
+        },
+        "passphrase": PromptDef {
+            name: "passphrase",
+            description: Some(
+                "SSH key passphrase",
+            ),
+        },
+    },
+    generator: "/nix/store/gen.sh",
+    serialization: "agenix",
+}

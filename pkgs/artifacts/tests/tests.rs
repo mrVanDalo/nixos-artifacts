@@ -39,6 +39,8 @@
 mod async_tests;
 mod backend;
 mod cli;
+#[macro_use]
 mod common;
+mod config;
 mod e2e;
 mod tui;

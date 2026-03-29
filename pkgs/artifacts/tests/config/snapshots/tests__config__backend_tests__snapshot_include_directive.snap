@@ -1,0 +1,17 @@
+---
+source: tests/config/backend_tests.rs
+expression: snapshot
+---
+Included file:
+[included.nixos]
+check = "./included_check.sh"
+serialize = "./included_serialize.sh"
+
+Main file:
+include = ["./included.toml"]
+
+[main.nixos]
+check = "./main_check.sh"
+serialize = "./main_serialize.sh"
+
+Backends: ["included", "main"]

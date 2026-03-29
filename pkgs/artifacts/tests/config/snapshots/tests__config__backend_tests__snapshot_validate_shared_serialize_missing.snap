@@ -1,0 +1,11 @@
+---
+source: tests/config/backend_tests.rs
+expression: snapshot
+---
+Input:
+[test.nixos]
+check = "./check.sh"
+serialize = "./serialize.sh"
+
+Result:
+Err(backend 'test' does not support shared artifacts: missing or disabled shared target in /tmp/FILTERED/backend.toml)

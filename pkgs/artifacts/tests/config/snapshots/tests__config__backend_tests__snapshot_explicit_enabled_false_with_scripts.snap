@@ -1,0 +1,31 @@
+---
+source: tests/config/backend_tests.rs
+expression: "make_snapshot!(input, backend)"
+---
+Input:
+[test.nixos]
+enabled = false
+check = "./check.sh"
+serialize = "./serialize.sh"
+
+Parsed:
+BackendEntry {
+    nixos: Some(
+        TargetConfig {
+            enabled: Some(
+                false,
+            ),
+            check: Some(
+                "/tmp/FILTERED/./check.sh",
+            ),
+            serialize: Some(
+                "/tmp/FILTERED/./serialize.sh",
+            ),
+        },
+    ),
+    home: None,
+    shared: None,
+    settings: BackendSettings(
+        {},
+    ),
+}

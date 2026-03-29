@@ -1,0 +1,19 @@
+---
+source: tests/config/backend_tests.rs
+expression: snapshot
+---
+TargetConfig:
+TargetConfig {
+    enabled: Some(
+        false,
+    ),
+    check: Some(
+        "./check.sh",
+    ),
+    serialize: Some(
+        "./serialize.sh",
+    ),
+}
+
+serializes: true
+is_enabled: false

@@ -388,13 +388,7 @@ fn e2e_headless_programmatic_invocation() -> Result<()> {
 #[serial]
 fn e2e_home_manager_only_config_loads() -> Result<()> {
     let (_backend, make_config) = load_example("scenarios/home-manager-only")?;
-    insta::with_settings!({
-        filters => [
-            (r"/nix/store/[a-z0-9]+-", "/nix/store/HASH-"),
-        ]
-    }, {
-        insta::assert_debug_snapshot!(make_config);
-    });
+    assert_debug_snapshot_nix_filtered!(make_config);
     Ok(())
 }
 
@@ -450,12 +444,6 @@ fn e2e_home_manager_artifact_generation() -> Result<()> {
 fn e2e_config_structure_comparison() -> Result<()> {
     let (_nixos_backend, nixos_config) = load_example("scenarios/single-artifact-with-prompts")?;
     let (_home_backend, home_config) = load_example("scenarios/home-manager-only")?;
-    insta::with_settings!({
-        filters => [
-            (r"/nix/store/[a-z0-9]+-", "/nix/store/HASH-"),
-        ]
-    }, {
-        insta::assert_debug_snapshot!((nixos_config, home_config));
-    });
+    assert_debug_snapshot_nix_filtered!((nixos_config, home_config));
     Ok(())
 }
