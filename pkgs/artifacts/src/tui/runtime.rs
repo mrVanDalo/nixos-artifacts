@@ -509,7 +509,7 @@ mod tests {
     use crate::app::KeyEvent;
     use crate::app::model::*;
     use crate::config::make::{ArtifactDef, FileDef, PromptDef};
-    use crate::tui::channels::Effect;
+    use crate::app::effect::Effect;
     use crate::tui::events::ScriptedEventSource;
     use crate::tui::events::test_helpers::*;
     use ratatui::backend::TestBackend;

@@ -10,13 +10,13 @@
 //! - `runtime` - Main runtime loop for the TUI
 //! - `terminal` - Terminal setup and teardown
 //! - `background` - Executes side effects from the app
-//! - `channels` - Async communication for effects
+
 //! - `model_builder` - Builds the app model from configuration
 //! - `views` - UI view components (list, prompt, progress, etc.)
 //! - `effect_handler` - Backend effect handler for executing real operations
 
 pub mod background;
-pub mod channels;
+
 pub mod effect_handler;
 pub mod events;
 pub mod model_builder;
