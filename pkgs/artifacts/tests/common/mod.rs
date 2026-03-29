@@ -288,7 +288,11 @@ impl TestHarness {
 
     /// Create a BackendEffectHandler for this harness.
     pub fn create_handler(&self) -> BackendEffectHandler {
-        BackendEffectHandler::new(self.backend.clone(), self.make.clone())
+        BackendEffectHandler::new(
+            self.backend.clone(),
+            self.make.clone(),
+            artifacts::logging::LogLevel::Info,
+        )
     }
 
     /// Generate an artifact using the full TUI effect pipeline.

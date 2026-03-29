@@ -28,14 +28,21 @@ pub struct BackendEffectHandler {
     /// Temporary output directory for the current generation.
     /// Stored here so Serialize can access the generator output.
     pub current_out_dir: Option<std::path::PathBuf>,
+    /// Log level to pass to executed scripts
+    log_level: crate::logging::LogLevel,
 }
 
 impl BackendEffectHandler {
-    pub fn new(backend: BackendConfiguration, make: MakeConfiguration) -> Self {
+    pub fn new(
+        backend: BackendConfiguration,
+        make: MakeConfiguration,
+        log_level: crate::logging::LogLevel,
+    ) -> Self {
         Self {
             backend,
             make,
             current_out_dir: None,
+            log_level,
         }
     }
 
@@ -49,7 +56,7 @@ impl BackendEffectHandler {
             target_type,
             &self.backend,
             &self.make,
-            "info",
+            self.log_level,
         ) {
             Ok(check_result) => {
                 let status = if check_result.needs_generation {
@@ -95,7 +102,7 @@ impl BackendEffectHandler {
             &self.make.make_base,
             prompt_dir.path(),
             out_dir.path(),
-            "info",
+            self.log_level,
         )
         .map_err(|e| e.to_string())?;
 
@@ -139,7 +146,7 @@ impl BackendEffectHandler {
             &out_path,
             target_type,
             &self.make,
-            "info",
+            self.log_level,
         )
         .map_err(|e| e.to_string())?;
 
@@ -278,7 +285,7 @@ impl EffectHandler for BackendEffectHandler {
                     &self.make,
                     &nixos_targets,
                     &home_targets,
-                    "info",
+                    self.log_level,
                 );
 
                 match result {
