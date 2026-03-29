@@ -506,12 +506,11 @@ pub fn simulate_with_history<E: EventSource>(events: &mut E, initial: Model) -> 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app::KeyEvent;
     use crate::app::model::*;
     use crate::config::make::{ArtifactDef, FileDef, PromptDef};
     use crate::app::effect::Effect;
     use crate::tui::events::ScriptedEventSource;
-    use crate::tui::events::test_helpers::*;
+    use crate::app::KeyEvent;
     use ratatui::backend::TestBackend;
     use std::collections::BTreeMap;
 
@@ -578,9 +577,9 @@ mod tests {
     fn test_simulate_navigation() {
         let model = make_test_model();
         let mut events = ScriptedEventSource::new(vec![
-            down(), // Move to second item
-            down(), // Stay at second (bottom)
-            up(),   // Move back to first
+            Message::Key(KeyEvent::down()), // Move to second item
+            Message::Key(KeyEvent::down()), // Stay at second (bottom)
+            Message::Key(KeyEvent::up()),   // Move back to first
         ]);
 
         let final_model = simulate(&mut events, model);
@@ -591,9 +590,9 @@ mod tests {
     fn test_simulate_quit() {
         let model = make_test_model();
         let mut events = ScriptedEventSource::new(vec![
-            down(),
-            char('q'), // Quit
-            down(),    // This should not be processed
+            Message::Key(KeyEvent::down()),
+            Message::Key(KeyEvent::char('q')), // Quit
+            Message::Key(KeyEvent::down()),    // This should not be processed
         ]);
 
         let final_model = simulate(&mut events, model);
@@ -604,7 +603,10 @@ mod tests {
     #[test]
     fn test_simulate_with_history() {
         let model = make_test_model();
-        let mut events = ScriptedEventSource::new(vec![down(), down()]);
+        let mut events = ScriptedEventSource::new(vec![
+            Message::Key(KeyEvent::down()),
+            Message::Key(KeyEvent::down()),
+        ]);
 
         let history = simulate_with_history(&mut events, model);
 
@@ -620,7 +622,10 @@ mod tests {
         let model = make_test_model();
         let backend = TestBackend::new(80, 24);
         let mut terminal = Terminal::new(backend).unwrap();
-        let mut events = ScriptedEventSource::new(vec![down(), char('q')]);
+        let mut events = ScriptedEventSource::new(vec![
+            Message::Key(KeyEvent::down()),
+            Message::Key(KeyEvent::char('q')),
+        ]);
 
         // Create minimal configs
         let backend_config = BackendConfiguration {
@@ -690,7 +695,7 @@ mod tests {
     fn test_enter_prompt_screen() {
         let model = make_test_model();
         let mut events = ScriptedEventSource::new(vec![
-            enter(), // Enter prompt screen for first artifact
+            Message::Key(KeyEvent::enter()), // Enter prompt screen for first artifact
         ]);
 
         let final_model = simulate(&mut events, model);
@@ -700,9 +705,9 @@ mod tests {
     #[test]
     fn test_complete_prompt_flow() {
         let model = make_test_model();
-        let mut events_vec = vec![enter()]; // Enter prompt
-        events_vec.extend(type_string("my-passphrase"));
-        events_vec.push(enter()); // Submit
+        let mut events_vec = vec![Message::Key(KeyEvent::enter())]; // Enter prompt
+        events_vec.extend("my-passphrase".chars().map(|c| Message::Key(KeyEvent::char(c))));
+        events_vec.push(Message::Key(KeyEvent::enter())); // Submit
 
         let mut events = ScriptedEventSource::new(events_vec);
         let final_model = simulate(&mut events, model);
@@ -715,10 +720,10 @@ mod tests {
     fn test_cancel_prompt_with_esc() {
         let model = make_test_model();
         let mut events = ScriptedEventSource::new(vec![
-            enter(),   // Enter prompt
-            char('a'), // Type something
-            char('b'),
-            esc(), // Cancel
+            Message::Key(KeyEvent::enter()),   // Enter prompt
+            Message::Key(KeyEvent::char('a')), // Type something
+            Message::Key(KeyEvent::char('b')),
+            Message::Key(KeyEvent::esc()), // Cancel
         ]);
 
         let final_model = simulate(&mut events, model);
