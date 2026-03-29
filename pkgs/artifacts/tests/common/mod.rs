@@ -509,18 +509,6 @@ pub fn setup_test_storage() -> Result<(TempDir, PathBuf)> {
     Ok((temp_dir, storage_path))
 }
 
-/// Clean up environment after test.
-pub fn cleanup_test_storage() {
-    unsafe {
-        std::env::remove_var("ARTIFACTS_TEST_OUTPUT_DIR");
-    }
-}
-
-/// Get the project root directory.
-pub fn project_root() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-}
-
 /// Dump diagnostic information to a file for test failure investigation.
 pub fn dump_test_diagnostics(diag: &DiagnosticInfo, output_path: &std::path::Path) -> Result<()> {
     if let Some(parent) = output_path.parent() {

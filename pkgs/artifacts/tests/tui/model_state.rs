@@ -25,6 +25,8 @@ pub struct ModelState {
 pub struct ArtifactState {
     pub target: String,
     pub name: String,
+    // #[allow(dead_code)] needed because field is read via Debug trait for snapshot testing
+    #[allow(dead_code)]
     pub status: String,
     pub target_type: &'static str,
 }

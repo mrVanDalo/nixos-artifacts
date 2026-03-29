@@ -20,10 +20,6 @@ pub enum MockResult {
         artifact_index: usize,
         needs_generation: bool,
     },
-    GeneratorFinished {
-        artifact_index: usize,
-        success: bool,
-    },
 }
 
 #[tokio::test]
