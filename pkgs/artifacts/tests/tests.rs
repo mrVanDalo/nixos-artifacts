@@ -43,4 +43,5 @@ mod cli;
 mod common;
 mod config;
 mod e2e;
+mod test_helpers;
 mod tui;

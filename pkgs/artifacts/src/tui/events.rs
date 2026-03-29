@@ -135,89 +135,17 @@ impl EventSource for ScriptedEventSource {
     }
 }
 
-// ============================================================================
-// Test Helpers
-// ============================================================================
-
-/// Helper functions for creating test events
-pub mod test_helpers {
-    use super::*;
-    use crossterm::event::KeyCode;
-
-    /// Create a key message from a KeyCode
-    pub fn key(code: KeyCode) -> Message {
-        Message::Key(KeyEvent::from_code(code))
-    }
-
-    /// Create a character key message
-    pub fn char(c: char) -> Message {
-        Message::Key(KeyEvent::char(c))
-    }
-
-    /// Create a Ctrl+key message
-    pub fn ctrl(c: char) -> Message {
-        Message::Key(KeyEvent::ctrl(c))
-    }
-
-    /// Create messages for typing a string
-    pub fn type_string(s: &str) -> Vec<Message> {
-        s.chars().map(char).collect()
-    }
-
-    /// Create an Enter key message
-    pub fn enter() -> Message {
-        Message::Key(KeyEvent::enter())
-    }
-
-    /// Create an Escape key message
-    pub fn esc() -> Message {
-        Message::Key(KeyEvent::esc())
-    }
-
-    /// Create a Tab key message
-    pub fn tab() -> Message {
-        Message::Key(KeyEvent::tab())
-    }
-
-    /// Create a Backspace key message
-    pub fn backspace() -> Message {
-        Message::Key(KeyEvent::backspace())
-    }
-
-    /// Create an Up arrow key message
-    pub fn up() -> Message {
-        Message::Key(KeyEvent::up())
-    }
-
-    /// Create a Down arrow key message
-    pub fn down() -> Message {
-        Message::Key(KeyEvent::down())
-    }
-
-    /// Build a sequence of events for a complete prompt submission
-    pub fn submit_prompt(value: &str) -> Vec<Message> {
-        let mut events = type_string(value);
-        events.push(enter());
-        events
-    }
-
-    /// Build a sequence for a hidden mode prompt
-    pub fn submit_hidden_prompt(value: &str) -> Vec<Message> {
-        let mut events = vec![tab(), tab()]; // Line -> Multiline -> Hidden
-        events.extend(type_string(value));
-        events.push(enter());
-        events
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use super::test_helpers::*;
     use super::*;
 
     #[test]
     fn test_scripted_event_source() {
-        let mut source = ScriptedEventSource::new(vec![char('a'), char('b'), enter()]);
+        let mut source = ScriptedEventSource::new(vec![
+            Message::Key(KeyEvent::char('a')),
+            Message::Key(KeyEvent::char('b')),
+            Message::Key(KeyEvent::enter()),
+        ]);
 
         assert_eq!(source.len(), 3);
         assert!(!source.is_empty());
@@ -227,17 +155,5 @@ mod tests {
         assert!(matches!(source.next_event(), Some(Message::Key(_))));
         assert!(source.next_event().is_none());
         assert!(source.is_empty());
-    }
-
-    #[test]
-    fn test_type_string_helper() {
-        let events = type_string("hi");
-        assert_eq!(events.len(), 2);
-    }
-
-    #[test]
-    fn test_submit_prompt_helper() {
-        let events = submit_prompt("secret");
-        assert_eq!(events.len(), 7); // 6 chars + enter
     }
 }
