@@ -294,7 +294,10 @@ struct MakeRoot {
 }
 
 impl MakeConfiguration {
-    pub fn parse_make_config(make_text: &str, make_json: &Path) -> anyhow::Result<MakeConfiguration> {
+    pub fn parse_make_config(
+        make_text: &str,
+        make_json: &Path,
+    ) -> anyhow::Result<MakeConfiguration> {
         #[cfg(feature = "logging")]
         {
             let pretty = match json_from_str::<Value>(make_text) {
@@ -520,5 +523,3 @@ fn validate_shared_files(entries: &[(String, TargetType, &ArtifactDef)]) -> Opti
         ))
     }
 }
-
-

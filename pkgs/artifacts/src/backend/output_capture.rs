@@ -105,8 +105,16 @@ impl std::fmt::Display for ScriptError {
                     "Script '{}' timed out after {} seconds\nstdout: {}\nstderr: {}",
                     script_name,
                     timeout_secs,
-                    if stdout.is_empty() { "(no output)" } else { stdout },
-                    if stderr.is_empty() { "(no output)" } else { stderr }
+                    if stdout.is_empty() {
+                        "(no output)"
+                    } else {
+                        stdout
+                    },
+                    if stderr.is_empty() {
+                        "(no output)"
+                    } else {
+                        stderr
+                    }
                 )
             }
             ScriptError::Failed {
@@ -118,8 +126,16 @@ impl std::fmt::Display for ScriptError {
                     f,
                     "Script failed with exit code {}\nstdout: {}\nstderr: {}",
                     exit_code,
-                    if stdout.is_empty() { "(no output)" } else { stdout },
-                    if stderr.is_empty() { "(no output)" } else { stderr }
+                    if stdout.is_empty() {
+                        "(no output)"
+                    } else {
+                        stdout
+                    },
+                    if stderr.is_empty() {
+                        "(no output)"
+                    } else {
+                        stderr
+                    }
                 )
             }
             ScriptError::Io { message } => {
@@ -339,19 +355,17 @@ pub fn run_with_captured_output_and_timeout(
         match rx.recv_timeout(remaining) {
             Ok((OutputStream::Stdout, line)) => stdout_lines.push(line),
             Ok((OutputStream::Stderr, line)) => stderr_lines.push(line),
-            Err(mpsc::RecvTimeoutError::Timeout) => {
-                match child.try_wait() {
-                    Ok(Some(_)) => break,
-                    Ok(None) => continue,
-                    Err(e) => {
-                        let _ = stdout_thread.join();
-                        let _ = stderr_thread.join();
-                        return Err(ScriptError::Io {
-                            message: e.to_string(),
-                        });
-                    }
+            Err(mpsc::RecvTimeoutError::Timeout) => match child.try_wait() {
+                Ok(Some(_)) => break,
+                Ok(None) => continue,
+                Err(e) => {
+                    let _ = stdout_thread.join();
+                    let _ = stderr_thread.join();
+                    return Err(ScriptError::Io {
+                        message: e.to_string(),
+                    });
                 }
-            }
+            },
             Err(mpsc::RecvTimeoutError::Disconnected) => break,
         }
     }
@@ -361,11 +375,9 @@ pub fn run_with_captured_output_and_timeout(
 
     let status = match child.try_wait() {
         Ok(Some(status)) => status,
-        Ok(None) => {
-            child.wait().map_err(|e| ScriptError::Io {
-                message: e.to_string(),
-            })?
-        }
+        Ok(None) => child.wait().map_err(|e| ScriptError::Io {
+            message: e.to_string(),
+        })?,
         Err(e) => {
             return Err(ScriptError::Io {
                 message: e.to_string(),
@@ -468,11 +480,8 @@ mod tests {
             .spawn()
             .unwrap();
 
-        let result = run_with_captured_output_and_timeout(
-            child,
-            "test_script",
-            Duration::from_millis(100),
-        );
+        let result =
+            run_with_captured_output_and_timeout(child, "test_script", Duration::from_millis(100));
 
         match result {
             Err(ScriptError::Timeout { stdout, stderr, .. }) => {
@@ -493,14 +502,15 @@ mod tests {
             .spawn()
             .unwrap();
 
-        let result = run_with_captured_output_and_timeout(
-            child,
-            "test_script",
-            Duration::from_secs(5),
-        );
+        let result =
+            run_with_captured_output_and_timeout(child, "test_script", Duration::from_secs(5));
 
         match result {
-            Err(ScriptError::Failed { exit_code, stdout, stderr }) => {
+            Err(ScriptError::Failed {
+                exit_code,
+                stdout,
+                stderr,
+            }) => {
                 assert_eq!(exit_code, 42);
                 assert_eq!(stdout, "stdout_content");
                 assert_eq!(stderr, "stderr_content");
@@ -519,14 +529,15 @@ mod tests {
             .spawn()
             .unwrap();
 
-        let result = run_with_captured_output_and_timeout(
-            child,
-            "test_script",
-            Duration::from_secs(5),
-        );
+        let result =
+            run_with_captured_output_and_timeout(child, "test_script", Duration::from_secs(5));
 
         match result {
-            Err(ScriptError::Failed { exit_code, stdout, stderr }) => {
+            Err(ScriptError::Failed {
+                exit_code,
+                stdout,
+                stderr,
+            }) => {
                 assert_eq!(exit_code, 1);
                 assert!(stdout.is_empty());
                 assert!(stderr.is_empty());

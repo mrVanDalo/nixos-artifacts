@@ -144,12 +144,18 @@ fn build_env_exports(
 }
 
 /// Build environment exports for shared artifact generators.
-fn build_shared_env_exports(out: &Path, prompts: &Path, log_level: crate::logging::LogLevel) -> String {
+fn build_shared_env_exports(
+    out: &Path,
+    prompts: &Path,
+    log_level: crate::logging::LogLevel,
+) -> String {
     let out_quoted = escape_single_quoted(&out.display().to_string());
     let prompts_quoted = escape_single_quoted(&prompts.display().to_string());
     format!(
         "export out='{}'; export prompts='{}'; export artifact_context='shared'; export LOG_LEVEL='{}';",
-        out_quoted, prompts_quoted, log_level.as_str()
+        out_quoted,
+        prompts_quoted,
+        log_level.as_str()
     )
 }
 

@@ -113,7 +113,11 @@ impl BackendEffectHandler {
         self.current_out_dir = Some(out_dir.path().to_path_buf());
         std::mem::forget(out_dir);
 
-        Ok((captured.stdout.clone(), captured.stderr.clone(), files_generated))
+        Ok((
+            captured.stdout.clone(),
+            captured.stderr.clone(),
+            files_generated,
+        ))
     }
 
     fn write_prompts_to_directory(

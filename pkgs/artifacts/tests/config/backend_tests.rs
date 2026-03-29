@@ -40,7 +40,7 @@ serialize = "./serialize.sh"
     let (_temp_dir, toml_path) = create_temp_backend_toml(input);
     let config = BackendConfiguration::read_backend_config(&toml_path).unwrap();
     let backend = get_backend(&config, "test").unwrap();
-    
+
     assert_snapshot_temp_filtered!(make_snapshot!(input, backend));
 }
 
@@ -62,7 +62,7 @@ serialize = "./shared_serialize.sh"
     let (_temp_dir, toml_path) = create_temp_backend_toml(input);
     let config = BackendConfiguration::read_backend_config(&toml_path).unwrap();
     let backend = get_backend(&config, "test").unwrap();
-    
+
     assert_snapshot_temp_filtered!(make_snapshot!(input, backend));
 }
 
@@ -78,7 +78,7 @@ enabled = true
     let (_temp_dir, toml_path) = create_temp_backend_toml(input);
     let config = BackendConfiguration::read_backend_config(&toml_path).unwrap();
     let backend = get_backend(&config, "test").unwrap();
-    
+
     assert_snapshot_temp_filtered!(make_snapshot!(input, backend));
 }
 
@@ -93,7 +93,7 @@ serialize = "./serialize.sh"
     let (_temp_dir, toml_path) = create_temp_backend_toml(input);
     let config = BackendConfiguration::read_backend_config(&toml_path).unwrap();
     let backend = get_backend(&config, "test").unwrap();
-    
+
     assert_snapshot_temp_filtered!(make_snapshot!(input, backend));
 }
 
@@ -111,7 +111,7 @@ another = 123
     let (_temp_dir, toml_path) = create_temp_backend_toml(input);
     let config = BackendConfiguration::read_backend_config(&toml_path).unwrap();
     let backend = get_backend(&config, "test").unwrap();
-    
+
     assert_snapshot_temp_filtered!(make_snapshot!(input, backend));
 }
 
@@ -132,10 +132,10 @@ serialize = "./serialize2.sh"
 "#;
     let (_temp_dir, toml_path) = create_temp_backend_toml(input);
     let config = BackendConfiguration::read_backend_config(&toml_path).unwrap();
-    
+
     let mut keys: Vec<_> = config.config.keys().collect();
     keys.sort();
-    
+
     let backend1 = get_backend(&config, "backend1").unwrap();
     let backend2 = get_backend(&config, "backend2").unwrap();
     let snapshot = format!(
@@ -156,7 +156,7 @@ fn snapshot_empty_backend_section() {
     let (_temp_dir, toml_path) = create_temp_backend_toml(input);
     let config = BackendConfiguration::read_backend_config(&toml_path).unwrap();
     let backend = get_backend(&config, "test").unwrap();
-    
+
     assert_snapshot_temp_filtered!(make_snapshot!(input, backend));
 }
 
@@ -170,7 +170,7 @@ serialize = "./serialize.sh"
     let (_temp_dir, toml_path) = create_temp_backend_toml(input);
     let config = BackendConfiguration::read_backend_config(&toml_path).unwrap();
     let backend = get_backend(&config, "test").unwrap();
-    
+
     assert_snapshot_temp_filtered!(make_snapshot!(input, backend));
 }
 
@@ -184,7 +184,7 @@ serialize = "./serialize.sh"
     let (_temp_dir, toml_path) = create_temp_backend_toml(input);
     let config = BackendConfiguration::read_backend_config(&toml_path).unwrap();
     let backend = get_backend(&config, "test").unwrap();
-    
+
     assert_snapshot_temp_filtered!(make_snapshot!(input, backend));
 }
 
@@ -203,7 +203,7 @@ serialize = "./shared_serialize.sh"
     let (_temp_dir, toml_path) = create_temp_backend_toml(input);
     let config = BackendConfiguration::read_backend_config(&toml_path).unwrap();
     let backend = get_backend(&config, "test").unwrap();
-    
+
     assert_snapshot_temp_filtered!(make_snapshot!(input, backend));
 }
 
@@ -220,7 +220,7 @@ enabled = true
     let (_temp_dir, toml_path) = create_temp_backend_toml(input);
     let config = BackendConfiguration::read_backend_config(&toml_path).unwrap();
     let backend = get_backend(&config, "test").unwrap();
-    
+
     assert_snapshot_temp_filtered!(make_snapshot!(input, backend));
 }
 
@@ -238,7 +238,7 @@ include = ["./included.toml"]
 check = "./main_check.sh"
 serialize = "./main_serialize.sh"
 "#;
-    
+
     let temp_dir = TempDir::new().unwrap();
     let included_path = temp_dir.path().join("included.toml");
     let mut file = std::fs::File::create(&included_path).unwrap();
@@ -249,7 +249,7 @@ serialize = "./main_serialize.sh"
     file.write_all(main.as_bytes()).unwrap();
 
     let config = BackendConfiguration::read_backend_config(&main_path).unwrap();
-    
+
     let mut keys: Vec<_> = config.config.keys().collect();
     keys.sort();
 
@@ -270,7 +270,7 @@ check = "./check.sh"
 "#;
     let (_temp_dir, toml_path) = create_temp_backend_toml(input);
     let result = BackendConfiguration::read_backend_config(&toml_path);
-    
+
     let snapshot = format!("Input:\n{}\n\nResult:\n{:?}", input.trim(), result);
     assert_snapshot_temp_filtered_with_file!(snapshot);
 }
@@ -283,7 +283,7 @@ serialize = "./serialize.sh"
 "#;
     let (_temp_dir, toml_path) = create_temp_backend_toml(input);
     let result = BackendConfiguration::read_backend_config(&toml_path);
-    
+
     let snapshot = format!("Input:\n{}\n\nResult:\n{:?}", input.trim(), result);
     assert_snapshot_temp_filtered_with_file!(snapshot);
 }
@@ -298,7 +298,7 @@ serialize = "./serialize.sh"
     let (_temp_dir, toml_path) = create_temp_backend_toml(input);
     let config = BackendConfiguration::read_backend_config(&toml_path).unwrap();
     let result = config.validate_shared_serialize("test");
-    
+
     let snapshot = format!("Input:\n{}\n\nResult:\n{:?}", input.trim(), result);
     assert_snapshot_temp_filtered_with_file!(snapshot);
 }
@@ -317,7 +317,7 @@ serialize = "./shared_serialize.sh"
     let (_temp_dir, toml_path) = create_temp_backend_toml(input);
     let config = BackendConfiguration::read_backend_config(&toml_path).unwrap();
     let result = config.validate_shared_serialize("test");
-    
+
     let snapshot = format!("Input:\n{}\n\nResult:\n{:?}", input.trim(), result);
     assert_snapshot_temp_filtered_with_file!(snapshot);
 }
@@ -329,7 +329,7 @@ fn snapshot_target_config_serializes_true() {
         check: Some("./check.sh".to_string()),
         serialize: Some("./serialize.sh".to_string()),
     };
-    
+
     let snapshot = format!(
         "TargetConfig:\n{:#?}\n\nserializes: {}\nis_enabled: {}",
         config,
@@ -346,7 +346,7 @@ fn snapshot_target_config_passthrough() {
         check: None,
         serialize: None,
     };
-    
+
     let snapshot = format!(
         "TargetConfig:\n{:#?}\n\nserializes: {}\nis_enabled: {}",
         config,
@@ -363,7 +363,7 @@ fn snapshot_target_config_disabled_explicit() {
         check: Some("./check.sh".to_string()),
         serialize: Some("./serialize.sh".to_string()),
     };
-    
+
     let snapshot = format!(
         "TargetConfig:\n{:#?}\n\nserializes: {}\nis_enabled: {}",
         config,
@@ -381,11 +381,10 @@ fn snapshot_target_config_validation_success() {
         serialize: Some("./serialize.sh".to_string()),
     };
     let result = config.validate(artifacts::config::backend::TargetType::NixOS, "test");
-    
+
     let snapshot = format!(
         "TargetConfig:\n{:#?}\n\nValidation result:\n{:?}",
-        config,
-        result
+        config, result
     );
     insta::assert_snapshot!(snapshot);
 }
@@ -398,11 +397,10 @@ fn snapshot_target_config_validation_check_without_serialize() {
         serialize: None,
     };
     let result = config.validate(artifacts::config::backend::TargetType::NixOS, "test");
-    
+
     let snapshot = format!(
         "TargetConfig:\n{:#?}\n\nValidation result:\n{:?}",
-        config,
-        result
+        config, result
     );
     insta::assert_snapshot!(snapshot);
 }
@@ -415,11 +413,10 @@ fn snapshot_target_config_validation_serialize_without_check() {
         serialize: Some("./serialize.sh".to_string()),
     };
     let result = config.validate(artifacts::config::backend::TargetType::Home, "test");
-    
+
     let snapshot = format!(
         "TargetConfig:\n{:#?}\n\nValidation result:\n{:?}",
-        config,
-        result
+        config, result
     );
     insta::assert_snapshot!(snapshot);
 }
