@@ -1,10 +1,16 @@
 ---
 source: tests/config/make_tests.rs
-expression: snapshot
+expression: "make_snapshot!(input, config)"
 ---
 Input:
 {"nixos": [], "home": []}
 
-nixos_map: {}
-
-home_map: {}
+Parsed:
+MakeConfiguration {
+    nixos_map: {},
+    home_map: {},
+    nixos_config: {},
+    home_config: {},
+    make_base: "",
+    make_json: "make.json",
+}

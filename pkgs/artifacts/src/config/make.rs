@@ -294,20 +294,17 @@ struct MakeRoot {
 }
 
 impl MakeConfiguration {
-    pub fn read_make_config(make_json: &Path) -> anyhow::Result<MakeConfiguration> {
-        let make_text = fs::read_to_string(make_json)
-            .with_context(|| format!("reading make config {}", make_json.display()))?;
-
+    pub fn parse_make_config(make_text: &str, make_json: &Path) -> anyhow::Result<MakeConfiguration> {
         #[cfg(feature = "logging")]
         {
-            let pretty = match json_from_str::<Value>(&make_text) {
-                Ok(v) => to_string_pretty(&v).unwrap_or_else(|_| make_text.clone()),
-                Err(_) => make_text.clone(),
+            let pretty = match json_from_str::<Value>(make_text) {
+                Ok(v) => to_string_pretty(&v).unwrap_or_else(|_| make_text.to_string()),
+                Err(_) => make_text.to_string(),
             };
             log_debug!("make config (pretty):\n{}", pretty);
         }
 
-        let root: MakeRoot = json_from_str(&make_text)
+        let root: MakeRoot = json_from_str(make_text)
             .with_context(|| format!("parsing make config {}", make_json.display()))?;
 
         let mut nixos_map: BTreeMap<String, BTreeMap<String, ArtifactDef>> = BTreeMap::new();
@@ -348,6 +345,12 @@ impl MakeConfiguration {
             make_base,
             make_json: make_json.to_path_buf(),
         })
+    }
+
+    pub fn read_make_config(make_json: &Path) -> anyhow::Result<MakeConfiguration> {
+        let make_text = fs::read_to_string(make_json)
+            .with_context(|| format!("reading make config {}", make_json.display()))?;
+        Self::parse_make_config(&make_text, make_json)
     }
 }
 

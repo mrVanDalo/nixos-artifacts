@@ -2,39 +2,22 @@
 //!
 //! Each test captures input JSON and parsed output as a readable snapshot.
 
-use std::io::Write;
 use std::path::PathBuf;
-use tempfile::TempDir;
 
 use artifacts::config::make::MakeConfiguration;
 
-fn create_temp_make_json(content: &str) -> (TempDir, PathBuf) {
-    let temp_dir = TempDir::new().unwrap();
-    let json_path = temp_dir.path().join("make.json");
-    let mut file = std::fs::File::create(&json_path).unwrap();
-    file.write_all(content.as_bytes()).unwrap();
-    (temp_dir, json_path)
-}
-
 macro_rules! make_snapshot {
-    ($input:expr, $parsed:expr) => {
-        format!("Input:\n{}\n\nParsed:\n{:#?}", $input.trim(), $parsed)
+    ($input:expr, $config:expr) => {
+        format!("Input:\n{}\n\nParsed:\n{:#?}", $input.trim(), $config)
     };
 }
 
 #[test]
 fn snapshot_empty_configuration() {
     let input = r#"{"nixos": [], "home": []}"#;
-    let (_temp_dir, json_path) = create_temp_make_json(input);
-    let config = MakeConfiguration::read_make_config(&json_path).unwrap();
+    let config = MakeConfiguration::parse_make_config(input, &PathBuf::from("make.json")).unwrap();
     
-    let snapshot = format!(
-        "Input:\n{}\n\nnixos_map: {:#?}\n\nhome_map: {:#?}",
-        input,
-        config.nixos_map,
-        config.home_map
-    );
-    insta::assert_snapshot!(snapshot);
+    insta::assert_snapshot!(make_snapshot!(input, config));
 }
 
 #[test]
@@ -56,16 +39,9 @@ fn snapshot_single_nixos_artifact_no_shared() {
     }],
     "home": []
 }"#;
-    let (_temp_dir, json_path) = create_temp_make_json(input);
-    let config = MakeConfiguration::read_make_config(&json_path).unwrap();
-    let shared = config.get_shared_artifacts();
-    let artifact = config.nixos_map.get("machine-one").unwrap().get("my-secret").unwrap();
+    let config = MakeConfiguration::parse_make_config(input, &PathBuf::from("make.json")).unwrap();
     
-    let snapshot = make_snapshot!(input, artifact);
-    insta::assert_snapshot!(snapshot);
-    
-    let shared_snapshot = make_snapshot!(input, shared);
-    insta::assert_snapshot!("single_nixos_artifact_shared", shared_snapshot);
+    insta::assert_snapshot!(make_snapshot!(input, config));
 }
 
 #[test]
@@ -87,13 +63,9 @@ fn snapshot_shared_artifact_single_machine() {
     }],
     "home": []
 }"#;
-    let (_temp_dir, json_path) = create_temp_make_json(input);
-    let config = MakeConfiguration::read_make_config(&json_path).unwrap();
-    let shared = config.get_shared_artifacts();
-    let info = shared.get("shared-secret").unwrap();
+    let config = MakeConfiguration::parse_make_config(input, &PathBuf::from("make.json")).unwrap();
     
-    let snapshot = make_snapshot!(input, info);
-    insta::assert_snapshot!(snapshot);
+    insta::assert_snapshot!(make_snapshot!(input, config));
 }
 
 #[test]
@@ -131,13 +103,9 @@ fn snapshot_shared_artifact_multiple_machines_same_generator() {
     ],
     "home": []
 }"#;
-    let (_temp_dir, json_path) = create_temp_make_json(input);
-    let config = MakeConfiguration::read_make_config(&json_path).unwrap();
-    let shared = config.get_shared_artifacts();
-    let info = shared.get("shared-secret").unwrap();
+    let config = MakeConfiguration::parse_make_config(input, &PathBuf::from("make.json")).unwrap();
     
-    let snapshot = make_snapshot!(input, info);
-    insta::assert_snapshot!(snapshot);
+    insta::assert_snapshot!(make_snapshot!(input, config));
 }
 
 #[test]
@@ -175,13 +143,9 @@ fn snapshot_shared_artifact_multiple_machines_different_generators() {
     ],
     "home": []
 }"#;
-    let (_temp_dir, json_path) = create_temp_make_json(input);
-    let config = MakeConfiguration::read_make_config(&json_path).unwrap();
-    let shared = config.get_shared_artifacts();
-    let info = shared.get("shared-secret").unwrap();
+    let config = MakeConfiguration::parse_make_config(input, &PathBuf::from("make.json")).unwrap();
     
-    let snapshot = make_snapshot!(input, info);
-    insta::assert_snapshot!(snapshot);
+    insta::assert_snapshot!(make_snapshot!(input, config));
 }
 
 #[test]
@@ -216,13 +180,9 @@ fn snapshot_shared_artifact_mixed_nixos_and_home() {
         "config": {}
     }]
 }"#;
-    let (_temp_dir, json_path) = create_temp_make_json(input);
-    let config = MakeConfiguration::read_make_config(&json_path).unwrap();
-    let shared = config.get_shared_artifacts();
-    let info = shared.get("shared-secret").unwrap();
+    let config = MakeConfiguration::parse_make_config(input, &PathBuf::from("make.json")).unwrap();
     
-    let snapshot = make_snapshot!(input, info);
-    insta::assert_snapshot!(snapshot);
+    insta::assert_snapshot!(make_snapshot!(input, config));
 }
 
 #[test]
@@ -274,13 +234,9 @@ fn snapshot_shared_artifact_matching_files_no_error() {
     ],
     "home": []
 }"#;
-    let (_temp_dir, json_path) = create_temp_make_json(input);
-    let config = MakeConfiguration::read_make_config(&json_path).unwrap();
-    let shared = config.get_shared_artifacts();
-    let info = shared.get("shared-secret").unwrap();
+    let config = MakeConfiguration::parse_make_config(input, &PathBuf::from("make.json")).unwrap();
     
-    let snapshot = make_snapshot!(input, info);
-    insta::assert_snapshot!(snapshot);
+    insta::assert_snapshot!(make_snapshot!(input, config));
 }
 
 #[test]
@@ -338,13 +294,9 @@ fn snapshot_shared_artifact_mismatched_files_error() {
     ],
     "home": []
 }"#;
-    let (_temp_dir, json_path) = create_temp_make_json(input);
-    let config = MakeConfiguration::read_make_config(&json_path).unwrap();
-    let shared = config.get_shared_artifacts();
-    let info = shared.get("shared-secret").unwrap();
+    let config = MakeConfiguration::parse_make_config(input, &PathBuf::from("make.json")).unwrap();
     
-    let snapshot = make_snapshot!(input, info);
-    insta::assert_snapshot!(snapshot);
+    insta::assert_snapshot!(make_snapshot!(input, config));
 }
 
 #[test]
@@ -396,13 +348,9 @@ fn snapshot_shared_artifact_different_file_names_error() {
     ],
     "home": []
 }"#;
-    let (_temp_dir, json_path) = create_temp_make_json(input);
-    let config = MakeConfiguration::read_make_config(&json_path).unwrap();
-    let shared = config.get_shared_artifacts();
-    let info = shared.get("shared-secret").unwrap();
+    let config = MakeConfiguration::parse_make_config(input, &PathBuf::from("make.json")).unwrap();
     
-    let snapshot = make_snapshot!(input, info);
-    insta::assert_snapshot!(snapshot);
+    insta::assert_snapshot!(make_snapshot!(input, config));
 }
 
 #[test]
@@ -425,12 +373,9 @@ fn snapshot_artifact_with_description() {
     }],
     "home": []
 }"#;
-    let (_temp_dir, json_path) = create_temp_make_json(input);
-    let config = MakeConfiguration::read_make_config(&json_path).unwrap();
-    let artifact = config.nixos_map.get("machine-one").unwrap().get("test-secret").unwrap();
+    let config = MakeConfiguration::parse_make_config(input, &PathBuf::from("make.json")).unwrap();
     
-    let snapshot = make_snapshot!(input, artifact);
-    insta::assert_snapshot!(snapshot);
+    insta::assert_snapshot!(make_snapshot!(input, config));
 }
 
 #[test]
@@ -452,12 +397,9 @@ fn snapshot_artifact_without_description() {
     }],
     "home": []
 }"#;
-    let (_temp_dir, json_path) = create_temp_make_json(input);
-    let config = MakeConfiguration::read_make_config(&json_path).unwrap();
-    let artifact = config.nixos_map.get("machine-one").unwrap().get("test-secret").unwrap();
+    let config = MakeConfiguration::parse_make_config(input, &PathBuf::from("make.json")).unwrap();
     
-    let snapshot = make_snapshot!(input, artifact);
-    insta::assert_snapshot!(snapshot);
+    insta::assert_snapshot!(make_snapshot!(input, config));
 }
 
 #[test]
@@ -497,13 +439,9 @@ fn snapshot_shared_artifact_with_description() {
     ],
     "home": []
 }"#;
-    let (_temp_dir, json_path) = create_temp_make_json(input);
-    let config = MakeConfiguration::read_make_config(&json_path).unwrap();
-    let shared = config.get_shared_artifacts();
-    let info = shared.get("shared-secret").unwrap();
+    let config = MakeConfiguration::parse_make_config(input, &PathBuf::from("make.json")).unwrap();
     
-    let snapshot = make_snapshot!(input, info);
-    insta::assert_snapshot!(snapshot);
+    insta::assert_snapshot!(make_snapshot!(input, config));
 }
 
 #[test]
@@ -552,16 +490,9 @@ fn snapshot_artifact_with_files_and_prompts() {
     }],
     "home": []
 }"#;
-    let (_temp_dir, json_path) = create_temp_make_json(input);
-    let config = MakeConfiguration::read_make_config(&json_path).unwrap();
-    let artifact = config.nixos_map.get("server").unwrap().get("ssh-key").unwrap();
-    let backend_config = config.get_backend_config_for("server", "agenix");
+    let config = MakeConfiguration::parse_make_config(input, &PathBuf::from("make.json")).unwrap();
     
-    let artifact_snapshot = make_snapshot!(input, artifact);
-    insta::assert_snapshot!(artifact_snapshot);
-    
-    let config_snapshot = format!("Input:\n{}\n\nBackend config (agenix):\n{:#?}", input.trim(), backend_config);
-    insta::assert_snapshot!("artifact_with_files_prompts_config", config_snapshot);
+    insta::assert_snapshot!(make_snapshot!(input, config));
 }
 
 #[test]
@@ -593,13 +524,7 @@ fn snapshot_home_manager_configuration() {
         "config": {}
     }]
 }"#;
-    let (_temp_dir, json_path) = create_temp_make_json(input);
-    let config = MakeConfiguration::read_make_config(&json_path).unwrap();
-    let artifact = config.home_map.get("alice@workstation").unwrap().get("user-secret").unwrap();
+    let config = MakeConfiguration::parse_make_config(input, &PathBuf::from("make.json")).unwrap();
     
-    let artifact_snapshot = make_snapshot!(input, artifact);
-    insta::assert_snapshot!(artifact_snapshot);
-    
-    let nixos_snapshot = format!("Input:\n{}\n\nnixos_map (empty):\n{:#?}", input.trim(), config.nixos_map);
-    insta::assert_snapshot!("home_manager_nixos_empty", nixos_snapshot);
+    insta::assert_snapshot!(make_snapshot!(input, config));
 }

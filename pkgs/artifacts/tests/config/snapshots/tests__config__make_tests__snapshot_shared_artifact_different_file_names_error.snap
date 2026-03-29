@@ -1,6 +1,6 @@
 ---
 source: tests/config/make_tests.rs
-expression: snapshot
+expression: "make_snapshot!(input, config)"
 ---
 Input:
 {
@@ -52,46 +52,60 @@ Input:
 }
 
 Parsed:
-SharedArtifactInfo {
-    artifact_name: "shared-secret",
-    description: None,
-    generators: [
-        GeneratorInfo {
-            path: "/nix/store/gen.sh",
-            sources: [
-                GeneratorSource {
-                    target: "machine-one",
-                    target_type: Nixos,
+MakeConfiguration {
+    nixos_map: {
+        "machine-one": {
+            "shared-secret": ArtifactDef {
+                name: "shared-secret",
+                description: None,
+                shared: true,
+                files: {
+                    "secret-a": FileDef {
+                        name: "secret-a",
+                        path: Some(
+                            "/run/secrets/secret-a",
+                        ),
+                        owner: Some(
+                            "root",
+                        ),
+                        group: Some(
+                            "root",
+                        ),
+                    },
                 },
-                GeneratorSource {
-                    target: "machine-two",
-                    target_type: Nixos,
-                },
-            ],
+                prompts: {},
+                generator: "/nix/store/gen.sh",
+                serialization: "test",
+            },
         },
-    ],
-    nixos_targets: [
-        "machine-one",
-        "machine-two",
-    ],
-    home_targets: [],
-    backend_name: "test",
-    prompts: {},
-    files: {
-        "secret-a": FileDef {
-            name: "secret-a",
-            path: Some(
-                "/run/secrets/secret-a",
-            ),
-            owner: Some(
-                "root",
-            ),
-            group: Some(
-                "root",
-            ),
+        "machine-two": {
+            "shared-secret": ArtifactDef {
+                name: "shared-secret",
+                description: None,
+                shared: true,
+                files: {
+                    "secret-b": FileDef {
+                        name: "secret-b",
+                        path: Some(
+                            "/run/secrets/secret-b",
+                        ),
+                        owner: Some(
+                            "root",
+                        ),
+                        group: Some(
+                            "root",
+                        ),
+                    },
+                },
+                prompts: {},
+                generator: "/nix/store/gen.sh",
+                serialization: "test",
+            },
         },
     },
-    error: Some(
-        "File definition mismatch: machine-one defines [secret-a], machine-two: missing: [secret-a], extra: [secret-b]. Shared artifacts must have identical file definitions.",
-    ),
+    home_map: {},
+    nixos_config: {},
+    home_config: {},
+    make_base: "",
+    make_json: "make.json",
 }

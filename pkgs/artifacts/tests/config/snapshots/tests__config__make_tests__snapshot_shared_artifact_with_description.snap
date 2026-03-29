@@ -1,6 +1,6 @@
 ---
 source: tests/config/make_tests.rs
-expression: snapshot
+expression: "make_snapshot!(input, config)"
 ---
 Input:
 {
@@ -40,33 +40,38 @@ Input:
 }
 
 Parsed:
-SharedArtifactInfo {
-    artifact_name: "shared-secret",
-    description: Some(
-        "Shared SSH key for all servers",
-    ),
-    generators: [
-        GeneratorInfo {
-            path: "/nix/store/gen.sh",
-            sources: [
-                GeneratorSource {
-                    target: "machine-one",
-                    target_type: Nixos,
-                },
-                GeneratorSource {
-                    target: "machine-two",
-                    target_type: Nixos,
-                },
-            ],
+MakeConfiguration {
+    nixos_map: {
+        "machine-one": {
+            "shared-secret": ArtifactDef {
+                name: "shared-secret",
+                description: Some(
+                    "Shared SSH key for all servers",
+                ),
+                shared: true,
+                files: {},
+                prompts: {},
+                generator: "/nix/store/gen.sh",
+                serialization: "test",
+            },
         },
-    ],
-    nixos_targets: [
-        "machine-one",
-        "machine-two",
-    ],
-    home_targets: [],
-    backend_name: "test",
-    prompts: {},
-    files: {},
-    error: None,
+        "machine-two": {
+            "shared-secret": ArtifactDef {
+                name: "shared-secret",
+                description: Some(
+                    "Shared SSH key for all servers",
+                ),
+                shared: true,
+                files: {},
+                prompts: {},
+                generator: "/nix/store/gen.sh",
+                serialization: "test",
+            },
+        },
+    },
+    home_map: {},
+    nixos_config: {},
+    home_config: {},
+    make_base: "",
+    make_json: "make.json",
 }
