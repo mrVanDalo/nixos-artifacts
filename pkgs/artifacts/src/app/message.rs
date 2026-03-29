@@ -106,22 +106,11 @@ pub struct ScriptOutput {
 }
 
 impl ScriptOutput {
-    /// Convert from CapturedOutput to ScriptOutput, splitting stdout and stderr
+    /// Convert from CapturedOutput to ScriptOutput, copying stdout and stderr
     pub fn from_captured(captured: &crate::backend::output_capture::CapturedOutput) -> Self {
-        use crate::app::model::OutputStream;
-        let mut stdout_lines = Vec::new();
-        let mut stderr_lines = Vec::new();
-
-        for line in &captured.lines {
-            match line.stream {
-                OutputStream::Stdout => stdout_lines.push(line.content.clone()),
-                OutputStream::Stderr => stderr_lines.push(line.content.clone()),
-            }
-        }
-
         Self {
-            stdout_lines,
-            stderr_lines,
+            stdout_lines: captured.stdout.clone(),
+            stderr_lines: captured.stderr.clone(),
         }
     }
 

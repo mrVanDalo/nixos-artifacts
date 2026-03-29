@@ -8,7 +8,6 @@ use crate::app::effect::Effect;
 use crate::app::message::ScriptOutput;
 use crate::app::model::{ArtifactEntry, ArtifactStatus, ListEntry, Model, TargetType};
 use crate::backend::generator::{run_generator_script, verify_generated_files};
-use crate::backend::output_capture::OutputStream;
 use crate::backend::serialization::{
     run_check_serialization, run_serialize, run_shared_check_serialization,
 };
@@ -107,9 +106,7 @@ impl BackendEffectHandler {
         self.current_out_dir = Some(out_dir.path().to_path_buf());
         std::mem::forget(out_dir);
 
-        let (stdout_lines, stderr_lines) = split_captured_output(&captured);
-
-        Ok((stdout_lines, stderr_lines, files_generated))
+        Ok((captured.stdout.clone(), captured.stderr.clone(), files_generated))
     }
 
     fn write_prompts_to_directory(
@@ -148,27 +145,8 @@ impl BackendEffectHandler {
 
         let _ = std::fs::remove_dir_all(&out_path);
 
-        let (stdout_lines, stderr_lines) = split_captured_output(&captured);
-
-        Ok((stdout_lines, stderr_lines))
+        Ok((captured.stdout.clone(), captured.stderr.clone()))
     }
-}
-
-/// Split captured output into separate stdout and stderr line vectors
-fn split_captured_output(
-    captured: &crate::backend::output_capture::CapturedOutput,
-) -> (Vec<String>, Vec<String>) {
-    let mut stdout_lines = Vec::new();
-    let mut stderr_lines = Vec::new();
-
-    for line in &captured.lines {
-        match line.stream {
-            OutputStream::Stdout => stdout_lines.push(line.content.clone()),
-            OutputStream::Stderr => stderr_lines.push(line.content.clone()),
-        }
-    }
-
-    (stdout_lines, stderr_lines)
 }
 
 impl EffectHandler for BackendEffectHandler {
