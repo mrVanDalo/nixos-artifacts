@@ -1,0 +1,16 @@
+---
+source: tests/config/backend_tests.rs
+expression: "make_snapshot!(input, backend)"
+---
+Input:
+[test]
+
+Parsed:
+BackendEntry {
+    nixos: None,
+    home: None,
+    shared: None,
+    settings: BackendSettings(
+        {},
+    ),
+}

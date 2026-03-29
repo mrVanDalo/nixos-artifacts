@@ -1,0 +1,59 @@
+---
+source: tests/config/make_tests.rs
+expression: artifact_snapshot
+---
+Input:
+{
+    "nixos": [],
+    "home": [{
+        "user": "alice@workstation",
+        "artifacts": {
+            "user-secret": {
+                "name": "user-secret",
+                "shared": false,
+                "files": {
+                    "config.json": {
+                        "name": "config.json",
+                        "path": "~/.config/app/config.json"
+                    }
+                },
+                "prompts": {
+                    "token": {
+                        "name": "token",
+                        "description": "API token"
+                    }
+                },
+                "generator": "/nix/store/gen.sh",
+                "serialization": "test"
+            }
+        },
+        "config": {}
+    }]
+}
+
+Parsed:
+ArtifactDef {
+    name: "user-secret",
+    description: None,
+    shared: false,
+    files: {
+        "config.json": FileDef {
+            name: "config.json",
+            path: Some(
+                "~/.config/app/config.json",
+            ),
+            owner: None,
+            group: None,
+        },
+    },
+    prompts: {
+        "token": PromptDef {
+            name: "token",
+            description: Some(
+                "API token",
+            ),
+        },
+    },
+    generator: "/nix/store/gen.sh",
+    serialization: "test",
+}

@@ -1,0 +1,25 @@
+---
+source: tests/config/make_tests.rs
+expression: shared_snapshot
+---
+Input:
+{
+    "nixos": [{
+        "machine": "machine-one",
+        "artifacts": {
+            "my-secret": {
+                "name": "my-secret",
+                "shared": false,
+                "files": {},
+                "prompts": {},
+                "generator": "/nix/store/gen.sh",
+                "serialization": "test"
+            }
+        },
+        "config": {}
+    }],
+    "home": []
+}
+
+Parsed:
+{}

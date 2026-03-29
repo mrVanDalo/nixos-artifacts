@@ -1,0 +1,15 @@
+---
+source: tests/config/backend_tests.rs
+expression: snapshot
+---
+Input:
+[test.nixos]
+check = "./check.sh"
+serialize = "./serialize.sh"
+
+[test.shared]
+check = "./shared_check.sh"
+serialize = "./shared_serialize.sh"
+
+Result:
+Ok(())

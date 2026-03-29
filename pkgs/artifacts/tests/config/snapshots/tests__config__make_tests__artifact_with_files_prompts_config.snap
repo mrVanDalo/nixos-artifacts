@@ -1,0 +1,56 @@
+---
+source: tests/config/make_tests.rs
+expression: config_snapshot
+---
+Input:
+{
+    "nixos": [{
+        "machine": "server",
+        "artifacts": {
+            "ssh-key": {
+                "name": "ssh-key",
+                "description": "SSH key for authentication",
+                "shared": false,
+                "files": {
+                    "id_ed25519": {
+                        "name": "id_ed25519",
+                        "path": "/run/secrets/id_ed25519",
+                        "owner": "root",
+                        "group": "root"
+                    },
+                    "id_ed25519.pub": {
+                        "name": "id_ed25519.pub",
+                        "path": "/run/secrets/id_ed25519.pub",
+                        "owner": "root",
+                        "group": "root"
+                    }
+                },
+                "prompts": {
+                    "passphrase": {
+                        "name": "passphrase",
+                        "description": "SSH key passphrase"
+                    },
+                    "comment": {
+                        "name": "comment",
+                        "description": "Key comment"
+                    }
+                },
+                "generator": "/nix/store/gen.sh",
+                "serialization": "agenix"
+            }
+        },
+        "config": {
+            "agenix": {
+                "publicKey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA..."
+            }
+        }
+    }],
+    "home": []
+}
+
+Backend config (agenix):
+Some(
+    {
+        "publicKey": String("ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA..."),
+    },
+)

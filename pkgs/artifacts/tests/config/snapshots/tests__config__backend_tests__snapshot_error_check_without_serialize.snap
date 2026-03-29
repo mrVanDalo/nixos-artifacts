@@ -1,0 +1,10 @@
+---
+source: tests/config/backend_tests.rs
+expression: snapshot
+---
+Input:
+[test.nixos]
+check = "./check.sh"
+
+Result:
+Err(backend 'test.nixos': 'check' requires 'serialize' to be defined)

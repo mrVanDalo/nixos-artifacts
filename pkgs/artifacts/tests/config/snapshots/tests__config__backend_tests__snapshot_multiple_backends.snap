@@ -1,0 +1,68 @@
+---
+source: tests/config/backend_tests.rs
+expression: snapshot
+---
+Input:
+[backend1.nixos]
+check = "./check1.sh"
+serialize = "./serialize1.sh"
+
+[backend2.nixos]
+check = "./check2.sh"
+serialize = "./serialize2.sh"
+
+[backend2.home]
+check = "./check2.sh"
+serialize = "./serialize2.sh"
+
+Backends: ["backend1", "backend2"]
+
+backend1:
+BackendEntry {
+    nixos: Some(
+        TargetConfig {
+            enabled: None,
+            check: Some(
+                "/tmp/FILTERED/./check1.sh",
+            ),
+            serialize: Some(
+                "/tmp/FILTERED/./serialize1.sh",
+            ),
+        },
+    ),
+    home: None,
+    shared: None,
+    settings: BackendSettings(
+        {},
+    ),
+}
+
+backend2:
+BackendEntry {
+    nixos: Some(
+        TargetConfig {
+            enabled: None,
+            check: Some(
+                "/tmp/FILTERED/./check2.sh",
+            ),
+            serialize: Some(
+                "/tmp/FILTERED/./serialize2.sh",
+            ),
+        },
+    ),
+    home: Some(
+        TargetConfig {
+            enabled: None,
+            check: Some(
+                "/tmp/FILTERED/./check2.sh",
+            ),
+            serialize: Some(
+                "/tmp/FILTERED/./serialize2.sh",
+            ),
+        },
+    ),
+    shared: None,
+    settings: BackendSettings(
+        {},
+    ),
+}

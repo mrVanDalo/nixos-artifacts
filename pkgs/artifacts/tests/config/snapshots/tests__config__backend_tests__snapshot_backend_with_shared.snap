@@ -1,0 +1,56 @@
+---
+source: tests/config/backend_tests.rs
+expression: "make_snapshot!(input, backend)"
+---
+Input:
+[test.nixos]
+check = "./check.sh"
+serialize = "./serialize.sh"
+
+[test.home]
+check = "./check.sh"
+serialize = "./serialize.sh"
+
+[test.shared]
+check = "./shared_check.sh"
+serialize = "./shared_serialize.sh"
+
+Parsed:
+BackendEntry {
+    nixos: Some(
+        TargetConfig {
+            enabled: None,
+            check: Some(
+                "/tmp/FILTERED/./check.sh",
+            ),
+            serialize: Some(
+                "/tmp/FILTERED/./serialize.sh",
+            ),
+        },
+    ),
+    home: Some(
+        TargetConfig {
+            enabled: None,
+            check: Some(
+                "/tmp/FILTERED/./check.sh",
+            ),
+            serialize: Some(
+                "/tmp/FILTERED/./serialize.sh",
+            ),
+        },
+    ),
+    shared: Some(
+        TargetConfig {
+            enabled: None,
+            check: Some(
+                "/tmp/FILTERED/./shared_check.sh",
+            ),
+            serialize: Some(
+                "/tmp/FILTERED/./shared_serialize.sh",
+            ),
+        },
+    ),
+    settings: BackendSettings(
+        {},
+    ),
+}

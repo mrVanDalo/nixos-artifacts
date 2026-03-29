@@ -1,0 +1,15 @@
+---
+source: tests/config/backend_tests.rs
+expression: snapshot
+---
+TargetConfig:
+TargetConfig {
+    enabled: None,
+    check: None,
+    serialize: Some(
+        "./serialize.sh",
+    ),
+}
+
+Validation result:
+Err(backend 'test.home': 'serialize' requires 'check' to be defined)

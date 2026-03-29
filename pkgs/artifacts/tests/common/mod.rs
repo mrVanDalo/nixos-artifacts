@@ -4,6 +4,9 @@
 //! (BackendEffectHandler + Model + Effects) for testing, ensuring that tests
 //! exercise the real production code paths rather than a separate headless API.
 
+#[macro_use]
+mod snapshot_macros;
+
 use anyhow::{Context, Result};
 use artifacts::app::effect::Effect;
 use artifacts::app::message::Message;

@@ -1,0 +1,36 @@
+---
+source: tests/config/make_tests.rs
+expression: snapshot
+---
+Input:
+{
+    "nixos": [{
+        "machine": "machine-one",
+        "artifacts": {
+            "test-secret": {
+                "name": "test-secret",
+                "description": "Test artifact description",
+                "shared": false,
+                "files": {},
+                "prompts": {},
+                "generator": "/nix/store/gen.sh",
+                "serialization": "test"
+            }
+        },
+        "config": {}
+    }],
+    "home": []
+}
+
+Parsed:
+ArtifactDef {
+    name: "test-secret",
+    description: Some(
+        "Test artifact description",
+    ),
+    shared: false,
+    files: {},
+    prompts: {},
+    generator: "/nix/store/gen.sh",
+    serialization: "test",
+}
