@@ -25,9 +25,7 @@ use artifacts::config::make::{ArtifactDef, MakeConfiguration};
 use artifacts::config::nix::build_make_from_flake;
 use serial_test::serial;
 use std::collections::BTreeMap;
-use std::fs;
-use std::path::{Path, PathBuf};
-use tempfile::TempDir;
+use std::path::PathBuf;
 
 fn project_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -60,97 +58,6 @@ fn find_first_artifact(
                 .next()
                 .map(|(name, def)| (name.clone(), def.clone()))
         })
-}
-
-fn find_first_home_artifact(
-    make_config: &MakeConfiguration,
-    user_name: &str,
-) -> Option<(String, ArtifactDef)> {
-    make_config.home_map.get(user_name).and_then(|artifacts| {
-        artifacts
-            .iter()
-            .next()
-            .map(|(name, def)| (name.clone(), def.clone()))
-    })
-}
-
-fn create_test_storage_dir(_test_name: &str) -> Result<TempDir> {
-    let temp_dir = TempDir::new()?;
-    let storage_dir = temp_dir.path().join("storage");
-    fs::create_dir_all(&storage_dir)?;
-    Ok(temp_dir)
-}
-
-fn setup_test_storage() -> Result<(TempDir, PathBuf)> {
-    let temp_dir = TempDir::new()?;
-    let storage_path = temp_dir.path().join("storage");
-    fs::create_dir_all(&storage_path)?;
-
-    unsafe {
-        std::env::set_var("ARTIFACTS_TEST_OUTPUT_DIR", &storage_path);
-    }
-
-    Ok((temp_dir, storage_path))
-}
-
-fn cleanup_test_storage() {
-    unsafe {
-        std::env::remove_var("ARTIFACTS_TEST_OUTPUT_DIR");
-    }
-}
-
-fn get_artifact_path(storage_dir: &Path, artifact_name: &str) -> PathBuf {
-    storage_dir.join(artifact_name)
-}
-
-fn verify_artifact_exists(storage_dir: &Path, artifact_name: &str) -> Result<()> {
-    let artifact_path = get_artifact_path(storage_dir, artifact_name);
-
-    if !artifact_path.exists() {
-        return Err(anyhow::anyhow!(
-            "Artifact '{}' not found at expected path: {}. \
-             Directory contents: {:?}",
-            artifact_name,
-            artifact_path.display(),
-            fs::read_dir(storage_dir)
-                .ok()
-                .and_then(|entries| {
-                    let names: Vec<_> = entries
-                        .filter_map(|e| e.ok())
-                        .map(|e| e.file_name())
-                        .collect();
-                    if names.is_empty() { None } else { Some(names) }
-                })
-                .unwrap_or_else(|| vec!["(empty or inaccessible)".into()])
-        ));
-    }
-
-    Ok(())
-}
-
-fn verify_artifact_content(storage_dir: &Path, artifact_name: &str, expected: &str) -> Result<()> {
-    verify_artifact_exists(storage_dir, artifact_name)?;
-
-    let artifact_path = get_artifact_path(storage_dir, artifact_name);
-    let actual_content = fs::read_to_string(&artifact_path).with_context(|| {
-        format!(
-            "Failed to read artifact '{}' from {}",
-            artifact_name,
-            artifact_path.display()
-        )
-    })?;
-
-    if actual_content != expected {
-        return Err(anyhow::anyhow!(
-            "Artifact '{}' content mismatch at {}\nExpected: {:?}\nActual: {:?}",
-            artifact_name,
-            artifact_path.display(),
-            expected,
-            actual_content
-        ));
-    }
-
-    Ok(())
 }
 
 #[test]

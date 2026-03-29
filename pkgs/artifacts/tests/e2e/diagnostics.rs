@@ -348,13 +348,3 @@ fn capture_test_environment() -> HashMap<String, String> {
 
     env_vars
 }
-
-struct CleanupGuard;
-
-impl Drop for CleanupGuard {
-    fn drop(&mut self) {
-        unsafe {
-            std::env::remove_var("ARTIFACTS_TEST_OUTPUT_DIR");
-        }
-    }
-}
