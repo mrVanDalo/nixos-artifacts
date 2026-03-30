@@ -79,7 +79,7 @@
 
 use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -88,7 +88,7 @@ use std::path::{Path, PathBuf};
 /// This type allows backends to declare arbitrary configuration settings
 /// that are passed through to serialization scripts via environment variables.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct BackendSettings(pub HashMap<String, serde_json::Value>);
+pub struct BackendSettings(pub BTreeMap<String, serde_json::Value>);
 
 /// Target type for configuration sections (nixos, home, shared).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

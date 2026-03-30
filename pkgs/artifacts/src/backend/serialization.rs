@@ -76,6 +76,7 @@ struct ScriptInfo<'a> {
 }
 
 /// Handle the output from a script execution, converting ScriptErrors to CheckResults
+#[allow(unused_variables)]
 fn handle_check_output(
     result: Result<CapturedOutput, ScriptError>,
     artifact_name: &str,

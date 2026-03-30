@@ -1,7 +1,7 @@
 {
   description = "test-bubblewrap-network-blocking";
   inputs.flake-parts.url = "github:hercules-ci/flake-parts";
-  inputs.nixos-artifacts.url = "path:/var/tmp/vibe-kanban/worktrees/0125-finish-improve-t/nixos-artifacts";
+  inputs.nixos-artifacts.url = "github:mrvandalo/nixos-artifacts";
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
   outputs =

@@ -3,3 +3,6 @@ public/
 /build/
 /node_modules/
 /secrets/
+
+plans
+.claude/settings.local.json

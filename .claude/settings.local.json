@@ -7,7 +7,10 @@
       "Bash(cargo check:*)",
       "Bash(nix flake check:*)",
       "Bash(nix fmt:*)",
-      "Bash(cargo insta test:*)"
+      "Bash(cargo insta test:*)",
+      "Bash(wc -l /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts/src/**/*.rs)",
+      "Bash(/tmp/analyze.txt:*)",
+      "Read(//tmp/**)"
     ]
   }
 }

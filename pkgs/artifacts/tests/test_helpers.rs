@@ -3,6 +3,8 @@
 //! This module provides convenient functions for creating key events
 //! in tests without requiring actual terminal interaction.
 
+#![allow(dead_code)]
+
 use artifacts::app::message::Message;
 use artifacts::app::KeyEvent;
 use crossterm::event::KeyCode;

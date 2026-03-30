@@ -28,8 +28,8 @@ BackendEntry {
     shared: None,
     settings: BackendSettings(
         {
-            "key": String("value"),
             "another": Number(123),
+            "key": String("value"),
         },
     ),
 }
