@@ -255,15 +255,6 @@ impl BackendEntry {
     }
 }
 
-/// Intermediate structure for parsing TOML with optional includes
-#[derive(Debug, Deserialize)]
-struct BackendFileRaw {
-    #[serde(default)]
-    include: Vec<String>,
-    #[serde(flatten)]
-    backends: HashMap<String, BackendEntry>,
-}
-
 /// Container combining backend configuration and its base path.
 ///
 /// This struct holds the parsed backend configuration along with metadata
@@ -274,12 +265,21 @@ struct BackendFileRaw {
 ///
 /// - `config`: Map of backend name to [`BackendEntry`]
 /// - `base_path`: Directory containing the primary backend.toml file
-/// - `backend_toml`: Full path to the primary backend.toml file
+/// - `backend_toml`: Full path to the primary backend.toml file (empty for parsed content)
 #[derive(Debug, Clone)]
 pub struct BackendConfiguration {
     pub config: HashMap<String, BackendEntry>,
     pub base_path: PathBuf,
     pub backend_toml: PathBuf,
+}
+
+/// Intermediate structure for parsing TOML with optional includes.
+#[derive(Debug, Deserialize)]
+struct BackendFileRaw {
+    #[serde(default)]
+    include: Vec<String>,
+    #[serde(flatten)]
+    backends: HashMap<String, BackendEntry>,
 }
 
 impl BackendConfiguration {
@@ -332,7 +332,7 @@ impl BackendConfiguration {
 
     /// Recursively load backend configuration with circular include detection.
     ///
-    /// This internal method handles the recursive loading of backend.toml files
+    /// This method handles the recursive loading of backend.toml files
     /// and their included files. It validates script requirements and resolves
     /// relative paths to absolute paths.
     ///
@@ -344,7 +344,7 @@ impl BackendConfiguration {
     /// ## Returns
     ///
     /// A map of backend names to their [`BackendEntry`] definitions.
-    fn load_with_includes(
+    pub fn load_with_includes(
         toml_path: &Path,
         visited: &mut HashSet<PathBuf>,
     ) -> Result<HashMap<String, BackendEntry>> {
