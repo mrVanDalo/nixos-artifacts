@@ -67,6 +67,7 @@ fn separator_line(width: usize) -> Span<'static> {
     Span::raw("─".repeat(width))
 }
 
+#[allow(clippy::too_many_lines)]
 pub fn render_generator_selection(frame: &mut Frame, state: &SelectGeneratorState, area: Rect) {
     let mut items: Vec<ListItem> = Vec::new();
     let block_inner_width = area.width.saturating_sub(2) as usize;

@@ -488,6 +488,7 @@ impl BackgroundEffectHandler {
     }
 
     /// Handle SharedCheckSerialization command.
+    #[allow(clippy::too_many_lines)]
     async fn execute_shared_check_serialization(
         &self,
         artifact_index: usize,
@@ -616,6 +617,7 @@ impl BackgroundEffectHandler {
     }
 
     /// Handle RunSharedGenerator command.
+    #[allow(clippy::too_many_lines)]
     async fn execute_run_shared_generator(
         &mut self,
         artifact_index: usize,
@@ -755,6 +757,7 @@ impl BackgroundEffectHandler {
     }
 
     /// Handle SharedSerialize command.
+    #[allow(clippy::too_many_lines)]
     async fn execute_shared_serialize(
         &mut self,
         artifact_index: usize,
@@ -888,6 +891,7 @@ impl BackgroundEffectHandler {
     ///
     /// This is the core effect execution logic that runs in the background.
     /// Uses spawn_blocking for all blocking I/O operations.
+    #[allow(clippy::too_many_lines)]
     pub async fn execute(&mut self, effect: Effect) -> Message {
         log_component("BACKGROUND", "Starting execution of effect");
         match effect {

@@ -578,6 +578,7 @@ pub fn run_serialize(
 /// The script receives paths to:
 /// - `$machines` - JSON mapping machine names to their backend configs
 /// - `$users` - JSON mapping user names to their backend configs
+#[allow(clippy::too_many_arguments)]
 pub fn run_shared_serialize(
     artifact_name: &str,
     backend_name: &str,

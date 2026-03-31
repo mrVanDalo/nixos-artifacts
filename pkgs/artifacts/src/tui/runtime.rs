@@ -56,6 +56,7 @@ pub struct RunResult {
 /// # Returns
 ///
 /// The final RunResult containing the final model and frame count
+#[allow(clippy::too_many_lines)]
 pub async fn run_async<B, E>(
     terminal: &mut Terminal<B>,
     events: &mut E,

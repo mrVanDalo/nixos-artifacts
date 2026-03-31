@@ -211,11 +211,14 @@ fn handle_check_result(
 
 // === Helper for generation flow ===
 
+#[allow(clippy::too_many_lines)]
 pub(crate) fn start_generation_for_selected_internal(
     mut model: Model,
     artifact_index: usize,
 ) -> (Model, Effect) {
     // Extract all needed data before any mutable borrow
+    // Complex tuple type needed to extract data before mutable borrow
+    #[allow(clippy::type_complexity)]
     let entry_data: Option<(
         bool,
         Option<String>,
