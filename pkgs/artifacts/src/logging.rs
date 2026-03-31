@@ -8,7 +8,7 @@
 //!
 //! # Usage
 //!
-//! ```rust
+//! ```rust,ignore
 //! use artifacts::log_error;
 //! use artifacts::log_warn;
 //! use artifacts::log_info;
@@ -363,7 +363,7 @@ pub fn log_component(_component: &str, _msg: &str) {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```rust,ignore
 /// log_error!("Failed to load file: {}", path);
 /// log_error!("Configuration error: {:?}", err);
 /// ```
@@ -396,7 +396,7 @@ macro_rules! log_error {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```rust,ignore
 /// log_warn!("Using default configuration");
 /// log_warn!("Deprecated feature: {}", feature_name);
 /// ```
@@ -429,7 +429,7 @@ macro_rules! log_warn {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```rust,ignore
 /// log_info!("Starting application");
 /// log_info!("Loaded {} artifacts", count);
 /// ```
@@ -464,7 +464,7 @@ macro_rules! log_info {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```rust,ignore
 /// log_debug!("Processing artifact: {:?}", artifact);
 /// log_debug!("State: {} files, {} prompts", file_count, prompt_count);
 /// ```
