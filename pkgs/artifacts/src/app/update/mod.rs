@@ -40,13 +40,19 @@ use super::message::KeyEvent;
 pub fn update(model: Model, msg: Message) -> (Model, Effect) {
     match (&model.screen, msg) {
         // === Artifact List Screen ===
-        (Screen::ArtifactList, Message::Key(key)) => artifact_list::update_artifact_list(model, key),
+        (Screen::ArtifactList, Message::Key(key)) => {
+            artifact_list::update_artifact_list(model, key)
+        }
 
         // === Generator Selection Screen ===
-        (Screen::SelectGenerator(_), Message::Key(key)) => generator_selection::update_generator_selection(model, key),
+        (Screen::SelectGenerator(_), Message::Key(key)) => {
+            generator_selection::update_generator_selection(model, key)
+        }
 
         // === Confirm Regenerate Screen ===
-        (Screen::ConfirmRegenerate(_), Message::Key(key)) => confirm_regenerate::update_confirm_regenerate(model, key),
+        (Screen::ConfirmRegenerate(_), Message::Key(key)) => {
+            confirm_regenerate::update_confirm_regenerate(model, key)
+        }
 
         // === Prompt Screen ===
         (Screen::Prompt(_), Message::Key(key)) => prompt::update_prompt(model, key),
@@ -82,7 +88,9 @@ pub fn update(model: Model, msg: Message) -> (Model, Effect) {
         ) => generating::handle_shared_serialize_finished(model, artifact_index, results),
 
         // === Chronological Log Screen ===
-        (Screen::ChronologicalLog(_), Message::Key(key)) => chronological_log::update_chronological_log(model, key),
+        (Screen::ChronologicalLog(_), Message::Key(key)) => {
+            chronological_log::update_chronological_log(model, key)
+        }
 
         // === Check serialization results (any screen) ===
         (

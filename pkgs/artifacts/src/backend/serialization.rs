@@ -335,7 +335,11 @@ fn run_command_with_timeout(
         Err(ScriptError::Io { message }) => {
             bail!("I/O error during {}: {}", script_name, message);
         }
-        Err(ScriptError::Failed { exit_code, stdout: _, stderr }) => {
+        Err(ScriptError::Failed {
+            exit_code,
+            stdout: _,
+            stderr,
+        }) => {
             bail!(
                 "{} failed with exit code {}: {}",
                 script_name,
@@ -350,7 +354,10 @@ fn run_command_with_timeout(
 fn make_timeout_result(script_name: &str, timeout_secs: u64) -> CheckResult {
     let output = CapturedOutput {
         stdout: Vec::new(),
-        stderr: vec![format!("{} timed out after {} seconds", script_name, timeout_secs)],
+        stderr: vec![format!(
+            "{} timed out after {} seconds",
+            script_name, timeout_secs
+        )],
         exit_success: false,
     };
     CheckResult {
@@ -375,8 +382,16 @@ fn make_io_result(message: &str) -> CheckResult {
 /// Create CheckResult for failed script execution
 fn make_failed_result(stdout: String, stderr: String) -> CheckResult {
     let output = CapturedOutput {
-        stdout: if stdout.is_empty() { Vec::new() } else { vec![stdout] },
-        stderr: if stderr.is_empty() { Vec::new() } else { vec![stderr] },
+        stdout: if stdout.is_empty() {
+            Vec::new()
+        } else {
+            vec![stdout]
+        },
+        stderr: if stderr.is_empty() {
+            Vec::new()
+        } else {
+            vec![stderr]
+        },
         exit_success: false,
     };
     CheckResult {

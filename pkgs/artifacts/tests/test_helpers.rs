@@ -5,8 +5,8 @@
 
 #![allow(dead_code)]
 
-use artifacts::app::message::Message;
 use artifacts::app::KeyEvent;
+use artifacts::app::message::Message;
 use crossterm::event::KeyCode;
 
 pub fn key(code: KeyCode) -> Message {
@@ -76,8 +76,8 @@ fn test_submit_prompt_helper() {
 
 #[test]
 fn test_scripted_event_source() {
-    use artifacts::tui::events::ScriptedEventSource;
     use artifacts::tui::EventSource;
+    use artifacts::tui::events::ScriptedEventSource;
 
     let mut source = ScriptedEventSource::new(vec![char('a'), char('b'), enter()]);
 

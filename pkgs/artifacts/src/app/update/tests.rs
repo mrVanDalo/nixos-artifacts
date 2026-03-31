@@ -352,9 +352,7 @@ fn test_update_returns_check_serialization_effect() {
                 );
             }
         }
-        _ => panic!(
-            "init() should return Effect::Batch with CheckSerialization for each artifact"
-        ),
+        _ => panic!("init() should return Effect::Batch with CheckSerialization for each artifact"),
     }
 }
 
@@ -375,11 +373,10 @@ fn test_update_handles_async_result() {
 
     // Update first entry to Generating status
     if let Some(entry) = model.entries.get_mut(0) {
-        *entry.status_mut() =
-            ArtifactStatus::Generating(crate::app::model::GeneratingSubstate {
-                step: crate::app::model::GenerationStep::RunningGenerator,
-                output: String::new(),
-            });
+        *entry.status_mut() = ArtifactStatus::Generating(crate::app::model::GeneratingSubstate {
+            step: crate::app::model::GenerationStep::RunningGenerator,
+            output: String::new(),
+        });
     }
 
     // Simulate successful completion

@@ -6,6 +6,7 @@
 //! 3. Run with real effect handler and snapshot result
 //! 4. Collect serialized artifacts for snapshot verification
 
+use crate::test_helpers::*;
 use crate::tui::model_state::ModelState;
 use artifacts::app::Message;
 use artifacts::config::backend::BackendConfiguration;
@@ -13,7 +14,6 @@ use artifacts::config::make::MakeConfiguration;
 use artifacts::config::nix::build_make_from_flake;
 use artifacts::tui::events::ScriptedEventSource;
 use artifacts::tui::model_builder::build_model;
-use crate::test_helpers::*;
 use artifacts::tui::run;
 use insta::assert_debug_snapshot;
 use ratatui::Terminal;

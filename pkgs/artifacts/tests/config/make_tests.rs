@@ -16,7 +16,7 @@ macro_rules! make_snapshot {
 fn snapshot_empty_configuration() {
     let input = r#"{"nixos": [], "home": []}"#;
     let config = MakeConfiguration::parse_make_config(input, &PathBuf::from("make.json")).unwrap();
-    
+
     insta::assert_snapshot!(make_snapshot!(input, config));
 }
 
@@ -40,7 +40,7 @@ fn snapshot_single_nixos_artifact_no_shared() {
     "home": []
 }"#;
     let config = MakeConfiguration::parse_make_config(input, &PathBuf::from("make.json")).unwrap();
-    
+
     insta::assert_snapshot!(make_snapshot!(input, config));
 }
 
@@ -64,7 +64,7 @@ fn snapshot_shared_artifact_single_machine() {
     "home": []
 }"#;
     let config = MakeConfiguration::parse_make_config(input, &PathBuf::from("make.json")).unwrap();
-    
+
     insta::assert_snapshot!(make_snapshot!(input, config));
 }
 
@@ -104,7 +104,7 @@ fn snapshot_shared_artifact_multiple_machines_same_generator() {
     "home": []
 }"#;
     let config = MakeConfiguration::parse_make_config(input, &PathBuf::from("make.json")).unwrap();
-    
+
     insta::assert_snapshot!(make_snapshot!(input, config));
 }
 
@@ -144,7 +144,7 @@ fn snapshot_shared_artifact_multiple_machines_different_generators() {
     "home": []
 }"#;
     let config = MakeConfiguration::parse_make_config(input, &PathBuf::from("make.json")).unwrap();
-    
+
     insta::assert_snapshot!(make_snapshot!(input, config));
 }
 
@@ -181,7 +181,7 @@ fn snapshot_shared_artifact_mixed_nixos_and_home() {
     }]
 }"#;
     let config = MakeConfiguration::parse_make_config(input, &PathBuf::from("make.json")).unwrap();
-    
+
     insta::assert_snapshot!(make_snapshot!(input, config));
 }
 
@@ -235,7 +235,7 @@ fn snapshot_shared_artifact_matching_files_no_error() {
     "home": []
 }"#;
     let config = MakeConfiguration::parse_make_config(input, &PathBuf::from("make.json")).unwrap();
-    
+
     insta::assert_snapshot!(make_snapshot!(input, config));
 }
 
@@ -295,7 +295,7 @@ fn snapshot_shared_artifact_mismatched_files_error() {
     "home": []
 }"#;
     let config = MakeConfiguration::parse_make_config(input, &PathBuf::from("make.json")).unwrap();
-    
+
     insta::assert_snapshot!(make_snapshot!(input, config));
 }
 
@@ -349,7 +349,7 @@ fn snapshot_shared_artifact_different_file_names_error() {
     "home": []
 }"#;
     let config = MakeConfiguration::parse_make_config(input, &PathBuf::from("make.json")).unwrap();
-    
+
     insta::assert_snapshot!(make_snapshot!(input, config));
 }
 
@@ -374,7 +374,7 @@ fn snapshot_artifact_with_description() {
     "home": []
 }"#;
     let config = MakeConfiguration::parse_make_config(input, &PathBuf::from("make.json")).unwrap();
-    
+
     insta::assert_snapshot!(make_snapshot!(input, config));
 }
 
@@ -398,7 +398,7 @@ fn snapshot_artifact_without_description() {
     "home": []
 }"#;
     let config = MakeConfiguration::parse_make_config(input, &PathBuf::from("make.json")).unwrap();
-    
+
     insta::assert_snapshot!(make_snapshot!(input, config));
 }
 
@@ -440,7 +440,7 @@ fn snapshot_shared_artifact_with_description() {
     "home": []
 }"#;
     let config = MakeConfiguration::parse_make_config(input, &PathBuf::from("make.json")).unwrap();
-    
+
     insta::assert_snapshot!(make_snapshot!(input, config));
 }
 
@@ -491,7 +491,7 @@ fn snapshot_artifact_with_files_and_prompts() {
     "home": []
 }"#;
     let config = MakeConfiguration::parse_make_config(input, &PathBuf::from("make.json")).unwrap();
-    
+
     insta::assert_snapshot!(make_snapshot!(input, config));
 }
 
@@ -525,6 +525,6 @@ fn snapshot_home_manager_configuration() {
     }]
 }"#;
     let config = MakeConfiguration::parse_make_config(input, &PathBuf::from("make.json")).unwrap();
-    
+
     insta::assert_snapshot!(make_snapshot!(input, config));
 }

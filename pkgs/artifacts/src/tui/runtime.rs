@@ -506,11 +506,11 @@ pub fn simulate_with_history<E: EventSource>(events: &mut E, initial: Model) -> 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::app::KeyEvent;
+    use crate::app::effect::Effect;
     use crate::app::model::*;
     use crate::config::make::{ArtifactDef, FileDef, PromptDef};
-    use crate::app::effect::Effect;
     use crate::tui::events::ScriptedEventSource;
-    use crate::app::KeyEvent;
     use ratatui::backend::TestBackend;
     use std::collections::BTreeMap;
 
@@ -706,7 +706,11 @@ mod tests {
     fn test_complete_prompt_flow() {
         let model = make_test_model();
         let mut events_vec = vec![Message::Key(KeyEvent::enter())]; // Enter prompt
-        events_vec.extend("my-passphrase".chars().map(|c| Message::Key(KeyEvent::char(c))));
+        events_vec.extend(
+            "my-passphrase"
+                .chars()
+                .map(|c| Message::Key(KeyEvent::char(c))),
+        );
         events_vec.push(Message::Key(KeyEvent::enter())); // Submit
 
         let mut events = ScriptedEventSource::new(events_vec);
