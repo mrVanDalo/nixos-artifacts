@@ -3,8 +3,12 @@
 //! Each test follows the pattern:
 //! 1. Load flake configuration
 //! 2. Define event sequence
-//! 3. Run with real effect handler and snapshot result
-//! 4. Collect serialized artifacts for snapshot verification
+//! 3. Run with simulate() to test state transitions
+//! 4. Snapshot the resulting model state
+//!
+//! Note: These tests verify UI state transitions only. Effect execution
+//! (generator running, serialization) is tested in the e2e tests which
+//! use the TestHarness to directly call backend operations.
 
 use crate::test_helpers::*;
 use crate::tui::model_state::ModelState;
@@ -14,10 +18,8 @@ use artifacts::config::make::MakeConfiguration;
 use artifacts::config::nix::build_make_from_flake;
 use artifacts::tui::events::ScriptedEventSource;
 use artifacts::tui::model_builder::build_model;
-use artifacts::tui::run;
+use artifacts::tui::simulate;
 use insta::assert_debug_snapshot;
-use ratatui::Terminal;
-use ratatui::backend::TestBackend;
 use serial_test::serial;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -143,20 +145,19 @@ fn run_tui(example: &str, events: Events) -> TestResult {
         std::env::set_var("ARTIFACTS_TEST_OUTPUT_DIR", &output_dir);
     }
 
-    let (backend, make) = load_example(example);
+    let (_backend, make) = load_example(example);
     let model = build_model(&make);
 
     let before = ModelState::from_model(&model);
 
-    let mut terminal = Terminal::new(TestBackend::new(80, 24)).unwrap();
+    // Use simulate() for pure state transition testing
+    // Note: Effects are not executed - this tests UI state transitions only
     let mut event_source = ScriptedEventSource::new(events.messages);
+    let final_model = simulate(&mut event_source, model);
 
-    let result =
-        run(&mut terminal, &mut event_source, backend, make, model).expect("TUI run failed");
+    let after = ModelState::from_model(&final_model);
 
-    let after = ModelState::from_model(&result.final_model);
-
-    // Collect serialized artifacts
+    // Collect serialized artifacts (will be empty since effects aren't executed)
     let serialized_artifacts = collect_serialized_artifacts(&output_dir);
 
     // Clean up the environment variable

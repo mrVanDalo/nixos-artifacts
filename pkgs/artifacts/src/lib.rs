@@ -66,7 +66,6 @@
 //!
 //! ## Key Types
 //!
-//! - `EffectHandler`: Bridges TUI foreground with background task execution
 //! - [`Logger`]: File-based logging (when `logging` feature enabled)
 //!
 //! # Pedantic lints we intentionally allow:
@@ -210,9 +209,3 @@ pub mod tui;
 /// See the [`logging`] module for details on log file
 /// management and the Logger API.
 pub use crate::logging::Logger;
-
-/// Backend effect handler for executing real operations.
-///
-/// This type connects the TUI to the backend infrastructure for
-/// running generators and serialization scripts.
-pub use tui::BackendEffectHandler;

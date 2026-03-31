@@ -1,25 +1,21 @@
 //! Common test utilities for artifact generation tests.
 //!
-//! This module provides a unified test harness that uses the actual TUI code path
-//! (BackendEffectHandler + Model + Effects) for testing, ensuring that tests
-//! exercise the real production code paths rather than a separate headless API.
+//! This module provides a unified test harness that directly calls backend
+//! operations for testing, ensuring that tests exercise the real production
+//! code paths for serialization, generation, and verification.
 
 #[macro_use]
 mod snapshot_macros;
 
 use anyhow::{Context, Result};
-use artifacts::app::effect::Effect;
-use artifacts::app::message::Message;
-use artifacts::app::model::{
-    ArtifactEntry, ArtifactStatus, ListEntry, Model, StepLogs, TargetType,
-};
+use artifacts::app::model::TargetType;
+use artifacts::backend::generator::{run_generator_script, verify_generated_files};
+use artifacts::backend::serialization::{run_check_serialization, run_serialize};
 use artifacts::config::backend::BackendConfiguration;
 use artifacts::config::make::{ArtifactDef, MakeConfiguration};
 use artifacts::config::nix::build_make_from_flake;
-use artifacts::tui::BackendEffectHandler;
-use artifacts::tui::EffectHandler;
 use std::collections::{BTreeMap, HashMap};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tempfile::TempDir;
 
 /// Result of artifact generation for tests.
@@ -196,8 +192,8 @@ impl DiagnosticInfo {
 
 /// Test harness for artifact generation tests.
 ///
-/// This harness uses the actual TUI code path (BackendEffectHandler + Effects)
-/// to ensure tests exercise the real production code.
+/// This harness directly calls backend operations to ensure tests exercise
+/// the real production code for serialization, generation, and verification.
 pub struct TestHarness {
     pub backend: BackendConfiguration,
     pub make: MakeConfiguration,
@@ -268,34 +264,21 @@ impl TestHarness {
         None
     }
 
-    /// Build a minimal Model with one artifact entry.
-    pub fn build_model(
+    /// Write prompt values to a temporary directory.
+    fn write_prompts_to_directory(
         &self,
-        _target: &str,
-        artifact: &ArtifactDef,
-        target_type: TargetType,
-    ) -> Model {
-        Model {
-            entries: vec![ListEntry::Single(ArtifactEntry {
-                target_type,
-                artifact: artifact.clone(),
-                status: ArtifactStatus::Pending,
-                step_logs: StepLogs::default(),
-            })],
-            ..Default::default()
+        prompts: &HashMap<String, String>,
+        prompt_dir: &Path,
+    ) -> Result<()> {
+        for (name, value) in prompts {
+            let path = prompt_dir.join(name);
+            std::fs::write(&path, value)
+                .with_context(|| format!("writing prompt file {}", path.display()))?;
         }
+        Ok(())
     }
 
-    /// Create a BackendEffectHandler for this harness.
-    pub fn create_handler(&self) -> BackendEffectHandler {
-        BackendEffectHandler::new(
-            self.backend.clone(),
-            self.make.clone(),
-            artifacts::logging::LogLevel::Info,
-        )
-    }
-
-    /// Generate an artifact using the full TUI effect pipeline.
+    /// Generate an artifact using the backend operations directly.
     ///
     /// This method executes the complete pipeline:
     /// 1. CheckSerialization (if artifact exists)
@@ -318,97 +301,91 @@ impl TestHarness {
         target_type: TargetType,
         prompts: &BTreeMap<String, String>,
     ) -> Result<TestArtifactResult> {
-        let model = self.build_model(target, artifact, target_type.clone());
-        let mut handler = self.create_handler();
+        let log_level = artifacts::logging::LogLevel::Info;
 
-        let check_effect = Effect::CheckSerialization {
-            artifact_index: 0,
-            artifact_name: artifact.name.clone(),
-            target_type: target_type.clone(),
-        };
+        // Step 1: Check serialization
+        let _check_result =
+            run_check_serialization(artifact, &target_type, &self.backend, &self.make, log_level)?;
 
-        let messages = handler.execute(check_effect, &model)?;
-
-        let _needs_generation = messages.iter().any(|msg| {
-            matches!(
-                msg,
-                Message::CheckSerializationResult {
-                    status: ArtifactStatus::NeedsGeneration,
-                    ..
-                }
-            )
-        });
+        // Step 2: Run generator
+        let prompt_dir = tempfile::TempDir::new().context("creating prompt temp dir")?;
+        let out_dir = tempfile::TempDir::new().context("creating output temp dir")?;
 
         let prompts_map: HashMap<String, String> = prompts
             .iter()
             .map(|(k, v)| (k.clone(), v.clone()))
             .collect();
 
-        let gen_effect = Effect::RunGenerator {
-            artifact_index: 0,
-            artifact_name: artifact.name.clone(),
-            target_type: target_type.clone(),
-            prompts: prompts_map.clone(),
-        };
+        self.write_prompts_to_directory(&prompts_map, prompt_dir.path())?;
 
-        let gen_messages = handler.execute(gen_effect, &model)?;
+        let gen_result = run_generator_script(
+            artifact,
+            &target_type,
+            &self.make.make_base,
+            prompt_dir.path(),
+            out_dir.path(),
+            log_level,
+        );
 
-        for msg in &gen_messages {
-            if let Message::GeneratorFinished { result, .. } = msg {
-                if let Err(e) = result {
-                    return Ok(TestArtifactResult {
-                        target: target.to_string(),
-                        artifact_name: artifact.name.clone(),
-                        success: false,
-                        error: Some(e.clone()),
-                        generated_file_contents: BTreeMap::new(),
-                    });
-                }
-            }
+        if let Err(e) = gen_result {
+            return Ok(TestArtifactResult {
+                target: target.to_string(),
+                artifact_name: artifact.name.clone(),
+                success: false,
+                error: Some(e.to_string()),
+                generated_file_contents: BTreeMap::new(),
+            });
+        }
+
+        // Verify generated files
+        if let Err(e) = verify_generated_files(artifact, out_dir.path()) {
+            return Ok(TestArtifactResult {
+                target: target.to_string(),
+                artifact_name: artifact.name.clone(),
+                success: false,
+                error: Some(e.to_string()),
+                generated_file_contents: BTreeMap::new(),
+            });
         }
 
         // Collect generated files BEFORE serialize clears the temp directory
         let mut generated_file_contents = BTreeMap::new();
-        if let Some(out_dir) = &handler.current_out_dir {
-            for file_name in artifact.files.keys() {
-                let file_path = out_dir.join(file_name);
-                if file_path.exists() {
-                    match std::fs::read_to_string(&file_path) {
-                        Ok(content) => {
-                            generated_file_contents.insert(file_name.clone(), content);
-                        }
-                        Err(e) => {
-                            eprintln!(
-                                "Warning: failed to read generated file {}: {}",
-                                file_path.display(),
-                                e
-                            );
-                        }
+        for file_name in artifact.files.keys() {
+            let file_path = out_dir.path().join(file_name);
+            if file_path.exists() {
+                match std::fs::read_to_string(&file_path) {
+                    Ok(content) => {
+                        generated_file_contents.insert(file_name.clone(), content);
+                    }
+                    Err(e) => {
+                        eprintln!(
+                            "Warning: failed to read generated file {}: {}",
+                            file_path.display(),
+                            e
+                        );
                     }
                 }
             }
         }
 
-        let serialize_effect = Effect::Serialize {
-            artifact_index: 0,
-            artifact_name: artifact.name.clone(),
-            target_type,
-        };
+        // Step 3: Serialize
+        let serialize_result = run_serialize(
+            artifact,
+            &self.backend,
+            out_dir.path(),
+            &target_type,
+            &self.make,
+            log_level,
+        );
 
-        let serialize_messages = handler.execute(serialize_effect, &model)?;
-
-        for msg in &serialize_messages {
-            if let Message::SerializeFinished { result, .. } = msg {
-                if let Err(e) = result {
-                    return Ok(TestArtifactResult {
-                        target: target.to_string(),
-                        artifact_name: artifact.name.clone(),
-                        success: false,
-                        error: Some(e.clone()),
-                        generated_file_contents,
-                    });
-                }
-            }
+        if let Err(e) = serialize_result {
+            return Ok(TestArtifactResult {
+                target: target.to_string(),
+                artifact_name: artifact.name.clone(),
+                success: false,
+                error: Some(e.to_string()),
+                generated_file_contents,
+            });
         }
 
         Ok(TestArtifactResult {
@@ -465,7 +442,7 @@ impl TestHarness {
 
         if let Some(out_dir) = std::env::var("ARTIFACTS_TEST_OUTPUT_DIR")
             .ok()
-            .map(|p| std::path::PathBuf::from(p))
+            .map(std::path::PathBuf::from)
         {
             for file_name in artifact.files.keys() {
                 let file_path = out_dir.join(file_name);

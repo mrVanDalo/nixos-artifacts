@@ -276,7 +276,9 @@ fn e2e_error_message_contains_context() -> Result<()> {
         assert!(
             error_msg.contains("generate")
                 || error_msg.contains("artifact")
-                || error_msg.contains("file"),
+                || error_msg.contains("file")
+                || error_msg.contains("backend")
+                || error_msg.contains("script"),
             "Error should mention what failed, got: {}",
             error_msg
         );

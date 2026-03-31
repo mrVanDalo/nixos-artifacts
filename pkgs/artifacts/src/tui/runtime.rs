@@ -1,5 +1,4 @@
 use crate::app::effect::Effect;
-use crate::app::message::Message;
 use crate::app::model::Model;
 use crate::app::{init, update};
 use crate::config::backend::BackendConfiguration;
@@ -33,89 +32,6 @@ fn send_effect(effect: Effect, tx: &tokio::sync::mpsc::UnboundedSender<Effect>) 
 pub struct RunResult {
     pub final_model: Model,
     pub frames_rendered: usize,
-}
-
-/// Trait for executing side effects.
-/// This allows injecting different effect handlers for testing vs production.
-/// Note: This trait is deprecated - use the async runtime with channels instead.
-pub trait EffectHandler {
-    /// Execute an effect and return any resulting messages.
-    /// The handler may return messages that should be fed back into the update loop.
-    fn execute(&mut self, effect: Effect, model: &Model) -> Result<Vec<Message>>;
-}
-
-/// A no-op effect handler that ignores all effects.
-/// Useful for pure UI testing where we don't want real side effects.
-#[derive(Debug, Default)]
-pub struct NoOpEffectHandler;
-
-impl EffectHandler for NoOpEffectHandler {
-    fn execute(&mut self, _effect: Effect, _model: &Model) -> Result<Vec<Message>> {
-        Ok(vec![])
-    }
-}
-
-/// Run the TUI application with the given components.
-///
-/// This is the main entry point for running the Elm-architecture loop:
-/// 1. Render the current model
-/// 2. Get the next event
-/// 3. Update the model with the event
-/// 4. Execute any resulting effects
-/// 5. Repeat until quit or events exhausted
-///
-/// This is the SYNC version - kept for backward compatibility with tests.
-/// For production use, prefer `run_async` which doesn't block on effects.
-pub fn run<B, E>(
-    terminal: &mut Terminal<B>,
-    events: &mut E,
-    _backend: BackendConfiguration,
-    _make: MakeConfiguration,
-    mut model: Model,
-) -> Result<RunResult>
-where
-    B: Backend,
-    E: EventSource,
-{
-    // For sync version, just simulate without real background task
-    let mut frames_rendered = 0;
-
-    // Render the initial state
-    terminal.draw(|f| render(f, &model))?;
-    frames_rendered += 1;
-
-    // Skip initial effect execution in sync mode
-    // (would need the full async setup for real effects)
-
-    loop {
-        // Render the current state
-        terminal.draw(|f| render(f, &model))?;
-        frames_rendered += 1;
-
-        // Get the next event
-        let Some(msg) = events.next_event() else {
-            // Event source exhausted, exit gracefully
-            break;
-        };
-
-        // Update state with the event
-        let (new_model, effect) = update(model, msg);
-        model = new_model;
-
-        // Check for quit
-        if effect.is_quit() {
-            break;
-        }
-
-        // In sync mode, we don't execute real effects
-        // Just continue the loop
-        let _ = effect;
-    }
-
-    Ok(RunResult {
-        final_model: model,
-        frames_rendered,
-    })
 }
 
 /// Run the TUI application asynchronously with background task support.
@@ -508,10 +424,10 @@ mod tests {
     use super::*;
     use crate::app::KeyEvent;
     use crate::app::effect::Effect;
+    use crate::app::message::Message;
     use crate::app::model::*;
     use crate::config::make::{ArtifactDef, FileDef, PromptDef};
     use crate::tui::events::ScriptedEventSource;
-    use ratatui::backend::TestBackend;
     use std::collections::BTreeMap;
 
     fn make_test_artifact(name: &str, prompts: Vec<&str>) -> ArtifactDef {
@@ -618,77 +534,25 @@ mod tests {
     }
 
     #[test]
-    fn test_run_with_test_backend() {
+    fn test_simulate_navigation_and_quit() {
         let model = make_test_model();
-        let backend = TestBackend::new(80, 24);
-        let mut terminal = Terminal::new(backend).unwrap();
         let mut events = ScriptedEventSource::new(vec![
             Message::Key(KeyEvent::down()),
             Message::Key(KeyEvent::char('q')),
         ]);
 
-        // Create minimal configs
-        let backend_config = BackendConfiguration {
-            config: std::collections::HashMap::new(),
-            base_path: std::path::PathBuf::from("."),
-            backend_toml: std::path::PathBuf::from("./test.toml"),
-        };
-
-        let make_config = MakeConfiguration {
-            nixos_map: std::collections::BTreeMap::new(),
-            home_map: std::collections::BTreeMap::new(),
-            nixos_config: std::collections::BTreeMap::new(),
-            home_config: std::collections::BTreeMap::new(),
-            make_base: std::path::PathBuf::from("."),
-            make_json: std::path::PathBuf::from("./test.json"),
-        };
-
-        let result = run(
-            &mut terminal,
-            &mut events,
-            backend_config,
-            make_config,
-            model,
-        )
-        .unwrap();
-
-        assert_eq!(result.final_model.selected_index, 1);
-        assert!(result.frames_rendered >= 2);
+        let final_model = simulate(&mut events, model);
+        assert_eq!(final_model.selected_index, 1);
     }
 
     #[test]
-    fn test_run_empty_events_exits_gracefully() {
+    fn test_simulate_empty_events_exits_gracefully() {
         let model = make_test_model();
-        let backend = TestBackend::new(80, 24);
-        let mut terminal = Terminal::new(backend).unwrap();
         let mut events = ScriptedEventSource::new(vec![]);
 
-        let backend_config = BackendConfiguration {
-            config: std::collections::HashMap::new(),
-            base_path: std::path::PathBuf::from("."),
-            backend_toml: std::path::PathBuf::from("./test.toml"),
-        };
-
-        let make_config = MakeConfiguration {
-            nixos_map: std::collections::BTreeMap::new(),
-            home_map: std::collections::BTreeMap::new(),
-            nixos_config: std::collections::BTreeMap::new(),
-            home_config: std::collections::BTreeMap::new(),
-            make_base: std::path::PathBuf::from("."),
-            make_json: std::path::PathBuf::from("./test.json"),
-        };
-
-        let result = run(
-            &mut terminal,
-            &mut events,
-            backend_config,
-            make_config,
-            model,
-        )
-        .unwrap();
-
-        // Should render twice (initial + one loop iteration) then exit
-        assert!(result.frames_rendered >= 2);
+        // Should exit gracefully with initial model unchanged
+        let final_model = simulate(&mut events, model);
+        assert_eq!(final_model.selected_index, 0);
     }
 
     #[test]
