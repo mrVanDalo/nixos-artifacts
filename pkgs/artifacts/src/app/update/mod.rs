@@ -194,15 +194,15 @@ fn handle_check_result(
                     .push(LogEntry { level, message });
             }
             Err(e) => {
-                *entry.status_mut() = ArtifactStatus::Failed {
-                    error: e.clone(),
-                    output: String::new(),
-                    retry_available: true,
-                };
+                let artifact_error = ArtifactError::IoError { context: e.clone() };
                 entry.step_logs_mut().check.push(LogEntry {
                     level: LogLevel::Error,
                     message: e.clone(),
                 });
+                *entry.status_mut() = ArtifactStatus::Failed {
+                    error: artifact_error,
+                    output: String::new(),
+                };
             }
         }
     }

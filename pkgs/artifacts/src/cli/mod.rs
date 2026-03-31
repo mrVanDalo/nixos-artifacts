@@ -162,26 +162,32 @@ async fn run_tui(backend_path: &Path, make_path: &Path) -> Result<()> {
 
     match result {
         Ok(run_result) => {
-            let failed: Vec<_> = run_result
-                .final_model
-                .entries
-                .iter()
-                .filter_map(|entry| match entry {
-                    crate::app::model::ListEntry::Single(a) => match &a.status {
-                        crate::app::model::ArtifactStatus::Failed { error, .. } => {
-                            let target = a.target_type.target_name();
-                            Some(format!("{}/{}: {}", target, a.artifact.name, error))
-                        }
-                        _ => None,
-                    },
-                    crate::app::model::ListEntry::Shared(s) => match &s.status {
-                        crate::app::model::ArtifactStatus::Failed { error, .. } => {
-                            Some(format!("shared/{}: {}", s.info.artifact_name, error))
-                        }
-                        _ => None,
-                    },
-                })
-                .collect();
+            let failed: Vec<_> =
+                run_result
+                    .final_model
+                    .entries
+                    .iter()
+                    .filter_map(|entry| match entry {
+                        crate::app::model::ListEntry::Single(a) => match &a.status {
+                            crate::app::model::ArtifactStatus::Failed { error, .. } => {
+                                let target = a.target_type.target_name();
+                                Some(format!(
+                                    "{}/{}: {}",
+                                    target,
+                                    a.artifact.name,
+                                    error.summary()
+                                ))
+                            }
+                            _ => None,
+                        },
+                        crate::app::model::ListEntry::Shared(s) => match &s.status {
+                            crate::app::model::ArtifactStatus::Failed { error, .. } => Some(
+                                format!("shared/{}: {}", s.info.artifact_name, error.summary()),
+                            ),
+                            _ => None,
+                        },
+                    })
+                    .collect();
 
             if !failed.is_empty() {
                 eprintln!("Failed artifacts:");

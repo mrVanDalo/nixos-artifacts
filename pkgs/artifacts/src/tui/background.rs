@@ -26,7 +26,7 @@ use tokio_util::sync::CancellationToken;
 
 use crate::app::effect::Effect;
 use crate::app::message::{Message, ScriptOutput};
-use crate::app::model::{ArtifactStatus, TargetType};
+use crate::app::model::{ArtifactError, ArtifactStatus, TargetType};
 use crate::backend;
 use crate::config::backend::BackendConfiguration;
 use crate::config::make::{ArtifactDef, MakeConfiguration};
@@ -217,20 +217,17 @@ impl BackgroundEffectHandler {
         let artifact = match self.lookup_artifact(&target, &artifact_name) {
             Some(a) => a,
             None => {
+                let error = ArtifactError::ArtifactNotFound {
+                    artifact_name: artifact_name.clone(),
+                    target: target.clone(),
+                };
                 return Message::CheckSerializationResult {
                     artifact_index,
                     status: ArtifactStatus::Failed {
-                        error: format!(
-                            "Artifact '{}' not found for target '{}'",
-                            artifact_name, target
-                        ),
+                        error: error.clone(),
                         output: String::new(),
-                        retry_available: true,
                     },
-                    result: Err(format!(
-                        "Artifact '{}' not found for target '{}'",
-                        artifact_name, target
-                    )),
+                    result: Err(error.summary()),
                 };
             }
         };
@@ -264,39 +261,46 @@ impl BackgroundEffectHandler {
                     result: Ok(ScriptOutput::from_captured(&check_result.output)),
                 }
             }
-            TimeoutResult::OperationFailed(e) => Message::CheckSerializationResult {
-                artifact_index,
-                status: ArtifactStatus::Failed {
-                    error: format!("Check failed: {}", e),
-                    output: String::new(),
-                    retry_available: true,
-                },
-                result: Err(format!("Check failed: {}", e)),
-            },
-            TimeoutResult::TaskPanic(e) => Message::CheckSerializationResult {
-                artifact_index,
-                status: ArtifactStatus::Failed {
-                    error: format!("Task panicked: {}", e),
-                    output: String::new(),
-                    retry_available: true,
-                },
-                result: Err(format!("Task panicked: {}", e)),
-            },
-            TimeoutResult::Timeout => Message::CheckSerializationResult {
-                artifact_index,
-                status: ArtifactStatus::Failed {
-                    error: format!(
-                        "Timed out after {} seconds",
-                        BACKGROUND_TASK_TIMEOUT.as_secs()
-                    ),
-                    output: String::new(),
-                    retry_available: true,
-                },
-                result: Err(format!(
-                    "Timed out after {} seconds",
-                    BACKGROUND_TASK_TIMEOUT.as_secs()
-                )),
-            },
+            TimeoutResult::OperationFailed(e) => {
+                let error = ArtifactError::ScriptFailed {
+                    script_name: "CheckSerialization".to_string(),
+                    exit_code: None,
+                    stderr_summary: e.clone(),
+                };
+                Message::CheckSerializationResult {
+                    artifact_index,
+                    status: ArtifactStatus::Failed {
+                        error: error.clone(),
+                        output: String::new(),
+                    },
+                    result: Err(error.summary()),
+                }
+            }
+            TimeoutResult::TaskPanic(e) => {
+                let error = ArtifactError::TaskPanic { message: e.clone() };
+                Message::CheckSerializationResult {
+                    artifact_index,
+                    status: ArtifactStatus::Failed {
+                        error: error.clone(),
+                        output: String::new(),
+                    },
+                    result: Err(error.summary()),
+                }
+            }
+            TimeoutResult::Timeout => {
+                let error = ArtifactError::ScriptTimeout {
+                    script_name: "CheckSerialization".to_string(),
+                    timeout_secs: BACKGROUND_TASK_TIMEOUT.as_secs(),
+                };
+                Message::CheckSerializationResult {
+                    artifact_index,
+                    status: ArtifactStatus::Failed {
+                        error: error.clone(),
+                        output: String::new(),
+                    },
+                    result: Err(error.summary()),
+                }
+            }
         }
     }
 
@@ -514,21 +518,18 @@ impl BackgroundEffectHandler {
             Some(info) => info.backend_name.clone(),
             None => {
                 let count = targets.len();
+                let error = ArtifactError::ArtifactNotFound {
+                    artifact_name: artifact_name.clone(),
+                    target: "shared".to_string(),
+                };
                 let status = ArtifactStatus::Failed {
-                    error: format!("Shared artifact '{}' not found", artifact_name),
+                    error: error.clone(),
                     output: String::new(),
-                    retry_available: true,
                 };
                 return Message::SharedCheckSerializationResult {
                     artifact_index,
                     statuses: vec![status; count],
-                    outputs: vec![
-                        ScriptOutput::from_message(&format!(
-                            "Shared artifact '{}' not found",
-                            artifact_name
-                        ));
-                        count
-                    ],
+                    outputs: vec![ScriptOutput::from_message(&error.summary()); count],
                 };
             }
         };
@@ -567,14 +568,17 @@ impl BackgroundEffectHandler {
                 }
             }
             TimeoutResult::OperationFailed(e) => {
+                let error = ArtifactError::ScriptFailed {
+                    script_name: "SharedCheckSerialization".to_string(),
+                    exit_code: None,
+                    stderr_summary: e.clone(),
+                };
                 let status = ArtifactStatus::Failed {
-                    error: format!("Check failed: {}", e),
+                    error: error.clone(),
                     output: String::new(),
-                    retry_available: true,
                 };
                 let statuses = vec![status; count];
-                let outputs =
-                    vec![ScriptOutput::from_message(&format!("Check failed: {}", e)); count];
+                let outputs = vec![ScriptOutput::from_message(&error.summary()); count];
                 Message::SharedCheckSerializationResult {
                     artifact_index,
                     statuses,
@@ -582,14 +586,13 @@ impl BackgroundEffectHandler {
                 }
             }
             TimeoutResult::TaskPanic(e) => {
+                let error = ArtifactError::TaskPanic { message: e.clone() };
                 let status = ArtifactStatus::Failed {
-                    error: format!("Task panicked: {}", e),
+                    error: error.clone(),
                     output: String::new(),
-                    retry_available: true,
                 };
                 let statuses = vec![status; count];
-                let outputs =
-                    vec![ScriptOutput::from_message(&format!("Task panicked: {}", e)); count];
+                let outputs = vec![ScriptOutput::from_message(&error.summary()); count];
                 Message::SharedCheckSerializationResult {
                     artifact_index,
                     statuses,
@@ -597,13 +600,13 @@ impl BackgroundEffectHandler {
                 }
             }
             TimeoutResult::Timeout => {
+                let error = ArtifactError::ScriptTimeout {
+                    script_name: "SharedCheckSerialization".to_string(),
+                    timeout_secs: BACKGROUND_TASK_TIMEOUT.as_secs(),
+                };
                 let status = ArtifactStatus::Failed {
-                    error: format!(
-                        "Timed out after {} seconds",
-                        BACKGROUND_TASK_TIMEOUT.as_secs()
-                    ),
+                    error: error.clone(),
                     output: String::new(),
-                    retry_available: true,
                 };
                 let statuses = vec![status; count];
                 let outputs = vec![Self::timeout_output(); count];

@@ -11,7 +11,7 @@ ArtifactListState {
             target: "[shared]",
             target_type: "shared",
             name: "shared-secret",
-            status: "Failed { error: \"File definition mismatch: 'id_rsa' in machine-one but 'id_ed25519' in machine-two\", output: \"\", retry_available: false }",
+            status: "Failed { error: ConfigurationError { message: \"File definition mismatch: 'id_rsa' in machine-one but 'id_ed25519' in machine-two\" }, output: \"\" }",
             has_logs: true,
         },
     ],

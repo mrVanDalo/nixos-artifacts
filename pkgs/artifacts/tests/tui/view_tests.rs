@@ -1,8 +1,8 @@
 use crate::tui::model_state::ModelState;
 use artifacts::app::model::{
-    ArtifactEntry, ArtifactStatus, GeneratingState, GenerationStep, InputMode, ListEntry, LogEntry,
-    LogLevel, LogStep, Model, PromptEntry, PromptState, Screen, SelectGeneratorState, SharedEntry,
-    StepLogs, TargetType,
+    ArtifactEntry, ArtifactError, ArtifactStatus, GeneratingState, GenerationStep, InputMode,
+    ListEntry, LogEntry, LogLevel, LogStep, Model, PromptEntry, PromptState, Screen,
+    SelectGeneratorState, SharedEntry, StepLogs, TargetType,
 };
 use artifacts::config::make::{
     ArtifactDef, FileDef, GeneratorInfo, GeneratorSource, PromptDef, TargetType as ConfigTargetType,
@@ -428,9 +428,12 @@ fn test_artifact_list_with_failed_status() {
     // Update entries (field used for rendering)
     if let ListEntry::Single(ref mut entry) = model.entries[0] {
         entry.status = ArtifactStatus::Failed {
-            error: "Generator script exited with code 1".to_string(),
+            error: ArtifactError::ScriptFailed {
+                script_name: "Generator".to_string(),
+                exit_code: Some(1),
+                stderr_summary: "ssh-keygen: permission denied".to_string(),
+            },
             output: String::new(),
-            retry_available: true,
         };
         entry.step_logs.check = vec![LogEntry {
             level: LogLevel::Info,
@@ -1025,9 +1028,12 @@ fn test_shared_artifact_up_to_date_status() {
 #[test]
 fn test_shared_artifact_failed_runtime_error() {
     let mut shared_entry = make_shared_entry_with_status(ArtifactStatus::Failed {
-        error: "Generator script exited with code 1".to_string(),
+        error: ArtifactError::ScriptFailed {
+            script_name: "Generator".to_string(),
+            exit_code: Some(1),
+            stderr_summary: "permission denied".to_string(),
+        },
         output: "Error: permission denied".to_string(),
-        retry_available: true,
     });
     // Add some check logs
     shared_entry.step_logs.check = vec![
@@ -1070,10 +1076,12 @@ fn test_shared_artifact_failed_runtime_error() {
 #[test]
 fn test_shared_artifact_failed_config_error() {
     let mut shared_entry = make_shared_entry_with_status(ArtifactStatus::Failed {
-        error: "File definition mismatch: 'id_rsa' in machine-one but 'id_ed25519' in machine-two"
-            .to_string(),
+        error: ArtifactError::ConfigurationError {
+            message:
+                "File definition mismatch: 'id_rsa' in machine-one but 'id_ed25519' in machine-two"
+                    .to_string(),
+        },
         output: String::new(),
-        retry_available: false,
     });
     // Add check logs
     shared_entry.step_logs.check = vec![LogEntry {
@@ -1628,9 +1636,12 @@ mod model_tests {
             &mut model.entries,
             0,
             ArtifactStatus::Failed {
-                error: "Generator failed with exit code 1".to_string(),
+                error: ArtifactError::ScriptFailed {
+                    script_name: "Generator".to_string(),
+                    exit_code: Some(1),
+                    stderr_summary: "Missing required prompt value".to_string(),
+                },
                 output: "Error: Missing required prompt value".to_string(),
-                retry_available: true,
             },
         );
 

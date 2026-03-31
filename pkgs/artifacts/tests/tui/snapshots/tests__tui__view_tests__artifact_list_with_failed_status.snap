@@ -11,7 +11,7 @@ ArtifactListState {
             target: "machine-one",
             target_type: "nixos",
             name: "ssh-key",
-            status: "Failed { error: \"Generator script exited with code 1\", output: \"\", retry_available: true }",
+            status: "Failed { error: ScriptFailed { script_name: \"Generator\", exit_code: Some(1), stderr_summary: \"ssh-keygen: permission denied\" }, output: \"\" }",
             has_logs: true,
         },
         ArtifactSnapshot {
@@ -41,7 +41,7 @@ ModelState {
         ArtifactState {
             target: "machine-one",
             name: "ssh-key",
-            status: "Failed { error: \"Generator script exited with code 1\", output: \"\", retry_available: true }",
+            status: "Failed { error: ScriptFailed { script_name: \"Generator\", exit_code: Some(1), stderr_summary: \"ssh-keygen: permission denied\" }, output: \"\" }",
             target_type: "nixos",
         },
         ArtifactState {
@@ -64,8 +64,8 @@ ModelState {
 Rendered:
 "┌Artifacts (3) - j/k: move, Enter:┐┌Logs: machine-one/ssh-key────────┐"
 "│> ✗ [N] machine-one/ssh-key      ││✗ FAILED                         │"
-"│  ✓ [N] machine-two/api-token    ││Error: Generator script exited   │"
-"│  ◐ [H] user@host/gpg-key        ││with code 1                      │"
+"│  ✓ [N] machine-two/api-token    ││Error: Generator failed (exit    │"
+"│  ◐ [H] user@host/gpg-key        ││code 1)                          │"
 "│                                 ││─────────────────────────────────│"
 "│                                 ││──                               │"
 "│                                 ││▶ Check                          │"

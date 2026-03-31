@@ -14,7 +14,7 @@ ModelState {
         ArtifactState {
             target: "machine-one",
             name: "ssh-key",
-            status: "Failed { error: \"Generator failed with exit code 1\", output: \"Error: Missing required prompt value\", retry_available: true }",
+            status: "Failed { error: ScriptFailed { script_name: \"Generator\", exit_code: Some(1), stderr_summary: \"Missing required prompt value\" }, output: \"Error: Missing required prompt value\" }",
             target_type: "nixos",
         },
         ArtifactState {

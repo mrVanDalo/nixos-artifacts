@@ -121,13 +121,8 @@ fn render_log_panel(frame: &mut Frame, model: &Model, area: Rect) {
 
     #[allow(clippy::collapsible_if)]
     if let Some(entry) = selected_entry {
-        if let ArtifactStatus::Failed {
-            error,
-            output,
-            retry_available,
-        } = entry.status()
-        {
-            if *retry_available {
+        if let ArtifactStatus::Failed { error, output } = entry.status() {
+            if error.is_retryable() {
                 lines.push(Line::from(vec![
                     Span::styled("✗ ", Style::default().add_modifier(Modifier::BOLD)),
                     Span::styled("FAILED", Style::default().add_modifier(Modifier::BOLD)),
@@ -143,7 +138,7 @@ fn render_log_panel(frame: &mut Frame, model: &Model, area: Rect) {
             }
             lines.push(Line::from(vec![
                 Span::styled("Error: ", Style::default().add_modifier(Modifier::BOLD)),
-                Span::raw(error),
+                Span::raw(error.summary()),
             ]));
 
             if !output.is_empty() {

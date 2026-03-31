@@ -410,13 +410,13 @@ fn test_generator_flow_failure() {
 
     // Dual assertion 2: Final state is Failed
     match final_model.entries[0].status() {
-        ArtifactStatus::Failed {
-            error,
-            retry_available,
-            ..
-        } => {
-            assert!(error.contains("Generator failed"));
-            assert!(*retry_available);
+        ArtifactStatus::Failed { error, .. } => {
+            assert!(
+                error.summary().contains("Generator"),
+                "Expected error to mention Generator, got: {}",
+                error.summary()
+            );
+            assert!(error.is_retryable());
         }
         other => panic!("Expected Failed status, got {:?}", other),
     }
@@ -488,7 +488,11 @@ fn test_serialize_flow_failure() {
     // Dual assertion: Final state is Failed
     match final_model.entries[0].status() {
         ArtifactStatus::Failed { error, .. } => {
-            assert!(error.contains("Serialization failed"));
+            assert!(
+                error.summary().contains("Serialization"),
+                "Expected error to mention Serialization, got: {}",
+                error.summary()
+            );
         }
         other => panic!("Expected Failed status, got {:?}", other),
     }
@@ -517,28 +521,31 @@ fn test_check_serialization_failure() {
     tracker.assert_command_at(0, "CheckSerialization");
 
     // Simulate failed check result
+    use artifacts::app::model::ArtifactError;
+    let error = ArtifactError::IoError {
+        context: "Check script not found".to_string(),
+    };
     let (final_model, _) = update(
         model,
         Message::CheckSerializationResult {
             artifact_index: 0,
             status: ArtifactStatus::Failed {
-                error: "Check script not found".to_string(),
+                error: error.clone(),
                 output: String::new(),
-                retry_available: true,
             },
-            result: Err("Check script not found".to_string()),
+            result: Err(error.summary()),
         },
     );
 
     // Final state should be Failed with retry available
     match final_model.entries[0].status() {
-        ArtifactStatus::Failed {
-            error,
-            retry_available,
-            ..
-        } => {
-            assert!(error.contains("Check script not found"));
-            assert!(*retry_available);
+        ArtifactStatus::Failed { error, .. } => {
+            assert!(
+                error.summary().contains("Check script not found"),
+                "Expected error to mention 'Check script not found', got: {}",
+                error.summary()
+            );
+            assert!(error.is_retryable());
         }
         other => panic!("Expected Failed status, got {:?}", other),
     }
@@ -738,28 +745,33 @@ fn test_complete_lifecycle_success() {
 }
 
 /// Test: State persistence through failed check
-/// When check fails, status becomes Failed with retry_available
+/// When check fails, status becomes Failed and is retryable
 #[test]
 #[serial]
 fn test_retry_available_after_failed_check() {
+    use artifacts::app::model::ArtifactError;
     let model = create_test_model("test-artifact", false);
 
+    let error = ArtifactError::IoError {
+        context: "Backend not configured".to_string(),
+    };
     let (final_model, _) = update(
         model,
         Message::CheckSerializationResult {
             artifact_index: 0,
-            status: ArtifactStatus::NeedsGeneration,
-            result: Err("Backend not configured".to_string()),
+            status: ArtifactStatus::Failed {
+                error: error.clone(),
+                output: String::new(),
+            },
+            result: Err(error.summary()),
         },
     );
 
     match final_model.entries[0].status() {
-        ArtifactStatus::Failed {
-            retry_available, ..
-        } => {
+        ArtifactStatus::Failed { error, .. } => {
             assert!(
-                *retry_available,
-                "retry_available should be true for check failures"
+                error.is_retryable(),
+                "Error should be retryable for check failures"
             );
         }
         other => panic!("Expected Failed status, got {:?}", other),

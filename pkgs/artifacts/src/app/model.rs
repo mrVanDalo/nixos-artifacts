@@ -117,6 +117,170 @@ impl std::fmt::Display for TargetType {
     }
 }
 
+/// Typed error enum for artifact failures.
+///
+/// This enum represents all possible error conditions that can occur during
+/// artifact processing, providing structured error information instead of
+/// plain strings. This enables:
+/// - Programmatic error handling (e.g., different retry behavior per type)
+/// - Customized error display per type
+/// - Type-safe error context preservation
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ArtifactError {
+    /// Script exceeded its timeout during execution.
+    ScriptTimeout {
+        /// Name of the script or operation that timed out
+        script_name: String,
+        /// Timeout duration in seconds
+        timeout_secs: u64,
+    },
+    /// Script exited with non-zero exit code.
+    ScriptFailed {
+        /// Name of the script or operation that failed
+        script_name: String,
+        /// Exit code from the script
+        exit_code: Option<i32>,
+        /// Summary of stderr output (first ~200 chars)
+        stderr_summary: String,
+    },
+    /// Generated files didn't match expected files.
+    ValidationFailed {
+        /// Description of what validation failed
+        reason: String,
+    },
+    /// Artifact not found in configuration.
+    ArtifactNotFound {
+        /// Name of the artifact that wasn't found
+        artifact_name: String,
+        /// Target (machine/user) context
+        target: String,
+    },
+    /// Task panicked during execution.
+    TaskPanic {
+        /// Panic message or description
+        message: String,
+    },
+    /// I/O or other runtime error during execution.
+    IoError {
+        /// Context describing what operation failed
+        context: String,
+    },
+    /// Configuration validation error (cannot be fixed by retry).
+    ConfigurationError {
+        /// Description of the configuration issue
+        message: String,
+    },
+}
+
+impl ArtifactError {
+    /// Whether this error type supports retrying.
+    ///
+    /// Runtime errors (timeouts, script failures, I/O) can potentially
+    /// succeed on retry. Configuration errors require user intervention.
+    pub fn is_retryable(&self) -> bool {
+        match self {
+            Self::ScriptTimeout { .. }
+            | Self::ScriptFailed { .. }
+            | Self::TaskPanic { .. }
+            | Self::IoError { .. }
+            | Self::ArtifactNotFound { .. } => true,
+            Self::ValidationFailed { .. } | Self::ConfigurationError { .. } => false,
+        }
+    }
+
+    /// Human-readable summary for the status line (short form).
+    pub fn summary(&self) -> String {
+        match self {
+            Self::ScriptTimeout {
+                script_name,
+                timeout_secs,
+            } => {
+                format!("Timed out after {} seconds ({})", timeout_secs, script_name)
+            }
+            Self::ScriptFailed {
+                script_name,
+                exit_code,
+                ..
+            } => {
+                if let Some(code) = exit_code {
+                    format!("{} failed (exit code {})", script_name, code)
+                } else {
+                    format!("{} failed", script_name)
+                }
+            }
+            Self::ValidationFailed { reason } => format!("Validation failed: {}", reason),
+            Self::ArtifactNotFound {
+                artifact_name,
+                target,
+            } => {
+                format!(
+                    "Artifact '{}' not found for target '{}'",
+                    artifact_name, target
+                )
+            }
+            Self::TaskPanic { message } => format!("Task panicked: {}", message),
+            Self::IoError { context } => format!("I/O error: {}", context),
+            Self::ConfigurationError { message } => message.clone(),
+        }
+    }
+
+    /// Detailed message for the log view (includes full context).
+    pub fn detail(&self) -> String {
+        match self {
+            Self::ScriptTimeout {
+                script_name,
+                timeout_secs,
+            } => {
+                format!(
+                    "Script '{}' exceeded timeout of {} seconds and was terminated.",
+                    script_name, timeout_secs
+                )
+            }
+            Self::ScriptFailed {
+                script_name,
+                exit_code,
+                stderr_summary,
+            } => {
+                let code_str = exit_code
+                    .map(|c| format!(" with exit code {}", c))
+                    .unwrap_or_default();
+                if stderr_summary.is_empty() {
+                    format!("{} failed{}", script_name, code_str)
+                } else {
+                    format!("{} failed{}:\n{}", script_name, code_str, stderr_summary)
+                }
+            }
+            Self::ValidationFailed { reason } => {
+                format!("Generated files validation failed: {}", reason)
+            }
+            Self::ArtifactNotFound {
+                artifact_name,
+                target,
+            } => {
+                format!(
+                    "Artifact '{}' was not found in the configuration for target '{}'.",
+                    artifact_name, target
+                )
+            }
+            Self::TaskPanic { message } => {
+                format!("Background task panicked: {}", message)
+            }
+            Self::IoError { context } => {
+                format!("I/O operation failed: {}", context)
+            }
+            Self::ConfigurationError { message } => {
+                format!("Configuration error: {}", message)
+            }
+        }
+    }
+}
+
+impl std::fmt::Display for ArtifactError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.summary())
+    }
+}
+
 /// Current status of an artifact through its lifecycle.
 ///
 /// The normal flow is `Pending` → (`NeedsGeneration` | `UpToDate`), where the
@@ -160,11 +324,12 @@ pub enum ArtifactStatus {
     /// artifact. The inner state tracks which step and any output.
     Generating(GeneratingSubstate),
     /// A step (check, generation, or serialization) failed.  The error
-    /// message and output are preserved for display.
+    /// and output are preserved for display.
     Failed {
-        error: String,
+        /// Typed error describing what went wrong
+        error: ArtifactError,
+        /// Formatted step logs from the generation process
         output: String,
-        retry_available: bool,
     },
 }
 

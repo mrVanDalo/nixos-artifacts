@@ -1,6 +1,6 @@
 use crate::app::model::{
-    ArtifactEntry, ArtifactStatus, ListEntry, LogStep, Model, Screen, SharedEntry, StepLogs,
-    TargetType, Warning,
+    ArtifactEntry, ArtifactError, ArtifactStatus, ListEntry, LogStep, Model, Screen, SharedEntry,
+    StepLogs, TargetType, Warning,
 };
 use crate::config::backend::BackendConfiguration;
 use crate::config::make::MakeConfiguration;
@@ -56,9 +56,10 @@ pub fn build_model(make: &MakeConfiguration) -> Model {
         // Check if artifact has validation error
         let status = if let Some(ref error) = shared_info.error {
             ArtifactStatus::Failed {
-                error: error.clone(),
+                error: ArtifactError::ConfigurationError {
+                    message: error.clone(),
+                },
                 output: String::new(),
-                retry_available: false, // Validation errors don't benefit from retry
             }
         } else {
             ArtifactStatus::Pending
@@ -495,18 +496,15 @@ mod tests {
 
             // Status should be Failed
             match &entry.status {
-                ArtifactStatus::Failed {
-                    error,
-                    retry_available,
-                    ..
-                } => {
+                ArtifactStatus::Failed { error, .. } => {
                     assert!(
-                        error.contains("File definition mismatch"),
-                        "Error should mention file definition mismatch"
+                        error.summary().contains("File definition mismatch"),
+                        "Error should mention file definition mismatch, got: {}",
+                        error.summary()
                     );
                     assert!(
-                        !retry_available,
-                        "Validation errors should have retry_available: false"
+                        !error.is_retryable(),
+                        "Validation errors should not be retryable"
                     );
                 }
                 other => panic!("Expected Failed status, got {:?}", other),

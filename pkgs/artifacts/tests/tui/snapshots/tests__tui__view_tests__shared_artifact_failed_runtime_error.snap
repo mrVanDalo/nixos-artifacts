@@ -11,7 +11,7 @@ ArtifactListState {
             target: "[shared]",
             target_type: "shared",
             name: "shared-secret",
-            status: "Failed { error: \"Generator script exited with code 1\", output: \"Error: permission denied\", retry_available: true }",
+            status: "Failed { error: ScriptFailed { script_name: \"Generator\", exit_code: Some(1), stderr_summary: \"permission denied\" }, output: \"Error: permission denied\" }",
             has_logs: true,
         },
     ],
@@ -21,8 +21,8 @@ ArtifactListState {
 Rendered:
 "┌Artifacts (1) - j/k: move, Enter:┐┌Logs: shared-secret──────────────┐"
 "│> ✗ [S] shared-secret (2 targets)││✗ FAILED                         │"
-"│                                 ││Error: Generator script exited   │"
-"│                                 ││with code 1                      │"
+"│                                 ││Error: Generator failed (exit    │"
+"│                                 ││code 1)                          │"
 "│                                 ││Output:                          │"
 "│                                 ││  Error: permission denied       │"
 "│                                 ││─────────────────────────────────│"
