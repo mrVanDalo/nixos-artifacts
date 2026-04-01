@@ -32,12 +32,57 @@ use crate::backend::helpers::{escape_single_quoted, fnv1a64, resolve_path};
 use crate::backend::output_capture::{CapturedOutput, run_with_captured_output};
 use crate::config::make::ArtifactDef;
 use crate::log_debug;
+use crate::logging::LogLevel;
 use crate::string_vec;
 use anyhow::{Context, Result, bail};
 use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
+
+/// Describes the generator invocation context.
+///
+/// This enum unifies per-target and shared generator execution by abstracting
+/// over the differences in how the generator path is obtained and what
+/// environment variables are exported.
+enum GeneratorContext<'a> {
+    /// Per-target generator from an artifact definition.
+    PerTarget {
+        artifact: &'a ArtifactDef,
+        target_type: &'a TargetType,
+    },
+    /// Shared generator invoked by direct path.
+    Shared { generator_path: &'a str },
+}
+
+impl<'a> GeneratorContext<'a> {
+    /// The raw generator script path string.
+    fn generator_script(&self) -> &str {
+        match self {
+            Self::PerTarget { artifact, .. } => artifact.generator.as_ref(),
+            Self::Shared { generator_path } => generator_path,
+        }
+    }
+
+    /// Build the environment export string for the bwrap command.
+    fn env_exports(&self, out: &Path, prompts: &Path, log_level: LogLevel) -> String {
+        match self {
+            Self::PerTarget {
+                artifact,
+                target_type,
+            } => build_env_exports(out, prompts, target_type, &artifact.name, log_level),
+            Self::Shared { .. } => build_shared_env_exports(out, prompts, log_level),
+        }
+    }
+
+    /// Label for error messages and logging.
+    fn label(&self) -> &'static str {
+        match self {
+            Self::PerTarget { .. } => "generator",
+            Self::Shared { .. } => "shared generator",
+        }
+    }
+}
 
 /// Resolve and canonicalize a generator script path.
 fn resolve_generator_path(make_base: &Path, generator_script: &str) -> PathBuf {
@@ -205,6 +250,45 @@ fn log_bwrap_command(arguments: &[String]) {
 #[cfg(not(feature = "logging"))]
 fn log_bwrap_command(_arguments: &[String]) {}
 
+/// Internal unified implementation for running generator scripts.
+///
+/// This function contains the common logic shared by both per-target and shared
+/// generator execution paths.
+fn run_generator_inner(
+    ctx: &GeneratorContext<'_>,
+    make_base: &Path,
+    prompts: &Path,
+    out: &Path,
+    log_level: LogLevel,
+) -> Result<CapturedOutput> {
+    let generator_path = resolve_generator_path(make_base, ctx.generator_script());
+    let nix_shell = which::which("nix-shell")
+        .context("nix-shell is required to run the generator but was not found in PATH")?;
+    let temp_passwd = create_temp_passwd(out)?;
+    let arguments = build_bwrap_arguments(&generator_path, prompts, out, &temp_passwd);
+
+    log_debug!(
+        "run {} bwrap with command {}",
+        ctx.label(),
+        generator_path.display()
+    );
+    log_bwrap_command(&arguments);
+
+    let env_exports = ctx.env_exports(out, prompts, log_level);
+    let output = execute_generator_in_bwrap(&nix_shell, &arguments, &env_exports)?;
+
+    let _ = fs::remove_file(&temp_passwd);
+
+    if !output.exit_success {
+        bail!(
+            "{} failed inside nix-shell with non-zero exit status",
+            ctx.label()
+        );
+    }
+
+    Ok(output)
+}
+
 /// Verify that the generator produced exactly the expected files for the given artifact.
 ///
 /// This function checks that the generator script produced:
@@ -304,27 +388,13 @@ pub fn run_generator_script(
     make_base: &Path,
     prompts: &Path,
     out: &Path,
-    log_level: crate::logging::LogLevel,
+    log_level: LogLevel,
 ) -> Result<CapturedOutput> {
-    let generator_path = resolve_generator_path(make_base, artifact.generator.as_ref());
-    let nix_shell = which::which("nix-shell")
-        .context("nix-shell is required to run the generator but was not found in PATH")?;
-    let temp_passwd = create_temp_passwd(out)?;
-    let arguments = build_bwrap_arguments(&generator_path, prompts, out, &temp_passwd);
-
-    log_debug!("run bwrap with command {}", generator_path.display());
-    log_bwrap_command(&arguments);
-
-    let env_exports = build_env_exports(out, prompts, target_type, &artifact.name, log_level);
-    let output = execute_generator_in_bwrap(&nix_shell, &arguments, &env_exports)?;
-
-    let _ = fs::remove_file(&temp_passwd);
-
-    if !output.exit_success {
-        bail!("generator failed inside nix-shell with non-zero exit status");
-    }
-
-    Ok(output)
+    let ctx = GeneratorContext::PerTarget {
+        artifact,
+        target_type,
+    };
+    run_generator_inner(&ctx, make_base, prompts, out, log_level)
 }
 
 /// Run a generator script by its direct path (for shared artifacts).
@@ -375,28 +445,8 @@ pub fn run_generator_script_with_path(
     make_base: &Path,
     prompts: &Path,
     out: &Path,
-    log_level: crate::logging::LogLevel,
+    log_level: LogLevel,
 ) -> Result<CapturedOutput> {
-    let resolved_generator_path = resolve_generator_path(make_base, generator_path);
-    let nix_shell = which::which("nix-shell")
-        .context("nix-shell is required to run the generator but was not found in PATH")?;
-    let temp_passwd = create_temp_passwd(out)?;
-    let arguments = build_bwrap_arguments(&resolved_generator_path, prompts, out, &temp_passwd);
-
-    log_debug!(
-        "run shared generator bwrap with command {}",
-        resolved_generator_path.display()
-    );
-    log_bwrap_command(&arguments);
-
-    let env_exports = build_shared_env_exports(out, prompts, log_level);
-    let output = execute_generator_in_bwrap(&nix_shell, &arguments, &env_exports)?;
-
-    let _ = fs::remove_file(&temp_passwd);
-
-    if !output.exit_success {
-        bail!("shared generator failed inside nix-shell with non-zero exit status");
-    }
-
-    Ok(output)
+    let ctx = GeneratorContext::Shared { generator_path };
+    run_generator_inner(&ctx, make_base, prompts, out, log_level)
 }
