@@ -373,16 +373,13 @@ pub fn run_with_captured_output_and_timeout(
     let _ = stdout_thread.join();
     let _ = stderr_thread.join();
 
-    let status = match child.try_wait() {
-        Ok(Some(status)) => status,
-        Ok(None) => child.wait().map_err(|e| ScriptError::Io {
+    let status = match child.try_wait().map_err(|e| ScriptError::Io {
+        message: e.to_string(),
+    })? {
+        Some(status) => status,
+        None => child.wait().map_err(|e| ScriptError::Io {
             message: e.to_string(),
         })?,
-        Err(e) => {
-            return Err(ScriptError::Io {
-                message: e.to_string(),
-            });
-        }
     };
 
     if !status.success() {

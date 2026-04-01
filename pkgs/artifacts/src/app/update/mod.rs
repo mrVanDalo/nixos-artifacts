@@ -162,48 +162,47 @@ fn handle_check_result(
     status: ArtifactStatus,
     result: Result<ScriptOutput, String>,
 ) -> (Model, Effect) {
-    if let Some(entry) = model.entries.get_mut(artifact_index) {
-        match &result {
-            Ok(output) => {
-                // Add captured script output to logs using helper methods
-                if !output.stdout_lines.is_empty() || !output.stderr_lines.is_empty() {
-                    entry
-                        .step_logs_mut()
-                        .append_stdout(LogStep::Check, &output.stdout_lines);
-                    entry
-                        .step_logs_mut()
-                        .append_stderr(LogStep::Check, &output.stderr_lines);
-                }
-
-                // Set status from check result
-                *entry.status_mut() = status.clone();
-
-                // Add status summary log entry
-                let (level, message) = match status {
-                    ArtifactStatus::NeedsGeneration => {
-                        (LogLevel::Info, "Artifact needs regeneration".to_string())
-                    }
-                    ArtifactStatus::UpToDate => {
-                        (LogLevel::Success, "Already up to date".to_string())
-                    }
-                    _ => (LogLevel::Info, "Unknown status".to_string()),
-                };
+    let Some(entry) = model.entries.get_mut(artifact_index) else {
+        return (model, Effect::None);
+    };
+    match &result {
+        Ok(output) => {
+            // Add captured script output to logs using helper methods
+            if !output.stdout_lines.is_empty() || !output.stderr_lines.is_empty() {
                 entry
                     .step_logs_mut()
-                    .check
-                    .push(LogEntry { level, message });
+                    .append_stdout(LogStep::Check, &output.stdout_lines);
+                entry
+                    .step_logs_mut()
+                    .append_stderr(LogStep::Check, &output.stderr_lines);
             }
-            Err(e) => {
-                let artifact_error = ArtifactError::IoError { context: e.clone() };
-                entry.step_logs_mut().check.push(LogEntry {
-                    level: LogLevel::Error,
-                    message: e.clone(),
-                });
-                *entry.status_mut() = ArtifactStatus::Failed {
-                    error: artifact_error,
-                    output: String::new(),
-                };
-            }
+
+            // Set status from check result
+            *entry.status_mut() = status.clone();
+
+            // Add status summary log entry
+            let (level, message) = match status {
+                ArtifactStatus::NeedsGeneration => {
+                    (LogLevel::Info, "Artifact needs regeneration".to_string())
+                }
+                ArtifactStatus::UpToDate => (LogLevel::Success, "Already up to date".to_string()),
+                _ => (LogLevel::Info, "Unknown status".to_string()),
+            };
+            entry
+                .step_logs_mut()
+                .check
+                .push(LogEntry { level, message });
+        }
+        Err(e) => {
+            let artifact_error = ArtifactError::IoError { context: e.clone() };
+            entry.step_logs_mut().check.push(LogEntry {
+                level: LogLevel::Error,
+                message: e.clone(),
+            });
+            *entry.status_mut() = ArtifactStatus::Failed {
+                error: artifact_error,
+                output: String::new(),
+            };
         }
     }
     (model, Effect::None)
@@ -391,33 +390,34 @@ fn handle_shared_check_result(
         .iter()
         .any(|s| matches!(s, ArtifactStatus::NeedsGeneration));
 
-    if let Some(entry) = model.entries.get_mut(artifact_index) {
-        // Add captured script output to logs using first output if available
-        if let Some(check_output) = outputs.first()
-            && (!check_output.stdout_lines.is_empty() || !check_output.stderr_lines.is_empty())
-        {
-            entry
-                .step_logs_mut()
-                .append_stdout(LogStep::Check, &check_output.stdout_lines);
-            entry
-                .step_logs_mut()
-                .append_stderr(LogStep::Check, &check_output.stderr_lines);
-        }
+    let Some(entry) = model.entries.get_mut(artifact_index) else {
+        return (model, Effect::None);
+    };
+    // Add captured script output to logs using first output if available
+    if let Some(check_output) = outputs.first()
+        && (!check_output.stdout_lines.is_empty() || !check_output.stderr_lines.is_empty())
+    {
+        entry
+            .step_logs_mut()
+            .append_stdout(LogStep::Check, &check_output.stdout_lines);
+        entry
+            .step_logs_mut()
+            .append_stderr(LogStep::Check, &check_output.stderr_lines);
+    }
 
-        // Set status based on aggregated result
-        if any_needs_gen {
-            *entry.status_mut() = ArtifactStatus::NeedsGeneration;
-            entry.step_logs_mut().check.push(LogEntry {
-                level: LogLevel::Info,
-                message: "Shared artifact needs regeneration".to_string(),
-            });
-        } else {
-            *entry.status_mut() = ArtifactStatus::UpToDate;
-            entry.step_logs_mut().check.push(LogEntry {
-                level: LogLevel::Success,
-                message: "Already up to date".to_string(),
-            });
-        }
+    // Set status based on aggregated result
+    if any_needs_gen {
+        *entry.status_mut() = ArtifactStatus::NeedsGeneration;
+        entry.step_logs_mut().check.push(LogEntry {
+            level: LogLevel::Info,
+            message: "Shared artifact needs regeneration".to_string(),
+        });
+    } else {
+        *entry.status_mut() = ArtifactStatus::UpToDate;
+        entry.step_logs_mut().check.push(LogEntry {
+            level: LogLevel::Success,
+            message: "Already up to date".to_string(),
+        });
     }
     (model, Effect::None)
 }
@@ -429,24 +429,25 @@ fn handle_output_line(
     stream: crate::app::model::OutputStream,
     content: String,
 ) -> (Model, Effect) {
-    if let Some(entry) = model.entries.get_mut(artifact_index) {
-        // Determine log level from stream type
-        let level = match stream {
-            crate::app::model::OutputStream::Stdout => LogLevel::Output,
-            crate::app::model::OutputStream::Stderr => LogLevel::Error,
-        };
+    let Some(entry) = model.entries.get_mut(artifact_index) else {
+        return (model, Effect::None);
+    };
+    // Determine log level from stream type
+    let level = match stream {
+        crate::app::model::OutputStream::Stdout => LogLevel::Output,
+        crate::app::model::OutputStream::Stderr => LogLevel::Error,
+    };
 
-        // Determine current step based on status
-        // Use the model's selected_log_step to determine where to append
-        // This ensures streaming output goes to the correct step being viewed
-        let step = model.selected_log_step;
+    // Determine current step based on status
+    // Use the model's selected_log_step to determine where to append
+    // This ensures streaming output goes to the correct step being viewed
+    let step = model.selected_log_step;
 
-        // Append to appropriate step logs
-        entry.step_logs_mut().get_mut(step).push(LogEntry {
-            level,
-            message: content,
-        });
-    }
+    // Append to appropriate step logs
+    entry.step_logs_mut().get_mut(step).push(LogEntry {
+        level,
+        message: content,
+    });
     (model, Effect::None)
 }
 

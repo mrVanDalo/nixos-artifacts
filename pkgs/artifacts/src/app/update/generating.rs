@@ -22,25 +22,26 @@ fn handle_generator_success(
     output: ScriptOutput,
 ) -> (Model, Effect) {
     // Store logs in entry
-    if let Some(entry) = model.entries.get_mut(artifact_index) {
-        let step_logs = entry.step_logs_mut();
-        for line in &output.stdout_lines {
-            step_logs.generate.push(LogEntry {
-                level: LogLevel::Output,
-                message: line.clone(),
-            });
-        }
-        for line in &output.stderr_lines {
-            step_logs.generate.push(LogEntry {
-                level: LogLevel::Error,
-                message: line.clone(),
-            });
-        }
+    let Some(entry) = model.entries.get_mut(artifact_index) else {
+        return (model, Effect::None);
+    };
+    let step_logs = entry.step_logs_mut();
+    for line in &output.stdout_lines {
         step_logs.generate.push(LogEntry {
-            level: LogLevel::Success,
-            message: "Generated files".to_string(),
+            level: LogLevel::Output,
+            message: line.clone(),
         });
     }
+    for line in &output.stderr_lines {
+        step_logs.generate.push(LogEntry {
+            level: LogLevel::Error,
+            message: line.clone(),
+        });
+    }
+    step_logs.generate.push(LogEntry {
+        level: LogLevel::Success,
+        message: "Generated files".to_string(),
+    });
 
     // Move to serialization
     if let Screen::Generating(ref mut state) = model.screen {
@@ -65,27 +66,30 @@ fn handle_generator_failure(
     artifact_index: usize,
     error: String,
 ) -> (Model, Effect) {
-    if let Some(entry) = model.entries.get_mut(artifact_index) {
-        let artifact_name = entry.artifact_name().to_string();
-        let error_msg = format!("Generator failed for '{}': {}", artifact_name, error);
-        entry.step_logs_mut().generate.push(LogEntry {
-            level: LogLevel::Error,
-            message: error_msg,
-        });
+    let Some(entry) = model.entries.get_mut(artifact_index) else {
+        model.screen = Screen::ArtifactList;
+        return (model, Effect::None);
+    };
+    let artifact_name = entry.artifact_name().to_string();
+    let error_msg = format!("Generator failed for '{}': {}", artifact_name, error);
+    entry.step_logs_mut().generate.push(LogEntry {
+        level: LogLevel::Error,
+        message: error_msg,
+    });
 
-        let output = super::format_step_logs(entry);
+    let output = super::format_step_logs(entry);
 
-        let artifact_error = ArtifactError::ScriptFailed {
-            script_name: format!("Generator for '{}'", artifact_name),
-            exit_code: None,
-            stderr_summary: error,
-        };
+    let artifact_error = ArtifactError::ScriptFailed {
+        script_name: format!("Generator for '{}'", artifact_name),
+        exit_code: None,
+        stderr_summary: error,
+    };
 
-        *entry.status_mut() = ArtifactStatus::Failed {
-            error: artifact_error,
-            output,
-        };
-    }
+    *entry.status_mut() = ArtifactStatus::Failed {
+        error: artifact_error,
+        output,
+    };
+
     model.screen = Screen::ArtifactList;
     (model, Effect::None)
 }
@@ -107,26 +111,29 @@ fn handle_serialize_success(
     artifact_index: usize,
     output: ScriptOutput,
 ) -> (Model, Effect) {
-    if let Some(entry) = model.entries.get_mut(artifact_index) {
-        let step_logs = entry.step_logs_mut();
-        for line in &output.stdout_lines {
-            step_logs.serialize.push(LogEntry {
-                level: LogLevel::Output,
-                message: line.clone(),
-            });
-        }
-        for line in &output.stderr_lines {
-            step_logs.serialize.push(LogEntry {
-                level: LogLevel::Error,
-                message: line.clone(),
-            });
-        }
+    let Some(entry) = model.entries.get_mut(artifact_index) else {
+        model.screen = Screen::ArtifactList;
+        return (model, Effect::None);
+    };
+    let step_logs = entry.step_logs_mut();
+    for line in &output.stdout_lines {
         step_logs.serialize.push(LogEntry {
-            level: LogLevel::Success,
-            message: "Serialized to backend".to_string(),
+            level: LogLevel::Output,
+            message: line.clone(),
         });
-        *entry.status_mut() = ArtifactStatus::UpToDate;
     }
+    for line in &output.stderr_lines {
+        step_logs.serialize.push(LogEntry {
+            level: LogLevel::Error,
+            message: line.clone(),
+        });
+    }
+    step_logs.serialize.push(LogEntry {
+        level: LogLevel::Success,
+        message: "Serialized to backend".to_string(),
+    });
+    *entry.status_mut() = ArtifactStatus::UpToDate;
+
     model.screen = Screen::ArtifactList;
     (model, Effect::None)
 }
@@ -137,27 +144,30 @@ fn handle_serialize_failure(
     artifact_index: usize,
     error: String,
 ) -> (Model, Effect) {
-    if let Some(entry) = model.entries.get_mut(artifact_index) {
-        let artifact_name = entry.artifact_name().to_string();
-        let error_msg = format!("Serialization failed for '{}': {}", artifact_name, error);
-        entry.step_logs_mut().serialize.push(LogEntry {
-            level: LogLevel::Error,
-            message: error_msg,
-        });
+    let Some(entry) = model.entries.get_mut(artifact_index) else {
+        model.screen = Screen::ArtifactList;
+        return (model, Effect::None);
+    };
+    let artifact_name = entry.artifact_name().to_string();
+    let error_msg = format!("Serialization failed for '{}': {}", artifact_name, error);
+    entry.step_logs_mut().serialize.push(LogEntry {
+        level: LogLevel::Error,
+        message: error_msg,
+    });
 
-        let output = super::format_step_logs(entry);
+    let output = super::format_step_logs(entry);
 
-        let artifact_error = ArtifactError::ScriptFailed {
-            script_name: format!("Serialization for '{}'", artifact_name),
-            exit_code: None,
-            stderr_summary: error,
-        };
+    let artifact_error = ArtifactError::ScriptFailed {
+        script_name: format!("Serialization for '{}'", artifact_name),
+        exit_code: None,
+        stderr_summary: error,
+    };
 
-        *entry.status_mut() = ArtifactStatus::Failed {
-            error: artifact_error,
-            output,
-        };
-    }
+    *entry.status_mut() = ArtifactStatus::Failed {
+        error: artifact_error,
+        output,
+    };
+
     model.screen = Screen::ArtifactList;
     (model, Effect::None)
 }
@@ -181,25 +191,26 @@ fn handle_shared_generator_success(
     artifact_index: usize,
     output: ScriptOutput,
 ) -> (Model, Effect) {
-    if let Some(entry) = model.entries.get_mut(artifact_index) {
-        let step_logs = entry.step_logs_mut();
-        for line in &output.stdout_lines {
-            step_logs.generate.push(LogEntry {
-                level: LogLevel::Output,
-                message: line.clone(),
-            });
-        }
-        for line in &output.stderr_lines {
-            step_logs.generate.push(LogEntry {
-                level: LogLevel::Error,
-                message: line.clone(),
-            });
-        }
+    let Some(entry) = model.entries.get_mut(artifact_index) else {
+        return (model, Effect::None);
+    };
+    let step_logs = entry.step_logs_mut();
+    for line in &output.stdout_lines {
         step_logs.generate.push(LogEntry {
-            level: LogLevel::Success,
-            message: "Generated files".to_string(),
+            level: LogLevel::Output,
+            message: line.clone(),
         });
     }
+    for line in &output.stderr_lines {
+        step_logs.generate.push(LogEntry {
+            level: LogLevel::Error,
+            message: line.clone(),
+        });
+    }
+    step_logs.generate.push(LogEntry {
+        level: LogLevel::Success,
+        message: "Generated files".to_string(),
+    });
 
     if let Screen::Generating(ref mut state) = model.screen {
         state.step = GenerationStep::Serializing;
@@ -224,27 +235,30 @@ fn handle_shared_generator_failure(
     artifact_index: usize,
     error: String,
 ) -> (Model, Effect) {
-    if let Some(entry) = model.entries.get_mut(artifact_index) {
-        let artifact_name = entry.artifact_name().to_string();
-        let error_msg = format!("Generator failed for '{}': {}", artifact_name, error);
-        entry.step_logs_mut().generate.push(LogEntry {
-            level: LogLevel::Error,
-            message: error_msg,
-        });
+    let Some(entry) = model.entries.get_mut(artifact_index) else {
+        model.screen = Screen::ArtifactList;
+        return (model, Effect::None);
+    };
+    let artifact_name = entry.artifact_name().to_string();
+    let error_msg = format!("Generator failed for '{}': {}", artifact_name, error);
+    entry.step_logs_mut().generate.push(LogEntry {
+        level: LogLevel::Error,
+        message: error_msg,
+    });
 
-        let output = super::format_step_logs(entry);
+    let output = super::format_step_logs(entry);
 
-        let artifact_error = ArtifactError::ScriptFailed {
-            script_name: format!("Generator for '{}'", artifact_name),
-            exit_code: None,
-            stderr_summary: error,
-        };
+    let artifact_error = ArtifactError::ScriptFailed {
+        script_name: format!("Generator for '{}'", artifact_name),
+        exit_code: None,
+        stderr_summary: error,
+    };
 
-        *entry.status_mut() = ArtifactStatus::Failed {
-            error: artifact_error,
-            output,
-        };
-    }
+    *entry.status_mut() = ArtifactStatus::Failed {
+        error: artifact_error,
+        output,
+    };
+
     model.screen = Screen::ArtifactList;
     (model, Effect::None)
 }
@@ -283,29 +297,32 @@ fn handle_shared_serialize_success(
     artifact_index: usize,
     results: Vec<(String, bool, ScriptOutput)>,
 ) -> (Model, Effect) {
-    if let Some(entry) = model.entries.get_mut(artifact_index) {
-        let step_logs = entry.step_logs_mut();
-        // Use first result's output for logs
-        if let Some((_, _, output)) = results.first() {
-            for line in &output.stdout_lines {
-                step_logs.serialize.push(LogEntry {
-                    level: LogLevel::Output,
-                    message: line.clone(),
-                });
-            }
-            for line in &output.stderr_lines {
-                step_logs.serialize.push(LogEntry {
-                    level: LogLevel::Error,
-                    message: line.clone(),
-                });
-            }
+    let Some(entry) = model.entries.get_mut(artifact_index) else {
+        model.screen = Screen::ArtifactList;
+        return (model, Effect::None);
+    };
+    let step_logs = entry.step_logs_mut();
+    // Use first result's output for logs
+    if let Some((_, _, output)) = results.first() {
+        for line in &output.stdout_lines {
+            step_logs.serialize.push(LogEntry {
+                level: LogLevel::Output,
+                message: line.clone(),
+            });
         }
-        step_logs.serialize.push(LogEntry {
-            level: LogLevel::Success,
-            message: "Serialized to backend (shared)".to_string(),
-        });
-        *entry.status_mut() = ArtifactStatus::UpToDate;
+        for line in &output.stderr_lines {
+            step_logs.serialize.push(LogEntry {
+                level: LogLevel::Error,
+                message: line.clone(),
+            });
+        }
     }
+    step_logs.serialize.push(LogEntry {
+        level: LogLevel::Success,
+        message: "Serialized to backend (shared)".to_string(),
+    });
+    *entry.status_mut() = ArtifactStatus::UpToDate;
+
     model.screen = Screen::ArtifactList;
     (model, Effect::None)
 }
@@ -316,30 +333,33 @@ fn handle_shared_serialize_failure(
     artifact_index: usize,
     error: String,
 ) -> (Model, Effect) {
-    if let Some(entry) = model.entries.get_mut(artifact_index) {
-        let artifact_name = entry.artifact_name().to_string();
-        let error_msg = format!(
-            "Shared serialization failed for '{}': {}",
-            artifact_name, error
-        );
-        entry.step_logs_mut().serialize.push(LogEntry {
-            level: LogLevel::Error,
-            message: error_msg,
-        });
+    let Some(entry) = model.entries.get_mut(artifact_index) else {
+        model.screen = Screen::ArtifactList;
+        return (model, Effect::None);
+    };
+    let artifact_name = entry.artifact_name().to_string();
+    let error_msg = format!(
+        "Shared serialization failed for '{}': {}",
+        artifact_name, error
+    );
+    entry.step_logs_mut().serialize.push(LogEntry {
+        level: LogLevel::Error,
+        message: error_msg,
+    });
 
-        let output = super::format_step_logs(entry);
+    let output = super::format_step_logs(entry);
 
-        let artifact_error = ArtifactError::ScriptFailed {
-            script_name: format!("Shared serialization for '{}'", artifact_name),
-            exit_code: None,
-            stderr_summary: error,
-        };
+    let artifact_error = ArtifactError::ScriptFailed {
+        script_name: format!("Shared serialization for '{}'", artifact_name),
+        exit_code: None,
+        stderr_summary: error,
+    };
 
-        *entry.status_mut() = ArtifactStatus::Failed {
-            error: artifact_error,
-            output,
-        };
-    }
+    *entry.status_mut() = ArtifactStatus::Failed {
+        error: artifact_error,
+        output,
+    };
+
     model.screen = Screen::ArtifactList;
     (model, Effect::None)
 }

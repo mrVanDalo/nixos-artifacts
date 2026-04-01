@@ -617,32 +617,24 @@ fn run_command_with_timeout(
     script_name: &str,
     timeout: Duration,
 ) -> Result<CapturedOutput> {
-    match run_with_captured_output_and_timeout(child, script_name, timeout) {
-        Ok(output) => Ok(output),
-        Err(ScriptError::Timeout {
+    run_with_captured_output_and_timeout(child, script_name, timeout).map_err(|e| match e {
+        ScriptError::Timeout {
             script_name: name,
             timeout_secs,
-            stdout: _,
-            stderr: _,
-        }) => {
-            bail!("{} timed out after {} seconds", name, timeout_secs);
+            ..
+        } => anyhow::anyhow!("{} timed out after {} seconds", name, timeout_secs),
+        ScriptError::Io { message } => {
+            anyhow::anyhow!("I/O error during {}: {}", script_name, message)
         }
-        Err(ScriptError::Io { message }) => {
-            bail!("I/O error during {}: {}", script_name, message);
-        }
-        Err(ScriptError::Failed {
+        ScriptError::Failed {
+            exit_code, stderr, ..
+        } => anyhow::anyhow!(
+            "{} failed with exit code {}: {}",
+            script_name,
             exit_code,
-            stdout: _,
-            stderr,
-        }) => {
-            bail!(
-                "{} failed with exit code {}: {}",
-                script_name,
-                exit_code,
-                stderr
-            );
-        }
-    }
+            stderr
+        ),
+    })
 }
 
 /// Create CheckResult for timeout error
