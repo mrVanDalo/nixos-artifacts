@@ -22,6 +22,23 @@ use std::collections::HashMap;
 
 use crate::app::model::TargetType;
 
+/// Unified target specification for all artifact operations.
+///
+/// This enum abstracts over single-target and multi-target (shared) artifacts,
+/// allowing the same Effect variants to handle both cases. The background
+/// handler and serialization layer use this to dispatch to the appropriate
+/// implementation.
+#[derive(Debug, Clone)]
+pub enum TargetSpec {
+    /// A single target (one machine or one user)
+    Single(TargetType),
+    /// Multiple targets (shared artifact)
+    Multi {
+        nixos_targets: Vec<String>,
+        home_targets: Vec<String>,
+    },
+}
+
 /// Side effects that the runtime must execute.
 ///
 /// These are returned by [`update`](crate::app::update::update), not executed inside it.
@@ -38,49 +55,26 @@ pub enum Effect {
     /// Quit the application
     Quit,
 
-    /// Check if an artifact needs regeneration
+    /// Check if an artifact needs regeneration (single or shared)
     CheckSerialization {
         artifact_index: usize,
         artifact_name: String,
-        target_type: TargetType,
+        target_spec: TargetSpec,
     },
 
-    /// Run the generator script for an artifact
+    /// Run the generator script for an artifact (single or shared)
     RunGenerator {
         artifact_index: usize,
         artifact_name: String,
-        target_type: TargetType,
+        target_spec: TargetSpec,
         prompts: HashMap<String, String>,
     },
 
-    /// Serialize the generated files
+    /// Serialize the generated files (single or shared)
     Serialize {
         artifact_index: usize,
         artifact_name: String,
-        target_type: TargetType,
-    },
-
-    /// Check if a shared artifact needs regeneration
-    SharedCheckSerialization {
-        artifact_index: usize,
-        artifact_name: String,
-        nixos_targets: Vec<String>,
-        home_targets: Vec<String>,
-    },
-
-    /// Run the generator script for a shared artifact
-    RunSharedGenerator {
-        artifact_index: usize,
-        artifact_name: String,
-        prompts: HashMap<String, String>,
-    },
-
-    /// Serialize the generated files for a shared artifact
-    SharedSerialize {
-        artifact_index: usize,
-        artifact_name: String,
-        nixos_targets: Vec<String>,
-        home_targets: Vec<String>,
+        target_spec: TargetSpec,
     },
 }
 

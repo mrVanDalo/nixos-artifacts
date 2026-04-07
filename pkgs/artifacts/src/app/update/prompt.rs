@@ -1,4 +1,4 @@
-use super::super::effect::Effect;
+use super::super::effect::{Effect, TargetSpec};
 use super::super::message::KeyEvent;
 use super::super::model::*;
 use crossterm::event::{KeyCode, KeyModifiers};
@@ -123,17 +123,21 @@ fn finish_prompts_and_start_generation(mut model: Model) -> (Model, Effect) {
         exists: false, // Prompt screen means new artifact (no confirmation shown)
     });
 
-    // Build effect based on entry type
+    // Build effect based on entry type (using unified TargetSpec)
     let effect = match &model.entries[artifact_index] {
         ListEntry::Single(single) => Effect::RunGenerator {
             artifact_index,
             artifact_name,
-            target_type: single.target_type.clone(),
+            target_spec: TargetSpec::Single(single.target_type.clone()),
             prompts,
         },
-        ListEntry::Shared(_) => Effect::RunSharedGenerator {
+        ListEntry::Shared(shared) => Effect::RunGenerator {
             artifact_index,
             artifact_name,
+            target_spec: TargetSpec::Multi {
+                nixos_targets: shared.info.nixos_targets.clone(),
+                home_targets: shared.info.home_targets.clone(),
+            },
             prompts,
         },
     };

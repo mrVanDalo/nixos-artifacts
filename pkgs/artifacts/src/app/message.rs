@@ -25,20 +25,20 @@ pub enum Message {
     /// Timer tick (for animations, polling)
     Tick,
 
-    /// Check serialization completed for an artifact
+    /// Check serialization completed for an artifact (single or shared)
     CheckSerializationResult {
         artifact_index: usize,
         status: crate::app::model::ArtifactStatus,
         result: Result<ScriptOutput, String>,
     },
 
-    /// Generator script finished (per-target artifact).
+    /// Generator script finished (single or shared)
     GeneratorFinished {
         artifact_index: usize,
         result: Result<ScriptOutput, String>,
     },
 
-    /// Serialize script finished
+    /// Serialize script finished (single or shared)
     SerializeFinished {
         artifact_index: usize,
         result: Result<ScriptOutput, String>,
@@ -48,25 +48,6 @@ pub enum Message {
     GeneratorSelected {
         artifact_index: usize,
         generator_path: String,
-    },
-
-    /// Shared check serialization completed for an artifact
-    SharedCheckSerializationResult {
-        artifact_index: usize,
-        statuses: Vec<crate::app::model::ArtifactStatus>,
-        outputs: Vec<ScriptOutput>,
-    },
-
-    /// Shared generator script finished
-    SharedGeneratorFinished {
-        artifact_index: usize,
-        result: Result<ScriptOutput, String>,
-    },
-
-    /// Shared serialize script finished
-    SharedSerializeFinished {
-        artifact_index: usize,
-        results: Vec<(String, bool, ScriptOutput)>,
     },
 
     /// Streaming output line received during script execution

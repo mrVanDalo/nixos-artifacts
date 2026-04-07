@@ -13,16 +13,35 @@
 //! Exit code 0 means "up-to-date", any non-zero exit means "needs generation".
 //!
 //! ## Serialize
-//! Stores generated files using the `serialize` script. The script receives:
-//! - `$out` - Directory containing generated files
-//! - `$config` - Path to JSON file with backend-specific configuration
-//! - `$artifact` - Artifact name
-//! - `$machine` or `$username` - Target identifier (context-dependent)
+//! Stores generated files using the `serialize` script.
 //!
-//! ## Shared Operations
-//! For shared artifacts that span multiple machines/users:
-//! - `run_shared_serialize` - Serializes with machines.json and users.json context
-//! - `run_shared_check_serialization` - Checks status with full context
+//! ## Environment Variables (Unified)
+//!
+//! All backend scripts receive the same unified environment variables:
+//!
+//! | Variable | Value | When Set |
+//! |----------|-------|----------|
+//! | `$artifact` | Artifact name | Always |
+//! | `$artifact_context` | `"nixos"`, `"homemanager"`, or `"shared"` | Always |
+//! | `$targets` | Path to `targets.json` | Always |
+//! | `$out` | Output directory | Serialize only |
+//! | `$inputs` | Inputs directory | Check only |
+//! | `$LOG_LEVEL` | Log level | Always |
+//!
+//! ## targets.json Structure
+//!
+//! The `$targets` file contains:
+//! ```json
+//! {
+//!   "context": "nixos" | "homemanager" | "shared",
+//!   "targets": [
+//!     { "name": "target-name", "type": "nixos" | "homemanager", "config": {...} }
+//!   ]
+//! }
+//! ```
+//!
+//! For single targets, there's exactly one entry in the targets array.
+//! For shared artifacts, all machines and users are listed.
 //!
 //! # Timeout Protection
 //!
@@ -39,7 +58,7 @@ use crate::config::backend::{BackendConfiguration, BackendEntry};
 use crate::config::make::{ArtifactDef, MakeConfiguration};
 use crate::{log_debug, log_info};
 use anyhow::{Context, Result, bail};
-use serde_json::{Map, Value, json, to_string_pretty};
+use serde_json::{json, to_string_pretty};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
@@ -80,16 +99,10 @@ pub enum SerializationContext<'a> {
 struct ConfigFiles {
     /// TempFile handles that must stay alive until the command finishes
     _handles: Vec<TempFile>,
-    /// Paths to configuration files
-    paths: ConfigPaths,
-}
-
-/// Paths to configuration files, varying by context type.
-enum ConfigPaths {
-    /// Single target: one config.json file
-    Single { config: PathBuf },
-    /// Shared: machines.json and users.json files
-    Shared { machines: PathBuf, users: PathBuf },
+    /// Path to the unified targets.json file
+    targets_path: PathBuf,
+    /// Path to inputs directory (set for check operations)
+    inputs_path: Option<PathBuf>,
 }
 
 impl<'a> SerializationContext<'a> {
@@ -181,73 +194,34 @@ impl<'a> SerializationContext<'a> {
         }
     }
 
+    /// Returns the context string for environment variables.
+    fn context_str(&self) -> &'static str {
+        match self {
+            SerializationContext::Single { target_type, .. } => target_type.context_str(),
+            SerializationContext::Shared { .. } => "shared",
+        }
+    }
+
     /// Builds configuration files and returns handles + paths.
     fn build_config_files(&self, make: &MakeConfiguration) -> Result<ConfigFiles> {
-        match self {
-            SerializationContext::Single {
-                artifact,
-                target_type,
-            } => {
-                let target_name = target_type.target_name();
-                let backend_name = &artifact.serialization;
-                let (config_dir, config_path) =
-                    build_config_json(make, target_name, backend_name, &artifact.name)?;
-                Ok(ConfigFiles {
-                    _handles: vec![config_dir],
-                    paths: ConfigPaths::Single {
-                        config: config_path,
-                    },
-                })
-            }
-            SerializationContext::Shared {
-                backend_name,
-                nixos_targets,
-                home_targets,
-                ..
-            } => {
-                let (machines_dir, machines_path) =
-                    build_machines_json(make, nixos_targets, backend_name)?;
-                let (users_dir, users_path) = build_users_json(make, home_targets, backend_name)?;
-                Ok(ConfigFiles {
-                    _handles: vec![machines_dir, users_dir],
-                    paths: ConfigPaths::Shared {
-                        machines: machines_path,
-                        users: users_path,
-                    },
-                })
-            }
-        }
+        let (targets_handle, targets_path) = build_targets_json(self, make)?;
+        Ok(ConfigFiles {
+            _handles: vec![targets_handle],
+            targets_path,
+            inputs_path: None,
+        })
     }
 
     /// Applies context-specific env vars to a Command.
     fn apply_env(&self, cmd: &mut Command, config: &ConfigFiles) {
+        // Always set unified variables
         cmd.env("artifact", self.artifact_name());
+        cmd.env("artifact_context", self.context_str());
+        cmd.env("targets", &config.targets_path);
 
-        match (&self, &config.paths) {
-            (
-                SerializationContext::Single { target_type, .. },
-                ConfigPaths::Single {
-                    config: config_path,
-                },
-            ) => {
-                cmd.env("config", config_path);
-                cmd.env("artifact_context", target_type.context_str());
-                match target_type {
-                    TargetType::HomeManager { username } => {
-                        cmd.env("username", username);
-                    }
-                    TargetType::NixOS { machine } => {
-                        cmd.env("machine", machine);
-                    }
-                }
-            }
-            (SerializationContext::Shared { .. }, ConfigPaths::Shared { machines, users }) => {
-                cmd.env("machines", machines);
-                cmd.env("users", users);
-            }
-            // These cases shouldn't happen due to how we construct things,
-            // but handle gracefully by doing nothing extra
-            _ => {}
+        // Set inputs if available (check operations)
+        if let Some(ref inputs_path) = config.inputs_path {
+            cmd.env("inputs", inputs_path);
         }
     }
 
@@ -265,93 +239,35 @@ impl<'a> SerializationContext<'a> {
             script_name,
             script_path.display()
         );
-
-        match (&self, &config.paths) {
-            (
-                SerializationContext::Single { target_type, .. },
-                ConfigPaths::Single {
-                    config: config_path,
-                },
-            ) => {
-                log_debug!(
-                    "  environment: out=\"{}\" config=\"{}\" artifact=\"{}\" artifact_context=\"{}\"",
-                    out.display(),
-                    config_path.display(),
-                    self.artifact_name(),
-                    target_type.context_str()
-                );
-                match target_type {
-                    TargetType::HomeManager { username } => {
-                        log_debug!("  environment: username=\"{}\"", username);
-                    }
-                    TargetType::NixOS { machine } => {
-                        log_debug!("  environment: machine=\"{}\"", machine);
-                    }
-                }
-            }
-            (SerializationContext::Shared { .. }, ConfigPaths::Shared { machines, users }) => {
-                log_debug!(
-                    "  environment: artifact=\"{}\" out=\"{}\" machines=\"{}\" users=\"{}\"",
-                    self.artifact_name(),
-                    out.display(),
-                    machines.display(),
-                    users.display()
-                );
-            }
-            _ => {}
-        }
+        log_debug!(
+            "  environment: out=\"{}\" targets=\"{}\" artifact=\"{}\" artifact_context=\"{}\"",
+            out.display(),
+            config.targets_path.display(),
+            self.artifact_name(),
+            self.context_str()
+        );
     }
 
     /// Log the environment for check operations.
     #[allow(unused_variables)]
-    fn log_check_env(
-        &self,
-        script_name: &str,
-        script_path: &Path,
-        inputs: Option<&Path>,
-        config: &ConfigFiles,
-    ) {
+    fn log_check_env(&self, script_name: &str, script_path: &Path, config: &ConfigFiles) {
         log_debug!(
             "running {}: script=\"{}\"",
             script_name,
             script_path.display()
         );
-
-        match (&self, &config.paths) {
-            (
-                SerializationContext::Single { target_type, .. },
-                ConfigPaths::Single {
-                    config: config_path,
-                },
-            ) => {
-                if let Some(inputs_path) = inputs {
-                    log_debug!(
-                        "  environment: inputs=\"{}\" config=\"{}\" artifact=\"{}\" artifact_context=\"{}\"",
-                        inputs_path.display(),
-                        config_path.display(),
-                        self.artifact_name(),
-                        target_type.context_str()
-                    );
-                }
-                match target_type {
-                    TargetType::HomeManager { username } => {
-                        log_debug!("  environment: username=\"{}\"", username);
-                    }
-                    TargetType::NixOS { machine } => {
-                        log_debug!("  environment: machine=\"{}\"", machine);
-                    }
-                }
-            }
-            (SerializationContext::Shared { .. }, ConfigPaths::Shared { machines, users }) => {
-                log_debug!(
-                    "  environment: artifact=\"{}\" machines=\"{}\" users=\"{}\"",
-                    self.artifact_name(),
-                    machines.display(),
-                    users.display()
-                );
-            }
-            _ => {}
-        }
+        let inputs_str = config
+            .inputs_path
+            .as_ref()
+            .map(|p| p.display().to_string())
+            .unwrap_or_else(|| "<none>".to_string());
+        log_debug!(
+            "  environment: inputs=\"{}\" targets=\"{}\" artifact=\"{}\" artifact_context=\"{}\"",
+            inputs_str,
+            config.targets_path.display(),
+            self.artifact_name(),
+            self.context_str()
+        );
     }
 }
 
@@ -411,66 +327,83 @@ fn handle_check_output(
     }
 }
 
-/// Build machines JSON file mapping machine names to backend configs
-fn build_machines_json(
+/// Build unified targets.json file for all contexts.
+///
+/// Creates a JSON file with the structure:
+/// ```json
+/// {
+///   "context": "nixos" | "homemanager" | "shared",
+///   "targets": [
+///     { "name": "...", "type": "nixos" | "homemanager", "config": {...} }
+///   ]
+/// }
+/// ```
+fn build_targets_json(
+    ctx: &SerializationContext<'_>,
     make: &MakeConfiguration,
-    nixos_targets: &[String],
-    backend_name: &str,
 ) -> Result<(TempFile, PathBuf)> {
-    let dir = TempFile::new_dir("machines")?;
-    let path = dir.join("machines.json");
-    let config: Map<String, Value> = nixos_targets
-        .iter()
-        .map(|machine| {
+    let dir = TempFile::new_dir_with_name(&format!("targets-{}", ctx.artifact_name()))?;
+    let path = dir.join("targets.json");
+
+    let (context_str, targets) = match ctx {
+        SerializationContext::Single {
+            artifact,
+            target_type,
+        } => {
+            let target_name = target_type.target_name();
+            let type_str = target_type.context_str();
             let config = make
-                .get_backend_config_for(machine, backend_name)
+                .get_backend_config_for(target_name, &artifact.serialization)
                 .map(|m| serde_json::to_value(m).unwrap_or(json!({})))
                 .unwrap_or(json!({}));
-            (machine.clone(), config)
-        })
-        .collect();
-    let text = to_string_pretty(&config)?;
-    fs::write(&path, &text).with_context(|| format!("writing {}", path.display()))?;
-    Ok((dir, path))
-}
+            (
+                type_str.to_string(),
+                vec![json!({
+                    "name": target_name,
+                    "type": type_str,
+                    "config": config
+                })],
+            )
+        }
+        SerializationContext::Shared {
+            backend_name,
+            nixos_targets,
+            home_targets,
+            ..
+        } => {
+            let mut targets = Vec::new();
+            for machine in nixos_targets.iter() {
+                let config = make
+                    .get_backend_config_for(machine, backend_name)
+                    .map(|m| serde_json::to_value(m).unwrap_or(json!({})))
+                    .unwrap_or(json!({}));
+                targets.push(json!({
+                    "name": machine,
+                    "type": "nixos",
+                    "config": config
+                }));
+            }
+            for user in home_targets.iter() {
+                let config = make
+                    .get_backend_config_for(user, backend_name)
+                    .map(|m| serde_json::to_value(m).unwrap_or(json!({})))
+                    .unwrap_or(json!({}));
+                targets.push(json!({
+                    "name": user,
+                    "type": "homemanager",
+                    "config": config
+                }));
+            }
+            ("shared".to_string(), targets)
+        }
+    };
 
-/// Build users JSON file mapping user names to backend configs
-fn build_users_json(
-    make: &MakeConfiguration,
-    home_targets: &[String],
-    backend_name: &str,
-) -> Result<(TempFile, PathBuf)> {
-    let dir = TempFile::new_dir("users")?;
-    let path = dir.join("users.json");
-    let config: Map<String, Value> = home_targets
-        .iter()
-        .map(|user| {
-            let config = make
-                .get_backend_config_for(user, backend_name)
-                .map(|m| serde_json::to_value(m).unwrap_or(json!({})))
-                .unwrap_or(json!({}));
-            (user.clone(), config)
-        })
-        .collect();
-    let text = to_string_pretty(&config)?;
-    fs::write(&path, &text).with_context(|| format!("writing {}", path.display()))?;
-    Ok((dir, path))
-}
+    let json_value = json!({
+        "context": context_str,
+        "targets": targets
+    });
 
-/// Build config JSON file for single target serialization
-fn build_config_json(
-    make: &MakeConfiguration,
-    target_name: &str,
-    backend_name: &str,
-    artifact_name: &str,
-) -> Result<(TempFile, PathBuf)> {
-    let dir = TempFile::new_dir_with_name(&format!("config-{}", artifact_name))?;
-    let path = dir.join("config.json");
-    let config = make
-        .get_backend_config_for(target_name, backend_name)
-        .map(|m| serde_json::to_value(m).unwrap_or(json!({})))
-        .unwrap_or(json!({}));
-    let text = to_string_pretty(&config)?;
+    let text = to_string_pretty(&json_value)?;
     fs::write(&path, &text).with_context(|| format!("writing {}", path.display()))?;
     Ok((dir, path))
 }
@@ -507,7 +440,6 @@ fn build_serialize_command_unified(
 /// Build a Command for check_serialization script execution (unified for single and shared).
 fn build_check_command_unified(
     script_path: &Path,
-    inputs_dir: Option<&Path>,
     ctx: &SerializationContext<'_>,
     config: &ConfigFiles,
     log_level: crate::logging::LogLevel,
@@ -516,10 +448,6 @@ fn build_check_command_unified(
     cmd.env("LOG_LEVEL", log_level.as_str())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
-
-    if let Some(inputs) = inputs_dir {
-        cmd.env("inputs", inputs);
-    }
 
     ctx.apply_env(&mut cmd, config);
 
@@ -576,7 +504,6 @@ fn run_check_inner(
     ctx: &SerializationContext<'_>,
     backend: &BackendConfiguration,
     make: &MakeConfiguration,
-    inputs_dir: Option<&TempFile>,
     log_level: crate::logging::LogLevel,
 ) -> Result<CheckResult> {
     let backend_name = ctx.backend_name();
@@ -586,12 +513,27 @@ fn run_check_inner(
     let script_abs =
         validate_backend_script(backend_name, script_name, &backend.base_path, &script_path)?;
 
-    let config = ctx.build_config_files(make)?;
+    // Create inputs directory for ALL contexts
+    let inputs = TempFile::new_dir_with_name(&format!("inputs-{}", ctx.artifact_name()))?;
 
-    let inputs_path = inputs_dir.map(|d| d.as_ref() as &Path);
-    ctx.log_check_env(script_name, &script_abs, inputs_path, &config);
+    match ctx {
+        SerializationContext::Single { artifact, .. } => {
+            write_check_input_files(artifact, &inputs, make)?;
+        }
+        SerializationContext::Shared { artifact_name, .. } => {
+            write_shared_check_input_files(artifact_name, make, &inputs)?;
+        }
+    }
 
-    let mut cmd = build_check_command_unified(&script_abs, inputs_path, ctx, &config, log_level);
+    let mut config = ctx.build_config_files(make)?;
+    config.inputs_path = Some(inputs.as_ref().to_path_buf());
+
+    // Keep inputs alive by adding to handles
+    config._handles.push(inputs);
+
+    ctx.log_check_env(script_name, &script_abs, &config);
+
+    let mut cmd = build_check_command_unified(&script_abs, ctx, &config, log_level);
 
     let child = cmd
         .spawn()
@@ -687,7 +629,7 @@ fn make_failed_result(stdout: String, stderr: String) -> CheckResult {
     }
 }
 
-/// Write input files for check_serialization
+/// Write input files for check_serialization (single target)
 fn write_check_input_files(
     artifact: &ArtifactDef,
     inputs_dir: &Path,
@@ -711,11 +653,48 @@ fn write_check_input_files(
     Ok(())
 }
 
+/// Write input files for check_serialization (shared artifacts)
+fn write_shared_check_input_files(
+    artifact_name: &str,
+    make: &MakeConfiguration,
+    inputs_dir: &Path,
+) -> Result<()> {
+    // Get file definitions from the shared artifact info
+    let shared_artifacts = make.get_shared_artifacts();
+    if let Some(shared_info) = shared_artifacts.get(artifact_name) {
+        for file in shared_info.files.values() {
+            let resolved_path = file
+                .path
+                .as_ref()
+                .map(|path| resolve_path(&make.make_base, path));
+            let json_path = inputs_dir.join(&file.name);
+
+            let text = to_string_pretty(&json!({
+                "path": resolved_path,
+                "owner": file.owner,
+                "group": file.group,
+            }))?;
+
+            fs::write(&json_path, text)
+                .with_context(|| format!("writing {}", json_path.display()))?;
+        }
+    }
+    Ok(())
+}
+
 /// Run the serialize script for a generated artifact.
 ///
 /// Executes the serialize script from the backend configuration to store
-/// the generated artifact files. The script receives paths to the output
-/// directory and a configuration JSON file.
+/// the generated artifact files.
+///
+/// # Environment Variables
+///
+/// The script receives unified environment variables:
+/// - `$artifact` - Artifact name
+/// - `$artifact_context` - "nixos" or "homemanager"
+/// - `$targets` - Path to targets.json with single target entry
+/// - `$out` - Directory containing generated files
+/// - `$LOG_LEVEL` - Log level
 ///
 /// # Arguments
 ///
@@ -737,11 +716,6 @@ fn write_check_input_files(
 /// - The serialize script cannot be found or executed
 /// - The script times out (after 30 seconds)
 /// - The script exits with non-zero status
-///
-/// # Context-Specific Behavior
-///
-/// For `HomeManager`: Sets `$username` environment variable
-/// For `Nixos`: Sets `$machine` environment variable
 pub fn run_serialize(
     artifact: &ArtifactDef,
     backend: &BackendConfiguration,
@@ -759,10 +733,16 @@ pub fn run_serialize(
 
 /// Run the shared_serialize script for a generated shared artifact.
 ///
-/// Shared artifacts span multiple machines or users and require additional
-/// context during serialization. This function builds machines.json and users.json
-/// files containing backend configurations for each target, then executes the
-/// `shared_serialize` script.
+/// Shared artifacts span multiple machines or users.
+///
+/// # Environment Variables
+///
+/// The script receives unified environment variables:
+/// - `$artifact` - Artifact name
+/// - `$artifact_context` - "shared"
+/// - `$targets` - Path to targets.json with all target entries
+/// - `$out` - Directory containing generated files
+/// - `$LOG_LEVEL` - Log level
 ///
 /// # Arguments
 ///
@@ -786,12 +766,6 @@ pub fn run_serialize(
 /// - The script cannot be found or executed
 /// - The script times out (after 30 seconds)
 /// - The script exits with non-zero status
-///
-/// # JSON Files
-///
-/// The script receives paths to:
-/// - `$machines` - JSON mapping machine names to their backend configs
-/// - `$users` - JSON mapping user names to their backend configs
 #[allow(clippy::too_many_arguments)]
 pub fn run_shared_serialize(
     artifact_name: &str,
@@ -851,15 +825,11 @@ pub fn run_check_serialization(
     make: &MakeConfiguration,
     log_level: crate::logging::LogLevel,
 ) -> Result<CheckResult> {
-    // Create inputs directory and write input files for single-target check
-    let inputs = TempFile::new_dir_with_name(&format!("inputs-{}", artifact.name))?;
-    write_check_input_files(artifact, &inputs, make)?;
-
     let ctx = SerializationContext::Single {
         artifact,
         target_type,
     };
-    run_check_inner(&ctx, backend, make, Some(&inputs), log_level)
+    run_check_inner(&ctx, backend, make, log_level)
 }
 
 /// Check if shared serialization is up to date for a shared artifact.
@@ -911,6 +881,5 @@ pub fn run_shared_check_serialization(
         nixos_targets,
         home_targets,
     };
-    // Shared check doesn't use inputs directory
-    run_check_inner(&ctx, backend, make, None, log_level)
+    run_check_inner(&ctx, backend, make, log_level)
 }

@@ -1,0 +1,21 @@
+---
+source: tests/e2e/config_env_tests.rs
+expression: result.output.to_string()
+---
+stdout: # BEGIN CHECK SNAPSHOT
+# artifact=nixos-secret
+# artifact_context=nixos
+# TARGETS FILE:
+{
+  "context": "nixos",
+  "targets": [
+    {
+      "config": {},
+      "name": "test-machine",
+      "type": "nixos"
+    }
+  ]
+}# INPUTS DIRECTORY:
+secret-file
+# END CHECK SNAPSHOT
+stderr: (no output)

@@ -115,9 +115,6 @@ impl CommandTracker {
             Effect::CheckSerialization { .. } => "CheckSerialization",
             Effect::RunGenerator { .. } => "RunGenerator",
             Effect::Serialize { .. } => "Serialize",
-            Effect::SharedCheckSerialization { .. } => "SharedCheckSerialization",
-            Effect::RunSharedGenerator { .. } => "RunSharedGenerator",
-            Effect::SharedSerialize { .. } => "SharedSerialize",
             Effect::None | Effect::Batch(_) | Effect::Quit => "None",
         };
         assert_eq!(actual, expected_name, "Command at index {} mismatch", index);
@@ -129,9 +126,6 @@ impl CommandTracker {
             Effect::CheckSerialization { artifact_index, .. } => *artifact_index,
             Effect::RunGenerator { artifact_index, .. } => *artifact_index,
             Effect::Serialize { artifact_index, .. } => *artifact_index,
-            Effect::SharedCheckSerialization { artifact_index, .. } => *artifact_index,
-            Effect::RunSharedGenerator { artifact_index, .. } => *artifact_index,
-            Effect::SharedSerialize { artifact_index, .. } => *artifact_index,
             Effect::None | Effect::Batch(_) | Effect::Quit => 0,
         }
     }
@@ -187,9 +181,9 @@ fn test_check_serialization_flow_needs_generation() {
     let check_effect = Effect::CheckSerialization {
         artifact_index: 0,
         artifact_name: "test-artifact".to_string(),
-        target_type: TargetType::NixOS {
+        target_spec: artifacts::app::effect::TargetSpec::Single(TargetType::NixOS {
             machine: "machine-one".to_string(),
-        },
+        }),
     };
 
     process_effects_and_track(&mut model, check_effect, &mut tracker);
@@ -237,9 +231,9 @@ fn test_check_serialization_flow_up_to_date() {
     let check_effect = Effect::CheckSerialization {
         artifact_index: 0,
         artifact_name: "test-artifact".to_string(),
-        target_type: TargetType::NixOS {
+        target_spec: artifacts::app::effect::TargetSpec::Single(TargetType::NixOS {
             machine: "machine-one".to_string(),
-        },
+        }),
     };
 
     process_effects_and_track(&mut model, check_effect, &mut tracker);
@@ -292,9 +286,9 @@ fn test_generator_flow_success() {
     let generator_effect = Effect::RunGenerator {
         artifact_index: 0,
         artifact_name: "test-artifact".to_string(),
-        target_type: TargetType::NixOS {
+        target_spec: artifacts::app::effect::TargetSpec::Single(TargetType::NixOS {
             machine: "machine-one".to_string(),
-        },
+        }),
         prompts: HashMap::new(),
     };
 
@@ -387,9 +381,9 @@ fn test_generator_flow_failure() {
     let generator_effect = Effect::RunGenerator {
         artifact_index: 0,
         artifact_name: "test-artifact".to_string(),
-        target_type: TargetType::NixOS {
+        target_spec: artifacts::app::effect::TargetSpec::Single(TargetType::NixOS {
             machine: "machine-one".to_string(),
-        },
+        }),
         prompts: HashMap::new(),
     };
 
@@ -458,9 +452,9 @@ fn test_serialize_flow_failure() {
     let serialize_effect = Effect::Serialize {
         artifact_index: 0,
         artifact_name: "test-artifact".to_string(),
-        target_type: TargetType::NixOS {
+        target_spec: artifacts::app::effect::TargetSpec::Single(TargetType::NixOS {
             machine: "machine-one".to_string(),
-        },
+        }),
     };
 
     process_effects_and_track(&mut model, serialize_effect, &mut tracker);
@@ -512,9 +506,9 @@ fn test_check_serialization_failure() {
     let check_effect = Effect::CheckSerialization {
         artifact_index: 0,
         artifact_name: "test-artifact".to_string(),
-        target_type: TargetType::NixOS {
+        target_spec: artifacts::app::effect::TargetSpec::Single(TargetType::NixOS {
             machine: "machine-one".to_string(),
-        },
+        }),
     };
 
     process_effects_and_track(&mut model.clone(), check_effect, &mut tracker);
@@ -594,16 +588,16 @@ fn test_batch_effect_processing() {
         Effect::CheckSerialization {
             artifact_index: 0,
             artifact_name: "artifact-1".to_string(),
-            target_type: TargetType::NixOS {
+            target_spec: artifacts::app::effect::TargetSpec::Single(TargetType::NixOS {
                 machine: "machine-one".to_string(),
-            },
+            }),
         },
         Effect::CheckSerialization {
             artifact_index: 1,
             artifact_name: "artifact-2".to_string(),
-            target_type: TargetType::NixOS {
+            target_spec: artifacts::app::effect::TargetSpec::Single(TargetType::NixOS {
                 machine: "machine-one".to_string(),
-            },
+            }),
         },
     ]);
 
@@ -630,9 +624,9 @@ fn test_artifact_index_preservation() {
         let effect = Effect::CheckSerialization {
             artifact_index: idx,
             artifact_name: "test".to_string(),
-            target_type: TargetType::NixOS {
+            target_spec: artifacts::app::effect::TargetSpec::Single(TargetType::NixOS {
                 machine: "machine-one".to_string(),
-            },
+            }),
         };
 
         process_effects_and_track(&mut model.clone(), effect, &mut tracker);
@@ -661,9 +655,9 @@ fn test_complete_lifecycle_success() {
     let check_effect = Effect::CheckSerialization {
         artifact_index: 0,
         artifact_name: "test-artifact".to_string(),
-        target_type: TargetType::NixOS {
+        target_spec: artifacts::app::effect::TargetSpec::Single(TargetType::NixOS {
             machine: "machine-one".to_string(),
-        },
+        }),
     };
     process_effects_and_track(&mut model, check_effect, &mut tracker);
 
@@ -691,9 +685,9 @@ fn test_complete_lifecycle_success() {
     let gen_effect = Effect::RunGenerator {
         artifact_index: 0,
         artifact_name: "test-artifact".to_string(),
-        target_type: TargetType::NixOS {
+        target_spec: artifacts::app::effect::TargetSpec::Single(TargetType::NixOS {
             machine: "machine-one".to_string(),
-        },
+        }),
         prompts: HashMap::new(),
     };
     process_effects_and_track(&mut model.clone(), gen_effect, &mut tracker);
@@ -791,24 +785,24 @@ fn test_multiple_command_types_tracked() {
         Effect::CheckSerialization {
             artifact_index: 0,
             artifact_name: "check".to_string(),
-            target_type: TargetType::NixOS {
+            target_spec: artifacts::app::effect::TargetSpec::Single(TargetType::NixOS {
                 machine: "machine-one".to_string(),
-            },
+            }),
         },
         Effect::RunGenerator {
             artifact_index: 0,
             artifact_name: "gen".to_string(),
-            target_type: TargetType::NixOS {
+            target_spec: artifacts::app::effect::TargetSpec::Single(TargetType::NixOS {
                 machine: "machine-one".to_string(),
-            },
+            }),
             prompts: HashMap::new(),
         },
         Effect::Serialize {
             artifact_index: 0,
             artifact_name: "ser".to_string(),
-            target_type: TargetType::NixOS {
+            target_spec: artifacts::app::effect::TargetSpec::Single(TargetType::NixOS {
                 machine: "machine-one".to_string(),
-            },
+            }),
         },
     ];
 
@@ -850,17 +844,17 @@ fn test_batch_filters_none_effects() {
         Effect::CheckSerialization {
             artifact_index: 0,
             artifact_name: "test".to_string(),
-            target_type: TargetType::NixOS {
+            target_spec: artifacts::app::effect::TargetSpec::Single(TargetType::NixOS {
                 machine: "machine-one".to_string(),
-            },
+            }),
         },
         Effect::None,
         Effect::RunGenerator {
             artifact_index: 0,
             artifact_name: "test".to_string(),
-            target_type: TargetType::NixOS {
+            target_spec: artifacts::app::effect::TargetSpec::Single(TargetType::NixOS {
                 machine: "machine-one".to_string(),
-            },
+            }),
             prompts: HashMap::new(),
         },
     ]);
@@ -879,21 +873,24 @@ fn test_all_effect_variants_field_extraction() {
     let test_effect = Effect::CheckSerialization {
         artifact_index: 42,
         artifact_name: "test-check".to_string(),
-        target_type: TargetType::NixOS {
+        target_spec: artifacts::app::effect::TargetSpec::Single(TargetType::NixOS {
             machine: "machine-one".to_string(),
-        },
+        }),
     };
 
     // Verify we can extract fields directly from Effect
     if let Effect::CheckSerialization {
         artifact_index,
         artifact_name,
-        target_type,
+        target_spec,
     } = test_effect
     {
         assert_eq!(artifact_index, 42);
         assert_eq!(artifact_name, "test-check");
-        assert!(matches!(target_type, TargetType::NixOS { machine } if machine == "machine-one"));
+        assert!(matches!(
+            target_spec,
+            artifacts::app::effect::TargetSpec::Single(TargetType::NixOS { machine }) if machine == "machine-one"
+        ));
     } else {
         panic!("Expected CheckSerialization variant");
     }
@@ -916,9 +913,9 @@ fn test_dual_assertion_strategy_demonstration() {
     let check_effect = Effect::CheckSerialization {
         artifact_index: 0,
         artifact_name: "demo-artifact".to_string(),
-        target_type: TargetType::NixOS {
+        target_spec: artifacts::app::effect::TargetSpec::Single(TargetType::NixOS {
             machine: "machine-one".to_string(),
-        },
+        }),
     };
 
     process_effects_and_track(&mut model.clone(), check_effect, &mut tracker);

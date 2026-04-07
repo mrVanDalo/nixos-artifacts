@@ -3,83 +3,103 @@
 
 Detailed reference for implementing backend scripts. For a quick introduction, see xref:backend-quickstart.adoc[Backend Quickstart].
 
-== Environment Variables by Script
+== Unified Environment Variables
 
-=== nixos.check / nixos.serialize
+All backend scripts receive the same unified environment variables, regardless of whether they handle single targets (NixOS/HomeManager) or shared artifacts.
 
 [cols="1,2,3"]
 |===
 | Variable | Type | Description
 
-| `$inputs` | Directory | JSON files with file metadata (check only)
-| `$out` | Directory | Generated files from generator (serialize only)
-| `$config` | File | Path to JSON with backend settings
-| `$artifact_context` | String | Always `"nixos"`
-| `$machine` | String | Machine name (e.g., `server-one`)
 | `$artifact` | String | Artifact name
-|===
-
-=== home.check / home.serialize
-
-[cols="1,2,3"]
-|===
-| Variable | Type | Description
-
+| `$artifact_context` | String | `"nixos"`, `"homemanager"`, or `"shared"`
+| `$targets` | File | Path to `targets.json` with target info and config
 | `$inputs` | Directory | JSON files with file metadata (check only)
 | `$out` | Directory | Generated files (serialize only)
-| `$config` | File | Path to JSON with backend settings
-| `$artifact_context` | String | Always `"homemanager"`
-| `$username` | String | User identifier (e.g., `alice@workstation`)
-| `$artifact` | String | Artifact name
+| `$LOG_LEVEL` | String | Log level
 |===
 
-=== shared.serialize
+== targets.json Structure
 
-[cols="1,2,3"]
-|===
-| Variable | Type | Description
+The `$targets` file is a JSON document containing:
 
-| `$out` | Directory | Generated files
-| `$artifact` | String | Artifact name
-| `$machines` | File | JSON: `{"machine-name": {...config...}}`
-| `$users` | File | JSON: `{"user@host": {...config...}}`
-|===
-
-Note: `$config` is not available in shared scripts. Read per-target config from `$machines` and `$users`.
-
-=== shared.check
-
-Check if a shared artifact already exists for all targets.
-
-.Purpose
-Prevent accidental regeneration of existing shared secrets.
-
-.Example
+[source,json]
 ----
-#!/usr/bin/env bash
-set -euo pipefail
-
-# $artifact contains the artifact name
-# $machines contains JSON mapping of machine names to configs
-# $users contains JSON mapping of user identifiers to configs
-
-# Check all targets
-for target in $(jq -r 'keys[]' "$machines" 2>/dev/null || true); do
-    config=$(jq -c ".\"$target\"" "$machines")
-    storage_path=$(echo "$config" | jq -r '.storage_path')
-    [ -f "$storage_path/$target/$artifact-secret" ] || exit 1
-done
-
-echo "EXISTS"
-exit 0
+{
+  "context": "nixos" | "homemanager" | "shared",
+  "targets": [
+    {
+      "name": "target-name",
+      "type": "nixos" | "homemanager",
+      "config": { /* backend-specific settings */ }
+    }
+  ]
+}
 ----
 
-== nixos.check
+For single targets (NixOS or HomeManager), there's exactly one entry in the targets array. For shared artifacts, all machines and users are listed.
 
-Check if a NixOS machine artifact already exists. Return exit code 0 to skip generation.
+=== Single NixOS Target Example
 
-.Purpose
-Prevent accidental regeneration of existing secrets.
+[source,json]
+----
+{
+  "context": "nixos",
+  "targets": [
+    {
+      "name": "server-one",
+      "type": "nixos",
+      "config": {"storage_path": "/var/lib/secrets", "public_key": "age1..."}
+    }
+  ]
+}
+----
+
+=== Single HomeManager Target Example
+
+[source,json]
+----
+{
+  "context": "homemanager",
+  "targets": [
+    {
+      "name": "alice@workstation",
+      "type": "homemanager",
+      "config": {"storage_path": "~/.secrets"}
+    }
+  ]
+}
+----
+
+=== Shared Artifact Example
+
+[source,json]
+----
+{
+  "context": "shared",
+  "targets": [
+    {
+      "name": "server-one",
+      "type": "nixos",
+      "config": {"storage_path": "/var/lib/secrets", "public_key": "age1abc..."}
+    },
+    {
+      "name": "server-two",
+      "type": "nixos",
+      "config": {"storage_path": "/var/lib/secrets", "public_key": "age1def..."}
+    },
+    {
+      "name": "alice@workstation",
+      "type": "homemanager",
+      "config": {"storage_path": "~/.secrets"}
+    }
+  ]
+}
+----
+
+== check Scripts
+
+Check if an artifact already exists. Return exit code 0 to skip generation.
 
 .Exit codes
 [cols="1,3"]
@@ -88,34 +108,34 @@ Prevent accidental regeneration of existing secrets.
 | Non-zero | Needs generation, continue
 |===
 
-.Example
+.Example (unified check script)
 [source,bash]
 ----
 #!/usr/bin/env bash
 set -euo pipefail
 
-# $artifact_context is always "nixos" for this script
-# $machine contains the machine name
-# $inputs contains JSON files with file metadata
+# Parse targets.json
+context=$(jq -r '.context' "$targets")
 
-STORAGE_PATH=$(jq -r '.storage_path // "/var/lib/secrets"' "$config")
+# Check all targets
+jq -c '.targets[]' "$targets" | while read -r target; do
+    name=$(echo "$target" | jq -r '.name')
+    type=$(echo "$target" | jq -r '.type')
+    storage_path=$(echo "$target" | jq -r '.config.storage_path // "/var/lib/secrets"')
 
-for meta in "$inputs"/*; do
-    [ -f "$meta" ] || continue
-    filename=$(basename "$meta")
-    [ -f "$STORAGE_PATH/$machine/$artifact-$filename" ] || exit 1
+    # Check if artifact exists for this target
+    if [ ! -f "$storage_path/$name/$artifact" ]; then
+        exit 1  # Needs generation
+    fi
 done
 
 echo "EXISTS"
 exit 0
 ----
 
-== nixos_serialize
+== serialize Scripts
 
-Store files for a NixOS machine.
-
-.Purpose
-Persist artifact files to your backend storage.
+Store generated artifact files.
 
 .Exit codes
 [cols="1,3"]
@@ -124,164 +144,52 @@ Persist artifact files to your backend storage.
 | Non-zero | Failure, abort generation
 |===
 
-.Example (encrypted storage)
+.Example (unified serialize script)
 [source,bash]
 ----
 #!/usr/bin/env bash
 set -euo pipefail
 
-# $artifact_context is always "nixos" for this script
-# $machine contains the machine name
-# $out contains generated files
+# Parse targets.json
+context=$(jq -r '.context' "$targets")
 
-STORAGE_PATH=$(jq -r '.storage_path // "/var/lib/secrets"' "$config")
-PUBLIC_KEY=$(jq -r '.public_key' "$config")
-mkdir -p "$STORAGE_PATH/$machine"
+# Store for each target
+jq -c '.targets[]' "$targets" | while read -r target; do
+    name=$(echo "$target" | jq -r '.name')
+    type=$(echo "$target" | jq -r '.type')
+    storage_path=$(echo "$target" | jq -r '.config.storage_path // "/var/lib/secrets"')
+    public_key=$(echo "$target" | jq -r '.config.public_key // ""')
 
-for file in "$out"/*; do
-    [ -f "$file" ] || continue
-    filename=$(basename "$file")
-    age -r "$PUBLIC_KEY" -o "$STORAGE_PATH/$machine/$artifact-$filename.age" "$file"
-done
-----
-
-== home.check
-
-Check if a Home Manager artifact already exists.
-
-.Purpose
-Prevent accidental regeneration of existing secrets.
-
-.Example
-[source,bash]
-----
-#!/usr/bin/env bash
-set -euo pipefail
-
-# $artifact_context is always "homemanager" for this script
-# $username contains the user identifier (e.g., "alice@workstation")
-
-STORAGE_PATH=$(jq -r '.storage_path // "/var/lib/secrets"' "$config")
-
-for meta in "$inputs"/*; do
-    [ -f "$meta" ] || continue
-    filename=$(basename "$meta")
-    [ -f "$STORAGE_PATH/$username/$artifact-$filename" ] || exit 1
-done
-
-echo "EXISTS"
-exit 0
-----
-
-== home_serialize
-
-Store files for a Home Manager user.
-
-.Purpose
-Persist artifact files to your backend storage.
-
-.Example
-[source,bash]
-----
-#!/usr/bin/env bash
-set -euo pipefail
-
-# $artifact_context is always "homemanager" for this script
-# $username contains the user identifier
-
-STORAGE_PATH=$(jq -r '.storage_path // "/var/lib/secrets"' "$config")
-PUBLIC_KEY=$(jq -r '.public_key' "$config")
-mkdir -p "$STORAGE_PATH/$username"
-
-for file in "$out"/*; do
-    [ -f "$file" ] || continue
-    filename=$(basename "$file")
-    age -r "$PUBLIC_KEY" -o "$STORAGE_PATH/$username/$artifact-$filename.age" "$file"
-done
-----
-
-== shared_serialize
-
-Store a shared artifact for all targets at once. Called once instead of per-target.
-
-.Purpose
-Efficiently store the same artifact for multiple machines or users (e.g., WireGuard keys shared across a cluster).
-
-.Example
-[source,bash]
-----
-#!/usr/bin/env bash
-set -euo pipefail
-
-store_for_target() {
-    local target="$1"
-    local config="$2"
-    local storage_path=$(echo "$config" | jq -r '.storage_path')
-    local public_key=$(echo "$config" | jq -r '.public_key')
-
-    mkdir -p "$storage_path/$target"
+    mkdir -p "$storage_path/$name"
 
     for file in "$out"/*; do
         [ -f "$file" ] || continue
         filename=$(basename "$file")
-        age -r "$public_key" -o "$storage_path/$target/$artifact-$filename.age" "$file"
+        if [ -n "$public_key" ]; then
+            age -r "$public_key" -o "$storage_path/$name/$artifact-$filename.age" "$file"
+        else
+            cp "$file" "$storage_path/$name/$artifact-$filename"
+        fi
     done
-}
-
-# Store for all machines
-if [ -f "$machines" ] && [ "$(jq 'length' "$machines")" -gt 0 ]; then
-    for machine in $(jq -r 'keys[]' "$machines"); do
-        machine_config=$(jq -c ".\"$machine\"" "$machines")
-        store_for_target "$machine" "$machine_config"
-    done
-fi
-
-# Store for all users
-if [ -f "$users" ] && [ "$(jq 'length' "$users")" -gt 0 ]; then
-    for user in $(jq -r 'keys[]' "$users"); do
-        user_config=$(jq -c ".\"$user\"" "$users")
-        store_for_target "$user" "$user_config"
-    done
-fi
+done
 ----
 
 == Input File Formats
 
 === $inputs directory
 
-Contains one JSON file per artifact file. For NixOS:
+Contains one JSON file per artifact file. Filename matches the file key from artifact definition.
 
 [source,json]
 ----
 {"path": "/etc/ssh/ssh_host_key", "owner": "root", "group": "root"}
 ----
 
-For Home Manager:
+For Home Manager (owner/group may be null):
 
 [source,json]
 ----
 {"path": "~/.ssh/id_ed25519", "owner": null, "group": null}
-----
-
-=== $config JSON
-
-Contents of `[backend.settings]` plus per-target config:
-
-[source,json]
-----
-{"storage_path": "/var/lib/secrets", "public_key": "age1..."}
-----
-
-=== $machines / $users JSON
-
-Mapping of target identifier to config:
-
-[source,json]
-----
-{
-  "server-one": {"storage_path": "/var/lib/secrets", "public_key": "age1abc..."},
-  "server-two": {"storage_path": "/var/lib/secrets", "public_key": "age1def..."}
-}
 ----
 
 == Error Handling
@@ -298,42 +206,36 @@ Print errors to stderr:
 
 [source,bash]
 ----
-if [ ! -f "$config" ]; then
-    echo "Error: Config file not found: $config" >&2
+if [ ! -f "$targets" ]; then
+    echo "Error: Targets file not found: $targets" >&2
     exit 1
 fi
 ----
 
 == Common Patterns
 
-=== Shared Script for Both Target Types
+=== One Script for All Contexts
 
-Use `$artifact_context` to handle both NixOS and Home Manager in one script:
+The unified interface means one script can handle NixOS, HomeManager, and shared contexts:
 
 [source,bash]
 ----
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Determine target from context
-if [[ "$artifact_context" == "nixos" ]]; then
-    TARGET="$machine"
-else
-    TARGET="$username"
-fi
+# Works for all contexts!
+context=$(jq -r '.context' "$targets")
+echo "Processing $context artifact: $artifact"
 
-# Use $TARGET for storage
-STORAGE_PATH=$(jq -r '.storage_path // "/var/lib/secrets"' "$config")
-mkdir -p "$STORAGE_PATH/$TARGET"
-
-for file in "$out"/*; do
-    [ -f "$file" ] || continue
-    filename=$(basename "$file")
-    cp "$file" "$STORAGE_PATH/$TARGET/$artifact-$filename"
+jq -c '.targets[]' "$targets" | while read -r target; do
+    name=$(echo "$target" | jq -r '.name')
+    type=$(echo "$target" | jq -r '.type')
+    echo "  Target: $name (type: $type)"
+    # ... process target
 done
 ----
 
-Then in `backend.toml`:
+Then reference the same script for all target types in `backend.toml`:
 
 [source,toml]
 ----
@@ -342,6 +244,10 @@ check = "./check.sh"
 serialize = "./serialize.sh"
 
 [mybackend.home]
+check = "./check.sh"
+serialize = "./serialize.sh"
+
+[mybackend.shared]
 check = "./check.sh"
 serialize = "./serialize.sh"
 ----
@@ -356,13 +262,17 @@ set -euo pipefail
 REPO_ROOT=$(git rev-parse --show-toplevel)
 SECRETS_DIR="$REPO_ROOT/secrets"
 
-PUBLIC_KEY=$(jq -r '.public_key' "$config")
-mkdir -p "$SECRETS_DIR/$TARGET"
+jq -c '.targets[]' "$targets" | while read -r target; do
+    name=$(echo "$target" | jq -r '.name')
+    public_key=$(echo "$target" | jq -r '.config.public_key')
 
-for file in "$out"/*; do
-    [ -f "$file" ] || continue
-    filename=$(basename "$file")
-    age -r "$PUBLIC_KEY" -o "$SECRETS_DIR/$TARGET/$artifact-$filename.age" "$file"
+    mkdir -p "$SECRETS_DIR/$name"
+
+    for file in "$out"/*; do
+        [ -f "$file" ] || continue
+        filename=$(basename "$file")
+        age -r "$public_key" -o "$SECRETS_DIR/$name/$artifact-$filename.age" "$file"
+    done
 done
 ----
 
@@ -377,3 +287,19 @@ for file in "$out"/*; do
     store_file "$file" "$artifact-$filename"
 done
 ----
+
+== Migration from Legacy Interface
+
+If you have existing backends using the old interface (`$config`, `$machine`, `$username`, `$machines`, `$users`), update them to use the unified interface:
+
+.Old variables → New approach
+[cols="1,2"]
+|===
+| Old Variable | New Approach
+
+| `$config` | `jq '.targets[0].config' "$targets"`
+| `$machine` | `jq -r '.targets[0].name' "$targets"`
+| `$username` | `jq -r '.targets[0].name' "$targets"`
+| `$machines` | Iterate `jq -c '.targets[] \| select(.type == "nixos")' "$targets"`
+| `$users` | Iterate `jq -c '.targets[] \| select(.type == "homemanager")' "$targets"`
+|===

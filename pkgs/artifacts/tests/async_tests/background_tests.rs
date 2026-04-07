@@ -54,9 +54,9 @@ async fn test_background_processes_check_command() {
         .send(Effect::CheckSerialization {
             artifact_index: 42,
             artifact_name: "test-artifact".to_string(),
-            target_type: TargetType::NixOS {
+            target_spec: artifacts::app::effect::TargetSpec::Single(TargetType::NixOS {
                 machine: "machine-1".to_string(),
-            },
+            }),
         })
         .unwrap();
 
@@ -111,9 +111,9 @@ async fn test_background_processes_generator_command() {
         .send(Effect::RunGenerator {
             artifact_index: 7,
             artifact_name: "test-artifact".to_string(),
-            target_type: TargetType::NixOS {
+            target_spec: artifacts::app::effect::TargetSpec::Single(TargetType::NixOS {
                 machine: "machine-1".to_string(),
-            },
+            }),
             prompts: HashMap::new(),
         })
         .unwrap();
@@ -164,9 +164,9 @@ async fn test_timeout_behavior() {
         .send(Effect::CheckSerialization {
             artifact_index: 99,
             artifact_name: "missing".to_string(),
-            target_type: TargetType::NixOS {
+            target_spec: artifacts::app::effect::TargetSpec::Single(TargetType::NixOS {
                 machine: "test".to_string(),
-            },
+            }),
         })
         .unwrap();
 
@@ -204,9 +204,9 @@ async fn test_graceful_shutdown_on_channel_close() {
         .send(Effect::CheckSerialization {
             artifact_index: 0,
             artifact_name: "test".to_string(),
-            target_type: TargetType::NixOS {
+            target_spec: artifacts::app::effect::TargetSpec::Single(TargetType::NixOS {
                 machine: "machine".to_string(),
-            },
+            }),
         })
         .unwrap();
 
@@ -249,9 +249,9 @@ async fn test_fifo_ordering_with_real_background() {
             .send(Effect::CheckSerialization {
                 artifact_index: i,
                 artifact_name: format!("artifact-{}", i),
-                target_type: TargetType::NixOS {
+                target_spec: artifacts::app::effect::TargetSpec::Single(TargetType::NixOS {
                     machine: "machine".to_string(),
-                },
+                }),
             })
             .unwrap();
     }
@@ -290,9 +290,9 @@ async fn test_background_effect_handler_new() {
     let cmd = Effect::CheckSerialization {
         artifact_index: 0,
         artifact_name: "test".to_string(),
-        target_type: TargetType::NixOS {
+        target_spec: artifacts::app::effect::TargetSpec::Single(TargetType::NixOS {
             machine: "machine".to_string(),
-        },
+        }),
     };
 
     // Execute will fail (artifact not found) but should not panic
@@ -326,9 +326,9 @@ async fn test_cancellation_token_shutdown() {
             .send(Effect::CheckSerialization {
                 artifact_index: i,
                 artifact_name: format!("artifact-{}", i),
-                target_type: TargetType::NixOS {
+                target_spec: artifacts::app::effect::TargetSpec::Single(TargetType::NixOS {
                     machine: "machine".to_string(),
-                },
+                }),
             })
             .unwrap();
     }

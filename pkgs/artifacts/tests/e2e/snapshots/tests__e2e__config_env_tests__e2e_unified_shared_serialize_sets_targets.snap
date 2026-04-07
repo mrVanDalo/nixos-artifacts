@@ -1,0 +1,21 @@
+---
+source: tests/e2e/config_env_tests.rs
+expression: result.to_string()
+---
+stdout: # BEGIN SERIALIZE SNAPSHOT
+# artifact=shared-config-secret
+# artifact_context=shared
+# TARGETS FILE:
+{
+  "context": "shared",
+  "targets": [
+    {
+      "config": {},
+      "name": "test-machine",
+      "type": "nixos"
+    }
+  ]
+}# OUTPUT DIRECTORY:
+shared-file
+# END SERIALIZE SNAPSHOT
+stderr: (no output)

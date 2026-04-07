@@ -9,11 +9,11 @@ Create a custom backend with minimal boilerplate. A backend is a set of scripts 
 ----
 my-backend/
 ├── backend.toml           # Backend configuration
-├── nixos_check.sh         # Check if NixOS artifact exists
-├── nixos_serialize.sh     # Store NixOS artifact files
-├── home_check.sh          # Check if Home Manager artifact exists
-└── home_serialize.sh     # Store Home Manager artifact files
+├── check.sh               # Check if artifact exists (unified)
+└── serialize.sh           # Store artifact files (unified)
 ----
+
+With the unified interface, a single script can handle all target types (NixOS, HomeManager, and shared).
 
 == backend.toml
 
@@ -21,41 +21,61 @@ my-backend/
 ----
 [mybackend.nixos]
 enabled = true
-check = "./nixos_check.sh"
-serialize = "./nixos_serialize.sh"
+check = "./check.sh"
+serialize = "./serialize.sh"
 
 [mybackend.home]
 enabled = true
-check = "./home_check.sh"
-serialize = "./home_serialize.sh"
+check = "./check.sh"
+serialize = "./serialize.sh"
+
+[mybackend.shared]
+enabled = true
+check = "./check.sh"
+serialize = "./serialize.sh"
 
 [mybackend.settings]
-# Optional: backend-specific configuration (available in $config JSON)
+# Optional: backend-specific configuration (available in targets.json)
 storage_path = "/var/lib/secrets"
 ----
 
-== nixos_check.sh
+== Unified Environment Variables
 
-Check if a NixOS machine artifact already exists (skip generation if it does):
+All scripts receive the same environment variables:
+
+[cols="1,2,3"]
+|===
+| Variable | Type | Description
+
+| `$artifact` | String | Artifact name
+| `$artifact_context` | String | `"nixos"`, `"homemanager"`, or `"shared"`
+| `$targets` | File | Path to targets.json with all target info
+| `$inputs` | Directory | File metadata JSONs (check only)
+| `$out` | Directory | Generated files (serialize only)
+|===
+
+== check.sh
+
+Check if an artifact already exists (skip generation if it does):
 
 [source,bash]
 ----
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Environment variables:
-#   $inputs          - Directory with file metadata JSONs
-#   $config          - Path to JSON file with backend settings
-#   $artifact_context - Always "nixos"
-#   $machine         - Machine name (e.g., "server-one")
-#   $artifact        - Artifact name
+# Unified check script - works for all contexts
+# Environment: $artifact, $artifact_context, $targets, $inputs
 
-STORAGE_PATH=$(jq -r '.storage_path // "/var/lib/secrets"' "$config")
+# Check all targets
+jq -c '.targets[]' "$targets" | while read -r target; do
+    name=$(echo "$target" | jq -r '.name')
+    storage_path=$(echo "$target" | jq -r '.config.storage_path // "/var/lib/secrets"')
 
-for meta in "$inputs"/*; do
-    [ -f "$meta" ] || continue
-    filename=$(basename "$meta")
-    [ -f "$STORAGE_PATH/$machine/$artifact-$filename" ] || exit 1
+    for meta in "$inputs"/*; do
+        [ -f "$meta" ] || continue
+        filename=$(basename "$meta")
+        [ -f "$storage_path/$name/$artifact-$filename" ] || exit 1
+    done
 done
 
 echo "EXISTS"
@@ -67,83 +87,30 @@ Exit codes:
 * `0` — Artifact exists, skip generation
 * Non-zero — Needs generation
 
-== nixos_serialize.sh
+== serialize.sh
 
-Store files for a NixOS machine:
-
-[source,bash]
-----
-#!/usr/bin/env bash
-set -euo pipefail
-
-# Environment variables:
-#   $out             - Directory containing generated files
-#   $config          - Path to JSON file with backend settings
-#   $artifact_context - Always "nixos"
-#   $machine         - Machine name (e.g., "server-one")
-#   $artifact        - Artifact name
-
-STORAGE_PATH=$(jq -r '.storage_path // "/var/lib/secrets"' "$config")
-mkdir -p "$STORAGE_PATH/$machine"
-
-for file in "$out"/*; do
-    [ -f "$file" ] || continue
-    filename=$(basename "$file")
-    cp "$file" "$STORAGE_PATH/$machine/$artifact-$filename"
-done
-----
-
-== home_check.sh
-
-Check if a Home Manager artifact already exists:
+Store files for all targets:
 
 [source,bash]
 ----
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Environment variables:
-#   $inputs          - Directory with file metadata JSONs
-#   $config          - Path to JSON file with backend settings
-#   $artifact_context - Always "homemanager"
-#   $username        - User identifier (e.g., "alice@workstation")
-#   $artifact        - Artifact name
+# Unified serialize script - works for all contexts
+# Environment: $artifact, $artifact_context, $targets, $out
 
-STORAGE_PATH=$(jq -r '.storage_path // "/var/lib/secrets"' "$config")
+# Process each target
+jq -c '.targets[]' "$targets" | while read -r target; do
+    name=$(echo "$target" | jq -r '.name')
+    storage_path=$(echo "$target" | jq -r '.config.storage_path // "/var/lib/secrets"')
 
-for meta in "$inputs"/*; do
-    [ -f "$meta" ] || continue
-    filename=$(basename "$meta")
-    [ -f "$STORAGE_PATH/$username/$artifact-$filename" ] || exit 1
-done
+    mkdir -p "$storage_path/$name"
 
-echo "EXISTS"
-exit 0
-----
-
-== home_serialize.sh
-
-Store files for a Home Manager user:
-
-[source,bash]
-----
-#!/usr/bin/env bash
-set -euo pipefail
-
-# Environment variables:
-#   $out             - Directory containing generated files
-#   $config          - Path to JSON file with backend settings
-#   $artifact_context - Always "homemanager"
-#   $username        - User identifier (e.g., "alice@workstation")
-#   $artifact        - Artifact name
-
-STORAGE_PATH=$(jq -r '.storage_path // "/var/lib/secrets"' "$config")
-mkdir -p "$STORAGE_PATH/$username"
-
-for file in "$out"/*; do
-    [ -f "$file" ] || continue
-    filename=$(basename "$file")
-    cp "$file" "$STORAGE_PATH/$username/$artifact-$filename"
+    for file in "$out"/*; do
+        [ -f "$file" ] || continue
+        filename=$(basename "$file")
+        cp "$file" "$storage_path/$name/$artifact-$filename"
+    done
 done
 ----
 
@@ -162,51 +129,51 @@ NIXOS_ARTIFACTS_BACKEND_CONFIG=/path/to/my-backend/backend.toml \
   artifacts /path/to/flake
 ----
 
-== Using the Same Scripts
+== targets.json Format
 
-You can use the same script for both NixOS and Home Manager by checking `$artifact_context`:
+The `$targets` file contains all target information:
 
-[source,bash]
+For single NixOS target:
+[source,json]
 ----
-#!/usr/bin/env bash
-set -euo pipefail
-
-# Determine target from context
-if [[ "$artifact_context" == "nixos" ]]; then
-    TARGET="$machine"
-else
-    TARGET="$username"
-fi
-
-# Use $TARGET for storage path
-STORAGE_PATH=$(jq -r '.storage_path // "/var/lib/secrets"' "$config")
-mkdir -p "$STORAGE_PATH/$TARGET"
-# ...
+{
+  "context": "nixos",
+  "targets": [
+    {
+      "name": "server-one",
+      "type": "nixos",
+      "config": {"storage_path": "/var/lib/secrets"}
+    }
+  ]
+}
 ----
 
-Then in `backend.toml`:
-
-[source,toml]
+For single HomeManager target:
+[source,json]
 ----
-[mybackend.nixos]
-check = "./check.sh"
-serialize = "./serialize.sh"
-
-[mybackend.home]
-check = "./check.sh"
-serialize = "./serialize.sh"
+{
+  "context": "homemanager",
+  "targets": [
+    {
+      "name": "alice@workstation",
+      "type": "homemanager",
+      "config": {"storage_path": "~/.secrets"}
+    }
+  ]
+}
 ----
 
-== Shared Artifacts
-
-To support shared artifacts (secrets shared across multiple machines), add a `[backend.shared]` section:
-
-[source,toml]
+For shared artifacts:
+[source,json]
 ----
-[mybackend.shared]
-enabled = true
-check = "./shared_check.sh"
-serialize = "./shared_serialize.sh"
+{
+  "context": "shared",
+  "targets": [
+    {"name": "server-one", "type": "nixos", "config": {...}},
+    {"name": "server-two", "type": "nixos", "config": {...}},
+    {"name": "alice@host", "type": "homemanager", "config": {...}}
+  ]
+}
 ----
 
 == Next Steps

@@ -1,10 +1,11 @@
-//! Tests to verify that backend scripts receive correct environment variables.
+//! Tests to verify that backend scripts receive correct unified environment variables.
 //!
-//! These tests verify that:
-//! - `$config` is set for NixOS and Home Manager targets
-//! - `$config` file exists and contains valid JSON
-//! - `$machines` and `$users` are set for shared artifacts (not `$config`)
-//! - `$machines` and `$users` files exist and contain valid JSON
+//! These tests verify that all backend scripts receive the unified interface:
+//! - `$artifact` - Artifact name
+//! - `$artifact_context` - "nixos", "homemanager", or "shared"
+//! - `$targets` - Path to targets.json with target info
+//! - `$inputs` - Path to inputs directory (check operations only)
+//! - `$out` - Output directory (serialize operations only)
 //!
 //! The tests use the test-config-verify backend which outputs the environment
 //! variable contents for snapshot verification.
@@ -12,7 +13,7 @@
 //! How to run:
 //! - All e2e tests: cargo test --test tests e2e
 //! - These tests: cargo test --test tests e2e_config
-//! - Specific test: cargo test --test tests e2e_config_nixos_check_sets_config
+//! - Specific test: cargo test --test tests e2e_unified_nixos_check
 
 use crate::common::{CleanupGuard, setup_test_storage};
 use anyhow::Result;
@@ -90,14 +91,14 @@ macro_rules! assert_snapshot_redacted {
 }
 
 // =============================================================================
-// TEST: check_serialization sets $config for NixOS targets
+// TEST: unified check_serialization for NixOS targets
 // =============================================================================
 
-/// Verify that run_check_serialization sets $config correctly for NixOS artifacts.
-/// Snapshot shows the full output including config path, machine, artifact, and JSON content.
+/// Verify that run_check_serialization sets unified env vars for NixOS artifacts.
+/// Snapshot shows $artifact, $artifact_context, $targets JSON, and $inputs directory.
 #[test]
 #[serial]
-fn e2e_config_nixos_check_sets_config() -> Result<()> {
+fn e2e_unified_nixos_check_sets_targets() -> Result<()> {
     let _cleanup = CleanupGuard;
     let (backend, make_config) = load_example("scenarios/config-verify")?;
 
@@ -120,14 +121,14 @@ fn e2e_config_nixos_check_sets_config() -> Result<()> {
 }
 
 // =============================================================================
-// TEST: serialize sets $config for NixOS targets
+// TEST: unified serialize for NixOS targets
 // =============================================================================
 
-/// Verify that run_serialize sets $config correctly for NixOS artifacts.
-/// Snapshot shows the full output including config path, machine, artifact, and JSON content.
+/// Verify that run_serialize sets unified env vars for NixOS artifacts.
+/// Snapshot shows $artifact, $artifact_context, $targets JSON, and $out directory.
 #[test]
 #[serial]
-fn e2e_config_nixos_serialize_sets_config() -> Result<()> {
+fn e2e_unified_nixos_serialize_sets_targets() -> Result<()> {
     let (_temp_dir, _storage_path) = setup_test_storage()?;
     let _cleanup = CleanupGuard;
     let (backend, make_config) = load_example("scenarios/config-verify")?;
@@ -156,14 +157,14 @@ fn e2e_config_nixos_serialize_sets_config() -> Result<()> {
 }
 
 // =============================================================================
-// TEST: shared_check_serialization sets $machines and $users
+// TEST: unified shared_check_serialization
 // =============================================================================
 
-/// Verify that run_shared_check_serialization sets $machines and $users correctly.
-/// Snapshot shows the full output including machines/users JSON content.
+/// Verify that run_shared_check_serialization sets unified env vars.
+/// Snapshot shows $artifact, $artifact_context="shared", $targets JSON with all targets.
 #[test]
 #[serial]
-fn e2e_config_shared_check_sets_machines_users() -> Result<()> {
+fn e2e_unified_shared_check_sets_targets() -> Result<()> {
     let _cleanup = CleanupGuard;
     let (backend, make_config) = load_example("scenarios/config-verify")?;
 
@@ -189,14 +190,14 @@ fn e2e_config_shared_check_sets_machines_users() -> Result<()> {
 }
 
 // =============================================================================
-// TEST: shared_serialize sets $machines and $users
+// TEST: unified shared_serialize
 // =============================================================================
 
-/// Verify that run_shared_serialize sets $machines and $users correctly.
-/// Snapshot shows the full output including machines/users JSON content.
+/// Verify that run_shared_serialize sets unified env vars.
+/// Snapshot shows $artifact, $artifact_context="shared", $targets JSON with all targets.
 #[test]
 #[serial]
-fn e2e_config_shared_serialize_sets_machines_users() -> Result<()> {
+fn e2e_unified_shared_serialize_sets_targets() -> Result<()> {
     let (_temp_dir, _storage_path) = setup_test_storage()?;
     let _cleanup = CleanupGuard;
     let (backend, make_config) = load_example("scenarios/config-verify")?;

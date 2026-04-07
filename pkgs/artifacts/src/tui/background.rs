@@ -24,7 +24,7 @@ use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel};
 use tokio::time::timeout;
 use tokio_util::sync::CancellationToken;
 
-use crate::app::effect::Effect;
+use crate::app::effect::{Effect, TargetSpec};
 use crate::app::message::{Message, ScriptOutput};
 use crate::app::model::{ArtifactError, ArtifactStatus, TargetType};
 use crate::backend;
@@ -97,19 +97,6 @@ impl BackgroundEffectHandler {
     // -------------------------------------------------------------------------
     // Utility Methods
     // -------------------------------------------------------------------------
-
-    /// Parse target type string into TargetType enum.
-    fn target_type_from_str(target_type: &str, target: &str) -> TargetType {
-        if target_type == "home" {
-            TargetType::HomeManager {
-                username: target.to_string(),
-            }
-        } else {
-            TargetType::NixOS {
-                machine: target.to_string(),
-            }
-        }
-    }
 
     /// Look up an artifact definition in either nixos_map or home_map.
     fn lookup_artifact(&self, target: &str, artifact_name: &str) -> Option<ArtifactDef> {
@@ -194,26 +181,45 @@ impl BackgroundEffectHandler {
         }
     }
 
-    /// Create a ScriptOutput for a timeout error.
-    fn timeout_output() -> ScriptOutput {
-        ScriptOutput::from_message(&format!(
-            "Timed out after {} seconds",
-            BACKGROUND_TASK_TIMEOUT.as_secs()
-        ))
-    }
-
     // -------------------------------------------------------------------------
-    // Effect Handler Methods
+    // Effect Handler Methods (Unified for Single and Shared)
     // -------------------------------------------------------------------------
 
-    /// Handle CheckSerialization command.
+    /// Handle CheckSerialization command (unified for single and shared).
     async fn execute_check_serialization(
         &self,
         artifact_index: usize,
         artifact_name: String,
-        target: String,
-        target_type: String,
+        target_spec: TargetSpec,
     ) -> Message {
+        match target_spec {
+            TargetSpec::Single(target_type) => {
+                self.execute_check_serialization_single(artifact_index, artifact_name, target_type)
+                    .await
+            }
+            TargetSpec::Multi {
+                nixos_targets,
+                home_targets,
+            } => {
+                self.execute_check_serialization_shared(
+                    artifact_index,
+                    artifact_name,
+                    nixos_targets,
+                    home_targets,
+                )
+                .await
+            }
+        }
+    }
+
+    /// Handle CheckSerialization for a single target.
+    async fn execute_check_serialization_single(
+        &self,
+        artifact_index: usize,
+        artifact_name: String,
+        target_type: TargetType,
+    ) -> Message {
+        let target = target_type.target_name().to_string();
         let artifact = match self.lookup_artifact(&target, &artifact_name) {
             Some(a) => a,
             None => {
@@ -234,13 +240,12 @@ impl BackgroundEffectHandler {
 
         let backend = self.backend.clone();
         let make = self.make.clone();
-        let target_type_enum = Self::target_type_from_str(&target_type, &target);
         let log_level = self.log_level;
 
         let result = Self::run_with_timeout(&artifact_name, "CheckSerialization", move || {
             backend::serialization::run_check_serialization(
                 &artifact,
-                &target_type_enum,
+                &target_type,
                 &backend,
                 &make,
                 log_level,
@@ -248,6 +253,63 @@ impl BackgroundEffectHandler {
         })
         .await;
 
+        Self::check_result_to_message(artifact_index, "CheckSerialization", result)
+    }
+
+    /// Handle CheckSerialization for shared targets.
+    async fn execute_check_serialization_shared(
+        &self,
+        artifact_index: usize,
+        artifact_name: String,
+        nixos_targets: Vec<String>,
+        home_targets: Vec<String>,
+    ) -> Message {
+        let backend_name = match self.make.get_shared_artifacts().get(&artifact_name) {
+            Some(info) => info.backend_name.clone(),
+            None => {
+                let error = ArtifactError::ArtifactNotFound {
+                    artifact_name: artifact_name.clone(),
+                    target: "shared".to_string(),
+                };
+                return Message::CheckSerializationResult {
+                    artifact_index,
+                    status: ArtifactStatus::Failed {
+                        error: error.clone(),
+                        output: String::new(),
+                    },
+                    result: Err(error.summary()),
+                };
+            }
+        };
+
+        let backend = self.backend.clone();
+        let make = self.make.clone();
+        let artifact_name_for_closure = artifact_name.clone();
+        let log_level = self.log_level;
+
+        let result =
+            Self::run_with_timeout(&artifact_name, "SharedCheckSerialization", move || {
+                backend::serialization::run_shared_check_serialization(
+                    &artifact_name_for_closure,
+                    &backend_name,
+                    &backend,
+                    &make,
+                    &nixos_targets,
+                    &home_targets,
+                    log_level,
+                )
+            })
+            .await;
+
+        Self::check_result_to_message(artifact_index, "SharedCheckSerialization", result)
+    }
+
+    /// Convert a check serialization TimeoutResult to a unified Message.
+    fn check_result_to_message(
+        artifact_index: usize,
+        script_name: &str,
+        result: TimeoutResult<backend::serialization::CheckResult>,
+    ) -> Message {
         match result {
             TimeoutResult::Success(check_result) => {
                 let status = if check_result.needs_generation {
@@ -263,7 +325,7 @@ impl BackgroundEffectHandler {
             }
             TimeoutResult::OperationFailed(e) => {
                 let error = ArtifactError::ScriptFailed {
-                    script_name: "CheckSerialization".to_string(),
+                    script_name: script_name.to_string(),
                     exit_code: None,
                     stderr_summary: e.clone(),
                 };
@@ -289,7 +351,7 @@ impl BackgroundEffectHandler {
             }
             TimeoutResult::Timeout => {
                 let error = ArtifactError::ScriptTimeout {
-                    script_name: "CheckSerialization".to_string(),
+                    script_name: script_name.to_string(),
                     timeout_secs: BACKGROUND_TASK_TIMEOUT.as_secs(),
                 };
                 Message::CheckSerializationResult {
@@ -304,15 +366,41 @@ impl BackgroundEffectHandler {
         }
     }
 
-    /// Handle RunGenerator command.
+    /// Handle RunGenerator command (unified for single and shared).
     async fn execute_run_generator(
         &mut self,
         artifact_index: usize,
         artifact_name: String,
-        target: String,
-        target_type: String,
+        target_spec: TargetSpec,
         prompts: HashMap<String, String>,
     ) -> Message {
+        match target_spec {
+            TargetSpec::Single(target_type) => {
+                self.execute_run_generator_single(
+                    artifact_index,
+                    artifact_name,
+                    target_type,
+                    prompts,
+                )
+                .await
+            }
+            TargetSpec::Multi { .. } => {
+                // Shared generator uses first generator from shared_info
+                self.execute_run_generator_shared(artifact_index, artifact_name, prompts)
+                    .await
+            }
+        }
+    }
+
+    /// Handle RunGenerator for a single target.
+    async fn execute_run_generator_single(
+        &mut self,
+        artifact_index: usize,
+        artifact_name: String,
+        target_type: TargetType,
+        prompts: HashMap<String, String>,
+    ) -> Message {
+        let target = target_type.target_name().to_string();
         let artifact = match self.lookup_artifact(&target, &artifact_name) {
             Some(a) => a,
             None => {
@@ -354,7 +442,6 @@ impl BackgroundEffectHandler {
             };
         }
 
-        let target_type_enum = Self::target_type_from_str(&target_type, &target);
         let prompts_path = prompts_dir.path().to_path_buf();
         let make_base = self.make.make_base.clone();
         let log_level = self.log_level;
@@ -364,7 +451,7 @@ impl BackgroundEffectHandler {
         let result = Self::run_with_timeout(&artifact_name, "Generator", move || {
             backend::generator::run_generator_script(
                 &artifact,
-                &target_type_enum,
+                &target_type,
                 &make_base,
                 &prompts_path,
                 &output_path,
@@ -373,6 +460,134 @@ impl BackgroundEffectHandler {
         })
         .await;
 
+        self.handle_generator_result(
+            artifact_index,
+            artifact_name,
+            result,
+            temp_dir,
+            prompts_dir,
+            prompts,
+            artifact_for_verify,
+            output_path_for_verify,
+        )
+    }
+
+    /// Handle RunGenerator for shared targets.
+    async fn execute_run_generator_shared(
+        &mut self,
+        artifact_index: usize,
+        artifact_name: String,
+        prompts: HashMap<String, String>,
+    ) -> Message {
+        let shared_info = match self
+            .make
+            .get_shared_artifacts()
+            .get(&artifact_name)
+            .cloned()
+        {
+            Some(info) => info,
+            None => {
+                return Message::GeneratorFinished {
+                    artifact_index,
+                    result: Err(format!("Shared artifact '{}' not found", artifact_name)),
+                };
+            }
+        };
+
+        let generator_path = match shared_info.generators.first() {
+            Some(gen_info) => gen_info.path.clone(),
+            None => {
+                return Message::GeneratorFinished {
+                    artifact_index,
+                    result: Err(format!(
+                        "No generators defined for shared artifact '{}'",
+                        artifact_name
+                    )),
+                };
+            }
+        };
+
+        let prompts_dir = match Self::create_temp_dir("prompts") {
+            Ok(dir) => dir,
+            Err(e) => {
+                return Message::GeneratorFinished {
+                    artifact_index,
+                    result: Err(e),
+                };
+            }
+        };
+
+        if let Err(e) = Self::write_prompts_to_dir(&prompts, prompts_dir.path()) {
+            return Message::GeneratorFinished {
+                artifact_index,
+                result: Err(e),
+            };
+        }
+
+        let out_dir = match Self::create_temp_dir("output") {
+            Ok(dir) => dir,
+            Err(e) => {
+                return Message::GeneratorFinished {
+                    artifact_index,
+                    result: Err(e),
+                };
+            }
+        };
+        let out_path = out_dir.path().to_path_buf();
+
+        let make_base = self.make.make_base.clone();
+        let prompts_path = prompts_dir.path().to_path_buf();
+        let generator_path_clone = generator_path.clone();
+        let out_path_for_verify = out_path.clone();
+        let log_level = self.log_level;
+
+        // Build an ArtifactDef for verification
+        let artifact_for_verify = ArtifactDef {
+            name: artifact_name.clone(),
+            description: None,
+            files: shared_info.files.clone(),
+            prompts: shared_info.prompts.clone(),
+            shared: true,
+            serialization: shared_info.backend_name.clone(),
+            generator: generator_path,
+        };
+
+        let result = Self::run_with_timeout(&artifact_name, "SharedGenerator", move || {
+            backend::generator::run_generator_script_with_path(
+                &generator_path_clone,
+                &make_base,
+                &prompts_path,
+                &out_path,
+                log_level,
+            )
+        })
+        .await;
+
+        self.handle_generator_result(
+            artifact_index,
+            artifact_name,
+            result,
+            out_dir,
+            prompts_dir,
+            prompts,
+            artifact_for_verify,
+            out_path_for_verify,
+        )
+    }
+
+    /// Common handler for generator results (single and shared).
+    #[allow(clippy::too_many_arguments)]
+    fn handle_generator_result(
+        &mut self,
+        artifact_index: usize,
+        artifact_name: String,
+        result: TimeoutResult<backend::output_capture::CapturedOutput>,
+        temp_dir: tempfile::TempDir,
+        prompts_dir: tempfile::TempDir,
+        prompts: HashMap<String, String>,
+        artifact_for_verify: ArtifactDef,
+        output_path_for_verify: std::path::PathBuf,
+    ) -> Message {
         match result {
             TimeoutResult::Success(output) => {
                 let verify_result = backend::generator::verify_generated_files(
@@ -419,13 +634,39 @@ impl BackgroundEffectHandler {
         }
     }
 
-    /// Handle Serialize command.
+    /// Handle Serialize command (unified for single and shared).
     async fn execute_serialize(
         &mut self,
         artifact_index: usize,
         artifact_name: String,
-        target: String,
-        target_type: String,
+        target_spec: TargetSpec,
+    ) -> Message {
+        match target_spec {
+            TargetSpec::Single(target_type) => {
+                self.execute_serialize_single(artifact_index, artifact_name, target_type)
+                    .await
+            }
+            TargetSpec::Multi {
+                nixos_targets,
+                home_targets,
+            } => {
+                self.execute_serialize_shared(
+                    artifact_index,
+                    artifact_name,
+                    nixos_targets,
+                    home_targets,
+                )
+                .await
+            }
+        }
+    }
+
+    /// Handle Serialize for a single target.
+    async fn execute_serialize_single(
+        &mut self,
+        artifact_index: usize,
+        artifact_name: String,
+        target_type: TargetType,
     ) -> Message {
         let output_dir = match self.current_output_dir.take() {
             Some(dir) => dir,
@@ -437,6 +678,7 @@ impl BackgroundEffectHandler {
             }
         };
 
+        let target = target_type.target_name().to_string();
         let artifact = match self.lookup_artifact(&target, &artifact_name) {
             Some(a) => a,
             None => {
@@ -451,7 +693,6 @@ impl BackgroundEffectHandler {
         };
 
         let output_path = output_dir.path().to_path_buf();
-        let target_type_enum = Self::target_type_from_str(&target_type, &target);
         let backend = self.backend.clone();
         let make = self.make.clone();
         let log_level = self.log_level;
@@ -461,13 +702,78 @@ impl BackgroundEffectHandler {
                 &artifact,
                 &backend,
                 &output_path,
-                &target_type_enum,
+                &target_type,
                 &make,
                 log_level,
             )
         })
         .await;
 
+        Self::serialize_result_to_message(artifact_index, result)
+    }
+
+    /// Handle Serialize for shared targets.
+    async fn execute_serialize_shared(
+        &mut self,
+        artifact_index: usize,
+        artifact_name: String,
+        nixos_targets: Vec<String>,
+        home_targets: Vec<String>,
+    ) -> Message {
+        let output_dir = match self.current_output_dir.take() {
+            Some(dir) => dir,
+            None => {
+                return Message::SerializeFinished {
+                    artifact_index,
+                    result: Err("No output directory from generator".to_string()),
+                };
+            }
+        };
+        let out_path = output_dir.path().to_path_buf();
+
+        let shared_info = match self
+            .make
+            .get_shared_artifacts()
+            .get(&artifact_name)
+            .cloned()
+        {
+            Some(info) => info,
+            None => {
+                return Message::SerializeFinished {
+                    artifact_index,
+                    result: Err(format!("Shared artifact '{}' not found", artifact_name)),
+                };
+            }
+        };
+
+        let backend = self.backend.clone();
+        let make = self.make.clone();
+        let backend_name = shared_info.backend_name.clone();
+        let artifact_name_clone = artifact_name.clone();
+        let log_level = self.log_level;
+
+        let result = Self::run_with_timeout(&artifact_name, "SharedSerialize", move || {
+            backend::serialization::run_shared_serialize(
+                &artifact_name_clone,
+                &backend_name,
+                &backend,
+                &out_path,
+                &make,
+                &nixos_targets,
+                &home_targets,
+                log_level,
+            )
+        })
+        .await;
+
+        Self::serialize_result_to_message(artifact_index, result)
+    }
+
+    /// Convert a serialize TimeoutResult to a unified Message.
+    fn serialize_result_to_message(
+        artifact_index: usize,
+        result: TimeoutResult<backend::output_capture::CapturedOutput>,
+    ) -> Message {
         match result {
             TimeoutResult::Success(output) => Message::SerializeFinished {
                 artifact_index,
@@ -491,410 +797,10 @@ impl BackgroundEffectHandler {
         }
     }
 
-    /// Handle SharedCheckSerialization command.
-    #[allow(clippy::too_many_lines)]
-    async fn execute_shared_check_serialization(
-        &self,
-        artifact_index: usize,
-        artifact_name: String,
-        targets: Vec<String>,
-        target_types: Vec<String>,
-    ) -> Message {
-        let backend = self.backend.clone();
-        let make = self.make.clone();
-
-        let mut nixos_targets = Vec::new();
-        let mut home_targets = Vec::new();
-        for (i, target) in targets.iter().enumerate() {
-            let target_type = target_types.get(i).map(|s| s.as_str()).unwrap_or("nixos");
-            if target_type == "home" {
-                home_targets.push(target.clone());
-            } else {
-                nixos_targets.push(target.clone());
-            }
-        }
-
-        let backend_name = match self.make.get_shared_artifacts().get(&artifact_name) {
-            Some(info) => info.backend_name.clone(),
-            None => {
-                let count = targets.len();
-                let error = ArtifactError::ArtifactNotFound {
-                    artifact_name: artifact_name.clone(),
-                    target: "shared".to_string(),
-                };
-                let status = ArtifactStatus::Failed {
-                    error: error.clone(),
-                    output: String::new(),
-                };
-                return Message::SharedCheckSerializationResult {
-                    artifact_index,
-                    statuses: vec![status; count],
-                    outputs: vec![ScriptOutput::from_message(&error.summary()); count],
-                };
-            }
-        };
-
-        let artifact_name_for_closure = artifact_name.clone();
-        let log_level = self.log_level;
-        let result =
-            Self::run_with_timeout(&artifact_name, "SharedCheckSerialization", move || {
-                backend::serialization::run_shared_check_serialization(
-                    &artifact_name_for_closure,
-                    &backend_name,
-                    &backend,
-                    &make,
-                    &nixos_targets,
-                    &home_targets,
-                    log_level,
-                )
-            })
-            .await;
-
-        let count = targets.len();
-        match result {
-            TimeoutResult::Success(check_result) => {
-                let needs_gen = check_result.needs_generation;
-                let status = if needs_gen {
-                    ArtifactStatus::NeedsGeneration
-                } else {
-                    ArtifactStatus::UpToDate
-                };
-                let statuses = vec![status; count];
-                let outputs = vec![ScriptOutput::from_captured(&check_result.output); count];
-                Message::SharedCheckSerializationResult {
-                    artifact_index,
-                    statuses,
-                    outputs,
-                }
-            }
-            TimeoutResult::OperationFailed(e) => {
-                let error = ArtifactError::ScriptFailed {
-                    script_name: "SharedCheckSerialization".to_string(),
-                    exit_code: None,
-                    stderr_summary: e.clone(),
-                };
-                let status = ArtifactStatus::Failed {
-                    error: error.clone(),
-                    output: String::new(),
-                };
-                let statuses = vec![status; count];
-                let outputs = vec![ScriptOutput::from_message(&error.summary()); count];
-                Message::SharedCheckSerializationResult {
-                    artifact_index,
-                    statuses,
-                    outputs,
-                }
-            }
-            TimeoutResult::TaskPanic(e) => {
-                let error = ArtifactError::TaskPanic { message: e.clone() };
-                let status = ArtifactStatus::Failed {
-                    error: error.clone(),
-                    output: String::new(),
-                };
-                let statuses = vec![status; count];
-                let outputs = vec![ScriptOutput::from_message(&error.summary()); count];
-                Message::SharedCheckSerializationResult {
-                    artifact_index,
-                    statuses,
-                    outputs,
-                }
-            }
-            TimeoutResult::Timeout => {
-                let error = ArtifactError::ScriptTimeout {
-                    script_name: "SharedCheckSerialization".to_string(),
-                    timeout_secs: BACKGROUND_TASK_TIMEOUT.as_secs(),
-                };
-                let status = ArtifactStatus::Failed {
-                    error: error.clone(),
-                    output: String::new(),
-                };
-                let statuses = vec![status; count];
-                let outputs = vec![Self::timeout_output(); count];
-                Message::SharedCheckSerializationResult {
-                    artifact_index,
-                    statuses,
-                    outputs,
-                }
-            }
-        }
-    }
-
-    /// Handle RunSharedGenerator command.
-    #[allow(clippy::too_many_lines)]
-    async fn execute_run_shared_generator(
-        &mut self,
-        artifact_index: usize,
-        artifact_name: String,
-        prompts: HashMap<String, String>,
-    ) -> Message {
-        let shared_info = match self
-            .make
-            .get_shared_artifacts()
-            .get(&artifact_name)
-            .cloned()
-        {
-            Some(info) => info,
-            None => {
-                return Message::SharedGeneratorFinished {
-                    artifact_index,
-                    result: Err(format!("Shared artifact '{}' not found", artifact_name)),
-                };
-            }
-        };
-
-        let generator_path = match shared_info.generators.first() {
-            Some(gen_info) => gen_info.path.clone(),
-            None => {
-                return Message::SharedGeneratorFinished {
-                    artifact_index,
-                    result: Err(format!(
-                        "No generators defined for shared artifact '{}'",
-                        artifact_name
-                    )),
-                };
-            }
-        };
-
-        let files_for_verify = shared_info.files.clone();
-        let prompts_for_verify = shared_info.prompts.clone();
-        let backend_name_for_verify = shared_info.backend_name.clone();
-
-        let prompts_dir = match Self::create_temp_dir("prompts") {
-            Ok(dir) => dir,
-            Err(e) => {
-                return Message::SharedGeneratorFinished {
-                    artifact_index,
-                    result: Err(e),
-                };
-            }
-        };
-
-        if let Err(e) = Self::write_prompts_to_dir(&prompts, prompts_dir.path()) {
-            return Message::SharedGeneratorFinished {
-                artifact_index,
-                result: Err(e),
-            };
-        }
-
-        let out_dir = match Self::create_temp_dir("output") {
-            Ok(dir) => dir,
-            Err(e) => {
-                return Message::SharedGeneratorFinished {
-                    artifact_index,
-                    result: Err(e),
-                };
-            }
-        };
-        let out_path = out_dir.path().to_path_buf();
-
-        let make_base = self.make.make_base.clone();
-        let prompts_path = prompts_dir.path().to_path_buf();
-        let generator_path_clone = generator_path.clone();
-        let artifact_name_for_verify = artifact_name.clone();
-        let out_path_for_verify = out_path.clone();
-        let log_level = self.log_level;
-
-        let result = Self::run_with_timeout(&artifact_name, "SharedGenerator", move || {
-            backend::generator::run_generator_script_with_path(
-                &generator_path_clone,
-                &make_base,
-                &prompts_path,
-                &out_path,
-                log_level,
-            )
-        })
-        .await;
-
-        match result {
-            TimeoutResult::Success(output) => {
-                let verify_result = backend::generator::verify_generated_files(
-                    &ArtifactDef {
-                        name: artifact_name_for_verify.clone(),
-                        description: None,
-                        files: files_for_verify,
-                        prompts: prompts_for_verify,
-                        shared: true,
-                        serialization: backend_name_for_verify,
-                        generator: generator_path,
-                    },
-                    &out_path_for_verify,
-                );
-                match verify_result {
-                    Ok(()) => {
-                        self.current_output_dir = Some(out_dir);
-                        self.current_prompts = Some(prompts);
-                        std::mem::forget(prompts_dir);
-                        Message::SharedGeneratorFinished {
-                            artifact_index,
-                            result: Ok(ScriptOutput::from_captured(&output)),
-                        }
-                    }
-                    Err(e) => {
-                        log(&format!(
-                            "[ERROR] Generator output verification failed for {}: {}",
-                            artifact_name, e
-                        ));
-                        Message::SharedGeneratorFinished {
-                            artifact_index,
-                            result: Err(format!("Verification failed: {}", e)),
-                        }
-                    }
-                }
-            }
-            TimeoutResult::OperationFailed(e) => Message::SharedGeneratorFinished {
-                artifact_index,
-                result: Err(format!("Generator failed: {}", e)),
-            },
-            TimeoutResult::TaskPanic(e) => Message::SharedGeneratorFinished {
-                artifact_index,
-                result: Err(format!("Task panicked: {}", e)),
-            },
-            TimeoutResult::Timeout => Message::SharedGeneratorFinished {
-                artifact_index,
-                result: Err(format!(
-                    "Timed out after {} seconds",
-                    BACKGROUND_TASK_TIMEOUT.as_secs()
-                )),
-            },
-        }
-    }
-
-    /// Handle SharedSerialize command.
-    #[allow(clippy::too_many_lines)]
-    async fn execute_shared_serialize(
-        &mut self,
-        artifact_index: usize,
-        artifact_name: String,
-        machine_targets: Vec<String>,
-        user_targets: Vec<String>,
-    ) -> Message {
-        let output_dir = match self.current_output_dir.take() {
-            Some(dir) => dir,
-            None => {
-                let mut results = Vec::new();
-                let msg = "No output directory from generator";
-                for target in &machine_targets {
-                    results.push((target.clone(), false, ScriptOutput::from_message(msg)));
-                }
-                for target in &user_targets {
-                    results.push((target.clone(), false, ScriptOutput::from_message(msg)));
-                }
-                return Message::SharedSerializeFinished {
-                    artifact_index,
-                    results,
-                };
-            }
-        };
-        let out_path = output_dir.path().to_path_buf();
-
-        let shared_info = match self
-            .make
-            .get_shared_artifacts()
-            .get(&artifact_name)
-            .cloned()
-        {
-            Some(info) => info,
-            None => {
-                let mut results = Vec::new();
-                let msg = format!("Shared artifact '{}' not found", artifact_name);
-                for target in &machine_targets {
-                    results.push((target.clone(), false, ScriptOutput::from_message(&msg)));
-                }
-                for target in &user_targets {
-                    results.push((target.clone(), false, ScriptOutput::from_message(&msg)));
-                }
-                return Message::SharedSerializeFinished {
-                    artifact_index,
-                    results,
-                };
-            }
-        };
-
-        let backend = self.backend.clone();
-        let make = self.make.clone();
-        let backend_name = shared_info.backend_name.clone();
-        let artifact_name_clone = artifact_name.clone();
-        let nixos_targets = machine_targets.clone();
-        let home_targets = user_targets.clone();
-        let log_level = self.log_level;
-
-        let result = Self::run_with_timeout(&artifact_name, "SharedSerialize", move || {
-            backend::serialization::run_shared_serialize(
-                &artifact_name_clone,
-                &backend_name,
-                &backend,
-                &out_path,
-                &make,
-                &nixos_targets,
-                &home_targets,
-                log_level,
-            )
-        })
-        .await;
-
-        match result {
-            TimeoutResult::Success(output) => {
-                let mut results = Vec::new();
-                for target in machine_targets {
-                    results.push((target, true, ScriptOutput::from_captured(&output)));
-                }
-                for target in user_targets {
-                    results.push((target, true, ScriptOutput::from_captured(&output)));
-                }
-                Message::SharedSerializeFinished {
-                    artifact_index,
-                    results,
-                }
-            }
-            TimeoutResult::OperationFailed(e) => {
-                let msg = format!("Serialize failed: {}", e);
-                let mut results = Vec::new();
-                for target in machine_targets {
-                    results.push((target, false, ScriptOutput::from_message(&msg)));
-                }
-                for target in user_targets {
-                    results.push((target, false, ScriptOutput::from_message(&msg)));
-                }
-                Message::SharedSerializeFinished {
-                    artifact_index,
-                    results,
-                }
-            }
-            TimeoutResult::TaskPanic(e) => {
-                let msg = format!("Task panicked: {}", e);
-                let mut results = Vec::new();
-                for target in machine_targets {
-                    results.push((target, false, ScriptOutput::from_message(&msg)));
-                }
-                for target in user_targets {
-                    results.push((target, false, ScriptOutput::from_message(&msg)));
-                }
-                Message::SharedSerializeFinished {
-                    artifact_index,
-                    results,
-                }
-            }
-            TimeoutResult::Timeout => {
-                let mut results = Vec::new();
-                for target in machine_targets {
-                    results.push((target, false, Self::timeout_output()));
-                }
-                for target in user_targets {
-                    results.push((target, false, Self::timeout_output()));
-                }
-                Message::SharedSerializeFinished {
-                    artifact_index,
-                    results,
-                }
-            }
-        }
-    }
-
     /// Execute a single effect and return the result.
     ///
     /// This is the core effect execution logic that runs in the background.
     /// Uses spawn_blocking for all blocking I/O operations.
-    #[allow(clippy::too_many_lines)]
     pub async fn execute(&mut self, effect: Effect) -> Message {
         log_component("BACKGROUND", "Starting execution of effect");
         match effect {
@@ -907,95 +813,29 @@ impl BackgroundEffectHandler {
             Effect::CheckSerialization {
                 artifact_index,
                 artifact_name,
-                target_type,
+                target_spec,
             } => {
-                let target = target_type.target_name().to_string();
-                let target_type_str = target_type.to_string();
-                self.execute_check_serialization(
-                    artifact_index,
-                    artifact_name,
-                    target,
-                    target_type_str,
-                )
-                .await
+                self.execute_check_serialization(artifact_index, artifact_name, target_spec)
+                    .await
             }
 
             Effect::RunGenerator {
                 artifact_index,
                 artifact_name,
-                target_type,
+                target_spec,
                 prompts,
             } => {
-                let target = target_type.target_name().to_string();
-                let target_type_str = target_type.to_string();
-                self.execute_run_generator(
-                    artifact_index,
-                    artifact_name,
-                    target,
-                    target_type_str,
-                    prompts,
-                )
-                .await
+                self.execute_run_generator(artifact_index, artifact_name, target_spec, prompts)
+                    .await
             }
 
             Effect::Serialize {
                 artifact_index,
                 artifact_name,
-                target_type,
+                target_spec,
             } => {
-                let target = target_type.target_name().to_string();
-                let target_type_str = target_type.to_string();
-                self.execute_serialize(artifact_index, artifact_name, target, target_type_str)
+                self.execute_serialize(artifact_index, artifact_name, target_spec)
                     .await
-            }
-
-            Effect::SharedCheckSerialization {
-                artifact_index,
-                artifact_name,
-                nixos_targets,
-                home_targets,
-            } => {
-                let targets: Vec<String> = nixos_targets
-                    .iter()
-                    .chain(home_targets.iter())
-                    .cloned()
-                    .collect();
-                let target_types: Vec<String> = nixos_targets
-                    .iter()
-                    .map(|_| "nixos".to_string())
-                    .chain(home_targets.iter().map(|_| "home".to_string()))
-                    .collect();
-                self.execute_shared_check_serialization(
-                    artifact_index,
-                    artifact_name,
-                    targets,
-                    target_types,
-                )
-                .await
-            }
-
-            Effect::RunSharedGenerator {
-                artifact_index,
-                artifact_name,
-                prompts,
-            } => {
-                self.execute_run_shared_generator(artifact_index, artifact_name, prompts)
-                    .await
-            }
-
-            Effect::SharedSerialize {
-                artifact_index,
-                artifact_name,
-                nixos_targets,
-                home_targets,
-            } => {
-                self.execute_shared_serialize(
-                    artifact_index,
-                    artifact_name,
-                    nixos_targets,
-                    home_targets,
-                )
-                .await
             }
 
             Effect::Batch(effects) => {

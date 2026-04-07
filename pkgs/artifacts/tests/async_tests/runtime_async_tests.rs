@@ -260,9 +260,9 @@ async fn test_run_async_sends_effects_to_background() {
     let cmd = Effect::CheckSerialization {
         artifact_index: 0,
         artifact_name: "test".to_string(),
-        target_type: TargetType::NixOS {
+        target_spec: artifacts::app::effect::TargetSpec::Single(TargetType::NixOS {
             machine: "machine".to_string(),
-        },
+        }),
     };
 
     cmd_tx.send(cmd).unwrap();
@@ -305,9 +305,9 @@ async fn test_run_async_handles_results() {
         .send(Effect::CheckSerialization {
             artifact_index: 0,
             artifact_name: "test".to_string(),
-            target_type: TargetType::NixOS {
+            target_spec: artifacts::app::effect::TargetSpec::Single(TargetType::NixOS {
                 machine: "machine".to_string(),
-            },
+            }),
         })
         .unwrap();
 
@@ -394,9 +394,9 @@ async fn test_select_shutdown_branch() {
         .send(Effect::CheckSerialization {
             artifact_index: 0,
             artifact_name: "test".to_string(),
-            target_type: TargetType::NixOS {
+            target_spec: artifacts::app::effect::TargetSpec::Single(TargetType::NixOS {
                 machine: "machine".to_string(),
-            },
+            }),
         })
         .unwrap();
 
@@ -444,9 +444,9 @@ async fn test_select_result_branch() {
             .send(Effect::CheckSerialization {
                 artifact_index: i,
                 artifact_name: format!("artifact{}", i),
-                target_type: TargetType::NixOS {
+                target_spec: artifacts::app::effect::TargetSpec::Single(TargetType::NixOS {
                     machine: "machine".to_string(),
-                },
+                }),
             })
             .unwrap();
     }
@@ -490,9 +490,9 @@ async fn test_select_command_branch() {
         .send(Effect::CheckSerialization {
             artifact_index: 42,
             artifact_name: "test".to_string(),
-            target_type: TargetType::NixOS {
+            target_spec: artifacts::app::effect::TargetSpec::Single(TargetType::NixOS {
                 machine: "machine".to_string(),
-            },
+            }),
         })
         .unwrap();
 
@@ -533,9 +533,9 @@ async fn test_select_channel_closed() {
         .send(Effect::CheckSerialization {
             artifact_index: 0,
             artifact_name: "test".to_string(),
-            target_type: TargetType::NixOS {
+            target_spec: artifacts::app::effect::TargetSpec::Single(TargetType::NixOS {
                 machine: "machine".to_string(),
-            },
+            }),
         })
         .unwrap();
 
@@ -586,9 +586,9 @@ async fn test_channel_disconnect_graceful() {
             .send(Effect::CheckSerialization {
                 artifact_index: i,
                 artifact_name: format!("artifact{}", i),
-                target_type: TargetType::NixOS {
+                target_spec: artifacts::app::effect::TargetSpec::Single(TargetType::NixOS {
                     machine: "machine".to_string(),
-                },
+                }),
             })
             .unwrap();
     }
@@ -641,9 +641,9 @@ async fn test_result_channel_disconnect() {
         .send(Effect::CheckSerialization {
             artifact_index: 0,
             artifact_name: "test".to_string(),
-            target_type: TargetType::NixOS {
+            target_spec: artifacts::app::effect::TargetSpec::Single(TargetType::NixOS {
                 machine: "machine".to_string(),
-            },
+            }),
         })
         .unwrap();
 
@@ -676,9 +676,9 @@ async fn test_graceful_shutdown_with_in_flight_commands() {
             .send(Effect::CheckSerialization {
                 artifact_index: i,
                 artifact_name: format!("artifact{}", i),
-                target_type: TargetType::NixOS {
+                target_spec: artifacts::app::effect::TargetSpec::Single(TargetType::NixOS {
                     machine: "machine".to_string(),
-                },
+                }),
             })
             .unwrap();
     }
@@ -758,9 +758,9 @@ async fn test_shutdown_drain_timeout() {
             .send(Effect::CheckSerialization {
                 artifact_index: i,
                 artifact_name: format!("artifact{}", i),
-                target_type: TargetType::NixOS {
+                target_spec: artifacts::app::effect::TargetSpec::Single(TargetType::NixOS {
                     machine: "machine".to_string(),
-                },
+                }),
             })
             .unwrap();
     }
@@ -799,9 +799,9 @@ async fn test_effect_to_command_conversion() {
     let effect = Effect::CheckSerialization {
         artifact_index: 0,
         artifact_name: "test".to_string(),
-        target_type: TargetType::NixOS {
+        target_spec: artifacts::app::effect::TargetSpec::Single(TargetType::NixOS {
             machine: "machine-one".to_string(),
-        },
+        }),
     };
     let cmds = effect_to_command(effect);
     assert_eq!(cmds.len(), 1);

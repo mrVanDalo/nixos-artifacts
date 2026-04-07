@@ -1,6 +1,15 @@
 #!/usr/bin/env bash
 # Skip generation for machine-one/artifact-two, require it for others
-if [ -z "$machine" ] || [ -z "$artifact" ]; then
+# Use the unified targets.json to get machine name
+
+if [ -z "$targets" ] || [ -z "$artifact" ]; then
+    exit 1
+fi
+
+# Get machine name from targets.json
+machine=$(jq -r '.targets[0].name' "$targets")
+
+if [ -z "$machine" ]; then
     exit 1
 fi
 

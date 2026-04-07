@@ -62,9 +62,9 @@ async fn test_graceful_shutdown_completes_in_flight() {
         .send(Effect::CheckSerialization {
             artifact_index: 0,
             artifact_name: "in-flight".to_string(),
-            target_type: TargetType::NixOS {
+            target_spec: artifacts::app::effect::TargetSpec::Single(TargetType::NixOS {
                 machine: "machine".to_string(),
-            },
+            }),
         })
         .unwrap();
 
@@ -124,9 +124,9 @@ async fn test_shutdown_with_queued_commands() {
             .send(Effect::CheckSerialization {
                 artifact_index: i,
                 artifact_name: format!("queued-{}", i),
-                target_type: TargetType::NixOS {
+                target_spec: artifacts::app::effect::TargetSpec::Single(TargetType::NixOS {
                     machine: "machine".to_string(),
-                },
+                }),
             })
             .unwrap();
     }
@@ -222,9 +222,9 @@ async fn test_result_channel_disconnect() {
         .send(Effect::CheckSerialization {
             artifact_index: 0,
             artifact_name: "test".to_string(),
-            target_type: TargetType::NixOS {
+            target_spec: artifacts::app::effect::TargetSpec::Single(TargetType::NixOS {
                 machine: "machine".to_string(),
-            },
+            }),
         })
         .unwrap();
 
@@ -263,9 +263,9 @@ async fn test_command_timeout() {
         .send(Effect::CheckSerialization {
             artifact_index: 99,
             artifact_name: "timeout-test".to_string(),
-            target_type: TargetType::NixOS {
+            target_spec: artifacts::app::effect::TargetSpec::Single(TargetType::NixOS {
                 machine: "machine".to_string(),
-            },
+            }),
         })
         .unwrap();
 

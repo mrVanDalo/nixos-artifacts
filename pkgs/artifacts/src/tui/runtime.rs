@@ -601,6 +601,7 @@ mod tests {
 
     #[test]
     fn test_effect_to_command_handles_all_variants() {
+        use crate::app::effect::TargetSpec;
         use crate::app::model::TargetType;
         use std::collections::HashMap;
 
@@ -616,9 +617,9 @@ mod tests {
         let cmd = effect_to_command(Effect::CheckSerialization {
             artifact_index: 0,
             artifact_name: "test".to_string(),
-            target_type: TargetType::NixOS {
+            target_spec: TargetSpec::Single(TargetType::NixOS {
                 machine: "machine".to_string(),
-            },
+            }),
         });
         assert_eq!(cmd.len(), 1);
         assert!(matches!(cmd[0], Effect::CheckSerialization { .. }));
@@ -627,9 +628,9 @@ mod tests {
         let cmd = effect_to_command(Effect::RunGenerator {
             artifact_index: 0,
             artifact_name: "test".to_string(),
-            target_type: TargetType::NixOS {
+            target_spec: TargetSpec::Single(TargetType::NixOS {
                 machine: "machine".to_string(),
-            },
+            }),
             prompts: HashMap::new(),
         });
         assert_eq!(cmd.len(), 1);
@@ -676,9 +677,9 @@ mod tests {
         let cmd = Effect::CheckSerialization {
             artifact_index: 0,
             artifact_name: "test".to_string(),
-            target_type: TargetType::NixOS {
+            target_spec: crate::app::effect::TargetSpec::Single(TargetType::NixOS {
                 machine: "machine".to_string(),
-            },
+            }),
         };
 
         cmd_tx.send(cmd).expect("Should be able to send command");
@@ -779,9 +780,9 @@ mod tests {
             let cmd = Effect::CheckSerialization {
                 artifact_index: i,
                 artifact_name: format!("artifact{}", i),
-                target_type: TargetType::NixOS {
+                target_spec: crate::app::effect::TargetSpec::Single(TargetType::NixOS {
                     machine: "machine".to_string(),
-                },
+                }),
             };
             cmd_tx.send(cmd).expect("Should send command");
         }

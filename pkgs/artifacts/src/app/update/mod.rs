@@ -27,7 +27,7 @@ mod prompt;
 
 pub use init::init;
 
-use super::effect::Effect;
+use super::effect::{Effect, TargetSpec};
 use super::message::{Message, ScriptOutput};
 use super::model::*;
 
@@ -72,27 +72,13 @@ pub fn update(model: Model, msg: Message) -> (Model, Effect) {
                 result,
             },
         ) => generating::handle_serialize_finished(model, artifact_index, result),
-        (
-            Screen::Generating(_),
-            Message::SharedGeneratorFinished {
-                artifact_index,
-                result,
-            },
-        ) => generating::handle_shared_generator_finished(model, artifact_index, result),
-        (
-            Screen::Generating(_),
-            Message::SharedSerializeFinished {
-                artifact_index,
-                results,
-            },
-        ) => generating::handle_shared_serialize_finished(model, artifact_index, results),
 
         // === Chronological Log Screen ===
         (Screen::ChronologicalLog(_), Message::Key(key)) => {
             chronological_log::update_chronological_log(model, key)
         }
 
-        // === Check serialization results (any screen) ===
+        // === Check serialization results (any screen, single or shared) ===
         (
             _,
             Message::CheckSerializationResult {
@@ -101,16 +87,6 @@ pub fn update(model: Model, msg: Message) -> (Model, Effect) {
                 result,
             },
         ) => handle_check_result(model, artifact_index, status, result),
-
-        // === Shared check serialization results (any screen) ===
-        (
-            _,
-            Message::SharedCheckSerializationResult {
-                artifact_index,
-                statuses,
-                outputs,
-            },
-        ) => handle_shared_check_result(model, artifact_index, statuses, outputs),
 
         // === Streaming output (any screen) ===
         (
@@ -303,7 +279,7 @@ pub(crate) fn start_generation_for_selected_internal(
                 let effect = Effect::RunGenerator {
                     artifact_index,
                     artifact_name: artifact_name.clone(),
-                    target_type,
+                    target_spec: TargetSpec::Single(target_type),
                     prompts: Default::default(),
                 };
                 model.screen = Screen::Generating(GeneratingState {
@@ -328,9 +304,13 @@ pub(crate) fn start_generation_for_selected_internal(
                 }
 
                 if prompts.is_empty() {
-                    let effect = Effect::RunSharedGenerator {
+                    let effect = Effect::RunGenerator {
                         artifact_index,
                         artifact_name: artifact_name.clone(),
+                        target_spec: TargetSpec::Multi {
+                            nixos_targets: nixos_targets.clone(),
+                            home_targets: home_targets.clone(),
+                        },
                         prompts: Default::default(),
                     };
                     model.screen = Screen::Generating(GeneratingState {
@@ -375,51 +355,6 @@ pub(crate) fn start_generation_for_selected_internal(
             }
         }
     }
-}
-
-// === Shared Artifact Handlers ===
-
-fn handle_shared_check_result(
-    mut model: Model,
-    artifact_index: usize,
-    statuses: Vec<ArtifactStatus>,
-    outputs: Vec<ScriptOutput>,
-) -> (Model, Effect) {
-    // Aggregate results: needs_generation if any needs it, exists if any is UpToDate
-    let any_needs_gen = statuses
-        .iter()
-        .any(|s| matches!(s, ArtifactStatus::NeedsGeneration));
-
-    let Some(entry) = model.entries.get_mut(artifact_index) else {
-        return (model, Effect::None);
-    };
-    // Add captured script output to logs using first output if available
-    if let Some(check_output) = outputs.first()
-        && (!check_output.stdout_lines.is_empty() || !check_output.stderr_lines.is_empty())
-    {
-        entry
-            .step_logs_mut()
-            .append_stdout(LogStep::Check, &check_output.stdout_lines);
-        entry
-            .step_logs_mut()
-            .append_stderr(LogStep::Check, &check_output.stderr_lines);
-    }
-
-    // Set status based on aggregated result
-    if any_needs_gen {
-        *entry.status_mut() = ArtifactStatus::NeedsGeneration;
-        entry.step_logs_mut().check.push(LogEntry {
-            level: LogLevel::Info,
-            message: "Shared artifact needs regeneration".to_string(),
-        });
-    } else {
-        *entry.status_mut() = ArtifactStatus::UpToDate;
-        entry.step_logs_mut().check.push(LogEntry {
-            level: LogLevel::Success,
-            message: "Already up to date".to_string(),
-        });
-    }
-    (model, Effect::None)
 }
 
 /// Handles streaming output line received during script execution.

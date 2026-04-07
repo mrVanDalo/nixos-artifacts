@@ -1,4 +1,4 @@
-use super::super::effect::Effect;
+use super::super::effect::{Effect, TargetSpec};
 use super::super::message::KeyEvent;
 use super::super::model::*;
 use crossterm::event::KeyCode;
@@ -55,9 +55,13 @@ pub(super) fn update_generator_selection(mut model: Model, key: KeyEvent) -> (Mo
 
                 if prompts.is_empty() {
                     // No prompts needed, go straight to generating
-                    let effect = Effect::RunSharedGenerator {
+                    let effect = Effect::RunGenerator {
                         artifact_index,
                         artifact_name: shared.info.artifact_name.clone(),
+                        target_spec: TargetSpec::Multi {
+                            nixos_targets: shared.info.nixos_targets.clone(),
+                            home_targets: shared.info.home_targets.clone(),
+                        },
                         prompts: Default::default(),
                     };
                     // exists = true if status is UpToDate (regenerating existing)

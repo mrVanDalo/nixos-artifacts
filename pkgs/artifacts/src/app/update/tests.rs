@@ -423,7 +423,8 @@ fn test_update_effect_batching() {
     }
 }
 
-/// Test that SharedCheckSerializationResult updates shared artifact status correctly
+/// Test that CheckSerializationResult updates shared artifact status correctly
+/// Note: With unified messages, aggregation happens in background handler
 #[test]
 fn test_shared_check_serialization_result_updates_status() {
     // Create a model with a shared artifact
@@ -432,16 +433,17 @@ fn test_shared_check_serialization_result_updates_status() {
     // Initial status should be Pending
     assert_eq!(model.entries[0].status(), &ArtifactStatus::Pending);
 
-    // Simulate successful shared check result indicating generation needed
+    // Simulate successful check result indicating generation needed
+    // (background handler now aggregates to single status before sending)
     let (new_model, effect) = update(
         model,
-        Message::SharedCheckSerializationResult {
+        Message::CheckSerializationResult {
             artifact_index: 0,
-            statuses: vec![ArtifactStatus::NeedsGeneration],
-            outputs: vec![ScriptOutput {
+            status: ArtifactStatus::NeedsGeneration,
+            result: Ok(ScriptOutput {
                 stdout_lines: vec!["Checking shared artifact...".to_string()],
                 stderr_lines: vec![],
-            }],
+            }),
         },
     );
 
@@ -456,18 +458,18 @@ fn test_shared_check_serialization_result_updates_status() {
     assert!(effect.is_none());
 }
 
-/// Test that SharedCheckSerializationResult handles up-to-date status
+/// Test that CheckSerializationResult handles up-to-date status for shared artifacts
 #[test]
 fn test_shared_check_serialization_result_up_to_date() {
     let model = make_test_model_with_shared();
 
-    // Simulate successful shared check result indicating up-to-date
+    // Simulate successful check result indicating up-to-date
     let (new_model, effect) = update(
         model,
-        Message::SharedCheckSerializationResult {
+        Message::CheckSerializationResult {
             artifact_index: 0,
-            statuses: vec![ArtifactStatus::UpToDate],
-            outputs: vec![],
+            status: ArtifactStatus::UpToDate,
+            result: Ok(ScriptOutput::default()),
         },
     );
 
@@ -480,30 +482,25 @@ fn test_shared_check_serialization_result_up_to_date() {
     assert!(effect.is_none());
 }
 
-/// Test that SharedCheckSerializationResult handles multiple targets
+/// Test that CheckSerializationResult sets NeedsGeneration when check indicates it
+/// Note: Multi-target aggregation now happens in background handler,
+/// so update() receives a single aggregated status
 #[test]
 fn test_shared_check_serialization_result_multi_target() {
     let model = make_test_model_with_shared();
 
-    // Simulate successful shared check result with multiple targets (any NeedsGeneration = needs gen)
+    // Simulate aggregated result where any target needs generation
+    // (background handler would have done: any NeedsGeneration => NeedsGeneration)
     let (new_model, effect) = update(
         model,
-        Message::SharedCheckSerializationResult {
+        Message::CheckSerializationResult {
             artifact_index: 0,
-            statuses: vec![
-                ArtifactStatus::UpToDate,
-                ArtifactStatus::NeedsGeneration,
-                ArtifactStatus::UpToDate,
-            ],
-            outputs: vec![
-                ScriptOutput::default(),
-                ScriptOutput::default(),
-                ScriptOutput::default(),
-            ],
+            status: ArtifactStatus::NeedsGeneration,
+            result: Ok(ScriptOutput::default()),
         },
     );
 
-    // Status should transition to NeedsGeneration because one target needs it
+    // Status should transition to NeedsGeneration
     assert_eq!(
         new_model.entries[0].status(),
         &ArtifactStatus::NeedsGeneration,
@@ -645,10 +642,10 @@ fn test_single_generator_no_prompts_goes_to_generating() {
         new_model.screen
     );
 
-    // Effect should be RunSharedGenerator
+    // Effect should be RunGenerator with TargetSpec::Multi
     assert!(
-        matches!(effect, Effect::RunSharedGenerator { .. }),
-        "Expected RunSharedGenerator effect, got {:?}",
+        matches!(effect, Effect::RunGenerator { ref target_spec, .. } if matches!(target_spec, TargetSpec::Multi { .. })),
+        "Expected RunGenerator effect with TargetSpec::Multi, got {:?}",
         effect
     );
 }

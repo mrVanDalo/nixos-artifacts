@@ -1,4 +1,4 @@
-use super::super::effect::Effect;
+use super::super::effect::{Effect, TargetSpec};
 use super::super::model::*;
 
 /// Compute the initial effect to run when the app starts.
@@ -23,13 +23,15 @@ pub fn init(model: &Model) -> Effect {
             ListEntry::Single(single) => Effect::CheckSerialization {
                 artifact_index: i,
                 artifact_name: single.artifact.name.clone(),
-                target_type: single.target_type.clone(),
+                target_spec: TargetSpec::Single(single.target_type.clone()),
             },
-            ListEntry::Shared(shared) => Effect::SharedCheckSerialization {
+            ListEntry::Shared(shared) => Effect::CheckSerialization {
                 artifact_index: i,
                 artifact_name: shared.info.artifact_name.clone(),
-                nixos_targets: shared.info.nixos_targets.clone(),
-                home_targets: shared.info.home_targets.clone(),
+                target_spec: TargetSpec::Multi {
+                    nixos_targets: shared.info.nixos_targets.clone(),
+                    home_targets: shared.info.home_targets.clone(),
+                },
             },
         })
         .collect();

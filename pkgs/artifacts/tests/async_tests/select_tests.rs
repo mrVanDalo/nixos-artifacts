@@ -61,9 +61,9 @@ async fn test_select_shutdown_branch() {
         .send(Effect::CheckSerialization {
             artifact_index: 0,
             artifact_name: "test".to_string(),
-            target_type: TargetType::NixOS {
+            target_spec: artifacts::app::effect::TargetSpec::Single(TargetType::NixOS {
                 machine: "machine".to_string(),
-            },
+            }),
         })
         .unwrap();
 
@@ -125,9 +125,9 @@ async fn test_select_command_branch() {
             .send(Effect::CheckSerialization {
                 artifact_index: i,
                 artifact_name: format!("artifact-{}", i),
-                target_type: TargetType::NixOS {
+                target_spec: artifacts::app::effect::TargetSpec::Single(TargetType::NixOS {
                     machine: "machine".to_string(),
-                },
+                }),
             })
             .unwrap();
     }
@@ -180,9 +180,9 @@ async fn test_select_channel_closed_branch() {
         .send(Effect::CheckSerialization {
             artifact_index: 42,
             artifact_name: "test".to_string(),
-            target_type: TargetType::NixOS {
+            target_spec: artifacts::app::effect::TargetSpec::Single(TargetType::NixOS {
                 machine: "machine".to_string(),
-            },
+            }),
         })
         .unwrap();
 
@@ -252,9 +252,9 @@ async fn test_select_with_in_flight_command() {
             .send(Effect::CheckSerialization {
                 artifact_index: i,
                 artifact_name: format!("artifact-{}", i),
-                target_type: TargetType::NixOS {
+                target_spec: artifacts::app::effect::TargetSpec::Single(TargetType::NixOS {
                     machine: "machine".to_string(),
-                },
+                }),
             })
             .unwrap();
     }
