@@ -10,7 +10,8 @@
       "Bash(cargo insta test:*)",
       "Bash(wc -l /home/palo/dev/artifacts/nixos-artifacts/pkgs/artifacts/src/**/*.rs)",
       "Bash(/tmp/analyze.txt:*)",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(jj log:*)"
     ]
   }
 }

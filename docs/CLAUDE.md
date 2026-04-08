@@ -32,21 +32,19 @@ docs/
         ├── pages/               # Main documentation pages
         │   ├── index.adoc                         # Landing page
         │   ├── what-is-nixos-artifacts.adoc       # Overview and concepts
+        │   ├── getting-started.adoc               # Getting started guide
         │   ├── artifact-definition-example.adoc   # How to define artifacts
-        │   ├── configure-nixos-artifacts.adoc       # Configuration and usage guide
-        │   ├── backend-quickstart.adoc           # Create a backend in minutes
-        │   ├── backend-concepts.adoc             # Backend execution flow
-        │   ├── backend-scripts-reference.adoc    # Scripts reference
-        │   ├── backend-nix-integration.adoc      # Nix integration
-        │   ├── artifacts-workflow-diagrams.adoc # Workflow visualization
+        │   ├── configure-nixos-artifacts.adoc     # Configuration and usage guide
+        │   ├── backend-quickstart.adoc            # Create a backend in minutes
+        │   ├── backend-concepts.adoc              # Backend execution flow
+        │   ├── backend-scripts-reference.adoc     # Scripts reference
         │   ├── reference-mkbackend.adoc           # mkBackend function reference
         │   ├── reference-mkartifactcli.adoc       # mkArtifactCli function reference
         │   ├── options-nixos.adoc                 # NixOS options (GENERATED)
         │   └── options-homemanager.adoc           # Home Manager options (GENERATED)
         └── partials/            # Reusable documentation fragments
             ├── artifacts-input-example.adoc
-            ├── artifact-store-example-ssh.adoc
-            └── workflow-loop-diagram.mermaid
+            └── artifact-store-example-ssh.adoc
 ```
 
 ## Documentation Format
