@@ -10,7 +10,7 @@
     {
       packages.artifacts-bin = pkgs.rustPlatform.buildRustPackage rec {
         pname = "artifacts";
-        version = "0.2.0";
+        version = "4.0";
 
         src = ./.;
         cargoLock.lockFile = ./Cargo.lock;
