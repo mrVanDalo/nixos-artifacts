@@ -67,7 +67,7 @@ self.lib.mkBackend {
 
 | `settings`
 | No
-| Attribute set of backend-specific settings. These are available in the `$config` JSON file at runtime. Default: `{ }`
+| Attribute set of backend-specific settings. These are available in the `$targets` JSON file under each target's `config` field at runtime. Default: `{ }`
 
 | `nixos_enabled`
 | No

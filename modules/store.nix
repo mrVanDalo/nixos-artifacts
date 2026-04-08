@@ -35,9 +35,9 @@ with types;
                 When `true`, the artifact is generated once and distributed to all targets that define it.
                 All definitions with the same artifact name and `shared = true` are aggregated together.
 
-                The backend must provide a `shared_serialize` script to handle serialization for all targets at once.
-                The script receives `$machines` and `$users` environment variables pointing to JSON files that map
-                target names to their respective `artifacts.config.<backend>` configurations.
+                The backend must provide a `shared.check` and `shared.serialize` scripts to handle shared artifacts.
+                The scripts receive a unified `$targets` environment variable pointing to a JSON file containing
+                all target names, types, and their respective backend configurations.
               '';
             };
 
@@ -139,11 +139,13 @@ with types;
               default = null;
               description = ''
                 Generator Script. These environment variables are handed over to this script.
-                - `$machine` machine name.
-                - `$artifact` artifact name.
-                - `$config` a file which contains `artifact.config.<backend>` values as json.
-                - `$prompt` a folder containing files containing the prompt inputs (defined by the prompt option).
                 - `$out` a folder the generator script must create a file for each file definition of the artifact.
+                - `$prompts` a folder containing files containing the prompt inputs (defined by the prompts option).
+                - `$artifact` artifact name.
+                - `$artifact_context` context type: "nixos", "homemanager", or "shared".
+                - `$machine` machine name (only for NixOS targets).
+                - `$username` username (only for Home Manager targets).
+                - `$LOG_LEVEL` log level.
               '';
               example = literalExpression ''
                 pkgs.write.writeBash "random" ${"''"}

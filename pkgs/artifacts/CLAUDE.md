@@ -81,10 +81,10 @@ another_key = 123
 
 - `shared.serialize`: Called instead of `nixos.serialize` for shared artifacts
 - `shared.check`: Called instead of `nixos.check` for shared artifacts
-- Environment: `$artifact`, `$out`, `$machines` (JSON file), `$users` (JSON
-  file)
-- The `$machines` and `$users` files contain mappings from target names to their
-  backend configs
+- Environment: `$artifact`, `$artifact_context`, `$targets` (JSON file), `$out`
+  (serialize only), `$inputs` (check only), `$LOG_LEVEL`
+- The `$targets` file contains a unified JSON structure with context, target
+  names, types, and their backend configs
 
 ### Splitting backend.toml with Includes
 
@@ -457,8 +457,8 @@ fn test_complete_flow() {
 1. Create temporary `inputs` directory
 2. Create file for every artifact file entry containing JSON with `path`,
    `owner`, `group`
-3. Call `check_serialization` script:
-   - Environment: `$inputs`, `$machine`, `$artifact`
+3. Call `check` script:
+   - Environment: `$artifact`, `$artifact_context`, `$targets`, `$inputs`, `$LOG_LEVEL`
    - Exit code 0: Skip to next artifact
    - Non-zero: Continue generation
 4. Create temporary `prompts` directory
@@ -466,12 +466,11 @@ fn test_complete_flow() {
 6. Prompt user for input, save to `prompts` directory
 7. Call `generator` script:
    - Execute in bubblewrap container
-   - Environment: `$prompts`, `$out`
+   - Environment: `$out`, `$prompts`, `$artifact`, `$artifact_context`, `$machine`/`$username` (context-dependent), `$LOG_LEVEL`
    - Verify success
    - Verify all demanded files generated
 8. Call `serialize` script:
-   - Execute in bubblewrap container
-   - Environment: `$out`, `$machine`, `$artifact`
+   - Environment: `$artifact`, `$artifact_context`, `$targets`, `$out`, `$LOG_LEVEL`
 9. Remove temporary folders
 
 **Implementation**: `src/cli/commands/generate.rs`
@@ -489,10 +488,9 @@ Launch interactive TUI for managing artifacts.
 **Usage**:
 
 ```bash
-artifacts tui                      # Show all artifacts
-artifacts tui --machine server-1   # Filter by NixOS machine
-artifacts tui --home alice@host    # Filter by home-manager user
-artifacts tui --artifact ssh-key   # Filter by artifact name
+artifacts                          # Show all artifacts (current directory as flake)
+artifacts /path/to/flake           # Specify flake directory
+artifacts --log-file /tmp/log.txt  # Enable debug logging
 ```
 
 **Keybindings** (artifact list):

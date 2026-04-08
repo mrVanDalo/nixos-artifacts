@@ -59,18 +59,10 @@ You can select a different backend for an individual artifact by setting the ser
 [source,shell]
 ----
 artifacts <1>
-artifacts --machine my-machine <2>
-artifacts --home alice@host <3>
-artifacts --artifact my-artifact <4>
-artifacts --machine my-machine --artifact my-artifact <5>
-artifacts /path/to/flake <6>
+artifacts /path/to/flake <2>
 ----
-<1> Show all artifacts from all machines and home-manager configurations
-<2> Filter to show only artifacts for the specified machine (repeatable)
-<3> Filter to show only artifacts for the specified home-manager user (repeatable)
-<4> Filter to show only artifacts matching the specified name (repeatable)
-<5> Combine filters to show specific artifacts on specific machines
-<6> Specify a different flake directory (default: current directory)
+<1> Show all artifacts from all machines and home-manager configurations (uses current directory as flake)
+<2> Specify a different flake directory
 
 === Logging
 

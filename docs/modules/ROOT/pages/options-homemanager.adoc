@@ -20,7 +20,33 @@ __Type:__ attribute set of (submodule)
 
 
 
-__Default:__ ``{ }``
+__Default:__
+
+[source,nix]
+----
+{ }
+----
+
+
+
+== artifacts{zwsp}.store{zwsp}.{zwsp}+<+{zwsp}name{gt}{zwsp}.description
+
+
+
+Optional description of the artifact for documentation purposes{zwsp}.
+
+
+
+__Type:__ null or string
+
+
+
+__Default:__
+
+[source,nix]
+----
+null
+----
 
 
 
@@ -36,7 +62,12 @@ __Type:__ attribute set of (submodule)
 
 
 
-__Default:__ ``{ }``
+__Default:__
+
+[source,nix]
+----
+{ }
+----
 
 
 
@@ -52,7 +83,12 @@ __Type:__ string
 
 
 
-__Default:__ ``{quot}0400{quot}``
+__Default:__
+
+[source,nix]
+----
+"0400"
+----
 
 
 
@@ -68,11 +104,21 @@ __Type:__ string
 
 
 
-__Default:__ ``${XDG_RUNTIME_DIR}/artifacts/{zwsp}+<+{zwsp}artifact-name{gt}/{zwsp}+<+{zwsp}file-name{gt}``
+__Default:__
+
+[source,nix]
+----
+${XDG_RUNTIME_DIR}/artifacts/<artifact-name>/<file-name>
+----
 
 
 
-__Example:__ ``${XDG_CONFIG_DIR}/artifacts/‹name›/‹name›``
+__Example:__
+
+[source,nix]
+----
+${XDG_CONFIG_DIR}/artifacts/‹name›/‹name›
+----
 
 
 
@@ -100,12 +146,18 @@ __Type:__ null or package
 
 
 
-__Default:__ ``null``
+__Default:__
+
+[source,nix]
+----
+null
+----
 
 
 
 __Example:__
 
+[source,nix]
 ----
 pkgs.write.writeBash "random" ''
   ${pkgs.xkcdpass}/bin/xkcdpass --numwords 10 > $out/random_password
@@ -127,7 +179,12 @@ __Type:__ attribute set of (submodule)
 
 
 
-__Default:__ ``{ }``
+__Default:__
+
+[source,nix]
+----
+{ }
+----
 
 
 
@@ -143,7 +200,12 @@ __Type:__ string
 
 
 
-__Default:__ ``{quot}input for ‹name›{quot}``
+__Default:__
+
+[source,nix]
+----
+"input for ‹name›"
+----
 
 
 
@@ -159,6 +221,11 @@ __Type:__ string
 
 
 
-__Default:__ ``config{zwsp}.artifacts{zwsp}.default{zwsp}.backend{zwsp}.serialization``
+__Default:__
+
+[source,nix]
+----
+config.artifacts.default.backend.serialization
+----
 
 

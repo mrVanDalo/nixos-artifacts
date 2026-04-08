@@ -111,11 +111,14 @@ For artifacts that need user input (like tokens or passwords), use the `prompts`
 }
 ----
 
-The generator script receives:
+The generator script receives these environment variables:
 
-* `$out/` — Directory where you write generated files (keys must match `files` names)
-* `$machine` — Machine name from the NixOS configuration
-* `$prompts/` — Directory containing prompt inputs (if `prompts` is defined)
+* `$out` — Directory where you write generated files (keys must match `files` names)
+* `$prompts` — Directory containing prompt inputs (if `prompts` is defined)
+* `$artifact` — Artifact name
+* `$artifact_context` — `"nixos"`, `"homemanager"`, or `"shared"`
+* `$machine` — Machine name (NixOS targets only)
+* `$username` — Username (Home Manager targets only)
 
 == Step 4: Generate Artifacts
 
@@ -123,19 +126,16 @@ Run the artifacts TUI to generate your secrets:
 
 [source,shell]
 ----
-# Launch TUI showing all artifacts
+# Launch TUI (from your flake directory)
 nix run .#artifacts
 
-# Or filter to a specific machine
-nix run .#artifacts --machine my-host
-
-# Or filter to a specific artifact
-nix run .#artifacts --artifact wireguard
+# Or specify a different flake directory
+nix run .#artifacts /path/to/flake
 ----
 
 The TUI will:
 
-1. Show a list of artifacts (filtered by your arguments)
+1. Show a list of all artifacts across machines and home-manager configurations
 2. Let you select artifacts to generate
 3. Prompt for any required inputs
 4. Run generator scripts and serialize via the backend (xref:latest@nixos-artifacts-agenix:ROOT:index.adoc[agenix])

@@ -20,7 +20,33 @@ __Type:__ attribute set of (submodule)
 
 
 
-__Default:__ ``{ }``
+__Default:__
+
+[source,nix]
+----
+{ }
+----
+
+
+
+== artifacts{zwsp}.store{zwsp}.{zwsp}+<+{zwsp}name{gt}{zwsp}.description
+
+
+
+Optional description of the artifact for documentation purposes{zwsp}.
+
+
+
+__Type:__ null or string
+
+
+
+__Default:__
+
+[source,nix]
+----
+null
+----
 
 
 
@@ -36,7 +62,12 @@ __Type:__ attribute set of (submodule)
 
 
 
-__Default:__ ``{ }``
+__Default:__
+
+[source,nix]
+----
+{ }
+----
 
 
 
@@ -52,7 +83,12 @@ __Type:__ string
 
 
 
-__Default:__ ``{quot}root{quot}``
+__Default:__
+
+[source,nix]
+----
+"root"
+----
 
 
 
@@ -68,7 +104,12 @@ __Type:__ string
 
 
 
-__Default:__ ``{quot}0400{quot}``
+__Default:__
+
+[source,nix]
+----
+"0400"
+----
 
 
 
@@ -84,7 +125,12 @@ __Type:__ string
 
 
 
-__Default:__ ``{quot}root{quot}``
+__Default:__
+
+[source,nix]
+----
+"root"
+----
 
 
 
@@ -100,11 +146,21 @@ __Type:__ string
 
 
 
-__Default:__ ``/run/artifacts/{zwsp}+<+{zwsp}artifact-name{gt}/{zwsp}+<+{zwsp}file-name{gt}``
+__Default:__
+
+[source,nix]
+----
+/run/artifacts/<artifact-name>/<file-name>
+----
 
 
 
-__Example:__ ``{quot}/etc/ssh/ssh_host_ed25519_key{quot}``
+__Example:__
+
+[source,nix]
+----
+"/etc/ssh/ssh_host_ed25519_key"
+----
 
 
 
@@ -115,15 +171,19 @@ __Example:__ ``{quot}/etc/ssh/ssh_host_ed25519_key{quot}``
 Generator Script{zwsp}. These environment variables are handed over to this script{zwsp}.
 
 [options="compact"]
-* {empty}``$machine`` machine name{zwsp}.
+* {empty}``$out`` a folder the generator script must create a file for each file definition of the artifact{zwsp}.
+
+* {empty}``$prompts`` a folder containing files containing the prompt inputs (defined by the prompts option){zwsp}.
 
 * {empty}``$artifact`` artifact name{zwsp}.
 
-* {empty}``$config`` a file which contains ``artifact{zwsp}.config{zwsp}.{zwsp}+<+{zwsp}backend{gt}`` values as json{zwsp}.
+* {empty}``$artifact_context`` context type: “nixos”, “homemanager”, or “shared”{zwsp}.
 
-* {empty}``$prompt`` a folder containing files containing the prompt inputs (defined by the prompt option){zwsp}.
+* {empty}``$machine`` machine name (only for NixOS targets){zwsp}.
 
-* {empty}``$out`` a folder the generator script must create a file for each file definition of the artifact{zwsp}.
+* {empty}``$username`` username (only for Home Manager targets){zwsp}.
+
+* {empty}``$LOG_LEVEL`` log level{zwsp}.
 
 
 
@@ -132,12 +192,18 @@ __Type:__ null or package
 
 
 
-__Default:__ ``null``
+__Default:__
+
+[source,nix]
+----
+null
+----
 
 
 
 __Example:__
 
+[source,nix]
 ----
 pkgs.write.writeBash "random" ''
   ${pkgs.xkcdpass}/bin/xkcdpass --numwords 10 > $out/random_password
@@ -159,7 +225,12 @@ __Type:__ attribute set of (submodule)
 
 
 
-__Default:__ ``{ }``
+__Default:__
+
+[source,nix]
+----
+{ }
+----
 
 
 
@@ -175,7 +246,12 @@ __Type:__ string
 
 
 
-__Default:__ ``{quot}input for ‹name›{quot}``
+__Default:__
+
+[source,nix]
+----
+"input for ‹name›"
+----
 
 
 
@@ -191,7 +267,12 @@ __Type:__ string
 
 
 
-__Default:__ ``config{zwsp}.artifacts{zwsp}.default{zwsp}.backend{zwsp}.serialization``
+__Default:__
+
+[source,nix]
+----
+config.artifacts.default.backend.serialization
+----
 
 
 
@@ -203,7 +284,7 @@ Whether this artifact is shared across multiple machines and/or home-manager con
 
 When ``true``, the artifact is generated once and distributed to all targets that define it{zwsp}. All definitions with the same artifact name and ``shared = true`` are aggregated together{zwsp}.
 
-The backend must configure a ``[backend.shared]`` section with a ``serialize`` script to handle serialization for all targets at once{zwsp}. The script receives ``$machines`` and ``$users`` environment variables pointing to JSON files that map target names to their respective ``artifacts{zwsp}.config{zwsp}.{zwsp}+<+{zwsp}backend{gt}`` configurations{zwsp}.
+The backend must provide a ``shared{zwsp}.check`` and ``shared{zwsp}.serialize`` scripts to handle shared artifacts{zwsp}. The scripts receive a unified ``$targets`` environment variable pointing to a JSON file containing all target names, types, and their respective backend configurations{zwsp}.
 
 
 
@@ -211,6 +292,11 @@ __Type:__ boolean
 
 
 
-__Default:__ ``false``
+__Default:__
+
+[source,nix]
+----
+false
+----
 
 
