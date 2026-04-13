@@ -186,80 +186,66 @@ fn handle_check_result(
 
 // === Helper for generation flow ===
 
+/// Data extracted from a `ListEntry` before the mutable reborrow of `model.entries`.
+///
+/// For `Single` entries only `exists_before` and `artifact_name` are meaningful;
+/// the shared-specific fields stay at their `Default` and are never read.
+#[derive(Default)]
+struct EntryData {
+    exists_before: bool,
+    artifact_name: String,
+    generator_path: Option<String>,
+    description: Option<String>,
+    prompts: Vec<crate::config::make::PromptDef>,
+    nixos_targets: Vec<String>,
+    home_targets: Vec<String>,
+    generators: Vec<crate::config::make::GeneratorInfo>,
+}
+
 #[allow(clippy::too_many_lines)]
 pub(crate) fn start_generation_for_selected_internal(
     mut model: Model,
     artifact_index: usize,
 ) -> (Model, Effect) {
     // Extract all needed data before any mutable borrow
-    // Complex tuple type needed to extract data before mutable borrow
-    #[allow(clippy::type_complexity)]
-    let entry_data: Option<(
-        bool,
-        Option<String>,
-        String,
-        Option<String>,
-        Vec<crate::config::make::PromptDef>,
-        Vec<String>,
-        Vec<String>,
-        Vec<crate::config::make::GeneratorInfo>,
-    )> = {
+    let entry_data: Option<EntryData> = {
         let Some(entry) = model.entries.get(artifact_index) else {
             return (model, Effect::None);
         };
         match entry {
-            ListEntry::Single(single) => {
-                let _prompt_state = create_prompt_state(artifact_index, single);
-                let artifact_name = single.artifact.name.clone();
-                let exists_before = matches!(single.status, ArtifactStatus::UpToDate);
-                // Store what we need for the branches
-                Some((
-                    exists_before,
-                    None,
-                    artifact_name,
-                    None,
-                    vec![],
-                    vec![],
-                    vec![],
-                    vec![],
-                ))
-            }
+            ListEntry::Single(single) => Some(EntryData {
+                exists_before: matches!(single.status, ArtifactStatus::UpToDate),
+                artifact_name: single.artifact.name.clone(),
+                ..Default::default()
+            }),
             ListEntry::Shared(shared) => {
                 if shared.info.error.is_some() {
                     return (model, Effect::None);
                 }
-                let artifact_name = shared.info.artifact_name.clone();
-                let exists_before = matches!(shared.status, ArtifactStatus::UpToDate);
-                let description = shared.info.description.clone();
-                let generator_path = shared.info.generators.first().map(|g| g.path.clone());
-                let prompts: Vec<_> = shared.info.prompts.values().cloned().collect();
-                let nixos_targets = shared.info.nixos_targets.clone();
-                let home_targets = shared.info.home_targets.clone();
-                let generators = shared.info.generators.clone();
-                Some((
-                    exists_before,
-                    generator_path,
-                    artifact_name,
-                    description,
-                    prompts,
-                    nixos_targets,
-                    home_targets,
-                    generators,
-                ))
+                Some(EntryData {
+                    exists_before: matches!(shared.status, ArtifactStatus::UpToDate),
+                    artifact_name: shared.info.artifact_name.clone(),
+                    generator_path: shared.info.generators.first().map(|g| g.path.clone()),
+                    description: shared.info.description.clone(),
+                    prompts: shared.info.prompts.values().cloned().collect(),
+                    nixos_targets: shared.info.nixos_targets.clone(),
+                    home_targets: shared.info.home_targets.clone(),
+                    generators: shared.info.generators.clone(),
+                })
             }
         }
     };
 
-    let Some((
+    let Some(EntryData {
         exists_before,
-        generator_path,
         artifact_name,
+        generator_path,
         description,
         prompts,
         nixos_targets,
         home_targets,
         generators,
-    )) = entry_data
+    }) = entry_data
     else {
         return (model, Effect::None);
     };
