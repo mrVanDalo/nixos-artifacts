@@ -93,7 +93,7 @@ fn project_root() -> std::path::PathBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use artifacts::app::model::{ArtifactEntry, ArtifactStatus, LogStep, StepLogs};
+    use artifacts::app::model::{ArtifactEntry, ArtifactStatus, Step, StepLogs};
     use artifacts::config::make::{ArtifactDef, FileDef};
     use std::collections::BTreeMap;
 
@@ -126,7 +126,7 @@ mod tests {
             screen: Screen::ArtifactList,
             entries: vec![],
             selected_index: 0,
-            selected_log_step: LogStep::default(),
+            selected_log_step: Step::default(),
             error: None,
             warnings: vec![],
             tick_count: 0,
@@ -157,13 +157,13 @@ mod tests {
             screen: Screen::Generating(artifacts::app::model::GeneratingState {
                 artifact_index: 0,
                 artifact_name: "test-artifact".to_string(),
-                step: artifacts::app::model::GenerationStep::RunningGenerator,
+                step: artifacts::app::model::Step::Generate,
                 log_lines: vec![],
                 exists: false,
             }),
             entries: vec![ListEntry::Single(entry)],
             selected_index: 0,
-            selected_log_step: LogStep::Generate,
+            selected_log_step: Step::Generate,
             error: None,
             warnings: vec![],
             tick_count: 0,

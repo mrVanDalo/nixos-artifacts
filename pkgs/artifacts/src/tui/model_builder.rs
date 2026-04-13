@@ -1,5 +1,5 @@
 use crate::app::model::{
-    ArtifactEntry, ArtifactError, ArtifactStatus, ListEntry, LogStep, Model, Screen, SharedEntry,
+    ArtifactEntry, ArtifactError, ArtifactStatus, ListEntry, Model, Screen, SharedEntry, Step,
     StepLogs, TargetType, Warning,
 };
 use crate::config::backend::BackendConfiguration;
@@ -90,7 +90,7 @@ pub fn build_model(make: &MakeConfiguration) -> Model {
         screen: Screen::ArtifactList,
         entries,
         selected_index: 0,
-        selected_log_step: LogStep::default(),
+        selected_log_step: Step::default(),
         error: None,
         warnings: Vec::new(),
         tick_count: 0,

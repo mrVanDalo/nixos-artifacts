@@ -1,4 +1,4 @@
-use crate::app::model::{ArtifactStatus, ListEntry, LogLevel, LogStep, Model, TargetType};
+use crate::app::model::{ArtifactStatus, ListEntry, LogLevel, Model, Step, TargetType};
 use ratatui::{
     Frame,
     layout::{Constraint, Layout, Rect},
@@ -157,8 +157,8 @@ fn render_log_panel(frame: &mut Frame, model: &Model, area: Rect) {
         }
     }
 
-    let visible_steps: Vec<LogStep> = match selected_entry {
-        Some(entry) => [LogStep::Check, LogStep::Generate, LogStep::Serialize]
+    let visible_steps: Vec<Step> = match selected_entry {
+        Some(entry) => [Step::Check, Step::Generate, Step::Serialize]
             .into_iter()
             .filter(|step| !entry.step_logs().get(*step).is_empty())
             .collect(),

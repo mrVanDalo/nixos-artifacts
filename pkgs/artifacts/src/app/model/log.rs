@@ -40,16 +40,20 @@ pub struct Warning {
     pub message: String,
 }
 
-/// The three generation steps that produce logs
+/// The three steps of the artifact generation pipeline.
+///
+/// Used both to track the currently-running step (via
+/// [`GeneratingSubstate`](super::artifact::GeneratingSubstate)) and to
+/// organise logs by phase in [`StepLogs`] and [`ChronologicalLogState`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Hash)]
-pub enum LogStep {
+pub enum Step {
     #[default]
     Check,
     Generate,
     Serialize,
 }
 
-impl LogStep {
+impl Step {
     pub fn next(self) -> Self {
         match self {
             Self::Check => Self::Generate,
@@ -75,8 +79,8 @@ impl LogStep {
     }
 
     /// Get all possible step variants
-    pub fn all_steps() -> &'static [LogStep] {
-        static STEPS: &[LogStep] = &[LogStep::Check, LogStep::Generate, LogStep::Serialize];
+    pub fn all_steps() -> &'static [Step] {
+        static STEPS: &[Step] = &[Step::Check, Step::Generate, Step::Serialize];
         STEPS
     }
 }
@@ -90,24 +94,24 @@ pub struct StepLogs {
 }
 
 impl StepLogs {
-    pub fn get(&self, step: LogStep) -> &Vec<LogEntry> {
+    pub fn get(&self, step: Step) -> &Vec<LogEntry> {
         match step {
-            LogStep::Check => &self.check,
-            LogStep::Generate => &self.generate,
-            LogStep::Serialize => &self.serialize,
+            Step::Check => &self.check,
+            Step::Generate => &self.generate,
+            Step::Serialize => &self.serialize,
         }
     }
 
-    pub fn get_mut(&mut self, step: LogStep) -> &mut Vec<LogEntry> {
+    pub fn get_mut(&mut self, step: Step) -> &mut Vec<LogEntry> {
         match step {
-            LogStep::Check => &mut self.check,
-            LogStep::Generate => &mut self.generate,
-            LogStep::Serialize => &mut self.serialize,
+            Step::Check => &mut self.check,
+            Step::Generate => &mut self.generate,
+            Step::Serialize => &mut self.serialize,
         }
     }
 
     /// Append stdout lines as Output-level entries
-    pub fn append_stdout(&mut self, step: LogStep, lines: &[String]) {
+    pub fn append_stdout(&mut self, step: Step, lines: &[String]) {
         let entries = lines.iter().map(|line| LogEntry {
             level: LogLevel::Output,
             message: line.clone(),
@@ -116,7 +120,7 @@ impl StepLogs {
     }
 
     /// Append stderr lines as Error-level entries
-    pub fn append_stderr(&mut self, step: LogStep, lines: &[String]) {
+    pub fn append_stderr(&mut self, step: Step, lines: &[String]) {
         let entries = lines.iter().map(|line| LogEntry {
             level: LogLevel::Error,
             message: line.clone(),
@@ -133,11 +137,11 @@ pub struct ChronologicalLogState {
     /// Artifact name for the header display
     pub artifact_name: String,
     /// Which sections are currently expanded (all steps by default)
-    pub expanded_sections: HashSet<LogStep>,
+    pub expanded_sections: HashSet<Step>,
     /// Vertical scroll offset in lines
     pub scroll_offset: usize,
     /// Currently focused section for keyboard navigation
-    pub focused_section: Option<LogStep>,
+    pub focused_section: Option<Step>,
 }
 
 impl ChronologicalLogState {
@@ -146,19 +150,19 @@ impl ChronologicalLogState {
         Self {
             artifact_index,
             artifact_name,
-            expanded_sections: LogStep::all_steps().iter().cloned().collect(),
+            expanded_sections: Step::all_steps().iter().cloned().collect(),
             scroll_offset: 0,
-            focused_section: Some(LogStep::Check),
+            focused_section: Some(Step::Check),
         }
     }
 
     /// Check if a specific section is expanded
-    pub fn is_expanded(&self, step: LogStep) -> bool {
+    pub fn is_expanded(&self, step: Step) -> bool {
         self.expanded_sections.contains(&step)
     }
 
     /// Toggle a section's expanded state
-    pub fn toggle_section(&mut self, step: LogStep) {
+    pub fn toggle_section(&mut self, step: Step) {
         if self.expanded_sections.contains(&step) {
             self.expanded_sections.remove(&step);
         } else {
@@ -168,7 +172,7 @@ impl ChronologicalLogState {
 
     /// Expand all sections
     pub fn expand_all(&mut self) {
-        self.expanded_sections = LogStep::all_steps().iter().cloned().collect();
+        self.expanded_sections = Step::all_steps().iter().cloned().collect();
     }
 
     /// Collapse all sections
@@ -203,7 +207,7 @@ impl ChronologicalLogState {
     /// Calculate the maximum scroll offset based on content and visible height
     pub fn max_scroll(&self, step_logs: &StepLogs) -> usize {
         let mut total_lines = 0usize;
-        for step in LogStep::all_steps() {
+        for step in Step::all_steps() {
             // One line for the section header
             total_lines += 1;
             // If expanded, add log lines
@@ -226,9 +230,9 @@ impl Default for ChronologicalLogState {
         Self {
             artifact_index: 0,
             artifact_name: String::new(),
-            expanded_sections: LogStep::all_steps().iter().cloned().collect(),
+            expanded_sections: Step::all_steps().iter().cloned().collect(),
             scroll_offset: 0,
-            focused_section: Some(LogStep::Check),
+            focused_section: Some(Step::Check),
         }
     }
 }

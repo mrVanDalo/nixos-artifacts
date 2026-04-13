@@ -1,8 +1,8 @@
 use crate::tui::model_state::ModelState;
 use artifacts::app::model::{
-    ArtifactEntry, ArtifactError, ArtifactStatus, GeneratingState, GenerationStep, InputMode,
-    ListEntry, LogEntry, LogLevel, LogStep, Model, PromptEntry, PromptState, Screen,
-    SelectGeneratorState, SharedEntry, StepLogs, TargetType,
+    ArtifactEntry, ArtifactError, ArtifactStatus, GeneratingState, InputMode, ListEntry, LogEntry,
+    LogLevel, Model, PromptEntry, PromptState, Screen, SelectGeneratorState, SharedEntry, Step,
+    StepLogs, TargetType,
 };
 use artifacts::config::make::{
     ArtifactDef, FileDef, GeneratorInfo, GeneratorSource, PromptDef, TargetType as ConfigTargetType,
@@ -157,9 +157,9 @@ impl GeneratingSnapshot {
         Self {
             artifact_name: state.artifact_name.clone(),
             step: match state.step {
-                GenerationStep::CheckSerialization => "CheckSerialization",
-                GenerationStep::RunningGenerator => "RunningGenerator",
-                GenerationStep::Serializing => "Serializing",
+                Step::Check => "CheckSerialization",
+                Step::Generate => "RunningGenerator",
+                Step::Serialize => "Serializing",
             },
             log_line_count: state.log_lines.len(),
         }
@@ -310,7 +310,7 @@ fn make_test_model() -> Model {
             ListEntry::Single(entry3),
         ],
         selected_index: 0,
-        selected_log_step: LogStep::default(),
+        selected_log_step: Step::default(),
         error: None,
         warnings: Vec::new(),
         tick_count: 0,
@@ -324,7 +324,7 @@ fn set_entry_status(entries: &mut [ListEntry], index: usize, status: ArtifactSta
     }
 }
 
-fn add_log_entry(entries: &mut [ListEntry], index: usize, step: LogStep, entry: LogEntry) {
+fn add_log_entry(entries: &mut [ListEntry], index: usize, step: Step, entry: LogEntry) {
     if let Some(entry_logs) = entries.get_mut(index) {
         entry_logs.step_logs_mut().get_mut(step).push(entry);
     }
@@ -357,13 +357,13 @@ fn test_artifact_list_initial() {
 fn test_artifact_list_with_selection() {
     let mut model = make_test_model();
     model.selected_index = 1;
-    model.selected_log_step = LogStep::Generate;
+    model.selected_log_step = Step::Generate;
 
     // Add realistic logs for the selected artifact (api-token)
     add_log_entry(
         &mut model.entries,
         1,
-        LogStep::Check,
+        Step::Check,
         LogEntry {
             level: LogLevel::Success,
             message: "Already up to date".to_string(),
@@ -372,7 +372,7 @@ fn test_artifact_list_with_selection() {
     add_log_entry(
         &mut model.entries,
         1,
-        LogStep::Generate,
+        Step::Generate,
         LogEntry {
             level: LogLevel::Output,
             message: "Generating API token...".to_string(),
@@ -381,7 +381,7 @@ fn test_artifact_list_with_selection() {
     add_log_entry(
         &mut model.entries,
         1,
-        LogStep::Generate,
+        Step::Generate,
         LogEntry {
             level: LogLevel::Output,
             message: "Token generated successfully".to_string(),
@@ -390,7 +390,7 @@ fn test_artifact_list_with_selection() {
     add_log_entry(
         &mut model.entries,
         1,
-        LogStep::Generate,
+        Step::Generate,
         LogEntry {
             level: LogLevel::Success,
             message: "Generated 1 file(s)".to_string(),
@@ -399,7 +399,7 @@ fn test_artifact_list_with_selection() {
     add_log_entry(
         &mut model.entries,
         1,
-        LogStep::Serialize,
+        Step::Serialize,
         LogEntry {
             level: LogLevel::Success,
             message: "Serialized to backend".to_string(),
@@ -454,7 +454,7 @@ fn test_artifact_list_with_failed_status() {
             },
         ];
     }
-    model.selected_log_step = LogStep::Generate;
+    model.selected_log_step = Step::Generate;
 
     let backend = TestBackend::new(70, 10);
     let mut terminal = Terminal::new(backend).unwrap();
@@ -652,7 +652,7 @@ fn test_progress_running_generator() {
     let state = GeneratingState {
         artifact_index: 0,
         artifact_name: "ssh-key".to_string(),
-        step: GenerationStep::RunningGenerator,
+        step: Step::Generate,
         log_lines: vec![],
         exists: false,
     };
@@ -677,7 +677,7 @@ fn test_progress_serializing() {
     let state = GeneratingState {
         artifact_index: 0,
         artifact_name: "ssh-key".to_string(),
-        step: GenerationStep::Serializing,
+        step: Step::Serialize,
         log_lines: vec![
             "Generator completed successfully".to_string(),
             "Starting serialization...".to_string(),
@@ -768,7 +768,7 @@ fn test_multiple_machines_before_generate_all() {
             ListEntry::Single(entry4),
         ],
         selected_index: 0,
-        selected_log_step: LogStep::default(),
+        selected_log_step: Step::default(),
         error: None,
         warnings: Vec::new(),
         tick_count: 0,
@@ -833,7 +833,7 @@ fn test_multiple_machines_after_generate_all() {
             ListEntry::Single(entry4),
         ],
         selected_index: 0,
-        selected_log_step: LogStep::default(),
+        selected_log_step: Step::default(),
         error: None,
         warnings: Vec::new(),
         tick_count: 0,
@@ -892,7 +892,7 @@ fn test_artifact_list_with_shared_artifacts() {
             ListEntry::Single(single_entry),
         ],
         selected_index: 0,
-        selected_log_step: LogStep::default(),
+        selected_log_step: Step::default(),
         error: None,
         warnings: Vec::new(),
         tick_count: 0,
@@ -944,7 +944,7 @@ fn test_shared_artifact_pending_status() {
 
         entries: vec![ListEntry::Shared(shared_entry)],
         selected_index: 0,
-        selected_log_step: LogStep::default(),
+        selected_log_step: Step::default(),
         error: None,
         warnings: Vec::new(),
         tick_count: 0,
@@ -974,7 +974,7 @@ fn test_shared_artifact_needs_generation_status() {
 
         entries: vec![ListEntry::Shared(shared_entry)],
         selected_index: 0,
-        selected_log_step: LogStep::default(),
+        selected_log_step: Step::default(),
         error: None,
         warnings: Vec::new(),
         tick_count: 0,
@@ -1004,7 +1004,7 @@ fn test_shared_artifact_up_to_date_status() {
 
         entries: vec![ListEntry::Shared(shared_entry)],
         selected_index: 0,
-        selected_log_step: LogStep::default(),
+        selected_log_step: Step::default(),
         error: None,
         warnings: Vec::new(),
         tick_count: 0,
@@ -1052,7 +1052,7 @@ fn test_shared_artifact_failed_runtime_error() {
 
         entries: vec![ListEntry::Shared(shared_entry)],
         selected_index: 0,
-        selected_log_step: LogStep::Check,
+        selected_log_step: Step::Check,
         error: None,
         warnings: Vec::new(),
         tick_count: 0,
@@ -1094,7 +1094,7 @@ fn test_shared_artifact_failed_config_error() {
 
         entries: vec![ListEntry::Shared(shared_entry)],
         selected_index: 0,
-        selected_log_step: LogStep::Check,
+        selected_log_step: Step::Check,
         error: None,
         warnings: Vec::new(),
         tick_count: 0,
@@ -1485,7 +1485,7 @@ fn test_generator_selection_multiple_with_mixed_sources() {
 mod model_tests {
     use super::*;
     use artifacts::app::message::{KeyEvent, Message, ScriptOutput};
-    use artifacts::app::model::{LogStep, Screen};
+    use artifacts::app::model::{Screen, Step};
     use artifacts::app::update::update;
 
     /// State capture after running an event sequence
@@ -1586,7 +1586,7 @@ mod model_tests {
             screen: Screen::ArtifactList,
             entries,
             selected_index: 0,
-            selected_log_step: LogStep::default(),
+            selected_log_step: Step::default(),
             error: None,
             warnings: Vec::new(),
             tick_count: 0,
@@ -1649,7 +1649,7 @@ mod model_tests {
         add_log_entry(
             &mut model.entries,
             0,
-            LogStep::Check,
+            Step::Check,
             LogEntry {
                 level: LogLevel::Success,
                 message: "Needs generation".to_string(),
@@ -1658,7 +1658,7 @@ mod model_tests {
         add_log_entry(
             &mut model.entries,
             0,
-            LogStep::Generate,
+            Step::Generate,
             LogEntry {
                 level: LogLevel::Output,
                 message: "Starting generator...".to_string(),
@@ -1667,7 +1667,7 @@ mod model_tests {
         add_log_entry(
             &mut model.entries,
             0,
-            LogStep::Generate,
+            Step::Generate,
             LogEntry {
                 level: LogLevel::Error,
                 message: "Error: Missing required prompt value".to_string(),

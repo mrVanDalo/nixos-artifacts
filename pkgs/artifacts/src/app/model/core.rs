@@ -15,7 +15,7 @@
 //! - Cloning is cheap (most fields are small or reference-counted)
 
 use super::artifact::ListEntry;
-use super::log::{ChronologicalLogState, LogStep, Warning};
+use super::log::{ChronologicalLogState, Step, Warning};
 use super::prompt::PromptState;
 use super::screen_state::{
     ConfirmRegenerateState, DoneState, GeneratingState, SelectGeneratorState,
@@ -35,7 +35,7 @@ pub struct Model {
     /// Currently selected entry index in the artifact list
     pub selected_index: usize,
     /// Currently selected log step for viewing output
-    pub selected_log_step: LogStep,
+    pub selected_log_step: Step,
     /// Critical error message (displayed in a banner)
     pub error: Option<String>,
     /// Non-blocking warnings about backend capability issues

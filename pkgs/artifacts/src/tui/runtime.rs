@@ -483,7 +483,7 @@ mod tests {
             screen: Screen::ArtifactList,
             entries: vec![ListEntry::Single(entry1), ListEntry::Single(entry2)],
             selected_index: 0,
-            selected_log_step: LogStep::default(),
+            selected_log_step: Step::default(),
             error: None,
             warnings: Vec::new(),
             tick_count: 0,

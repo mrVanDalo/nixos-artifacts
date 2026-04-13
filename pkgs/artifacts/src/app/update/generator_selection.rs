@@ -69,7 +69,7 @@ pub(super) fn update_generator_selection(mut model: Model, key: KeyEvent) -> (Mo
                     model.screen = Screen::Generating(GeneratingState {
                         artifact_index,
                         artifact_name: shared.info.artifact_name.clone(),
-                        step: GenerationStep::RunningGenerator,
+                        step: Step::Generate,
                         log_lines: vec![],
                         exists: exists_before,
                     });

@@ -1,6 +1,6 @@
 //! Artifact types and status definitions.
 
-use super::log::StepLogs;
+use super::log::{Step, StepLogs};
 use super::target::TargetType;
 use crate::config::make::{ArtifactDef, SharedArtifactInfo};
 use ratatui::style::{Color, Style};
@@ -278,49 +278,12 @@ impl ArtifactStatus {
 
 /// Substate while an artifact is being generated.
 /// Tracks the current step and accumulated output for display.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct GeneratingSubstate {
     /// Which step is currently running
-    pub step: GenerationStep,
+    pub step: Step,
     /// Accumulated output from the generator (shown after completion)
     pub output: String,
-}
-
-impl Default for GeneratingSubstate {
-    fn default() -> Self {
-        Self {
-            step: GenerationStep::CheckSerialization,
-            output: String::new(),
-        }
-    }
-}
-
-/// The steps in the artifact generation process.
-///
-/// These steps are executed in order:
-/// 1. CheckSerialization - Determine if regeneration is needed
-/// 2. RunningGenerator - Execute the generator script
-/// 3. Serializing - Store generated files in the backend
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum GenerationStep {
-    /// Checking if generation is needed via check_serialization script
-    #[default]
-    CheckSerialization,
-    /// Running the generator script to produce files
-    RunningGenerator,
-    /// Running the serialize script to store files in backend
-    Serializing,
-}
-
-impl GenerationStep {
-    /// Get a human-readable description of this step
-    pub fn description(&self) -> &'static str {
-        match self {
-            GenerationStep::CheckSerialization => "CheckSerialization...",
-            GenerationStep::RunningGenerator => "Running generator...",
-            GenerationStep::Serializing => "Serializing...",
-        }
-    }
 }
 
 /// An entry in the artifact list that can be either per-target or shared.

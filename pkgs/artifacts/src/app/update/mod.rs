@@ -147,10 +147,10 @@ fn handle_check_result(
             if !output.stdout_lines.is_empty() || !output.stderr_lines.is_empty() {
                 entry
                     .step_logs_mut()
-                    .append_stdout(LogStep::Check, &output.stdout_lines);
+                    .append_stdout(Step::Check, &output.stdout_lines);
                 entry
                     .step_logs_mut()
-                    .append_stderr(LogStep::Check, &output.stderr_lines);
+                    .append_stderr(Step::Check, &output.stderr_lines);
             }
 
             // Set status from check result
@@ -271,7 +271,7 @@ pub(crate) fn start_generation_for_selected_internal(
                 model.screen = Screen::Generating(GeneratingState {
                     artifact_index,
                     artifact_name,
-                    step: GenerationStep::RunningGenerator,
+                    step: Step::Generate,
                     log_lines: vec![],
                     exists: exists_before,
                 });
@@ -302,7 +302,7 @@ pub(crate) fn start_generation_for_selected_internal(
                     model.screen = Screen::Generating(GeneratingState {
                         artifact_index,
                         artifact_name,
-                        step: GenerationStep::RunningGenerator,
+                        step: Step::Generate,
                         log_lines: vec![],
                         exists: exists_before,
                     });

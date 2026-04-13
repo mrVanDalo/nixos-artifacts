@@ -54,7 +54,7 @@ fn make_test_model() -> Model {
         screen: Screen::ArtifactList,
         entries: vec![ListEntry::Single(entry1), ListEntry::Single(entry2)],
         selected_index: 0,
-        selected_log_step: LogStep::default(),
+        selected_log_step: Step::default(),
         error: None,
         warnings: Vec::new(),
         tick_count: 0,
@@ -258,17 +258,17 @@ fn test_prompt_esc_returns_to_list() {
 #[test]
 fn test_tab_cycles_log_step_on_list_screen() {
     let model = make_test_model();
-    assert_eq!(model.selected_log_step, LogStep::Check);
+    assert_eq!(model.selected_log_step, Step::Check);
 
     let (model, effect) = update(model, Message::Key(KeyEvent::tab()));
-    assert_eq!(model.selected_log_step, LogStep::Generate);
+    assert_eq!(model.selected_log_step, Step::Generate);
     assert!(effect.is_none());
 
     let (model, _) = update(model, Message::Key(KeyEvent::tab()));
-    assert_eq!(model.selected_log_step, LogStep::Serialize);
+    assert_eq!(model.selected_log_step, Step::Serialize);
 
     let (model, _) = update(model, Message::Key(KeyEvent::tab()));
-    assert_eq!(model.selected_log_step, LogStep::Check);
+    assert_eq!(model.selected_log_step, Step::Check);
 }
 
 // === Async Effect Tests ===
@@ -300,7 +300,7 @@ fn test_update_returns_serialize_effect() {
     model.screen = Screen::Generating(GeneratingState {
         artifact_index: 0,
         artifact_name: "ssh-key".to_string(),
-        step: GenerationStep::RunningGenerator,
+        step: Step::Generate,
         log_lines: vec![],
         exists: false,
     });
@@ -366,7 +366,7 @@ fn test_update_handles_async_result() {
     model.screen = Screen::Generating(GeneratingState {
         artifact_index: 0,
         artifact_name: "ssh-key".to_string(),
-        step: GenerationStep::RunningGenerator,
+        step: Step::Generate,
         log_lines: vec![],
         exists: false,
     });
@@ -374,7 +374,7 @@ fn test_update_handles_async_result() {
     // Update first entry to Generating status
     if let Some(entry) = model.entries.get_mut(0) {
         *entry.status_mut() = ArtifactStatus::Generating(crate::app::model::GeneratingSubstate {
-            step: crate::app::model::GenerationStep::RunningGenerator,
+            step: crate::app::model::Step::Generate,
             output: String::new(),
         });
     }
@@ -397,7 +397,7 @@ fn test_update_handles_async_result() {
     if let Screen::Generating(state) = &new_model.screen {
         assert_eq!(
             state.step,
-            GenerationStep::Serializing,
+            Step::Serialize,
             "Should move to serializing step"
         );
     }
@@ -555,7 +555,7 @@ fn test_single_generator_skips_dialog() {
         screen: Screen::ArtifactList,
         entries: vec![ListEntry::Shared(shared_entry)],
         selected_index: 0,
-        selected_log_step: LogStep::default(),
+        selected_log_step: Step::default(),
         error: None,
         warnings: Vec::new(),
         tick_count: 0,
@@ -626,7 +626,7 @@ fn test_single_generator_no_prompts_goes_to_generating() {
         screen: Screen::ArtifactList,
         entries: vec![ListEntry::Shared(shared_entry)],
         selected_index: 0,
-        selected_log_step: LogStep::default(),
+        selected_log_step: Step::default(),
         error: None,
         warnings: Vec::new(),
         tick_count: 0,
@@ -696,7 +696,7 @@ fn test_multiple_generators_shows_dialog() {
         screen: Screen::ArtifactList,
         entries: vec![ListEntry::Shared(shared_entry)],
         selected_index: 0,
-        selected_log_step: LogStep::default(),
+        selected_log_step: Step::default(),
         error: None,
         warnings: Vec::new(),
         tick_count: 0,
@@ -764,7 +764,7 @@ fn test_single_generator_stores_selected_path() {
         screen: Screen::ArtifactList,
         entries: vec![ListEntry::Shared(shared_entry)],
         selected_index: 0,
-        selected_log_step: LogStep::default(),
+        selected_log_step: Step::default(),
         error: None,
         warnings: Vec::new(),
         tick_count: 0,
@@ -825,7 +825,7 @@ fn make_test_model_with_shared() -> Model {
         screen: Screen::ArtifactList,
         entries: vec![ListEntry::Shared(shared_entry)],
         selected_index: 0,
-        selected_log_step: LogStep::default(),
+        selected_log_step: Step::default(),
         error: None,
         warnings: Vec::new(),
         tick_count: 0,

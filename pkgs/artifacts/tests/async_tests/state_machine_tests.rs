@@ -14,8 +14,8 @@ use std::collections::{BTreeMap, HashMap};
 use artifacts::app::effect::Effect;
 use artifacts::app::message::{Message, ScriptOutput};
 use artifacts::app::model::{
-    ArtifactEntry, ArtifactStatus, GeneratingState, GenerationStep, ListEntry, Model, Screen,
-    StepLogs, TargetType,
+    ArtifactEntry, ArtifactStatus, GeneratingState, ListEntry, Model, Screen, Step, StepLogs,
+    TargetType,
 };
 use artifacts::app::update::update;
 use artifacts::config::make::{ArtifactDef, FileDef, PromptDef};
@@ -277,7 +277,7 @@ fn test_generator_flow_success() {
     model.screen = Screen::Generating(GeneratingState {
         artifact_index: 0,
         artifact_name: "test-artifact".to_string(),
-        step: GenerationStep::RunningGenerator,
+        step: Step::Generate,
         log_lines: vec![],
         exists: false,
     });
@@ -314,7 +314,7 @@ fn test_generator_flow_success() {
 
     // After generator, we should have moved to serialization step
     if let Screen::Generating(state) = &model_after_gen.screen {
-        assert_eq!(state.step, GenerationStep::Serializing);
+        assert_eq!(state.step, Step::Serialize);
     } else {
         panic!(
             "Expected screen to be Generating, got {:?}",
@@ -333,7 +333,7 @@ fn test_generator_flow_success() {
     model_for_serialize.screen = Screen::Generating(GeneratingState {
         artifact_index: 0,
         artifact_name: "test-artifact".to_string(),
-        step: GenerationStep::Serializing,
+        step: Step::Serialize,
         log_lines: vec![],
         exists: false,
     });
@@ -372,7 +372,7 @@ fn test_generator_flow_failure() {
     model.screen = Screen::Generating(GeneratingState {
         artifact_index: 0,
         artifact_name: "test-artifact".to_string(),
-        step: GenerationStep::RunningGenerator,
+        step: Step::Generate,
         log_lines: vec![],
         exists: false,
     });
@@ -430,7 +430,7 @@ fn test_serialize_flow_failure() {
     model.screen = Screen::Generating(GeneratingState {
         artifact_index: 0,
         artifact_name: "test-artifact".to_string(),
-        step: GenerationStep::RunningGenerator,
+        step: Step::Generate,
         log_lines: vec![],
         exists: false,
     });
@@ -465,7 +465,7 @@ fn test_serialize_flow_failure() {
     model_for_serialize.screen = Screen::Generating(GeneratingState {
         artifact_index: 0,
         artifact_name: "test-artifact".to_string(),
-        step: GenerationStep::Serializing,
+        step: Step::Serialize,
         log_lines: vec![],
         exists: false,
     });
@@ -677,7 +677,7 @@ fn test_complete_lifecycle_success() {
     model_with_screen.screen = Screen::Generating(GeneratingState {
         artifact_index: 0,
         artifact_name: "test-artifact".to_string(),
-        step: GenerationStep::RunningGenerator,
+        step: Step::Generate,
         log_lines: vec![],
         exists: false,
     });
@@ -709,7 +709,7 @@ fn test_complete_lifecycle_success() {
     model_for_serialize.screen = Screen::Generating(GeneratingState {
         artifact_index: 0,
         artifact_name: "test-artifact".to_string(),
-        step: GenerationStep::Serializing,
+        step: Step::Serialize,
         log_lines: vec![],
         exists: false,
     });

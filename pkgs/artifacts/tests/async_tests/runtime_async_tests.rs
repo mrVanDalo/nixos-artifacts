@@ -85,7 +85,7 @@ fn make_test_model() -> Model {
         screen: Screen::ArtifactList,
         entries: vec![ListEntry::Single(entry1), ListEntry::Single(entry2)],
         selected_index: 0,
-        selected_log_step: artifacts::app::model::LogStep::default(),
+        selected_log_step: artifacts::app::model::Step::default(),
         error: None,
         warnings: Vec::new(),
         tick_count: 0,

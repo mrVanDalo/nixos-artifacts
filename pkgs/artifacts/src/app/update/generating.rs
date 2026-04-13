@@ -45,7 +45,7 @@ fn handle_generator_success(
 
     // Move to serialization
     if let Screen::Generating(ref mut state) = model.screen {
-        state.step = GenerationStep::Serializing;
+        state.step = Step::Serialize;
     }
 
     // Build serialization effect based on entry type (using unified TargetSpec)

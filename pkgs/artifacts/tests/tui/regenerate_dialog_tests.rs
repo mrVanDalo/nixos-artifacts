@@ -1,7 +1,7 @@
 use artifacts::app::message::{KeyEvent, Message};
 use artifacts::app::model::{
-    ArtifactEntry, ArtifactStatus, ConfirmRegenerateState, GeneratingState, GenerationStep,
-    ListEntry, Model, Screen, SharedEntry, StepLogs, TargetType,
+    ArtifactEntry, ArtifactStatus, ConfirmRegenerateState, GeneratingState, ListEntry, Model,
+    Screen, SharedEntry, Step, StepLogs, TargetType,
 };
 use artifacts::app::update::update;
 use artifacts::config::make::{ArtifactDef, FileDef, PromptDef, SharedArtifactInfo};
@@ -529,7 +529,7 @@ fn test_status_text_generating_state_for_existing() {
     let state = GeneratingState {
         artifact_index: 0,
         artifact_name: "ssh-key".to_string(),
-        step: GenerationStep::RunningGenerator,
+        step: Step::Generate,
         log_lines: vec![],
         exists: true, // EXISTING
     };
@@ -547,7 +547,7 @@ fn test_status_text_generating_state_for_new() {
     let state = GeneratingState {
         artifact_index: 0,
         artifact_name: "ssh-key".to_string(),
-        step: GenerationStep::RunningGenerator,
+        step: Step::Generate,
         log_lines: vec![],
         exists: false, // NEW
     };

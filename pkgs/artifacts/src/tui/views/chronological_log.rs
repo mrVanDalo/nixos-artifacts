@@ -1,4 +1,4 @@
-use crate::app::model::{ChronologicalLogState, LogStep, StepLogs};
+use crate::app::model::{ChronologicalLogState, Step, StepLogs};
 use ratatui::{
     Frame,
     layout::{Constraint, Layout, Rect},
@@ -57,7 +57,7 @@ fn render_scrollable_content(
     step_logs: &StepLogs,
     area: Rect,
 ) {
-    let sections = [LogStep::Check, LogStep::Generate, LogStep::Serialize];
+    let sections = [Step::Check, Step::Generate, Step::Serialize];
 
     let constraints: Vec<Constraint> = sections
         .iter()
@@ -117,7 +117,7 @@ fn calculate_summary(logs: &[crate::app::model::LogEntry]) -> String {
 fn render_section(
     frame: &mut Frame,
     state: &ChronologicalLogState,
-    step: &LogStep,
+    step: &Step,
     step_logs: &StepLogs,
     area: Rect,
 ) {

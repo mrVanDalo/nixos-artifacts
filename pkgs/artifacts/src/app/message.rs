@@ -58,7 +58,7 @@ pub enum Message {
     },
 
     /// Toggle expansion state of a log section (chronological log view)
-    ToggleSection { step: crate::app::model::LogStep },
+    ToggleSection { step: crate::app::model::Step },
 
     /// Scroll log content (chronological log view)
     ScrollLogs { delta: i32 },

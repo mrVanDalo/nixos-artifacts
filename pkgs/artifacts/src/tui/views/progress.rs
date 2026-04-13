@@ -1,4 +1,4 @@
-use crate::app::model::{GeneratingState, GenerationStep};
+use crate::app::model::{GeneratingState, Step};
 use ratatui::{
     Frame,
     layout::{Constraint, Layout, Rect},
@@ -34,9 +34,9 @@ fn render_header(frame: &mut Frame, state: &GeneratingState, area: Rect) {
 }
 
 fn render_steps(frame: &mut Frame, state: &GeneratingState, area: Rect) {
-    let generator_done = state.step == GenerationStep::Serializing;
-    let generator_current = state.step == GenerationStep::RunningGenerator;
-    let serialize_current = state.step == GenerationStep::Serializing;
+    let generator_done = state.step == Step::Serialize;
+    let generator_current = state.step == Step::Generate;
+    let serialize_current = state.step == Step::Serialize;
 
     let lines = vec![
         Line::from(vec![

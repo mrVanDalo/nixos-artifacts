@@ -118,7 +118,7 @@ fn finish_prompts_and_start_generation(mut model: Model) -> (Model, Effect) {
     model.screen = Screen::Generating(GeneratingState {
         artifact_index,
         artifact_name: artifact_name.clone(),
-        step: GenerationStep::RunningGenerator,
+        step: Step::Generate,
         log_lines: vec![],
         exists: false, // Prompt screen means new artifact (no confirmation shown)
     });
