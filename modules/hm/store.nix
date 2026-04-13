@@ -112,11 +112,13 @@ with types;
               default = null;
               description = ''
                 Generator Script. These environment variables are handed over to this script.
-                - `$machine` machine name.
-                - `$artifact` artifact name.
-                - `$config` a file which contains `artifact.config.<backend>` values as json.
-                - `$prompt` a folder containing files containing the prompt inputs (defined by the prompt option).
                 - `$out` a folder the generator script must create a file for each file definition of the artifact.
+                - `$prompts` a folder containing files containing the prompt inputs (defined by the prompts option).
+                - `$artifact` artifact name.
+                - `$artifact_context` context type: "nixos", "homemanager", or "shared".
+                - `$username` username (only for Home Manager targets).
+                - `$machine` machine name (only for NixOS targets).
+                - `$LOG_LEVEL` log level.
               '';
               example = literalExpression ''
                 pkgs.write.writeBash "random" ${"''"}
