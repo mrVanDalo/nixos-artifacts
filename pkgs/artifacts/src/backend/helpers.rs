@@ -97,30 +97,7 @@ pub fn validate_backend_script(
 
 /// Compute a 64-bit FNV-1a hash of a string.
 ///
-/// This hash function is used to generate deterministic filenames based on
-/// the 'out' path. The same input string will always produce the same hash,
-/// which keeps test snapshots stable across runs.
-///
-/// # Algorithm
-///
-/// Uses the FNV-1a (Fowler-Noll-Vo) hash algorithm:
-/// - Offset basis: 0xcbf2_9ce4_8422_2325
-/// - Prime: 0x0000_0100_0000_01B3
-///
-/// # Arguments
-///
-/// * `s` - The string to hash
-///
-/// # Returns
-///
-/// Returns a 64-bit unsigned hash value
-///
-/// # Example
-///
-/// ```rust,ignore
-/// let hash = fnv1a64("/tmp/artifact-out");
-/// // hash is deterministic for the same input
-/// ```
+/// Used to produce deterministic filenames so test snapshots stay stable across runs.
 pub fn fnv1a64(s: &str) -> u64 {
     let mut hash: u64 = 0xcbf2_9ce4_8422_2325; // FNV offset basis
     const PRIME: u64 = 0x0000_0100_0000_01B3; // FNV prime
@@ -131,37 +108,7 @@ pub fn fnv1a64(s: &str) -> u64 {
     hash
 }
 
-/// Resolve a path relative to a base directory.
-///
-/// If the path is already absolute, it's returned as-is. Otherwise, it's
-/// resolved relative to the provided base directory.
-///
-/// # Arguments
-///
-/// * `base_dir` - The base directory for relative path resolution
-/// * `relative_path` - The path to resolve (can be absolute or relative)
-///
-/// # Returns
-///
-/// Returns a `PathBuf` representing the resolved path
-///
-/// # Example
-///
-/// ```rust,ignore
-/// // Relative path - resolved against base_dir
-/// let path = resolve_path(
-///     Path::new("/project"),
-///     "backends/agenix.sh",
-/// );
-/// assert_eq!(path, PathBuf::from("/project/backends/agenix.sh"));
-///
-/// // Absolute path - returned as-is
-/// let path = resolve_path(
-///     Path::new("/project"),
-///     "/etc/nixos/config.nix",
-/// );
-/// assert_eq!(path, PathBuf::from("/etc/nixos/config.nix"));
-/// ```
+/// Resolve a path against `base_dir`, or return it unchanged if already absolute.
 pub(crate) fn resolve_path(base_dir: &Path, relative_path: &str) -> PathBuf {
     let path = Path::new(relative_path);
     if path.is_absolute() {
@@ -181,28 +128,8 @@ pub fn pretty_print_shell_escape(input: &str) -> String {
     }
 }
 
-/// Escape a string for safe use within single-quoted shell arguments.
-///
-/// Single quotes in shell are literal - except that a single quote itself
-/// cannot appear inside single quotes. This function escapes single quotes
-/// by ending the quoted string, adding an escaped quote, and starting a
-/// new quoted string.
-///
-/// # Arguments
-///
-/// * `input` - The string to escape
-///
-/// # Returns
-///
-/// Returns the escaped string suitable for use within single quotes
-///
-/// # Example
-///
-/// ```rust,ignore
-/// let escaped = escape_single_quoted("it's a test");
-/// // Returns: it'\''s a test
-/// // In shell: 'it'\''s a test' produces: it's a test
-/// ```
+/// Escape single quotes for safe use inside a single-quoted shell string
+/// (closes the quote, inserts `\'`, and reopens).
 pub fn escape_single_quoted(input: &str) -> String {
     input.replace('\'', "'\\''")
 }
