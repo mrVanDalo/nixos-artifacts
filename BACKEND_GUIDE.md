@@ -71,8 +71,8 @@ Consider writing a custom backend when:
 ## Backend Interface
 
 The CLI calls your backend scripts at specific points in the artifact lifecycle.
-All scripts use a **unified interface** regardless of context (nixos, homemanager,
-or shared):
+All scripts use a **unified interface** regardless of context (nixos,
+homemanager, or shared):
 
 - Receive data through unified environment variables
 - Must return exit code 0 on success, non-zero on failure
@@ -98,8 +98,8 @@ target types or provide separate scripts per target type.
 ## Backend Scripts
 
 All backend scripts use a **unified interface** with the same environment
-variables regardless of context (nixos, homemanager, or shared). This means
-you can use the same script for all target types.
+variables regardless of context (nixos, homemanager, or shared). This means you
+can use the same script for all target types.
 
 ### check
 
@@ -359,14 +359,14 @@ variables, regardless of context (nixos, homemanager, or shared):
 
 ### Variable Details
 
-| Variable            | Type      | Description                                                          | Example                        |
-| ------------------- | --------- | -------------------------------------------------------------------- | ------------------------------ |
-| `$artifact`         | String    | The artifact name being processed                                    | `ssh-host-key`                 |
-| `$artifact_context` | String    | Context type: `"nixos"`, `"homemanager"`, or `"shared"`              | `nixos`                        |
-| `$targets`          | File      | Path to JSON file containing target information and backend configs  | `/tmp/targets-abc123.json`     |
-| `$inputs`           | Directory | Contains JSON files with file metadata (one per artifact file)       | `/tmp/artifacts-inputs-def456` |
-| `$out`              | Directory | Contains generated files from the generator script                   | `/tmp/artifacts-out-abc123`    |
-| `$LOG_LEVEL`        | String    | Log level for script output                                          | `info`                         |
+| Variable            | Type      | Description                                                         | Example                        |
+| ------------------- | --------- | ------------------------------------------------------------------- | ------------------------------ |
+| `$artifact`         | String    | The artifact name being processed                                   | `ssh-host-key`                 |
+| `$artifact_context` | String    | Context type: `"nixos"`, `"homemanager"`, or `"shared"`             | `nixos`                        |
+| `$targets`          | File      | Path to JSON file containing target information and backend configs | `/tmp/targets-abc123.json`     |
+| `$inputs`           | Directory | Contains JSON files with file metadata (one per artifact file)      | `/tmp/artifacts-inputs-def456` |
+| `$out`              | Directory | Contains generated files from the generator script                  | `/tmp/artifacts-out-abc123`    |
+| `$LOG_LEVEL`        | String    | Log level for script output                                         | `info`                         |
 
 ## File Format Reference
 

@@ -458,7 +458,8 @@ fn test_complete_flow() {
 2. Create file for every artifact file entry containing JSON with `path`,
    `owner`, `group`
 3. Call `check` script:
-   - Environment: `$artifact`, `$artifact_context`, `$targets`, `$inputs`, `$LOG_LEVEL`
+   - Environment: `$artifact`, `$artifact_context`, `$targets`, `$inputs`,
+     `$LOG_LEVEL`
    - Exit code 0: Skip to next artifact
    - Non-zero: Continue generation
 4. Create temporary `prompts` directory
@@ -466,11 +467,13 @@ fn test_complete_flow() {
 6. Prompt user for input, save to `prompts` directory
 7. Call `generator` script:
    - Execute in bubblewrap container
-   - Environment: `$out`, `$prompts`, `$artifact`, `$artifact_context`, `$machine`/`$username` (context-dependent), `$LOG_LEVEL`
+   - Environment: `$out`, `$prompts`, `$artifact`, `$artifact_context`,
+     `$machine`/`$username` (context-dependent), `$LOG_LEVEL`
    - Verify success
    - Verify all demanded files generated
 8. Call `serialize` script:
-   - Environment: `$artifact`, `$artifact_context`, `$targets`, `$out`, `$LOG_LEVEL`
+   - Environment: `$artifact`, `$artifact_context`, `$targets`, `$out`,
+     `$LOG_LEVEL`
 9. Remove temporary folders
 
 **Implementation**: `src/cli/commands/generate.rs`

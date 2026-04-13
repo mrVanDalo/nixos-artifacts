@@ -3,6 +3,12 @@ public/
 /build/
 /node_modules/
 /secrets/
+.beads
 
 plans
 .claude/settings.local.json
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key
