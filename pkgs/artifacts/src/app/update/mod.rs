@@ -27,6 +27,8 @@ mod prompt;
 
 pub use init::init;
 
+use std::fmt::Write;
+
 use super::effect::{Effect, TargetSpec};
 use super::message::{Message, ScriptOutput};
 use super::model::*;
@@ -376,10 +378,10 @@ fn handle_output_line(
 pub(crate) fn format_step_logs(entry: &ListEntry) -> String {
     let mut output = String::new();
     for log in &entry.step_logs().check {
-        output.push_str(&format!("[check] {}\n", log.message));
+        let _ = writeln!(output, "[check] {}", log.message);
     }
     for log in &entry.step_logs().generate {
-        output.push_str(&format!("[generate] {}\n", log.message));
+        let _ = writeln!(output, "[generate] {}", log.message);
     }
     output
 }
