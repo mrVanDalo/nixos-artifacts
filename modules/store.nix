@@ -73,13 +73,13 @@ in
                       owner = mkOption {
                         type = str;
                         default = "root";
-                        description = "owner of the file on the target system.";
+                        description = "Owner of the file on the target system.";
                       };
 
                       group = mkOption {
                         type = str;
                         default = "root";
-                        description = "group of the file on the target system.";
+                        description = "Group of the file on the target system.";
                       };
 
                       mode = mkOption {
