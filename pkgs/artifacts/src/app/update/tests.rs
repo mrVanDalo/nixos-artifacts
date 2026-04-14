@@ -373,8 +373,8 @@ fn test_update_handles_async_result() {
 
     // Update first entry to Generating status
     if let Some(entry) = model.entries.get_mut(0) {
-        *entry.status_mut() = ArtifactStatus::Generating(crate::app::model::GeneratingSubstate {
-            step: crate::app::model::Step::Generate,
+        *entry.status_mut() = ArtifactStatus::Generating(GeneratingSubstate {
+            step: Step::Generate,
             output: String::new(),
         });
     }
@@ -512,7 +512,7 @@ fn test_shared_check_serialization_result_multi_target() {
 /// Test that single generator skips selection dialog and goes to prompts
 #[test]
 fn test_single_generator_skips_dialog() {
-    use crate::app::model::SharedEntry;
+
     use crate::config::make::{GeneratorInfo, GeneratorSource, PromptDef, SharedArtifactInfo};
     use std::collections::BTreeMap;
 
@@ -581,7 +581,7 @@ fn test_single_generator_skips_dialog() {
 /// Test that single generator without prompts goes directly to generating
 #[test]
 fn test_single_generator_no_prompts_goes_to_generating() {
-    use crate::app::model::SharedEntry;
+
     use crate::config::make::{FileDef, GeneratorInfo, GeneratorSource, SharedArtifactInfo};
     use std::collections::BTreeMap;
 
@@ -653,7 +653,7 @@ fn test_single_generator_no_prompts_goes_to_generating() {
 /// Test that multiple generators shows selection dialog
 #[test]
 fn test_multiple_generators_shows_dialog() {
-    use crate::app::model::SharedEntry;
+
     use crate::config::make::{GeneratorInfo, GeneratorSource, SharedArtifactInfo};
     use std::collections::BTreeMap;
 
@@ -730,7 +730,7 @@ fn test_multiple_generators_shows_dialog() {
 /// Test that selected generator is stored when single generator auto-selected
 #[test]
 fn test_single_generator_stores_selected_path() {
-    use crate::app::model::SharedEntry;
+
     use crate::config::make::{GeneratorInfo, GeneratorSource, SharedArtifactInfo};
     use std::collections::BTreeMap;
 
@@ -786,7 +786,7 @@ fn test_single_generator_stores_selected_path() {
 }
 
 fn make_test_model_with_shared() -> Model {
-    use crate::app::model::SharedEntry;
+
     use crate::config::make::{GeneratorInfo, GeneratorSource, SharedArtifactInfo};
     use std::collections::BTreeMap;
 

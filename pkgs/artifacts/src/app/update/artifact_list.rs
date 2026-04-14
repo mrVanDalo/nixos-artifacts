@@ -77,7 +77,7 @@ fn start_generation_for_selected(mut model: Model) -> (Model, Effect) {
 
     // Show dialog if needed
     if let Some((artifact_name, affected_targets)) = should_show_dialog {
-        model.screen = Screen::ConfirmRegenerate(crate::app::model::ConfirmRegenerateState {
+        model.screen = Screen::ConfirmRegenerate(ConfirmRegenerateState {
             artifact_index: model.selected_index,
             artifact_name,
             affected_targets,

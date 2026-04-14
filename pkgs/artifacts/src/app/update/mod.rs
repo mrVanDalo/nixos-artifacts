@@ -347,7 +347,7 @@ pub(crate) fn start_generation_for_selected_internal(
 fn handle_output_line(
     mut model: Model,
     artifact_index: usize,
-    stream: crate::app::model::OutputStream,
+    stream: OutputStream,
     content: String,
 ) -> (Model, Effect) {
     let Some(entry) = model.entries.get_mut(artifact_index) else {
@@ -355,8 +355,8 @@ fn handle_output_line(
     };
     // Determine log level from stream type
     let level = match stream {
-        crate::app::model::OutputStream::Stdout => LogLevel::Output,
-        crate::app::model::OutputStream::Stderr => LogLevel::Error,
+        OutputStream::Stdout => LogLevel::Output,
+        OutputStream::Stderr => LogLevel::Error,
     };
 
     // Determine current step based on status
