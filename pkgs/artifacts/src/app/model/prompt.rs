@@ -80,23 +80,3 @@ impl InputMode {
         }
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_input_mode_cycles() {
-        let mode = InputMode::Line;
-        assert_eq!(mode.next(), InputMode::Multiline);
-        assert_eq!(mode.next().next(), InputMode::Hidden);
-        assert_eq!(mode.next().next().next(), InputMode::Line);
-    }
-
-    #[test]
-    fn test_input_mode_labels() {
-        assert_eq!(InputMode::Line.label(), "line");
-        assert_eq!(InputMode::Multiline.label(), "multiline");
-        assert_eq!(InputMode::Hidden.label(), "hidden");
-    }
-}

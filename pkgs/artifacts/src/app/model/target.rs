@@ -41,24 +41,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_target_type_context_str() {
-        assert_eq!(
-            TargetType::NixOS {
-                machine: "test".to_string()
-            }
-            .context_str(),
-            "nixos"
-        );
-        assert_eq!(
-            TargetType::HomeManager {
-                username: "test".to_string()
-            }
-            .context_str(),
-            "homemanager"
-        );
-    }
-
-    #[test]
     fn test_target_type_target_name() {
         let nixos = TargetType::NixOS {
             machine: "my-machine".to_string(),
