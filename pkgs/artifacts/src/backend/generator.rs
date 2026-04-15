@@ -28,7 +28,7 @@
 //! - Custom /etc/passwd for isolation
 
 use crate::app::model::TargetType;
-use crate::backend::helpers::{escape_single_quoted, fnv1a64, resolve_path};
+use crate::backend::helpers::{escape_single_quoted, resolve_path};
 use crate::backend::output_capture::{CapturedOutput, run_with_captured_output};
 use crate::config::make::ArtifactDef;
 use crate::log_debug;
@@ -37,8 +37,10 @@ use crate::string_vec;
 use anyhow::{Context, Result, bail};
 use std::collections::HashSet;
 use std::fs;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
+use tempfile::NamedTempFile;
 
 /// Describes the generator invocation context.
 ///
@@ -91,18 +93,24 @@ fn resolve_generator_path(make_base: &Path, generator_script: &str) -> PathBuf {
 }
 
 /// Create a temporary passwd file for bwrap container isolation.
-fn create_temp_passwd(out: &Path) -> Result<PathBuf> {
-    let passwd_content = "user:x:1000:1000::/tmp:/bin/sh\n";
-    let hash = fnv1a64(&out.display().to_string());
-    let mut temp_path = std::env::temp_dir();
-    temp_path.push(format!("artifacts-cli-passwd-{:016x}.txt", hash));
-    fs::write(&temp_path, passwd_content).with_context(|| {
+///
+/// Returns a `NamedTempFile` that deletes itself on drop, so callers must keep
+/// it alive for as long as the path is needed (e.g. for the duration of the
+/// bwrap invocation).
+fn create_temp_passwd() -> Result<NamedTempFile> {
+    let passwd_content = b"user:x:1000:1000::/tmp:/bin/sh\n";
+    let mut temp_file = tempfile::Builder::new()
+        .prefix("artifacts-cli-passwd-")
+        .suffix(".txt")
+        .tempfile()
+        .context("failed to create temporary passwd file")?;
+    temp_file.write_all(passwd_content).with_context(|| {
         format!(
-            "failed to create temporary passwd file at {}",
-            temp_path.display()
+            "failed to write temporary passwd file at {}",
+            temp_file.path().display()
         )
     })?;
-    Ok(temp_path)
+    Ok(temp_file)
 }
 
 /// Build bwrap command arguments for container isolation.
@@ -264,8 +272,8 @@ fn run_generator_inner(
     let generator_path = resolve_generator_path(make_base, ctx.generator_script());
     let nix_shell = which::which("nix-shell")
         .context("nix-shell is required to run the generator but was not found in PATH")?;
-    let temp_passwd = create_temp_passwd(out)?;
-    let arguments = build_bwrap_arguments(&generator_path, prompts, out, &temp_passwd);
+    let temp_passwd = create_temp_passwd()?;
+    let arguments = build_bwrap_arguments(&generator_path, prompts, out, temp_passwd.path());
 
     log_debug!(
         "run {} bwrap with command {}",
@@ -277,7 +285,7 @@ fn run_generator_inner(
     let env_exports = ctx.env_exports(out, prompts, log_level);
     let output = execute_generator_in_bwrap(&nix_shell, &arguments, &env_exports)?;
 
-    let _ = fs::remove_file(&temp_passwd);
+    // `temp_passwd` is deleted automatically when it goes out of scope.
 
     if !output.exit_success {
         bail!(
