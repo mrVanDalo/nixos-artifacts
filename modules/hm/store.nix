@@ -2,7 +2,7 @@
 with lib;
 with types;
 let
-  commonOptions = import ../common-store-options.nix { inherit lib config; };
+  common = import ../common-store-options.nix { inherit lib config; };
 in
 {
   options.artifacts.store = mkOption {
@@ -29,6 +29,10 @@ in
               description = "Optional description of the artifact for documentation purposes.";
             };
 
+            # Home Manager stores intentionally omit `shared` (see
+            # ../store.nix): HM artifacts are per-user and never aggregated
+            # across multiple targets.
+
             files = mkOption {
               type = attrsOf (
                 submodule (
@@ -37,15 +41,7 @@ in
                     fileName = name;
                   in
                   {
-                    options = {
-
-                      name = mkOption {
-                        type = str;
-                        default = fileName;
-                        readOnly = true;
-                        internal = true;
-                        description = "The name of the filehandle";
-                      };
+                    options = (common.mkCommonFileOptions { inherit fileName; }) // {
 
                       path = mkOption {
                         type = str;
@@ -55,13 +51,9 @@ in
                         description = "Path to the file on the target system.";
                       };
 
-                      mode = mkOption {
-                        type = types.str;
-                        default = "0400";
-                        description = ''
-                          Permissions mode of the decrypted secret in a format understood by chmod.
-                        '';
-                      };
+                      # Home Manager stores intentionally omit `owner` and
+                      # `group` (see ../store.nix): home-manager cannot set
+                      # system-level file ownership.
 
                     };
                   }
@@ -72,7 +64,7 @@ in
             };
 
           }
-          // commonOptions;
+          // common.artifactOptions;
         }
       )
     );
