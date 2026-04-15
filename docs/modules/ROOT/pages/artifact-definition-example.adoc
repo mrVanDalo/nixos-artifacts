@@ -53,6 +53,37 @@ Reference artifact paths in NixOS configuration using `config.artifacts.store.<n
 <1> References the xref:options-nixos.adoc#_artifacts_store_name_files_name_path[path] defined in the artifact, creating a dependency.
 
 
+== Choosing a backend per artifact
+
+By default every artifact is serialized with the backend set in
+xref:options-nixos.adoc#_artifacts_default_backend_serialization[artifacts.default.backend.serialization].
+To use a different backend for a single artifact, set its
+xref:options-nixos.adoc#_artifacts_store_name_serialization[serialization]
+field:
+
+[source,nix]
+----
+{ config, pkgs, ... }:
+{
+  artifacts.store.gitea-runner = {
+    serialization = "sops"; <1>
+    files.auth_token = { };
+    prompts.auth_token.description = "Enter auth token";
+    generator = pkgs.writeShellApplication {
+      name = "generate-gitea-auth-token";
+      text = ''
+        TOKEN="$(cat $prompts/auth_token)"
+        echo "TOKEN=$TOKEN" > "$out/auth_token"
+      '';
+    };
+  };
+}
+----
+<1> Override the default backend for this artifact only. The value must match the `name` of a backend passed to xref:reference-mkartifactcli.adoc[mkArtifactCli].
+
+Different artifacts in the same configuration can use different backends — see
+xref:configure-nixos-artifacts.adoc#_choose_a_backend_for_artifacts[Choose a backend for artifacts].
+
 == Generator contract
 
 The generator must:

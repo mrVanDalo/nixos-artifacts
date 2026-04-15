@@ -75,7 +75,7 @@ __Default:__
 
 
 
-group of the file on the target system{zwsp}.
+Group of the file on the target system{zwsp}.
 
 
 
@@ -117,7 +117,7 @@ __Default:__
 
 
 
-owner of the file on the target system{zwsp}.
+Owner of the file on the target system{zwsp}.
 
 
 
@@ -259,7 +259,9 @@ __Default:__
 
 
 
-Serialization definition
+Name of the backend used to serialize this artifact{zwsp}.
+
+Defaults to ``artifacts{zwsp}.default{zwsp}.backend{zwsp}.serialization``{zwsp}. Set this to select a different backend for this specific artifact, while other artifacts continue to use the default{zwsp}. Backends are configured via ``mkArtifactCli`` and referenced here by the ``name`` passed to ``mkBackend``{zwsp}.
 
 
 

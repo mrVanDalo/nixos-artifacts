@@ -129,15 +129,19 @@ ${XDG_CONFIG_DIR}/artifacts/‹name›/‹name›
 Generator Script{zwsp}. These environment variables are handed over to this script{zwsp}.
 
 [options="compact"]
-* {empty}``$machine`` machine name{zwsp}.
+* {empty}``$out`` a folder the generator script must create a file for each file definition of the artifact{zwsp}.
+
+* {empty}``$prompts`` a folder containing files containing the prompt inputs (defined by the prompts option){zwsp}.
 
 * {empty}``$artifact`` artifact name{zwsp}.
 
-* {empty}``$config`` a file which contains ``artifact{zwsp}.config{zwsp}.{zwsp}+<+{zwsp}backend{gt}`` values as json{zwsp}.
+* {empty}``$artifact_context`` context type: “nixos”, “homemanager”, or “shared”{zwsp}.
 
-* {empty}``$prompt`` a folder containing files containing the prompt inputs (defined by the prompt option){zwsp}.
+* {empty}``$machine`` machine name (only for NixOS targets){zwsp}.
 
-* {empty}``$out`` a folder the generator script must create a file for each file definition of the artifact{zwsp}.
+* {empty}``$username`` username (only for Home Manager targets){zwsp}.
+
+* {empty}``$LOG_LEVEL`` log level{zwsp}.
 
 
 
@@ -213,7 +217,9 @@ __Default:__
 
 
 
-Serialization definition
+Name of the backend used to serialize this artifact{zwsp}.
+
+Defaults to ``artifacts{zwsp}.default{zwsp}.backend{zwsp}.serialization``{zwsp}. Set this to select a different backend for this specific artifact, while other artifacts continue to use the default{zwsp}. Backends are configured via ``mkArtifactCli`` and referenced here by the ``name`` passed to ``mkBackend``{zwsp}.
 
 
 

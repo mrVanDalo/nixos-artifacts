@@ -39,7 +39,14 @@ with types;
     type = str;
     default = config.artifacts.default.backend.serialization;
     defaultText = literalExpression "config.artifacts.default.backend.serialization";
-    description = "Serialization definition";
+    description = ''
+      Name of the backend used to serialize this artifact.
+
+      Defaults to `artifacts.default.backend.serialization`. Set this to
+      select a different backend for this specific artifact, while other
+      artifacts continue to use the default. Backends are configured via
+      `mkArtifactCli` and referenced here by the `name` passed to `mkBackend`.
+    '';
   };
 
   generator = mkOption {
