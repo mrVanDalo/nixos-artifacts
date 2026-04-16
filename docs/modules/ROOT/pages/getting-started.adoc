@@ -43,7 +43,7 @@ Set xref:latest@nixos-artifacts-agenix:ROOT:index.adoc[agenix] as your default b
 ----
 {
   # Use agenix as the default backend
-  artifacts.default.backend.serialization = "agenix";
+  artifacts.default.backend = "agenix";
 
   # Configure agenix (see nixos-artifacts-agenix docs for all options)
   artifacts.config.agenix = {

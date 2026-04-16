@@ -11,7 +11,7 @@
         inputs.nixos-artifacts.nixosModules.default <3>
         inputs.nixos-artifacts-agenix.nixosModules.default <4>
         ({ config, pkgs, ... }: {
-          artifacts.default.backend.serialization = "agenix"; <5>
+          artifacts.default.backend = "agenix"; <5>
           artifacts.config.agenix = { ... }; <6>
         })
         ...

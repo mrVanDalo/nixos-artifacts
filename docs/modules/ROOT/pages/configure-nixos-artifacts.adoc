@@ -36,7 +36,7 @@ Set the default backend once so all artifacts use it unless they override it.
 ----
 # In your NixOS configuration
 {
-  artifacts.default.backend.serialization = "my-backend";
+  artifacts.default.backend = "my-backend";
 }
 ----
 

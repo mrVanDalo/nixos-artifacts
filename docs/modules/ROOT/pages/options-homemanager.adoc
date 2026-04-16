@@ -1,6 +1,8 @@
-== artifacts{zwsp}.default{zwsp}.backend{zwsp}.serialization
+== artifacts{zwsp}.default{zwsp}.backend
 
-script for serialization
+Name of the default backend used to (de)serialize artifacts{zwsp}.
+
+Every artifact whose ``artifacts{zwsp}.store{zwsp}.{zwsp}+<+{zwsp}name{gt}{zwsp}.backend`` is not set explicitly falls back to this value{zwsp}. The name must match a backend provided via ``mkArtifactCli``{zwsp}.
 
 
 
@@ -33,9 +35,9 @@ __Default:__
 
 
 
-Name of the backend used to serialize this artifact{zwsp}.
+Name of the backend used to (de)serialize this artifact{zwsp}.
 
-Defaults to ``artifacts{zwsp}.default{zwsp}.backend{zwsp}.serialization``{zwsp}. Set this to select a different backend for this specific artifact, while other artifacts continue to use the default{zwsp}. Backends are configured via ``mkArtifactCli`` and referenced here by the ``name`` passed to ``mkBackend``{zwsp}.
+Defaults to ``artifacts{zwsp}.default{zwsp}.backend``{zwsp}. Set this to select a different backend for this specific artifact, while other artifacts continue to use the default{zwsp}. Backends are configured via ``mkArtifactCli`` and referenced here by the ``name`` passed to ``mkBackend``{zwsp}.
 
 
 
@@ -47,7 +49,7 @@ __Default:__
 
 [source,nix]
 ----
-config.artifacts.default.backend.serialization
+config.artifacts.default.backend
 ----
 
 

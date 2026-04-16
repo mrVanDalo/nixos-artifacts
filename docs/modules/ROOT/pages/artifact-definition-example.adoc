@@ -56,7 +56,7 @@ Reference artifact paths in NixOS configuration using `config.artifacts.store.<n
 == Choosing a backend per artifact
 
 By default every artifact is serialized with the backend set in
-xref:options-nixos.adoc#_artifacts_default_backend_serialization[artifacts.default.backend.serialization].
+xref:options-nixos.adoc#_artifacts_default_backend[artifacts.default.backend].
 To use a different backend for a single artifact, set its
 xref:options-nixos.adoc#_artifacts_store_name_backend[backend]
 field:

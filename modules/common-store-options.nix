@@ -45,14 +45,14 @@ let
 
     backend = mkOption {
       type = str;
-      default = config.artifacts.default.backend.serialization;
-      defaultText = literalExpression "config.artifacts.default.backend.serialization";
+      default = config.artifacts.default.backend;
+      defaultText = literalExpression "config.artifacts.default.backend";
       description = ''
-        Name of the backend used to serialize this artifact.
+        Name of the backend used to (de)serialize this artifact.
 
-        Defaults to `artifacts.default.backend.serialization`. Set this to
-        select a different backend for this specific artifact, while other
-        artifacts continue to use the default. Backends are configured via
+        Defaults to `artifacts.default.backend`. Set this to select a
+        different backend for this specific artifact, while other artifacts
+        continue to use the default. Backends are configured via
         `mkArtifactCli` and referenced here by the `name` passed to `mkBackend`.
       '';
     };

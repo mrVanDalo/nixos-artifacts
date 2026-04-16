@@ -67,7 +67,7 @@
                   self.nixosModules.examples
                   {
                     networking.hostName = name;
-                    artifacts.default.backend.serialization = "test";
+                    artifacts.default.backend = "test";
 
                     system.stateVersion = "25.05";
                     boot.loader.grub.enable = false;
@@ -89,7 +89,7 @@
           modules = [
             self.homeModules.default
             self.homeModules.examples
-            { artifacts.default.backend.serialization = "test"; }
+            { artifacts.default.backend = "test"; }
             {
               home.stateVersion = "25.05";
               home.username = "test";
