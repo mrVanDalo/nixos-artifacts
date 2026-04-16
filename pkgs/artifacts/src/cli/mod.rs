@@ -23,6 +23,7 @@
 
 pub mod args;
 
+use crate::app::model::{ArtifactStatus, ListEntry};
 use crate::config::backend::BackendConfiguration;
 use crate::config::make::MakeConfiguration;
 use crate::config::nix::build_make_from_flake;
@@ -168,8 +169,8 @@ async fn run_tui(backend_path: &Path, make_path: &Path) -> Result<()> {
                     .entries
                     .iter()
                     .filter_map(|entry| match entry {
-                        crate::app::model::ListEntry::Single(a) => match &a.status {
-                            crate::app::model::ArtifactStatus::Failed { error, .. } => {
+                        ListEntry::Single(a) => match &a.status {
+                            ArtifactStatus::Failed { error, .. } => {
                                 let target = a.target_type.target_name();
                                 Some(format!(
                                     "{}/{}: {}",
@@ -180,8 +181,8 @@ async fn run_tui(backend_path: &Path, make_path: &Path) -> Result<()> {
                             }
                             _ => None,
                         },
-                        crate::app::model::ListEntry::Shared(s) => match &s.status {
-                            crate::app::model::ArtifactStatus::Failed { error, .. } => Some(
+                        ListEntry::Shared(s) => match &s.status {
+                            ArtifactStatus::Failed { error, .. } => Some(
                                 format!("shared/{}: {}", s.info.artifact_name, error.summary()),
                             ),
                             _ => None,
