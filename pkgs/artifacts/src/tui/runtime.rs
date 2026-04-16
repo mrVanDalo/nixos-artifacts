@@ -457,7 +457,7 @@ mod tests {
             )]),
             prompts: prompt_map,
             generator: "/gen".to_string(),
-            serialization: "test".to_string(),
+            backend: "test".to_string(),
         }
     }
 

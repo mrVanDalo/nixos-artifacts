@@ -548,7 +548,7 @@ impl BackgroundEffectHandler {
             files: shared_info.files.clone(),
             prompts: shared_info.prompts.clone(),
             shared: true,
-            serialization: shared_info.backend_name.clone(),
+            backend: shared_info.backend_name.clone(),
             generator: generator_path,
         };
 

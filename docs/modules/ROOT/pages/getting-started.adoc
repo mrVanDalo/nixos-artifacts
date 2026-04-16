@@ -54,7 +54,7 @@ Set xref:latest@nixos-artifacts-agenix:ROOT:index.adoc[agenix] as your default b
 
 TIP: The default applies to every artifact unless overridden. Individual
 artifacts can select a different backend by setting
-`artifacts.store.<name>.serialization`. See
+`artifacts.store.<name>.backend`. See
 xref:configure-nixos-artifacts.adoc#_choose_a_backend_for_artifacts[Choose a backend for artifacts]
 for details.
 

@@ -1,5 +1,6 @@
 ---
 source: tests/e2e/mod.rs
+assertion_line: 354
 expression: "(nixos_config, home_config)"
 ---
 (
@@ -51,7 +52,7 @@ expression: "(nixos_config, home_config)"
                         },
                     },
                     generator: "/nix/store/HASH-test_generator.sh",
-                    serialization: "test",
+                    backend: "test",
                 },
             },
         },
@@ -87,7 +88,7 @@ expression: "(nixos_config, home_config)"
                     },
                     prompts: {},
                     generator: "/nix/store/HASH-test_generator_config.sh",
-                    serialization: "test",
+                    backend: "test",
                 },
                 "home-secret": ArtifactDef {
                     name: "home-secret",
@@ -105,7 +106,7 @@ expression: "(nixos_config, home_config)"
                     },
                     prompts: {},
                     generator: "/nix/store/HASH-test_generator_home.sh",
-                    serialization: "test",
+                    backend: "test",
                 },
             },
         },

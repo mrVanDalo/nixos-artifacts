@@ -272,7 +272,7 @@ fn make_test_artifact(name: &str, prompts: Vec<&str>) -> ArtifactDef {
         )]),
         prompts: prompt_map,
         generator: "/nix/store/xxx-gen".to_string(),
-        serialization: "test-backend".to_string(),
+        backend: "test-backend".to_string(),
     }
 }
 
@@ -720,7 +720,7 @@ fn make_multiple_machines_artifact(name: &str) -> ArtifactDef {
         )]),
         prompts: BTreeMap::new(),
         generator: "/nix/store/xxx-gen".to_string(),
-        serialization: "test-backend".to_string(),
+        backend: "test-backend".to_string(),
     }
 }
 

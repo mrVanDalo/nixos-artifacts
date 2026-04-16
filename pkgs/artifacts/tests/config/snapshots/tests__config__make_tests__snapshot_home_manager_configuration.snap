@@ -1,5 +1,6 @@
 ---
 source: tests/config/make_tests.rs
+assertion_line: 529
 expression: "make_snapshot!(input, config)"
 ---
 Input:
@@ -24,7 +25,7 @@ Input:
                     }
                 },
                 "generator": "/nix/store/gen.sh",
-                "serialization": "test"
+                "backend": "test"
             }
         },
         "config": {}
@@ -59,7 +60,7 @@ MakeConfiguration {
                     },
                 },
                 generator: "/nix/store/gen.sh",
-                serialization: "test",
+                backend: "test",
             },
         },
     },

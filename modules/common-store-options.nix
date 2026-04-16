@@ -43,7 +43,7 @@ let
       description = "Prompts end up in $prompt/<name> in the generator script";
     };
 
-    serialization = mkOption {
+    backend = mkOption {
       type = str;
       default = config.artifacts.default.backend.serialization;
       defaultText = literalExpression "config.artifacts.default.backend.serialization";

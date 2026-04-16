@@ -39,7 +39,7 @@ self.lib.mkBackend {
 
 | `name`
 | Yes
-| Backend name. This is the identifier used in `artifacts.store.<name>.serialization`.
+| Backend name. This is the identifier used in `artifacts.store.<name>.backend`.
 
 | `nixos_check`
 | Yes

@@ -42,14 +42,14 @@ Set the default backend once so all artifacts use it unless they override it.
 
 === Override the backend for a specific artifact
 
-You can select a different backend for an individual artifact by setting the serialization field on that artifact.
+You can select a different backend for an individual artifact by setting the backend field on that artifact.
 
 [source,nix]
 ----
 # In your NixOS configuration
 {
   artifacts.store.my-artifact = {
-    serialization = "my-backend";
+    backend = "my-backend";
   };
 }
 ----

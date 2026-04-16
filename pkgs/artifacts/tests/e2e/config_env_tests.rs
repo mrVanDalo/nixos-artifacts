@@ -176,7 +176,7 @@ fn e2e_unified_shared_check_sets_targets() -> Result<()> {
 
     let result = run_shared_check_serialization(
         &artifact_name,
-        &artifact_def.serialization,
+        &artifact_def.backend,
         &backend,
         &make_config,
         &nixos_targets,
@@ -214,7 +214,7 @@ fn e2e_unified_shared_serialize_sets_targets() -> Result<()> {
 
     let result = run_shared_serialize(
         &artifact_name,
-        &artifact_def.serialization,
+        &artifact_def.backend,
         &backend,
         out_dir.path(),
         &make_config,

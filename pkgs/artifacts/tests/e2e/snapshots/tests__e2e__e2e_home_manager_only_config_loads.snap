@@ -1,5 +1,6 @@
 ---
 source: tests/e2e/mod.rs
+assertion_line: 298
 expression: make_config
 ---
 MakeConfiguration {
@@ -22,7 +23,7 @@ MakeConfiguration {
                 },
                 prompts: {},
                 generator: "/nix/store/HASH-test_generator_config.sh",
-                serialization: "test",
+                backend: "test",
             },
             "home-secret": ArtifactDef {
                 name: "home-secret",
@@ -40,7 +41,7 @@ MakeConfiguration {
                 },
                 prompts: {},
                 generator: "/nix/store/HASH-test_generator_home.sh",
-                serialization: "test",
+                backend: "test",
             },
         },
     },

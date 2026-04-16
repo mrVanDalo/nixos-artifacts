@@ -490,7 +490,7 @@ fn e2e_artifact_definition_validation() -> Result<()> {
             }
 
             assert!(
-                !def.serialization.is_empty(),
+                !def.backend.is_empty(),
                 "Artifact {} should reference a backend",
                 name
             );

@@ -56,7 +56,7 @@ fn create_test_artifact(name: &str, has_prompts: bool) -> ArtifactDef {
         files,
         prompts,
         generator: "/test/generator.sh".to_string(),
-        serialization: "test".to_string(),
+        backend: "test".to_string(),
     }
 }
 

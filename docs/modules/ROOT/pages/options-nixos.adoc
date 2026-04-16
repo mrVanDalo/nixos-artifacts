@@ -29,6 +29,29 @@ __Default:__
 
 
 
+== artifacts{zwsp}.store{zwsp}.{zwsp}+<+{zwsp}name{gt}{zwsp}.backend
+
+
+
+Name of the backend used to serialize this artifact{zwsp}.
+
+Defaults to ``artifacts{zwsp}.default{zwsp}.backend{zwsp}.serialization``{zwsp}. Set this to select a different backend for this specific artifact, while other artifacts continue to use the default{zwsp}. Backends are configured via ``mkArtifactCli`` and referenced here by the ``name`` passed to ``mkBackend``{zwsp}.
+
+
+
+__Type:__ string
+
+
+
+__Default:__
+
+[source,nix]
+----
+config.artifacts.default.backend.serialization
+----
+
+
+
 == artifacts{zwsp}.store{zwsp}.{zwsp}+<+{zwsp}name{gt}{zwsp}.description
 
 
@@ -251,29 +274,6 @@ __Default:__
 [source,nix]
 ----
 "input for ‹name›"
-----
-
-
-
-== artifacts{zwsp}.store{zwsp}.{zwsp}+<+{zwsp}name{gt}{zwsp}.serialization
-
-
-
-Name of the backend used to serialize this artifact{zwsp}.
-
-Defaults to ``artifacts{zwsp}.default{zwsp}.backend{zwsp}.serialization``{zwsp}. Set this to select a different backend for this specific artifact, while other artifacts continue to use the default{zwsp}. Backends are configured via ``mkArtifactCli`` and referenced here by the ``name`` passed to ``mkBackend``{zwsp}.
-
-
-
-__Type:__ string
-
-
-
-__Default:__
-
-[source,nix]
-----
-config.artifacts.default.backend.serialization
 ----
 
 

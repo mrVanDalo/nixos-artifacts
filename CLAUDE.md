@@ -17,7 +17,7 @@ abstraction over multiple backends (agenix, sops-nix, colmena, etc.).
    - Files specification
    - User prompts
    - Generator script/binary
-   - Serialization backend reference
+   - Backend reference
 3. **Backend**: Technical implementation providing:
    - `serialize` operations
    - `deserialize` operations

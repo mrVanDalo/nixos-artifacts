@@ -52,8 +52,8 @@ structure:
   - `files`: File definitions for deployment
   - `prompts`: User input definitions
   - `generator`: Path to script for generating secrets
-  - `serialization`: Backend references as string (check if backend is defined
-    in `backend.toml`)
+  - `backend`: Backend reference as string (check if backend is defined in
+    `backend.toml`)
 
 - **Files**: Deployment targets
   - `name`: File identifier

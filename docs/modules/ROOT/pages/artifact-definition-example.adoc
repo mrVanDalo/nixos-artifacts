@@ -58,7 +58,7 @@ Reference artifact paths in NixOS configuration using `config.artifacts.store.<n
 By default every artifact is serialized with the backend set in
 xref:options-nixos.adoc#_artifacts_default_backend_serialization[artifacts.default.backend.serialization].
 To use a different backend for a single artifact, set its
-xref:options-nixos.adoc#_artifacts_store_name_serialization[serialization]
+xref:options-nixos.adoc#_artifacts_store_name_backend[backend]
 field:
 
 [source,nix]
@@ -66,7 +66,7 @@ field:
 { config, pkgs, ... }:
 {
   artifacts.store.gitea-runner = {
-    serialization = "sops"; <1>
+    backend = "sops"; <1>
     files.auth_token = { };
     prompts.auth_token.description = "Enter auth token";
     generator = pkgs.writeShellApplication {

@@ -116,7 +116,7 @@ mod tests {
             files,
             prompts: BTreeMap::new(),
             generator: "/nix/store/xxx-gen".to_string(),
-            serialization: "test".to_string(),
+            backend: "test".to_string(),
         }
     }
 

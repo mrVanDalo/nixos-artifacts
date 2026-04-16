@@ -189,7 +189,7 @@ mod tests {
                     },
                 )]),
                 generator: "/gen/ssh".to_string(),
-                serialization: "agenix".to_string(),
+                backend: "agenix".to_string(),
             },
         );
         nixos_map.insert("machine-one".to_string(), machine_one_artifacts);
@@ -212,7 +212,7 @@ mod tests {
                 )]),
                 prompts: BTreeMap::new(),
                 generator: "/gen/token".to_string(),
-                serialization: "agenix".to_string(),
+                backend: "agenix".to_string(),
             },
         );
         nixos_map.insert("machine-two".to_string(), machine_two_artifacts);
@@ -236,7 +236,7 @@ mod tests {
                 )]),
                 prompts: BTreeMap::new(),
                 generator: "/gen/gpg".to_string(),
-                serialization: "sops".to_string(),
+                backend: "sops".to_string(),
             },
         );
         home_map.insert("alice@desktop".to_string(), user_artifacts);
@@ -297,7 +297,7 @@ mod tests {
             )]),
             prompts: BTreeMap::new(),
             generator: "/gen/shared".to_string(),
-            serialization: "test".to_string(),
+            backend: "test".to_string(),
         }
     }
 
@@ -320,7 +320,7 @@ mod tests {
                 files: BTreeMap::new(),
                 prompts: BTreeMap::new(),
                 generator: "/gen/one".to_string(),
-                serialization: "test".to_string(),
+                backend: "test".to_string(),
             },
         );
         nixos_map.insert("machine-one".to_string(), machine_one_artifacts);
@@ -340,7 +340,7 @@ mod tests {
                 files: BTreeMap::new(),
                 prompts: BTreeMap::new(),
                 generator: "/gen/two".to_string(),
-                serialization: "test".to_string(),
+                backend: "test".to_string(),
             },
         );
         nixos_map.insert("machine-two".to_string(), machine_two_artifacts);
@@ -425,7 +425,7 @@ mod tests {
                 )]),
                 prompts: BTreeMap::new(),
                 generator: "/gen/shared".to_string(),
-                serialization: "test".to_string(),
+                backend: "test".to_string(),
             },
         );
         nixos_map.insert("machine-one".to_string(), machine_one_artifacts);
@@ -460,7 +460,7 @@ mod tests {
                 ]),
                 prompts: BTreeMap::new(),
                 generator: "/gen/shared".to_string(),
-                serialization: "test".to_string(),
+                backend: "test".to_string(),
             },
         );
         nixos_map.insert("machine-two".to_string(), machine_two_artifacts);

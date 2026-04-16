@@ -109,7 +109,7 @@ impl<'a> SerializationContext<'a> {
     /// Get the backend name for this context.
     fn backend_name(&self) -> &str {
         match self {
-            SerializationContext::Single { artifact, .. } => &artifact.serialization,
+            SerializationContext::Single { artifact, .. } => &artifact.backend,
             SerializationContext::Shared { backend_name, .. } => backend_name,
         }
     }
@@ -353,7 +353,7 @@ fn build_targets_json(
             let target_name = target_type.target_name();
             let type_str = target_type.context_str();
             let config = make
-                .get_backend_config_for(target_name, &artifact.serialization)
+                .get_backend_config_for(target_name, &artifact.backend)
                 .map(|m| serde_json::to_value(m).unwrap_or(json!({})))
                 .unwrap_or(json!({}));
             (

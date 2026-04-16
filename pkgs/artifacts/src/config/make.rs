@@ -38,7 +38,7 @@
 //!           }
 //!         },
 //!         "generator": "/nix/store/.../generate.sh",
-//!         "serialization": "agenix"
+//!         "backend": "agenix"
 //!       }
 //!     },
 //!     "config": {
@@ -102,7 +102,7 @@ pub struct PromptDef {
 /// - Files to be generated and their deployment properties
 /// - Prompts for user input
 /// - Generator script that produces the files
-/// - Backend reference for serialization
+/// - Backend reference used to (de)serialize the generated files
 #[derive(Debug, Clone, Serialize)]
 pub struct ArtifactDef {
     /// Artifact name identifier
@@ -117,8 +117,8 @@ pub struct ArtifactDef {
     pub prompts: BTreeMap<String, PromptDef>,
     /// Path to the generator script that produces files
     pub generator: String,
-    /// Backend name for serialization (references backend.toml)
-    pub serialization: String,
+    /// Backend name used to (de)serialize this artifact (references backend.toml)
+    pub backend: String,
 }
 
 impl<'de> Deserialize<'de> for ArtifactDef {
@@ -126,6 +126,10 @@ impl<'de> Deserialize<'de> for ArtifactDef {
     where
         D: Deserializer<'de>,
     {
+        // `serialization` is the legacy JSON key used by pre-rename versions of
+        // the nixos-artifacts Nix module. The canonical key is now `backend`;
+        // we accept both to stay compatible with flakes that still pin an older
+        // upstream version of the module.
         #[derive(Deserialize)]
         struct ArtifactDefHelper {
             name: Option<String>,
@@ -136,6 +140,7 @@ impl<'de> Deserialize<'de> for ArtifactDef {
             #[serde(default)]
             prompts: BTreeMap<String, PromptDef>,
             generator: Option<String>,
+            backend: Option<String>,
             serialization: Option<String>,
         }
 
@@ -149,9 +154,9 @@ impl<'de> Deserialize<'de> for ArtifactDef {
             Some(g) if !g.is_empty() => g,
             _ => return Err(de::Error::custom("generator must be set")),
         };
-        let serialization = match helper.serialization {
+        let backend = match helper.backend.or(helper.serialization) {
             Some(s) if !s.is_empty() => s,
-            _ => return Err(de::Error::custom("serialization must be set")),
+            _ => return Err(de::Error::custom("backend must be set")),
         };
         Ok(ArtifactDef {
             name,
@@ -160,7 +165,7 @@ impl<'de> Deserialize<'de> for ArtifactDef {
             files: helper.files,
             prompts: helper.prompts,
             generator,
-            serialization,
+            backend,
         })
     }
 }
@@ -225,7 +230,7 @@ pub struct SharedArtifactInfo {
     pub nixos_targets: Vec<String>,
     /// Home-manager user identifiers that use this artifact
     pub home_targets: Vec<String>,
-    /// Backend name for serialization (references backend.toml)
+    /// Backend name used to (de)serialize this artifact (references backend.toml)
     pub backend_name: String,
     /// Prompts from first definition (shared artifacts must have identical prompts)
     pub prompts: BTreeMap<String, PromptDef>,
@@ -418,7 +423,7 @@ impl MakeConfiguration {
 
             // Use the first definition for prompts, files, and backend
             let first_artifact = entries.first().map(|(_, _, a)| *a).unwrap();
-            let backend_name = first_artifact.serialization.clone();
+            let backend_name = first_artifact.backend.clone();
             let prompts = first_artifact.prompts.clone();
             let files = first_artifact.files.clone();
 

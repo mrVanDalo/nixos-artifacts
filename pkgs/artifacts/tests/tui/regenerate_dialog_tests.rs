@@ -43,7 +43,7 @@ fn make_test_artifact(name: &str, prompts: Vec<&str>) -> ArtifactDef {
         )]),
         prompts: prompt_map,
         generator: "/nix/store/xxx-gen".to_string(),
-        serialization: "test-backend".to_string(),
+        backend: "test-backend".to_string(),
     }
 }
 

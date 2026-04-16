@@ -9,7 +9,7 @@
     #
     #   name :: string
     #     Backend identifier used in artifact declarations
-    #     (artifacts.store.<name>.serialization = "<name>")
+    #     (artifacts.store.<name>.backend = "<name>")
     #
     #   settings :: attribute set (default: { })
     #     Backend-specific configuration passed to scripts via environment.

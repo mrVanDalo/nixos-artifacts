@@ -32,7 +32,7 @@ fn snapshot_single_nixos_artifact_no_shared() {
                 "files": {},
                 "prompts": {},
                 "generator": "/nix/store/gen.sh",
-                "serialization": "test"
+                "backend": "test"
             }
         },
         "config": {}
@@ -56,7 +56,7 @@ fn snapshot_shared_artifact_single_machine() {
                 "files": {},
                 "prompts": {},
                 "generator": "/nix/store/gen.sh",
-                "serialization": "test"
+                "backend": "test"
             }
         },
         "config": {}
@@ -81,7 +81,7 @@ fn snapshot_shared_artifact_multiple_machines_same_generator() {
                     "files": {},
                     "prompts": {},
                     "generator": "/nix/store/gen.sh",
-                    "serialization": "test"
+                    "backend": "test"
                 }
             },
             "config": {}
@@ -95,7 +95,7 @@ fn snapshot_shared_artifact_multiple_machines_same_generator() {
                     "files": {},
                     "prompts": {},
                     "generator": "/nix/store/gen.sh",
-                    "serialization": "test"
+                    "backend": "test"
                 }
             },
             "config": {}
@@ -121,7 +121,7 @@ fn snapshot_shared_artifact_multiple_machines_different_generators() {
                     "files": {},
                     "prompts": {},
                     "generator": "/nix/store/gen-a.sh",
-                    "serialization": "test"
+                    "backend": "test"
                 }
             },
             "config": {}
@@ -135,7 +135,7 @@ fn snapshot_shared_artifact_multiple_machines_different_generators() {
                     "files": {},
                     "prompts": {},
                     "generator": "/nix/store/gen-b.sh",
-                    "serialization": "test"
+                    "backend": "test"
                 }
             },
             "config": {}
@@ -160,7 +160,7 @@ fn snapshot_shared_artifact_mixed_nixos_and_home() {
                 "files": {},
                 "prompts": {},
                 "generator": "/nix/store/gen.sh",
-                "serialization": "test"
+                "backend": "test"
             }
         },
         "config": {}
@@ -174,7 +174,7 @@ fn snapshot_shared_artifact_mixed_nixos_and_home() {
                 "files": {},
                 "prompts": {},
                 "generator": "/nix/store/gen.sh",
-                "serialization": "test"
+                "backend": "test"
             }
         },
         "config": {}
@@ -205,7 +205,7 @@ fn snapshot_shared_artifact_matching_files_no_error() {
                     },
                     "prompts": {},
                     "generator": "/nix/store/gen.sh",
-                    "serialization": "test"
+                    "backend": "test"
                 }
             },
             "config": {}
@@ -226,7 +226,7 @@ fn snapshot_shared_artifact_matching_files_no_error() {
                     },
                     "prompts": {},
                     "generator": "/nix/store/gen.sh",
-                    "serialization": "test"
+                    "backend": "test"
                 }
             },
             "config": {}
@@ -259,7 +259,7 @@ fn snapshot_shared_artifact_mismatched_files_error() {
                     },
                     "prompts": {},
                     "generator": "/nix/store/gen.sh",
-                    "serialization": "test"
+                    "backend": "test"
                 }
             },
             "config": {}
@@ -286,7 +286,7 @@ fn snapshot_shared_artifact_mismatched_files_error() {
                     },
                     "prompts": {},
                     "generator": "/nix/store/gen.sh",
-                    "serialization": "test"
+                    "backend": "test"
                 }
             },
             "config": {}
@@ -319,7 +319,7 @@ fn snapshot_shared_artifact_different_file_names_error() {
                     },
                     "prompts": {},
                     "generator": "/nix/store/gen.sh",
-                    "serialization": "test"
+                    "backend": "test"
                 }
             },
             "config": {}
@@ -340,7 +340,7 @@ fn snapshot_shared_artifact_different_file_names_error() {
                     },
                     "prompts": {},
                     "generator": "/nix/store/gen.sh",
-                    "serialization": "test"
+                    "backend": "test"
                 }
             },
             "config": {}
@@ -366,7 +366,7 @@ fn snapshot_artifact_with_description() {
                 "files": {},
                 "prompts": {},
                 "generator": "/nix/store/gen.sh",
-                "serialization": "test"
+                "backend": "test"
             }
         },
         "config": {}
@@ -390,7 +390,7 @@ fn snapshot_artifact_without_description() {
                 "files": {},
                 "prompts": {},
                 "generator": "/nix/store/gen.sh",
-                "serialization": "test"
+                "backend": "test"
             }
         },
         "config": {}
@@ -416,7 +416,7 @@ fn snapshot_shared_artifact_with_description() {
                     "files": {},
                     "prompts": {},
                     "generator": "/nix/store/gen.sh",
-                    "serialization": "test"
+                    "backend": "test"
                 }
             },
             "config": {}
@@ -431,7 +431,7 @@ fn snapshot_shared_artifact_with_description() {
                     "files": {},
                     "prompts": {},
                     "generator": "/nix/store/gen.sh",
-                    "serialization": "test"
+                    "backend": "test"
                 }
             },
             "config": {}
@@ -479,7 +479,7 @@ fn snapshot_artifact_with_files_and_prompts() {
                     }
                 },
                 "generator": "/nix/store/gen.sh",
-                "serialization": "agenix"
+                "backend": "agenix"
             }
         },
         "config": {
@@ -518,7 +518,7 @@ fn snapshot_home_manager_configuration() {
                     }
                 },
                 "generator": "/nix/store/gen.sh",
-                "serialization": "test"
+                "backend": "test"
             }
         },
         "config": {}

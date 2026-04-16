@@ -1,5 +1,6 @@
 ---
 source: tests/config/make_tests.rs
+assertion_line: 353
 expression: "make_snapshot!(input, config)"
 ---
 Input:
@@ -21,7 +22,7 @@ Input:
                     },
                     "prompts": {},
                     "generator": "/nix/store/gen.sh",
-                    "serialization": "test"
+                    "backend": "test"
                 }
             },
             "config": {}
@@ -42,7 +43,7 @@ Input:
                     },
                     "prompts": {},
                     "generator": "/nix/store/gen.sh",
-                    "serialization": "test"
+                    "backend": "test"
                 }
             },
             "config": {}
@@ -75,7 +76,7 @@ MakeConfiguration {
                 },
                 prompts: {},
                 generator: "/nix/store/gen.sh",
-                serialization: "test",
+                backend: "test",
             },
         },
         "machine-two": {
@@ -99,7 +100,7 @@ MakeConfiguration {
                 },
                 prompts: {},
                 generator: "/nix/store/gen.sh",
-                serialization: "test",
+                backend: "test",
             },
         },
     },

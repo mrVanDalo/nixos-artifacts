@@ -136,7 +136,7 @@ The CLI extracts configuration from `nixosConfigurations` and
       files = { ... };
       prompts = { ... };
       generator = ./generator.sh;
-      serialization = "backend_name";
+      backend = "backend_name";
     };
   };
 
@@ -157,7 +157,7 @@ The CLI extracts configuration from `nixosConfigurations` and
 - `prompts`: User input definitions
 - `generator`: Path to the generator script (usually created with
   `pkgs.writers.writeBash`)
-- `serialization`: Backend name (must exist in backend.toml)
+- `backend`: Backend name (must exist in backend.toml)
 
 **Files**:
 

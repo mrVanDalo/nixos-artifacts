@@ -1,5 +1,6 @@
 ---
 source: tests/e2e/mod.rs
+assertion_line: 343
 expression: "(&harness.make, result, diag)"
 ---
 (
@@ -23,7 +24,7 @@ expression: "(&harness.make, result, diag)"
                     },
                     prompts: {},
                     generator: "/nix/store/HASH-test_generator_config.sh",
-                    serialization: "test",
+                    backend: "test",
                 },
                 "home-secret": ArtifactDef {
                     name: "home-secret",
@@ -41,7 +42,7 @@ expression: "(&harness.make, result, diag)"
                     },
                     prompts: {},
                     generator: "/nix/store/HASH-test_generator_home.sh",
-                    serialization: "test",
+                    backend: "test",
                 },
             },
         },
