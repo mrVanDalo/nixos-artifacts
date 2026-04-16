@@ -91,6 +91,14 @@ pub enum ScriptError {
     Io { message: String },
 }
 
+fn display_or_empty(s: &str) -> &str {
+    if s.is_empty() {
+        "(no output)"
+    } else {
+        s
+    }
+}
+
 impl std::fmt::Display for ScriptError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -99,48 +107,26 @@ impl std::fmt::Display for ScriptError {
                 timeout_secs,
                 stdout,
                 stderr,
-            } => {
-                write!(
-                    f,
-                    "Script '{}' timed out after {} seconds\nstdout: {}\nstderr: {}",
-                    script_name,
-                    timeout_secs,
-                    if stdout.is_empty() {
-                        "(no output)"
-                    } else {
-                        stdout
-                    },
-                    if stderr.is_empty() {
-                        "(no output)"
-                    } else {
-                        stderr
-                    }
-                )
-            }
+            } => write!(
+                f,
+                "Script '{}' timed out after {} seconds\nstdout: {}\nstderr: {}",
+                script_name,
+                timeout_secs,
+                display_or_empty(stdout),
+                display_or_empty(stderr),
+            ),
             ScriptError::Failed {
                 exit_code,
                 stdout,
                 stderr,
-            } => {
-                write!(
-                    f,
-                    "Script failed with exit code {}\nstdout: {}\nstderr: {}",
-                    exit_code,
-                    if stdout.is_empty() {
-                        "(no output)"
-                    } else {
-                        stdout
-                    },
-                    if stderr.is_empty() {
-                        "(no output)"
-                    } else {
-                        stderr
-                    }
-                )
-            }
-            ScriptError::Io { message } => {
-                write!(f, "I/O error: {}", message)
-            }
+            } => write!(
+                f,
+                "Script failed with exit code {}\nstdout: {}\nstderr: {}",
+                exit_code,
+                display_or_empty(stdout),
+                display_or_empty(stderr),
+            ),
+            ScriptError::Io { message } => write!(f, "I/O error: {}", message),
         }
     }
 }
@@ -163,19 +149,13 @@ pub struct CapturedOutput {
 
 impl std::fmt::Display for CapturedOutput {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let stdout = self.stdout.join("\n");
+        let stderr = self.stderr.join("\n");
         write!(
             f,
             "stdout: {}\nstderr: {}",
-            if self.stdout.is_empty() {
-                "(no output)".to_string()
-            } else {
-                self.stdout.join("\n")
-            },
-            if self.stderr.is_empty() {
-                "(no output)".to_string()
-            } else {
-                self.stderr.join("\n")
-            }
+            display_or_empty(&stdout),
+            display_or_empty(&stderr),
         )
     }
 }
