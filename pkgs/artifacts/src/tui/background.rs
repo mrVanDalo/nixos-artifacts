@@ -147,28 +147,13 @@ impl BackgroundEffectHandler {
         F: FnOnce() -> anyhow::Result<T> + Send + 'static,
         T: Send + 'static,
     {
-        let result = timeout(
+        let join_result = match timeout(
             BACKGROUND_TASK_TIMEOUT,
             tokio::task::spawn_blocking(operation),
         )
-        .await;
-
-        match result {
-            Ok(Ok(Ok(value))) => TimeoutResult::Success(value),
-            Ok(Ok(Err(e))) => {
-                log(&format!(
-                    "[ERROR] {} failed for {}: {}",
-                    operation_name, artifact_name, e
-                ));
-                TimeoutResult::OperationFailed(e.to_string())
-            }
-            Ok(Err(e)) => {
-                log(&format!(
-                    "[ERROR] {} task panicked for {}: {}",
-                    operation_name, artifact_name, e
-                ));
-                TimeoutResult::TaskPanic(e.to_string())
-            }
+        .await
+        {
+            Ok(join_result) => join_result,
             Err(_) => {
                 log(&format!(
                     "[ERROR] {} timed out for {} after {} seconds",
@@ -176,7 +161,29 @@ impl BackgroundEffectHandler {
                     artifact_name,
                     BACKGROUND_TASK_TIMEOUT.as_secs()
                 ));
-                TimeoutResult::Timeout
+                return TimeoutResult::Timeout;
+            }
+        };
+
+        let op_result = match join_result {
+            Ok(op_result) => op_result,
+            Err(e) => {
+                log(&format!(
+                    "[ERROR] {} task panicked for {}: {}",
+                    operation_name, artifact_name, e
+                ));
+                return TimeoutResult::TaskPanic(e.to_string());
+            }
+        };
+
+        match op_result {
+            Ok(value) => TimeoutResult::Success(value),
+            Err(e) => {
+                log(&format!(
+                    "[ERROR] {} failed for {}: {}",
+                    operation_name, artifact_name, e
+                ));
+                TimeoutResult::OperationFailed(e.to_string())
             }
         }
     }
