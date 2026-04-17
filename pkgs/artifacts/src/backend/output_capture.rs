@@ -92,11 +92,7 @@ pub enum ScriptError {
 }
 
 fn display_or_empty(s: &str) -> &str {
-    if s.is_empty() {
-        "(no output)"
-    } else {
-        s
-    }
+    if s.is_empty() { "(no output)" } else { s }
 }
 
 impl std::fmt::Display for ScriptError {
