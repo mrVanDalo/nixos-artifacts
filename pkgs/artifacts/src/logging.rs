@@ -83,10 +83,6 @@ impl LogLevel {
 ///
 /// The Logger is designed for fail-fast operation - it validates writability
 /// at creation time and streams logs in real-time (no buffering).
-/// Logger that writes structured log entries to a file.
-///
-/// The Logger is designed for fail-fast operation - it validates writability
-/// at creation time and streams logs in real-time (no buffering).
 #[derive(Debug)]
 pub struct Logger {
     /// The file handle, protected by a mutex for thread-safe writes
