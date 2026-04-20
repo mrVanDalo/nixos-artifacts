@@ -7,7 +7,7 @@
     files.identities.path = "${config.home.homeDirectory}/.passage/identities";
 
     # used to generate secrets based for rotation
-    generator = pkgs.writers.writeBash "generate-attic" ''
+    generator = pkgs.writers.writeBash "generate-passage" ''
       ${pkgs.age}/bin/age-keygen > $out/identities
     '';
   };
