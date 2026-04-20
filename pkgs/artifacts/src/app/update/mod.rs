@@ -143,7 +143,7 @@ fn handle_check_result(
     let Some(entry) = model.entries.get_mut(artifact_index) else {
         return (model, Effect::None);
     };
-    match &result {
+    match result {
         Ok(output) => {
             // Add captured script output to logs using helper methods
             if !output.stdout_lines.is_empty() || !output.stderr_lines.is_empty() {
@@ -175,7 +175,7 @@ fn handle_check_result(
             let artifact_error = ArtifactError::IoError { context: e.clone() };
             entry.step_logs_mut().check.push(LogEntry {
                 level: LogLevel::Error,
-                message: e.clone(),
+                message: e,
             });
             *entry.status_mut() = ArtifactStatus::Failed {
                 error: artifact_error,

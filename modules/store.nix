@@ -10,6 +10,7 @@ in
       submodule (
         { name, ... }:
         let
+          # bind outer name before inner submodule shadows it
           artifactName = name;
         in
         {
@@ -51,6 +52,7 @@ in
                 submodule (
                   { name, ... }:
                   let
+                    # bind outer name before inner submodule shadows it
                     fileName = name;
                   in
                   {
