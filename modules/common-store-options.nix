@@ -32,7 +32,7 @@ let
               description = mkOption {
                 type = str;
                 default = "input for ${promptName}";
-                description = "description shown during prompt entry";
+                description = "Description shown during prompt entry";
               };
 
             };
