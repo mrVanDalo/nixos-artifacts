@@ -1,8 +1,8 @@
 use crate::tui::model_state::ModelState;
 use artifacts::app::model::{
-    ArtifactEntry, ArtifactError, ArtifactStatus, GeneratingState, InputMode, ListEntry, LogEntry,
-    LogLevel, Model, PromptEntry, PromptState, Screen, SelectGeneratorState, SharedEntry, Step,
-    StepLogs, TargetType,
+    ArtifactEntry, ArtifactError, ArtifactStatus, GeneratingState, GenerationRun, InputMode,
+    ListEntry, LogEntry, LogLevel, Model, PromptEntry, PromptState, Screen, SelectGeneratorState,
+    SharedEntry, Step, TargetType,
 };
 use artifacts::config::make::{
     ArtifactDef, FileDef, GeneratorInfo, GeneratorSource, PromptDef, TargetType as ConfigTargetType,
@@ -77,25 +77,27 @@ impl ArtifactListState {
             artifacts: model
                 .entries
                 .iter()
-                .map(|e| match e {
-                    ListEntry::Single(single) => ArtifactSnapshot {
-                        target: single.target_type.target_name().to_string(),
-                        target_type: single.target_type.context_str(),
-                        name: single.artifact.name.clone(),
-                        status: format!("{:?}", single.status),
-                        has_logs: !single.step_logs.check.is_empty()
-                            || !single.step_logs.generate.is_empty()
-                            || !single.step_logs.serialize.is_empty(),
-                    },
-                    ListEntry::Shared(shared) => ArtifactSnapshot {
-                        target: "[shared]".to_string(),
-                        target_type: "shared",
-                        name: shared.info.artifact_name.clone(),
-                        status: format!("{:?}", shared.status),
-                        has_logs: !shared.step_logs.check.is_empty()
-                            || !shared.step_logs.generate.is_empty()
-                            || !shared.step_logs.serialize.is_empty(),
-                    },
+                .map(|e| {
+                    let logs = e.step_logs();
+                    let has_logs = !logs.check.is_empty()
+                        || !logs.generate.is_empty()
+                        || !logs.serialize.is_empty();
+                    match e {
+                        ListEntry::Single(single) => ArtifactSnapshot {
+                            target: single.target_type.target_name().to_string(),
+                            target_type: single.target_type.context_str(),
+                            name: single.artifact.name.clone(),
+                            status: format!("{:?}", single.status),
+                            has_logs,
+                        },
+                        ListEntry::Shared(shared) => ArtifactSnapshot {
+                            target: "[shared]".to_string(),
+                            target_type: "shared",
+                            name: shared.info.artifact_name.clone(),
+                            status: format!("{:?}", shared.status),
+                            has_logs,
+                        },
+                    }
                 })
                 .collect(),
             error: model.error.clone(),
@@ -283,7 +285,7 @@ fn make_test_model() -> Model {
         },
         artifact: make_test_artifact("ssh-key", vec!["passphrase"]),
         status: ArtifactStatus::Pending,
-        step_logs: StepLogs::default(),
+        runs: Vec::new(),
     };
     let entry2 = ArtifactEntry {
         target_type: TargetType::NixOS {
@@ -291,7 +293,7 @@ fn make_test_model() -> Model {
         },
         artifact: make_test_artifact("api-token", vec![]),
         status: ArtifactStatus::UpToDate,
-        step_logs: StepLogs::default(),
+        runs: Vec::new(),
     };
     let entry3 = ArtifactEntry {
         target_type: TargetType::HomeManager {
@@ -299,7 +301,7 @@ fn make_test_model() -> Model {
         },
         artifact: make_test_artifact("gpg-key", vec!["email", "name"]),
         status: ArtifactStatus::NeedsGeneration,
-        step_logs: StepLogs::default(),
+        runs: Vec::new(),
     };
 
     Model {
@@ -435,11 +437,12 @@ fn test_artifact_list_with_failed_status() {
             },
             output: String::new(),
         };
-        entry.step_logs.check = vec![LogEntry {
+        let mut run = GenerationRun::new();
+        run.step_logs.check = vec![LogEntry {
             level: LogLevel::Info,
             message: "Artifact needs regeneration".to_string(),
         }];
-        entry.step_logs.generate = vec![
+        run.step_logs.generate = vec![
             LogEntry {
                 level: LogLevel::Output,
                 message: "Generating SSH key pair...".to_string(),
@@ -453,6 +456,7 @@ fn test_artifact_list_with_failed_status() {
                 message: "Generator failed: exit code 1".to_string(),
             },
         ];
+        entry.runs = vec![run];
     }
     model.selected_log_step = Step::Generate;
 
@@ -732,7 +736,7 @@ fn test_multiple_machines_before_generate_all() {
         },
         artifact: make_multiple_machines_artifact("artifact-one"),
         status: ArtifactStatus::Pending,
-        step_logs: StepLogs::default(),
+        runs: Vec::new(),
     };
     let entry2 = ArtifactEntry {
         target_type: TargetType::NixOS {
@@ -740,7 +744,7 @@ fn test_multiple_machines_before_generate_all() {
         },
         artifact: make_multiple_machines_artifact("artifact-two"),
         status: ArtifactStatus::Pending,
-        step_logs: StepLogs::default(),
+        runs: Vec::new(),
     };
     let entry3 = ArtifactEntry {
         target_type: TargetType::NixOS {
@@ -748,7 +752,7 @@ fn test_multiple_machines_before_generate_all() {
         },
         artifact: make_multiple_machines_artifact("artifact-one"),
         status: ArtifactStatus::Pending,
-        step_logs: StepLogs::default(),
+        runs: Vec::new(),
     };
     let entry4 = ArtifactEntry {
         target_type: TargetType::NixOS {
@@ -756,7 +760,7 @@ fn test_multiple_machines_before_generate_all() {
         },
         artifact: make_multiple_machines_artifact("artifact-two"),
         status: ArtifactStatus::Pending,
-        step_logs: StepLogs::default(),
+        runs: Vec::new(),
     };
 
     let model = Model {
@@ -797,7 +801,7 @@ fn test_multiple_machines_after_generate_all() {
         },
         artifact: make_multiple_machines_artifact("artifact-one"),
         status: ArtifactStatus::NeedsGeneration,
-        step_logs: StepLogs::default(),
+        runs: Vec::new(),
     };
     let entry2 = ArtifactEntry {
         target_type: TargetType::NixOS {
@@ -805,7 +809,7 @@ fn test_multiple_machines_after_generate_all() {
         },
         artifact: make_multiple_machines_artifact("artifact-two"),
         status: ArtifactStatus::UpToDate,
-        step_logs: StepLogs::default(),
+        runs: Vec::new(),
     };
     let entry3 = ArtifactEntry {
         target_type: TargetType::NixOS {
@@ -813,7 +817,7 @@ fn test_multiple_machines_after_generate_all() {
         },
         artifact: make_multiple_machines_artifact("artifact-one"),
         status: ArtifactStatus::NeedsGeneration,
-        step_logs: StepLogs::default(),
+        runs: Vec::new(),
     };
     let entry4 = ArtifactEntry {
         target_type: TargetType::NixOS {
@@ -821,7 +825,7 @@ fn test_multiple_machines_after_generate_all() {
         },
         artifact: make_multiple_machines_artifact("artifact-two"),
         status: ArtifactStatus::NeedsGeneration,
-        step_logs: StepLogs::default(),
+        runs: Vec::new(),
     };
 
     let model = Model {
@@ -864,7 +868,7 @@ fn test_artifact_list_with_shared_artifacts() {
         },
         artifact: make_test_artifact("local-secret", vec![]),
         status: ArtifactStatus::Pending,
-        step_logs: StepLogs::default(),
+        runs: Vec::new(),
     };
 
     let shared_entry = SharedEntry {
@@ -880,7 +884,7 @@ fn test_artifact_list_with_shared_artifacts() {
             error: None,
         },
         status: ArtifactStatus::NeedsGeneration,
-        step_logs: StepLogs::default(),
+        runs: Vec::new(),
         selected_generator: None,
     };
 
@@ -930,7 +934,7 @@ fn make_shared_entry_with_status(status: ArtifactStatus) -> SharedEntry {
             error: None,
         },
         status,
-        step_logs: StepLogs::default(),
+        runs: Vec::new(),
         selected_generator: None,
     }
 }
@@ -1036,7 +1040,8 @@ fn test_shared_artifact_failed_runtime_error() {
         output: "Error: permission denied".to_string(),
     });
     // Add some check logs
-    shared_entry.step_logs.check = vec![
+    let mut run = GenerationRun::new();
+    run.step_logs.check = vec![
         LogEntry {
             level: LogLevel::Info,
             message: "Checking if generation is needed...".to_string(),
@@ -1046,6 +1051,7 @@ fn test_shared_artifact_failed_runtime_error() {
             message: "Artifact needs regeneration".to_string(),
         },
     ];
+    shared_entry.runs = vec![run];
 
     let model = Model {
         screen: Screen::ArtifactList,
@@ -1084,10 +1090,12 @@ fn test_shared_artifact_failed_config_error() {
         output: String::new(),
     });
     // Add check logs
-    shared_entry.step_logs.check = vec![LogEntry {
+    let mut run = GenerationRun::new();
+    run.step_logs.check = vec![LogEntry {
         level: LogLevel::Error,
         message: "Validation failed: File definition mismatch".to_string(),
     }];
+    shared_entry.runs = vec![run];
 
     let model = Model {
         screen: Screen::ArtifactList,
@@ -1577,7 +1585,7 @@ mod model_tests {
                     },
                     artifact: make_test_artifact(&format!("artifact-{}", i + 1), vec![]),
                     status,
-                    step_logs: StepLogs::default(),
+                    runs: Vec::new(),
                 })
             })
             .collect();

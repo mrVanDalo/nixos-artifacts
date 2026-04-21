@@ -14,8 +14,7 @@ use std::collections::{BTreeMap, HashMap};
 use artifacts::app::effect::Effect;
 use artifacts::app::message::{Message, ScriptOutput};
 use artifacts::app::model::{
-    ArtifactEntry, ArtifactStatus, GeneratingState, ListEntry, Model, Screen, Step, StepLogs,
-    TargetType,
+    ArtifactEntry, ArtifactStatus, GeneratingState, ListEntry, Model, Screen, Step, TargetType,
 };
 use artifacts::app::update::update;
 use artifacts::config::make::{ArtifactDef, FileDef, PromptDef};
@@ -69,7 +68,7 @@ fn create_test_model(artifact_name: &str, has_prompts: bool) -> Model {
         },
         artifact: artifact.clone(),
         status: ArtifactStatus::Pending,
-        step_logs: StepLogs::default(),
+        runs: Vec::new(),
     };
 
     Model {
@@ -560,7 +559,7 @@ fn test_batch_effect_processing() {
         },
         artifact: artifact1.clone(),
         status: ArtifactStatus::Pending,
-        step_logs: StepLogs::default(),
+        runs: Vec::new(),
     };
     let entry2 = ArtifactEntry {
         target_type: TargetType::NixOS {
@@ -568,7 +567,7 @@ fn test_batch_effect_processing() {
         },
         artifact: artifact2.clone(),
         status: ArtifactStatus::Pending,
-        step_logs: StepLogs::default(),
+        runs: Vec::new(),
     };
 
     let mut model = Model {

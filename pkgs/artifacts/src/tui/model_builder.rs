@@ -1,6 +1,6 @@
 use crate::app::model::{
     ArtifactEntry, ArtifactError, ArtifactStatus, ListEntry, Model, Screen, SharedEntry, Step,
-    StepLogs, TargetType, Warning,
+    TargetType, Warning,
 };
 use crate::config::backend::BackendConfiguration;
 use crate::config::make::MakeConfiguration;
@@ -27,7 +27,7 @@ pub fn build_model(make: &MakeConfiguration) -> Model {
                     },
                     artifact: artifact.clone(),
                     status: ArtifactStatus::Pending,
-                    step_logs: StepLogs::default(),
+                    runs: Vec::new(),
                 };
                 entries.push(ListEntry::Single(entry));
             }
@@ -44,7 +44,7 @@ pub fn build_model(make: &MakeConfiguration) -> Model {
                     },
                     artifact: artifact.clone(),
                     status: ArtifactStatus::Pending,
-                    step_logs: StepLogs::default(),
+                    runs: Vec::new(),
                 };
                 entries.push(ListEntry::Single(entry));
             }
@@ -68,7 +68,7 @@ pub fn build_model(make: &MakeConfiguration) -> Model {
         entries.push(ListEntry::Shared(SharedEntry {
             info: shared_info,
             status,
-            step_logs: StepLogs::default(),
+            runs: Vec::new(),
             selected_generator: None,
         }));
     }

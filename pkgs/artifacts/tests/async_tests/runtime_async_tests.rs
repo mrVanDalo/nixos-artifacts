@@ -14,9 +14,7 @@ use std::time::Duration;
 use artifacts::app::effect::Effect;
 use artifacts::app::message::Message;
 use artifacts::app::message::ScriptOutput;
-use artifacts::app::model::{
-    ArtifactEntry, ArtifactStatus, ListEntry, Model, Screen, StepLogs, TargetType,
-};
+use artifacts::app::model::{ArtifactEntry, ArtifactStatus, ListEntry, Model, Screen, TargetType};
 use artifacts::config::backend::BackendConfiguration;
 use artifacts::config::make::{ArtifactDef, FileDef, MakeConfiguration, PromptDef};
 use artifacts::tui::background::spawn_background_task;
@@ -70,7 +68,7 @@ fn make_test_model() -> Model {
         },
         artifact: make_test_artifact("ssh-key", vec!["passphrase"]),
         status: ArtifactStatus::Pending,
-        step_logs: StepLogs::default(),
+        runs: Vec::new(),
     };
     let entry2 = ArtifactEntry {
         target_type: TargetType::NixOS {
@@ -78,7 +76,7 @@ fn make_test_model() -> Model {
         },
         artifact: make_test_artifact("api-token", vec![]),
         status: ArtifactStatus::Pending,
-        step_logs: StepLogs::default(),
+        runs: Vec::new(),
     };
 
     Model {

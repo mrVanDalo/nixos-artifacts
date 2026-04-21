@@ -93,7 +93,7 @@ fn project_root() -> std::path::PathBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use artifacts::app::model::{ArtifactEntry, ArtifactStatus, Step, StepLogs};
+    use artifacts::app::model::{ArtifactEntry, ArtifactStatus, Step};
     use artifacts::config::make::{ArtifactDef, FileDef};
     use std::collections::BTreeMap;
 
@@ -150,7 +150,7 @@ mod tests {
             },
             artifact: make_test_artifact("test-artifact"),
             status: ArtifactStatus::NeedsGeneration,
-            step_logs: StepLogs::default(),
+            runs: Vec::new(),
         };
 
         let model = Model {

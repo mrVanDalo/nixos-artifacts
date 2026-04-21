@@ -1,6 +1,7 @@
 //! Log types for artifact generation output.
 
 use std::collections::HashSet;
+use std::time::SystemTime;
 
 /// A single log entry for an artifact generation step.
 #[derive(Debug, Clone)]
@@ -127,6 +128,43 @@ impl StepLogs {
         });
         self.get_mut(step).extend(entries);
     }
+}
+
+/// A single execution pass for an artifact.
+///
+/// Each run bundles the [`StepLogs`] produced by one trip through the
+/// check → generate → serialize pipeline. Entries keep a `Vec<GenerationRun>`
+/// so reruns don't collapse into the same per-step vecs.
+#[derive(Debug, Clone)]
+pub struct GenerationRun {
+    pub started_at: SystemTime,
+    pub step_logs: StepLogs,
+}
+
+impl GenerationRun {
+    pub fn new() -> Self {
+        Self {
+            started_at: SystemTime::now(),
+            step_logs: StepLogs::default(),
+        }
+    }
+}
+
+impl Default for GenerationRun {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Returns a shared empty [`StepLogs`] used when an entry has no runs yet.
+///
+/// Keeps `ListEntry::step_logs()` returning `&StepLogs` for views that still
+/// read a flat per-step structure, without forcing every entry to carry an
+/// initial run.
+pub(crate) fn empty_step_logs() -> &'static StepLogs {
+    use std::sync::OnceLock;
+    static EMPTY: OnceLock<StepLogs> = OnceLock::new();
+    EMPTY.get_or_init(StepLogs::default)
 }
 
 /// State for the chronological log view with expandable sections

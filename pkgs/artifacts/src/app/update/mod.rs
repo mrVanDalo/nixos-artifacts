@@ -252,6 +252,12 @@ pub(crate) fn start_generation_for_selected_internal(
         return (model, Effect::None);
     };
 
+    // Regeneration skips the check step, so seed a fresh run here. First-time
+    // generation (NeedsGeneration) continues the run started by init().
+    if exists_before && let Some(entry) = model.entries.get_mut(artifact_index) {
+        entry.start_new_run();
+    }
+
     // Now we can mutate model without borrowing entry
     let Some(entry) = model.entries.get(artifact_index) else {
         return (model, Effect::None);

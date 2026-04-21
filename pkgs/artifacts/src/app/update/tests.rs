@@ -39,7 +39,7 @@ fn make_test_model() -> Model {
         },
         artifact: make_test_artifact("ssh-key", vec!["passphrase"]),
         status: ArtifactStatus::Pending,
-        step_logs: StepLogs::default(),
+        runs: Vec::new(),
     };
     let entry2 = ArtifactEntry {
         target_type: TargetType::NixOS {
@@ -47,7 +47,7 @@ fn make_test_model() -> Model {
         },
         artifact: make_test_artifact("api-token", vec![]),
         status: ArtifactStatus::Pending,
-        step_logs: StepLogs::default(),
+        runs: Vec::new(),
     };
 
     Model {
@@ -332,10 +332,10 @@ fn test_update_returns_serialize_effect() {
 #[test]
 fn test_update_returns_check_serialization_effect() {
     // Create model with pending artifacts - init() will return CheckSerialization effects
-    let model = make_test_model();
+    let mut model = make_test_model();
 
     // Verify init() returns batch of CheckSerialization effects
-    let effect = init(&model);
+    let effect = init(&mut model);
 
     match &effect {
         Effect::Batch(effects) => {
@@ -406,9 +406,9 @@ fn test_update_handles_async_result() {
 /// Test that effect batching works correctly for multiple check operations
 #[test]
 fn test_update_effect_batching() {
-    let model = make_test_model();
+    let mut model = make_test_model();
 
-    let effect = init(&model);
+    let effect = init(&mut model);
 
     // init() should return a batch of check serialization effects
     match effect {
@@ -546,7 +546,7 @@ fn test_single_generator_skips_dialog() {
     let shared_entry = SharedEntry {
         info: shared_info,
         status: ArtifactStatus::Pending,
-        step_logs: StepLogs::default(),
+        runs: Vec::new(),
         selected_generator: None,
     };
 
@@ -616,7 +616,7 @@ fn test_single_generator_no_prompts_goes_to_generating() {
     let shared_entry = SharedEntry {
         info: shared_info,
         status: ArtifactStatus::Pending,
-        step_logs: StepLogs::default(),
+        runs: Vec::new(),
         selected_generator: None,
     };
 
@@ -685,7 +685,7 @@ fn test_multiple_generators_shows_dialog() {
     let shared_entry = SharedEntry {
         info: shared_info,
         status: ArtifactStatus::Pending,
-        step_logs: StepLogs::default(),
+        runs: Vec::new(),
         selected_generator: None,
     };
 
@@ -752,7 +752,7 @@ fn test_single_generator_stores_selected_path() {
     let shared_entry = SharedEntry {
         info: shared_info,
         status: ArtifactStatus::Pending,
-        step_logs: StepLogs::default(),
+        runs: Vec::new(),
         selected_generator: None,
     };
 
@@ -812,7 +812,7 @@ fn make_test_model_with_shared() -> Model {
     let shared_entry = SharedEntry {
         info: shared_info,
         status: ArtifactStatus::Pending,
-        step_logs: StepLogs::default(),
+        runs: Vec::new(),
         selected_generator: None,
     };
 
@@ -825,4 +825,82 @@ fn make_test_model_with_shared() -> Model {
         warnings: Vec::new(),
         tick_count: 0,
     }
+}
+
+/// Acceptance criterion: generating the same artifact twice produces two
+/// separate run buckets, preserving the logs of the first run alongside the
+/// second.
+#[test]
+fn test_regeneration_produces_distinct_run_buckets() {
+    // Run 1: initial check for a pending artifact.
+    let mut model = make_test_model();
+    let _ = init(&mut model);
+    assert_eq!(
+        model.entries[0].runs().len(),
+        1,
+        "init should seed one run per pending entry"
+    );
+
+    // Simulate the check reporting UpToDate with some captured output so the
+    // first run carries data we can later recognise.
+    let (model, _) = update(
+        model,
+        Message::CheckSerializationResult {
+            artifact_index: 0,
+            status: ArtifactStatus::UpToDate,
+            result: Ok(ScriptOutput {
+                stdout_lines: vec!["run-one-check".to_string()],
+                stderr_lines: vec![],
+            }),
+        },
+    );
+    assert_eq!(model.entries[0].runs().len(), 1);
+    let run_one_check_len = model.entries[0].runs()[0].step_logs.check.len();
+    assert!(run_one_check_len > 0, "first run should have check logs");
+
+    // Run 2: user triggers regeneration on the now-UpToDate artifact.
+    let (model, _) = start_generation_for_selected_internal(model, 0);
+    assert_eq!(
+        model.entries[0].runs().len(),
+        2,
+        "regenerating an UpToDate artifact should start a second run"
+    );
+
+    // The second run starts empty; the first run's logs are still intact.
+    let run_two = &model.entries[0].runs()[1];
+    assert!(
+        run_two.step_logs.check.is_empty()
+            && run_two.step_logs.generate.is_empty()
+            && run_two.step_logs.serialize.is_empty(),
+        "fresh run should begin with empty logs"
+    );
+    assert_eq!(
+        model.entries[0].runs()[0].step_logs.check.len(),
+        run_one_check_len,
+        "first run's logs must survive into subsequent runs"
+    );
+}
+
+/// When a user triggers generation on a NeedsGeneration artifact (no
+/// intervening regeneration prompt), we stay inside the run that init seeded.
+#[test]
+fn test_first_time_generation_continues_initial_run() {
+    let mut model = make_test_model();
+    let _ = init(&mut model);
+    // Check came back needing generation.
+    let (model, _) = update(
+        model,
+        Message::CheckSerializationResult {
+            artifact_index: 0,
+            status: ArtifactStatus::NeedsGeneration,
+            result: Ok(ScriptOutput::default()),
+        },
+    );
+
+    let (model, _) = start_generation_for_selected_internal(model, 0);
+    assert_eq!(
+        model.entries[0].runs().len(),
+        1,
+        "first-time generation should stay in the run seeded by init"
+    );
 }

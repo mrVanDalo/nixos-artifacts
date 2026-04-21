@@ -1,7 +1,7 @@
 use artifacts::app::message::{KeyEvent, Message};
 use artifacts::app::model::{
     ArtifactEntry, ArtifactStatus, ConfirmRegenerateState, GeneratingState, ListEntry, Model,
-    Screen, SharedEntry, Step, StepLogs, TargetType,
+    Screen, SharedEntry, Step, TargetType,
 };
 use artifacts::app::update::update;
 use artifacts::config::make::{ArtifactDef, FileDef, PromptDef, SharedArtifactInfo};
@@ -54,7 +54,7 @@ fn make_test_model_with_existing_artifact() -> Model {
         },
         artifact: make_test_artifact("ssh-key", vec![]),
         status: ArtifactStatus::UpToDate, // EXISTING ARTIFACT - UpToDate means it exists
-        step_logs: StepLogs::default(),
+        runs: Vec::new(),
     };
 
     Model {
@@ -75,7 +75,7 @@ fn make_test_model_with_new_artifact() -> Model {
         },
         artifact: make_test_artifact("ssh-key", vec![]),
         status: ArtifactStatus::NeedsGeneration, // NEW ARTIFACT - NeedsGeneration means doesn't exist
-        step_logs: StepLogs::default(),
+        runs: Vec::new(),
     };
 
     Model {
@@ -103,7 +103,7 @@ fn make_shared_entry(status: ArtifactStatus) -> SharedEntry {
             error: None,
         },
         status,
-        step_logs: StepLogs::default(),
+        runs: Vec::new(),
         selected_generator: None,
     }
 }
@@ -448,7 +448,7 @@ fn test_dialog_regenerate_proceeds_to_prompts() {
         },
         artifact: make_test_artifact("ssh-key", vec!["passphrase"]),
         status: ArtifactStatus::NeedsGeneration,
-        step_logs: StepLogs::default(),
+        runs: Vec::new(),
     };
     let model = Model {
         screen: Screen::ConfirmRegenerate(ConfirmRegenerateState {
@@ -588,7 +588,7 @@ fn test_entry_exists_used_for_dialog_decision() {
         },
         artifact: make_test_artifact("test", vec![]),
         status: ArtifactStatus::UpToDate, // exists=true
-        step_logs: StepLogs::default(),
+        runs: Vec::new(),
     };
 
     // The exists_before flag for GeneratingState comes from checking status == UpToDate
@@ -605,7 +605,7 @@ fn test_entry_exists_used_for_dialog_decision() {
         },
         artifact: make_test_artifact("test", vec![]),
         status: ArtifactStatus::NeedsGeneration, // exists=false
-        step_logs: StepLogs::default(),
+        runs: Vec::new(),
     };
 
     let not_exists_from_status = matches!(entry_needs_gen.status, ArtifactStatus::UpToDate);
@@ -755,7 +755,7 @@ fn test_dialog_appears_only_for_needs_generation() {
         },
         artifact: make_test_artifact("ssh-key", vec![]),
         status: ArtifactStatus::UpToDate,
-        step_logs: StepLogs::default(),
+        runs: Vec::new(),
     };
 
     let model = Model {

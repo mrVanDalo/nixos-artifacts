@@ -99,7 +99,7 @@ where
     frames_rendered += 1;
 
     // Execute initial effect (check serialization for all pending artifacts)
-    let initial_effect = init(&model);
+    let initial_effect = init(&mut model);
     model = execute_initial_effect(&cmd_tx, model, initial_effect).await?;
 
     loop {
@@ -468,7 +468,7 @@ mod tests {
             },
             artifact: make_test_artifact("ssh-key", vec!["passphrase"]),
             status: ArtifactStatus::Pending,
-            step_logs: StepLogs::default(),
+            runs: Vec::new(),
         };
         let entry2 = ArtifactEntry {
             target_type: TargetType::NixOS {
@@ -476,7 +476,7 @@ mod tests {
             },
             artifact: make_test_artifact("api-token", vec![]),
             status: ArtifactStatus::Pending,
-            step_logs: StepLogs::default(),
+            runs: Vec::new(),
         };
 
         Model {

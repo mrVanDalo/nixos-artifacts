@@ -1,6 +1,6 @@
 //! Artifact types and status definitions.
 
-use super::log::{Step, StepLogs};
+use super::log::{GenerationRun, Step, StepLogs, empty_step_logs};
 use super::target::TargetType;
 use crate::config::make::{ArtifactDef, SharedArtifactInfo};
 use ratatui::style::{Color, Style};
@@ -17,8 +17,9 @@ pub struct ArtifactEntry {
     pub artifact: ArtifactDef,
     /// Current generation status
     pub status: ArtifactStatus,
-    /// Logs organized by generation step
-    pub step_logs: StepLogs,
+    /// History of generation runs. Each run bundles the logs produced by
+    /// one trip through the check → generate → serialize pipeline.
+    pub runs: Vec<GenerationRun>,
 }
 
 /// Typed error enum for artifact failures.
@@ -321,18 +322,46 @@ impl ListEntry {
         }
     }
 
-    pub fn step_logs(&self) -> &StepLogs {
+    pub fn runs(&self) -> &[GenerationRun] {
         match self {
-            ListEntry::Single(entry) => &entry.step_logs,
-            ListEntry::Shared(entry) => &entry.step_logs,
+            ListEntry::Single(entry) => &entry.runs,
+            ListEntry::Shared(entry) => &entry.runs,
         }
     }
 
-    pub fn step_logs_mut(&mut self) -> &mut StepLogs {
+    pub fn runs_mut(&mut self) -> &mut Vec<GenerationRun> {
         match self {
-            ListEntry::Single(entry) => &mut entry.step_logs,
-            ListEntry::Shared(entry) => &mut entry.step_logs,
+            ListEntry::Single(entry) => &mut entry.runs,
+            ListEntry::Shared(entry) => &mut entry.runs,
         }
+    }
+
+    /// Append a fresh [`GenerationRun`] and return a mutable reference to it.
+    pub fn start_new_run(&mut self) -> &mut GenerationRun {
+        let runs = self.runs_mut();
+        runs.push(GenerationRun::new());
+        runs.last_mut().expect("just pushed a run")
+    }
+
+    /// Logs for the most recent run. Returns a shared empty [`StepLogs`] when
+    /// no runs have been recorded yet so callers can keep reading a flat
+    /// per-step structure.
+    pub fn step_logs(&self) -> &StepLogs {
+        match self.runs().last() {
+            Some(run) => &run.step_logs,
+            None => empty_step_logs(),
+        }
+    }
+
+    /// Mutable logs for the current run. If no run exists yet, one is
+    /// materialized on the fly so callers that log without explicit run
+    /// management still get a valid bucket.
+    pub fn step_logs_mut(&mut self) -> &mut StepLogs {
+        let runs = self.runs_mut();
+        if runs.is_empty() {
+            runs.push(GenerationRun::new());
+        }
+        &mut runs.last_mut().expect("run list non-empty").step_logs
     }
 
     pub fn is_shared(&self) -> bool {
@@ -353,7 +382,8 @@ pub struct SharedEntry {
     /// Shared artifact info (artifact name, generators, backend, prompts, files)
     pub info: SharedArtifactInfo,
     pub status: ArtifactStatus,
-    pub step_logs: StepLogs,
+    /// History of generation runs; see [`ArtifactEntry::runs`] for details.
+    pub runs: Vec<GenerationRun>,
     /// The selected generator path (set after user selection)
     pub selected_generator: Option<String>,
 }
