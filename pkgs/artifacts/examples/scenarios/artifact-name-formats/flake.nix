@@ -17,7 +17,7 @@
               { pkgs, ... }:
               {
                 networking.hostName = "machine-name";
-                artifacts.default.backend.serialization = "test";
+                artifacts.default.backend = "test";
                 artifacts.store = {
                   "artifact.one" = {
                     files."first.secret".path = "/run/secrets/first.secret";

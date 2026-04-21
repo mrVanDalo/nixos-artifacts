@@ -8,6 +8,6 @@ info:
 success: true
 exit_code: 0
 ----- stdout -----
-artifacts 0.1.0
+artifacts 4.0.0
 
 ----- stderr -----

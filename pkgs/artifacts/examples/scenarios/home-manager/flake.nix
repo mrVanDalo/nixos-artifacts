@@ -4,7 +4,7 @@
   inputs.flake-parts.url = "github:hercules-ci/flake-parts";
   inputs.home-manager.inputs.nixpkgs.follows = "nixpkgs";
   inputs.home-manager.url = "github:nix-community/home-manager";
-  inputs.nixos-artifacts.url = "github:mrvandalo/nixos-artifacts/home-manager";
+  inputs.nixos-artifacts.url = "github:mrvandalo/nixos-artifacts";
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
   outputs =
@@ -22,7 +22,7 @@
                 home.stateVersion = "25.05";
                 home.username = "some-test-name";
                 home.homeDirectory = "/home/test";
-                artifacts.default.backend.serialization = "test";
+                artifacts.default.backend = "test";
                 artifacts.store = {
                   artifact-one = {
                     files.first-secret = { };

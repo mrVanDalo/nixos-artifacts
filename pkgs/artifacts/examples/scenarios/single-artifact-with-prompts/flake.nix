@@ -1,7 +1,6 @@
 {
   description = "scenario-simple";
   inputs.flake-parts.url = "github:hercules-ci/flake-parts";
-  #inputs.nixos-artifacts.url = "path:///home/palo/dev/artifacts/nixos-artifacts";
   inputs.nixos-artifacts.url = "github:mrvandalo/nixos-artifacts";
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
@@ -33,7 +32,7 @@
               {
                 networking.hostName = "machine-name";
                 artifacts.config.test.key = "example-key";
-                artifacts.default.backend.serialization = "test";
+                artifacts.default.backend = "test";
                 artifacts.store = {
                   test-artifact = {
                     files.very-simple-secrets = {

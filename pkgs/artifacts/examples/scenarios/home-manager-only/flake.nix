@@ -22,7 +22,7 @@
                 home.stateVersion = "25.05";
                 home.username = "test-user";
                 home.homeDirectory = "/home/test-user";
-                artifacts.default.backend.serialization = "test";
+                artifacts.default.backend = "test";
                 artifacts.store = {
                   home-secret = {
                     files.secret-file = { };

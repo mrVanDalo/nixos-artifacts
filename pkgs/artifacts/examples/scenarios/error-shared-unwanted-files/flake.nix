@@ -17,7 +17,7 @@
               { pkgs, ... }:
               {
                 networking.hostName = "machine-one";
-                artifacts.default.backend.serialization = "test";
+                artifacts.default.backend = "test";
                 artifacts.store = {
                   # Shared artifact that creates wrong file (should error)
                   shared-secret = {
@@ -43,7 +43,7 @@
               { pkgs, ... }:
               {
                 networking.hostName = "machine-two";
-                artifacts.default.backend.serialization = "test";
+                artifacts.default.backend = "test";
                 artifacts.store = {
                   # Same shared artifact creating wrong file
                   shared-secret = {

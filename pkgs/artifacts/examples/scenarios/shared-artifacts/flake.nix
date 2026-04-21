@@ -17,7 +17,7 @@
               { pkgs, ... }:
               {
                 networking.hostName = "machine-one";
-                artifacts.default.backend.serialization = "test";
+                artifacts.default.backend = "test";
                 artifacts.store = {
                   # Shared artifact across both machines
                   shared-secret = {
@@ -51,7 +51,7 @@
               { pkgs, ... }:
               {
                 networking.hostName = "machine-two";
-                artifacts.default.backend.serialization = "test";
+                artifacts.default.backend = "test";
                 artifacts.store = {
                   # Same shared artifact
                   shared-secret = {

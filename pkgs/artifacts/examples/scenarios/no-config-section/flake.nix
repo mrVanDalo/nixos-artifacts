@@ -17,7 +17,7 @@
               { pkgs, ... }:
               {
                 networking.hostName = "machine-name";
-                artifacts.default.backend.serialization = "test";
+                artifacts.default.backend = "test";
                 artifacts.store = {
                   test-artifact = {
                     files = {

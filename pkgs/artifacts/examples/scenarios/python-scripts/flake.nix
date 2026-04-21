@@ -17,7 +17,7 @@
               { pkgs, ... }:
               {
                 networking.hostName = "machine-one";
-                artifacts.default.backend.serialization = "test";
+                artifacts.default.backend = "test";
                 artifacts.store = {
                   artifact-one = {
                     files.first-secret = {
@@ -48,7 +48,7 @@
               { pkgs, ... }:
               {
                 networking.hostName = "machine-two";
-                artifacts.default.backend.serialization = "test";
+                artifacts.default.backend = "test";
                 artifacts.store = {
                   artifact-one = {
                     files.first-secret = {

@@ -19,7 +19,7 @@
               {
                 networking.hostName = "test-machine";
                 # Backend config that should appear in $config
-                artifacts.default.backend.serialization = "test-config-verify";
+                artifacts.default.backend = "test-config-verify";
                 artifacts.store = {
                   # Regular NixOS artifact (will verify $config)
                   nixos-secret = {
