@@ -95,7 +95,11 @@ fn open_chronological_log_view(mut model: Model) -> (Model, Effect) {
     let artifact_index = model.selected_index;
 
     if let Some(entry) = model.entries.get(artifact_index) {
-        let state = ChronologicalLogState::new(artifact_index, entry.artifact_name().to_string());
+        let state = ChronologicalLogState::new(
+            artifact_index,
+            entry.artifact_name().to_string(),
+            entry.runs().len(),
+        );
         model.screen = Screen::ChronologicalLog(state);
     }
 

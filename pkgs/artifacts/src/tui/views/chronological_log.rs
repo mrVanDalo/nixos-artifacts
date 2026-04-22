@@ -1,4 +1,4 @@
-use crate::app::model::{ChronologicalLogState, Step, StepLogs};
+use crate::app::model::{ChronologicalLogState, GenerationRun, LogEntry, LogFocus, LogLevel, Step};
 use ratatui::{
     Frame,
     layout::{Constraint, Layout, Rect},
@@ -39,42 +39,116 @@ fn render_log_sections(
     state: &ChronologicalLogState,
     area: Rect,
 ) {
-    let step_logs = if let Some(entry) = model.entries.get(state.artifact_index) {
-        entry.step_logs()
-    } else {
-        return;
+    let runs = match model.entries.get(state.artifact_index) {
+        Some(entry) => entry.runs(),
+        None => return,
     };
 
     let chunks = Layout::vertical([Constraint::Min(0), Constraint::Length(1)]).split(area);
 
-    render_scrollable_content(frame, state, step_logs, chunks[0]);
+    render_scrollable_content(frame, state, runs, chunks[0]);
     render_legend(frame, chunks[1]);
 }
 
 fn render_scrollable_content(
     frame: &mut Frame,
     state: &ChronologicalLogState,
-    step_logs: &StepLogs,
+    runs: &[GenerationRun],
     area: Rect,
 ) {
-    let sections = [Step::Check, Step::Generate, Step::Serialize];
+    let mut lines: Vec<Line> = Vec::new();
 
-    let constraints: Vec<Constraint> = sections
-        .iter()
-        .map(|step| {
-            if state.is_expanded(*step) {
-                Constraint::Min(3)
-            } else {
-                Constraint::Length(1)
-            }
-        })
-        .collect();
-
-    let chunks = Layout::vertical(constraints).split(area);
-
-    for (idx, step) in sections.iter().enumerate() {
-        render_section(frame, state, step, step_logs, chunks[idx]);
+    if runs.is_empty() {
+        lines.push(Line::from(Span::styled(
+            "  (no runs recorded yet)",
+            Style::default().add_modifier(Modifier::DIM),
+        )));
     }
+
+    for (run_idx, run) in runs.iter().enumerate() {
+        lines.push(run_header_line(state, run_idx, run));
+
+        if !state.is_run_expanded(run_idx) {
+            continue;
+        }
+
+        for step in Step::all_steps() {
+            lines.push(step_header_line(state, run_idx, *step, run));
+            if state.is_step_expanded(run_idx, *step) {
+                for entry in run.step_logs.get(*step) {
+                    lines.push(log_entry_line(entry));
+                }
+            }
+        }
+    }
+
+    let paragraph = Paragraph::new(lines).scroll((state.scroll_offset as u16, 0));
+    frame.render_widget(paragraph, area);
+}
+
+fn run_header_line(
+    state: &ChronologicalLogState,
+    run_idx: usize,
+    run: &GenerationRun,
+) -> Line<'static> {
+    let is_expanded = state.is_run_expanded(run_idx);
+    let is_focused = matches!(state.focus, Some(LogFocus::Run(r)) if r == run_idx);
+
+    let expand_icon = if is_expanded { "▼" } else { "▶" };
+    let focus_indicator = if is_focused { "→ " } else { "  " };
+    let run_label = format!("Run {}", run_idx + 1);
+
+    let mut spans = vec![
+        Span::raw(focus_indicator),
+        Span::raw(expand_icon.to_string()),
+        Span::raw(" "),
+        Span::styled(run_label, Style::default().add_modifier(Modifier::BOLD)),
+    ];
+
+    if !is_expanded {
+        let summary = run_summary(run);
+        spans.push(Span::raw(format!(" · {}", summary)));
+    }
+
+    Line::from(spans)
+}
+
+fn step_header_line(
+    state: &ChronologicalLogState,
+    run_idx: usize,
+    step: Step,
+    run: &GenerationRun,
+) -> Line<'static> {
+    let is_expanded = state.is_step_expanded(run_idx, step);
+    let is_focused = matches!(state.focus, Some(LogFocus::Step(r, s)) if r == run_idx && s == step);
+
+    let expand_icon = if is_expanded { "▼" } else { "▶" };
+    let focus_indicator = if is_focused { "→ " } else { "  " };
+    let logs = run.step_logs.get(step);
+    let summary = calculate_summary(logs);
+
+    Line::from(vec![
+        Span::raw("    "),
+        Span::raw(focus_indicator),
+        Span::raw(expand_icon.to_string()),
+        Span::raw(" "),
+        Span::styled(step.label(), Style::default().add_modifier(Modifier::BOLD)),
+        Span::raw(format!(" ({})", summary)),
+    ])
+}
+
+fn log_entry_line(entry: &LogEntry) -> Line<'static> {
+    let prefix = match entry.level {
+        LogLevel::Info => "[INFO] ",
+        LogLevel::Output => "",
+        LogLevel::Error => "[ERROR] ",
+        LogLevel::Success => "[OK] ",
+    };
+    Line::from(vec![
+        Span::raw("        "),
+        Span::raw(prefix.to_string()),
+        Span::raw(entry.message.clone()),
+    ])
 }
 
 fn render_legend(frame: &mut Frame, area: Rect) {
@@ -95,82 +169,50 @@ fn render_legend(frame: &mut Frame, area: Rect) {
     frame.render_widget(legend, area);
 }
 
-fn calculate_summary(logs: &[crate::app::model::LogEntry]) -> String {
-    let error_count = logs
-        .iter()
-        .filter(|l| matches!(l.level, crate::app::model::LogLevel::Error))
-        .count();
-    let success_count = logs
-        .iter()
-        .filter(|l| matches!(l.level, crate::app::model::LogLevel::Success))
-        .count();
-
-    if error_count > 0 {
-        format!("{} lines, {} errors", logs.len(), error_count)
-    } else if success_count > 0 {
-        format!("{} lines, {} success", logs.len(), success_count)
+fn pluralize(count: usize, singular: &str, plural: &str) -> String {
+    if count == 1 {
+        format!("{} {}", count, singular)
     } else {
-        format!("{} lines", logs.len())
+        format!("{} {}", count, plural)
     }
 }
 
-fn render_section(
-    frame: &mut Frame,
-    state: &ChronologicalLogState,
-    step: &Step,
-    step_logs: &StepLogs,
-    area: Rect,
-) {
-    let is_expanded = state.is_expanded(*step);
-    let is_focused = state.focused_section == Some(*step);
+fn calculate_summary(logs: &[LogEntry]) -> String {
+    let error_count = logs
+        .iter()
+        .filter(|l| matches!(l.level, LogLevel::Error))
+        .count();
+    let success_count = logs
+        .iter()
+        .filter(|l| matches!(l.level, LogLevel::Success))
+        .count();
 
-    let logs = step_logs.get(*step);
-
-    let expand_icon = if is_expanded { "▼" } else { "▶" };
-    let step_name = step.label();
-    let summary = calculate_summary(logs);
-    let focus_indicator = if is_focused { "→ " } else { "  " };
-
-    let header_text = Line::from(vec![
-        Span::raw(focus_indicator),
-        Span::raw(expand_icon.to_string()),
-        Span::raw(" "),
-        Span::styled(
-            step_name.to_string(),
-            Style::default().add_modifier(Modifier::BOLD),
-        ),
-        Span::raw(format!(" ({})", summary)),
-    ]);
-
-    if !is_expanded {
-        let header = Paragraph::new(vec![header_text]);
-        frame.render_widget(header, area);
+    let lines = pluralize(logs.len(), "line", "lines");
+    if error_count > 0 {
+        format!("{}, {}", lines, pluralize(error_count, "error", "errors"))
+    } else if success_count > 0 {
+        format!("{}, {} success", lines, success_count)
     } else {
-        let log_lines: Vec<Line> = logs
+        lines
+    }
+}
+
+fn run_summary(run: &GenerationRun) -> String {
+    let mut total_lines = 0usize;
+    let mut total_errors = 0usize;
+    for step in Step::all_steps() {
+        let logs = run.step_logs.get(*step);
+        total_lines += logs.len();
+        total_errors += logs
             .iter()
-            .map(|log| {
-                let prefix = match log.level {
-                    crate::app::model::LogLevel::Info => "[INFO] ",
-                    crate::app::model::LogLevel::Output => "",
-                    crate::app::model::LogLevel::Error => "[ERROR] ",
-                    crate::app::model::LogLevel::Success => "[OK] ",
-                };
-                Line::from(vec![
-                    Span::raw(prefix.to_string()),
-                    Span::raw(log.message.clone()),
-                ])
-            })
-            .collect();
+            .filter(|l| matches!(l.level, LogLevel::Error))
+            .count();
+    }
 
-        let content = Paragraph::new(log_lines)
-            .block(
-                Block::default()
-                    .title(header_text)
-                    .borders(Borders::ALL)
-                    .border_style(Style::default()),
-            )
-            .scroll((state.scroll_offset as u16, 0));
-
-        frame.render_widget(content, area);
+    let lines = pluralize(total_lines, "line", "lines");
+    if total_errors > 0 {
+        format!("{}, {}", lines, pluralize(total_errors, "error", "errors"))
+    } else {
+        lines
     }
 }

@@ -1,3 +1,4 @@
+mod chronological_log_tests;
 mod integration_tests;
 pub mod model_state;
 mod regenerate_dialog_tests;

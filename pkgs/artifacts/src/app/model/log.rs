@@ -167,65 +167,158 @@ pub(crate) fn empty_step_logs() -> &'static StepLogs {
     EMPTY.get_or_init(StepLogs::default)
 }
 
-/// State for the chronological log view with expandable sections
-#[derive(Debug, Clone)]
+/// Identifies a focusable element in the chronological log view.
+///
+/// The view is a Run → Step tree: each run has its own header and can
+/// contain the three step sub-sections. Focus targets either a whole run
+/// or a specific step inside one.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum LogFocus {
+    /// Focus on a run header (toggling expands/collapses the run)
+    Run(usize),
+    /// Focus on a step inside a run (toggling expands/collapses the step)
+    Step(usize, Step),
+}
+
+/// State for the chronological log view with Run → Step collapsible hierarchy.
+#[derive(Debug, Clone, Default)]
 pub struct ChronologicalLogState {
     /// Index of the artifact being viewed
     pub artifact_index: usize,
     /// Artifact name for the header display
     pub artifact_name: String,
-    /// Which sections are currently expanded (all steps by default)
-    pub expanded_sections: HashSet<Step>,
+    /// Run indices that are currently expanded
+    pub expanded_runs: HashSet<usize>,
+    /// (run, step) pairs that are currently expanded (only visible when the
+    /// enclosing run is also expanded)
+    pub expanded_steps: HashSet<(usize, Step)>,
     /// Vertical scroll offset in lines
     pub scroll_offset: usize,
-    /// Currently focused section for keyboard navigation
-    pub focused_section: Option<Step>,
+    /// Currently focused element (run header or step within a run)
+    pub focus: Option<LogFocus>,
 }
 
 impl ChronologicalLogState {
-    /// Create a new chronological log state for viewing an artifact
-    pub fn new(artifact_index: usize, artifact_name: String) -> Self {
+    /// Create a new chronological log state for viewing an artifact.
+    ///
+    /// Default expand policy: only the latest run is expanded, with all of
+    /// its steps expanded. Older runs are collapsed so the view stays
+    /// scannable when an artifact has many runs.
+    pub fn new(artifact_index: usize, artifact_name: String, num_runs: usize) -> Self {
+        let mut expanded_runs = HashSet::new();
+        let mut expanded_steps = HashSet::new();
+        let focus = if num_runs == 0 {
+            None
+        } else {
+            let latest = num_runs - 1;
+            expanded_runs.insert(latest);
+            for step in Step::all_steps() {
+                expanded_steps.insert((latest, *step));
+            }
+            Some(LogFocus::Step(latest, Step::Check))
+        };
+
         Self {
             artifact_index,
             artifact_name,
-            expanded_sections: Step::all_steps().iter().cloned().collect(),
+            expanded_runs,
+            expanded_steps,
             scroll_offset: 0,
-            focused_section: Some(Step::Check),
+            focus,
         }
     }
 
-    /// Check if a specific section is expanded
-    pub fn is_expanded(&self, step: Step) -> bool {
-        self.expanded_sections.contains(&step)
+    pub fn is_run_expanded(&self, run: usize) -> bool {
+        self.expanded_runs.contains(&run)
     }
 
-    /// Toggle a section's expanded state
-    pub fn toggle_section(&mut self, step: Step) {
-        if self.expanded_sections.contains(&step) {
-            self.expanded_sections.remove(&step);
-        } else {
-            self.expanded_sections.insert(step);
+    pub fn is_step_expanded(&self, run: usize, step: Step) -> bool {
+        self.expanded_steps.contains(&(run, step))
+    }
+
+    /// Toggle the focused element. Runs toggle their own expansion; steps
+    /// toggle their own expansion regardless of the enclosing run state.
+    pub fn toggle_focused(&mut self) {
+        match self.focus {
+            Some(LogFocus::Run(run)) => {
+                if self.expanded_runs.contains(&run) {
+                    self.expanded_runs.remove(&run);
+                } else {
+                    self.expanded_runs.insert(run);
+                }
+            }
+            Some(LogFocus::Step(run, step)) => {
+                let key = (run, step);
+                if self.expanded_steps.contains(&key) {
+                    self.expanded_steps.remove(&key);
+                } else {
+                    self.expanded_steps.insert(key);
+                }
+            }
+            None => {}
         }
     }
 
-    /// Expand all sections
-    pub fn expand_all(&mut self) {
-        self.expanded_sections = Step::all_steps().iter().cloned().collect();
+    /// Expand every run and every step in the given run count.
+    pub fn expand_all(&mut self, num_runs: usize) {
+        self.expanded_runs = (0..num_runs).collect();
+        self.expanded_steps = (0..num_runs)
+            .flat_map(|run| Step::all_steps().iter().map(move |step| (run, *step)))
+            .collect();
     }
 
-    /// Collapse all sections
+    /// Collapse every run and every step.
     pub fn collapse_all(&mut self) {
-        self.expanded_sections.clear();
+        self.expanded_runs.clear();
+        self.expanded_steps.clear();
     }
 
-    /// Move focus to the next section
-    pub fn focus_next(&mut self) {
-        self.focused_section = self.focused_section.map(|s| s.next());
+    /// Visible focusable targets in top-to-bottom order.
+    fn visible_focus_order(&self, num_runs: usize) -> Vec<LogFocus> {
+        let mut order = Vec::new();
+        for run in 0..num_runs {
+            order.push(LogFocus::Run(run));
+            if self.is_run_expanded(run) {
+                for step in Step::all_steps() {
+                    order.push(LogFocus::Step(run, *step));
+                }
+            }
+        }
+        order
     }
 
-    /// Move focus to the previous section
-    pub fn focus_previous(&mut self) {
-        self.focused_section = self.focused_section.map(|s| s.previous());
+    /// Move focus to the next visible target (wraps to start).
+    pub fn focus_next(&mut self, num_runs: usize) {
+        let order = self.visible_focus_order(num_runs);
+        if order.is_empty() {
+            self.focus = None;
+            return;
+        }
+        let current = self
+            .focus
+            .and_then(|f| order.iter().position(|o| *o == f))
+            .unwrap_or(order.len().saturating_sub(1));
+        let next = (current + 1) % order.len();
+        self.focus = Some(order[next]);
+    }
+
+    /// Move focus to the previous visible target (wraps to end).
+    pub fn focus_previous(&mut self, num_runs: usize) {
+        let order = self.visible_focus_order(num_runs);
+        if order.is_empty() {
+            self.focus = None;
+            return;
+        }
+        let current = self
+            .focus
+            .and_then(|f| order.iter().position(|o| *o == f))
+            .unwrap_or(0);
+        let prev = if current == 0 {
+            order.len() - 1
+        } else {
+            current - 1
+        };
+        self.focus = Some(order[prev]);
     }
 
     /// Scroll down by a number of lines
@@ -242,15 +335,21 @@ impl ChronologicalLogState {
         }
     }
 
-    /// Calculate the maximum scroll offset based on content and visible height
-    pub fn max_scroll(&self, step_logs: &StepLogs) -> usize {
+    /// Estimate the total rendered line count for scroll clamping.
+    pub fn max_scroll(&self, runs: &[GenerationRun]) -> usize {
         let mut total_lines = 0usize;
-        for step in Step::all_steps() {
-            // One line for the section header
+        for (idx, run) in runs.iter().enumerate() {
+            // Run header line
             total_lines += 1;
-            // If expanded, add log lines
-            if self.is_expanded(*step) {
-                total_lines += step_logs.get(*step).len();
+            if !self.is_run_expanded(idx) {
+                continue;
+            }
+            for step in Step::all_steps() {
+                // Step header line
+                total_lines += 1;
+                if self.is_step_expanded(idx, *step) {
+                    total_lines += run.step_logs.get(*step).len();
+                }
             }
         }
         total_lines
@@ -259,18 +358,5 @@ impl ChronologicalLogState {
     /// Clamp scroll offset to valid range
     pub fn clamp_scroll(&mut self, max_scroll: usize) {
         self.scroll_offset = self.scroll_offset.min(max_scroll);
-    }
-}
-
-impl Default for ChronologicalLogState {
-    fn default() -> Self {
-        // All sections are expanded by default
-        Self {
-            artifact_index: 0,
-            artifact_name: String::new(),
-            expanded_sections: Step::all_steps().iter().cloned().collect(),
-            scroll_offset: 0,
-            focused_section: Some(Step::Check),
-        }
     }
 }
