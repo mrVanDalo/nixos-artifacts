@@ -65,6 +65,7 @@ fn make_test_model_with_existing_artifact() -> Model {
         error: None,
         warnings: Vec::new(),
         tick_count: 0,
+        generate_queue: Default::default(),
     }
 }
 
@@ -86,6 +87,7 @@ fn make_test_model_with_new_artifact() -> Model {
         error: None,
         warnings: Vec::new(),
         tick_count: 0,
+        generate_queue: Default::default(),
     }
 }
 
@@ -119,6 +121,7 @@ fn make_test_model_with_shared_artifact(status: ArtifactStatus) -> Model {
         error: None,
         warnings: Vec::new(),
         tick_count: 0,
+        generate_queue: Default::default(),
     }
 }
 
@@ -463,6 +466,7 @@ fn test_dialog_regenerate_proceeds_to_prompts() {
         error: None,
         warnings: Vec::new(),
         tick_count: 0,
+        generate_queue: Default::default(),
     };
 
     // When: User presses Enter (confirming Regenerate)
@@ -766,6 +770,7 @@ fn test_dialog_appears_only_for_needs_generation() {
         error: None,
         warnings: Vec::new(),
         tick_count: 0,
+        generate_queue: Default::default(),
     };
 
     // When: User presses Enter
@@ -812,6 +817,7 @@ fn test_dialog_with_many_targets_truncation() {
         error: None,
         warnings: Vec::new(),
         tick_count: 0,
+        generate_queue: Default::default(),
     };
 
     // When: User presses Enter

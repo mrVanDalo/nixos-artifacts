@@ -74,7 +74,7 @@ fn handle_generator_failure(
     error: String,
 ) -> (Model, Effect) {
     let Some(entry) = model.entries.get_mut(artifact_index) else {
-        model.screen = Screen::ArtifactList;
+        leave_generating_for(&mut model, artifact_index);
         return (model, Effect::None);
     };
     let artifact_name = entry.artifact_name().to_string();
@@ -97,7 +97,7 @@ fn handle_generator_failure(
         output,
     };
 
-    model.screen = Screen::ArtifactList;
+    leave_generating_for(&mut model, artifact_index);
     (model, Effect::None)
 }
 
@@ -121,7 +121,7 @@ fn handle_serialize_success(
     output: ScriptOutput,
 ) -> (Model, Effect) {
     let Some(entry) = model.entries.get_mut(artifact_index) else {
-        model.screen = Screen::ArtifactList;
+        leave_generating_for(&mut model, artifact_index);
         return (model, Effect::None);
     };
     let step_logs = entry.step_logs_mut();
@@ -143,7 +143,7 @@ fn handle_serialize_success(
     });
     *entry.status_mut() = ArtifactStatus::UpToDate;
 
-    model.screen = Screen::ArtifactList;
+    leave_generating_for(&mut model, artifact_index);
     (model, Effect::None)
 }
 
@@ -154,7 +154,7 @@ fn handle_serialize_failure(
     error: String,
 ) -> (Model, Effect) {
     let Some(entry) = model.entries.get_mut(artifact_index) else {
-        model.screen = Screen::ArtifactList;
+        leave_generating_for(&mut model, artifact_index);
         return (model, Effect::None);
     };
     let artifact_name = entry.artifact_name().to_string();
@@ -177,6 +177,18 @@ fn handle_serialize_failure(
         output,
     };
 
-    model.screen = Screen::ArtifactList;
+    leave_generating_for(&mut model, artifact_index);
     (model, Effect::None)
+}
+
+/// Returns the screen to the artifact list iff the user was watching this
+/// artifact's `Screen::Generating`. Background results from the generate-all
+/// flow arrive while the user is on the list (or any other screen), so we
+/// only force the transition for the matching watched artifact.
+fn leave_generating_for(model: &mut Model, artifact_index: usize) {
+    if let Screen::Generating(state) = &model.screen
+        && state.artifact_index == artifact_index
+    {
+        model.screen = Screen::ArtifactList;
+    }
 }

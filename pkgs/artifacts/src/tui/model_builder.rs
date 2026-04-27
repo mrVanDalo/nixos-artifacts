@@ -94,6 +94,7 @@ pub fn build_model(make: &MakeConfiguration) -> Model {
         error: None,
         warnings: Vec::new(),
         tick_count: 0,
+        generate_queue: Default::default(),
     }
 }
 

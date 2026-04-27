@@ -58,6 +58,7 @@ fn make_test_model() -> Model {
         error: None,
         warnings: Vec::new(),
         tick_count: 0,
+        generate_queue: Default::default(),
     }
 }
 
@@ -558,6 +559,7 @@ fn test_single_generator_skips_dialog() {
         error: None,
         warnings: Vec::new(),
         tick_count: 0,
+        generate_queue: Default::default(),
     };
 
     // Press Enter on shared artifact
@@ -628,6 +630,7 @@ fn test_single_generator_no_prompts_goes_to_generating() {
         error: None,
         warnings: Vec::new(),
         tick_count: 0,
+        generate_queue: Default::default(),
     };
 
     // Press Enter on shared artifact
@@ -697,6 +700,7 @@ fn test_multiple_generators_shows_dialog() {
         error: None,
         warnings: Vec::new(),
         tick_count: 0,
+        generate_queue: Default::default(),
     };
 
     // Press Enter on shared artifact
@@ -764,6 +768,7 @@ fn test_single_generator_stores_selected_path() {
         error: None,
         warnings: Vec::new(),
         tick_count: 0,
+        generate_queue: Default::default(),
     };
 
     // Press Enter on shared artifact
@@ -824,6 +829,7 @@ fn make_test_model_with_shared() -> Model {
         error: None,
         warnings: Vec::new(),
         tick_count: 0,
+        generate_queue: Default::default(),
     }
 }
 
@@ -902,5 +908,288 @@ fn test_first_time_generation_continues_initial_run() {
         model.entries[0].runs().len(),
         1,
         "first-time generation should stay in the run seeded by init"
+    );
+}
+
+// === 'a' generate-all keybind ===
+
+/// Build a model with one of each status so a single `a` keystroke exercises
+/// every partition arm: skip UpToDate, dispatch NeedsGeneration immediately,
+/// queue Pending until its check resolves.
+fn make_mixed_status_model() -> Model {
+    let pending = ArtifactEntry {
+        target_type: TargetType::NixOS {
+            machine: "machine-pending".to_string(),
+        },
+        artifact: make_test_artifact("pending-art", vec![]),
+        status: ArtifactStatus::Pending,
+        runs: Vec::new(),
+    };
+    let needs_gen = ArtifactEntry {
+        target_type: TargetType::NixOS {
+            machine: "machine-needs".to_string(),
+        },
+        artifact: make_test_artifact("needs-gen-art", vec![]),
+        status: ArtifactStatus::NeedsGeneration,
+        runs: Vec::new(),
+    };
+    let up_to_date = ArtifactEntry {
+        target_type: TargetType::NixOS {
+            machine: "machine-up".to_string(),
+        },
+        artifact: make_test_artifact("up-to-date-art", vec![]),
+        status: ArtifactStatus::UpToDate,
+        runs: Vec::new(),
+    };
+
+    Model {
+        screen: Screen::ArtifactList,
+        entries: vec![
+            ListEntry::Single(pending),
+            ListEntry::Single(needs_gen),
+            ListEntry::Single(up_to_date),
+        ],
+        selected_index: 0,
+        selected_log_step: Step::default(),
+        error: None,
+        warnings: Vec::new(),
+        tick_count: 0,
+        generate_queue: Default::default(),
+    }
+}
+
+#[test]
+fn test_a_dispatches_needs_generation_and_queues_pending() {
+    let model = make_mixed_status_model();
+    let (new_model, effect) = update(model, Message::Key(KeyEvent::char('a')));
+
+    // Pending → queued; UpToDate → not queued; NeedsGeneration dispatches.
+    assert_eq!(
+        new_model.generate_queue,
+        std::collections::HashSet::from([0]),
+        "only the Pending entry should be queued"
+    );
+
+    match effect {
+        Effect::RunGenerator { artifact_index, .. } => {
+            assert_eq!(artifact_index, 1, "NeedsGeneration entry should dispatch");
+        }
+        other => panic!(
+            "expected single RunGenerator effect for NeedsGeneration, got {:?}",
+            other
+        ),
+    }
+
+    // Screen stays on the artifact list — `a` runs in the background.
+    assert!(matches!(new_model.screen, Screen::ArtifactList));
+}
+
+#[test]
+fn test_a_with_only_up_to_date_does_nothing() {
+    let mut model = make_mixed_status_model();
+    // Set every entry to UpToDate so `a` should be a no-op.
+    for entry in &mut model.entries {
+        *entry.status_mut() = ArtifactStatus::UpToDate;
+    }
+
+    let (new_model, effect) = update(model, Message::Key(KeyEvent::char('a')));
+
+    assert!(
+        new_model.generate_queue.is_empty(),
+        "no entry should be queued when all are up to date"
+    );
+    assert!(
+        effect.is_none(),
+        "no generation effect when all entries are up to date, got {:?}",
+        effect
+    );
+}
+
+#[test]
+fn test_a_skips_needs_generation_with_prompts() {
+    // Single artifact with prompts → cannot dispatch directly; falls into the
+    // queue so the future inline-prompt flow can pick it up.
+    let entry = ArtifactEntry {
+        target_type: TargetType::NixOS {
+            machine: "machine".to_string(),
+        },
+        artifact: make_test_artifact("with-prompts", vec!["passphrase"]),
+        status: ArtifactStatus::NeedsGeneration,
+        runs: Vec::new(),
+    };
+    let model = Model {
+        screen: Screen::ArtifactList,
+        entries: vec![ListEntry::Single(entry)],
+        selected_index: 0,
+        selected_log_step: Step::default(),
+        error: None,
+        warnings: Vec::new(),
+        tick_count: 0,
+        generate_queue: Default::default(),
+    };
+
+    let (new_model, effect) = update(model, Message::Key(KeyEvent::char('a')));
+
+    assert_eq!(
+        new_model.generate_queue,
+        std::collections::HashSet::from([0]),
+        "prompted NeedsGeneration entry should be queued, not dispatched"
+    );
+    assert!(
+        effect.is_none(),
+        "no generator should fire when prompts are still pending, got {:?}",
+        effect
+    );
+}
+
+#[test]
+fn test_check_result_drains_queue_on_needs_generation() {
+    // Press 'a' on a Pending entry, then have its check come back as
+    // NeedsGeneration — generator must dispatch now.
+    let model = make_mixed_status_model();
+    let (model, _) = update(model, Message::Key(KeyEvent::char('a')));
+    assert!(model.generate_queue.contains(&0));
+
+    let (new_model, effect) = update(
+        model,
+        Message::CheckSerializationResult {
+            artifact_index: 0,
+            status: ArtifactStatus::NeedsGeneration,
+            result: Ok(ScriptOutput::default()),
+        },
+    );
+
+    assert!(
+        !new_model.generate_queue.contains(&0),
+        "queue should drain when check resolves to NeedsGeneration"
+    );
+    assert!(
+        matches!(
+            effect,
+            Effect::RunGenerator {
+                artifact_index: 0,
+                ..
+            }
+        ),
+        "expected RunGenerator for the previously queued entry, got {:?}",
+        effect
+    );
+}
+
+#[test]
+fn test_check_result_drops_up_to_date_silently() {
+    // Pending entry queued by 'a' resolves UpToDate → drop from queue, no
+    // generator dispatched.
+    let model = make_mixed_status_model();
+    let (model, _) = update(model, Message::Key(KeyEvent::char('a')));
+    assert!(model.generate_queue.contains(&0));
+
+    let (new_model, effect) = update(
+        model,
+        Message::CheckSerializationResult {
+            artifact_index: 0,
+            status: ArtifactStatus::UpToDate,
+            result: Ok(ScriptOutput::default()),
+        },
+    );
+
+    assert!(
+        !new_model.generate_queue.contains(&0),
+        "queue should drop UpToDate entry silently"
+    );
+    assert!(
+        effect.is_none(),
+        "no effect should fire for UpToDate result, got {:?}",
+        effect
+    );
+}
+
+#[test]
+fn test_check_result_does_not_dispatch_if_not_queued() {
+    // Without prior 'a' the check result should never spawn a generator,
+    // even when status flips to NeedsGeneration.
+    let model = make_mixed_status_model();
+    assert!(model.generate_queue.is_empty());
+
+    let (_, effect) = update(
+        model,
+        Message::CheckSerializationResult {
+            artifact_index: 0,
+            status: ArtifactStatus::NeedsGeneration,
+            result: Ok(ScriptOutput::default()),
+        },
+    );
+
+    assert!(
+        effect.is_none(),
+        "no auto-dispatch when entry was not queued by 'a', got {:?}",
+        effect
+    );
+}
+
+#[test]
+fn test_generator_finished_works_from_artifact_list_screen() {
+    // The 'a' flow leaves the user on Screen::ArtifactList while generators
+    // run. GeneratorFinished must still be processed (previously the dispatch
+    // was guarded on Screen::Generating, silently dropping these results).
+    let mut model = make_mixed_status_model();
+    *model.entries[1].status_mut() = ArtifactStatus::NeedsGeneration;
+    assert!(matches!(model.screen, Screen::ArtifactList));
+
+    let (new_model, effect) = update(
+        model,
+        Message::GeneratorFinished {
+            artifact_index: 1,
+            result: Ok(ScriptOutput {
+                stdout_lines: vec!["generated".to_string()],
+                stderr_lines: vec![],
+            }),
+        },
+    );
+
+    // Logs were appended and a Serialize follow-up was emitted.
+    assert!(matches!(
+        effect,
+        Effect::Serialize {
+            artifact_index: 1,
+            ..
+        }
+    ));
+    assert!(matches!(new_model.screen, Screen::ArtifactList));
+    assert!(
+        !new_model.entries[1].step_logs().generate.is_empty(),
+        "generator stdout should have been logged"
+    );
+}
+
+#[test]
+fn test_serialize_finished_does_not_kick_user_off_unrelated_screen() {
+    // While the 'a' flow is running, the user may navigate to the
+    // chronological log of a different artifact. A SerializeFinished arriving
+    // for some other artifact must not yank them back to the artifact list.
+    let mut model = make_mixed_status_model();
+    *model.entries[1].status_mut() = ArtifactStatus::NeedsGeneration;
+    model.screen = Screen::ChronologicalLog(ChronologicalLogState::new(
+        2,
+        "up-to-date-art".to_string(),
+        0,
+    ));
+
+    let (new_model, _) = update(
+        model,
+        Message::SerializeFinished {
+            artifact_index: 1,
+            result: Ok(ScriptOutput::default()),
+        },
+    );
+
+    assert!(
+        matches!(new_model.screen, Screen::ChronologicalLog(_)),
+        "user should remain on the log screen they navigated to"
+    );
+    assert_eq!(
+        new_model.entries[1].status(),
+        &ArtifactStatus::UpToDate,
+        "background result still updates status"
     );
 }

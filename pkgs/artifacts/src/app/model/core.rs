@@ -14,6 +14,8 @@
 //! - Update functions create new instances rather than mutate
 //! - Cloning is cheap (most fields are small or reference-counted)
 
+use std::collections::HashSet;
+
 use super::artifact::ListEntry;
 use super::log::{ChronologicalLogState, Step, Warning};
 use super::prompt::PromptState;
@@ -42,6 +44,11 @@ pub struct Model {
     pub warnings: Vec<Warning>,
     /// Animation frame counter for spinner animation
     pub tick_count: usize,
+    /// Indexes of entries enqueued by the `a` (generate-all) flow whose
+    /// `check_serialization` is still in flight. When a queued entry's check
+    /// resolves to `NeedsGeneration` its generator is dispatched and the index
+    /// is removed; an `UpToDate` result drops the index silently.
+    pub generate_queue: HashSet<usize>,
 }
 
 /// Current screen/view being displayed in the TUI.

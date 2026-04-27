@@ -122,6 +122,7 @@ fn model_with_runs(runs: Vec<GenerationRun>) -> Model {
         error: None,
         warnings: Vec::new(),
         tick_count: 0,
+        generate_queue: Default::default(),
     };
 
     let num_runs = model.entries[0].runs().len();

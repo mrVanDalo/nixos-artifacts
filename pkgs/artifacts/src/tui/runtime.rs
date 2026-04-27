@@ -487,6 +487,7 @@ mod tests {
             error: None,
             warnings: Vec::new(),
             tick_count: 0,
+            generate_queue: Default::default(),
         }
     }
 

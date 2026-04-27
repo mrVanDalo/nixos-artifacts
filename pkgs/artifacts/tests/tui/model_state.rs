@@ -130,6 +130,7 @@ mod tests {
             error: None,
             warnings: vec![],
             tick_count: 0,
+            generate_queue: Default::default(),
         };
 
         let state = ModelState::from_model(&model);
@@ -167,6 +168,7 @@ mod tests {
             error: None,
             warnings: vec![],
             tick_count: 0,
+            generate_queue: Default::default(),
         };
 
         let state = ModelState::from_model(&model);

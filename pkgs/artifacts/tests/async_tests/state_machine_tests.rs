@@ -79,6 +79,7 @@ fn create_test_model(artifact_name: &str, has_prompts: bool) -> Model {
         error: None,
         warnings: Vec::new(),
         tick_count: 0,
+        generate_queue: Default::default(),
     }
 }
 
@@ -578,6 +579,7 @@ fn test_batch_effect_processing() {
         error: None,
         warnings: Vec::new(),
         tick_count: 0,
+        generate_queue: Default::default(),
     };
 
     let mut tracker = CommandTracker::new();

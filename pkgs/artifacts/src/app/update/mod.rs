@@ -27,6 +27,7 @@ mod prompt;
 
 pub use init::init;
 
+use std::collections::HashMap;
 use std::fmt::Write;
 
 use super::effect::{Effect, TargetSpec};
@@ -59,16 +60,21 @@ pub fn update(model: Model, msg: Message) -> (Model, Effect) {
         // === Prompt Screen ===
         (Screen::Prompt(_), Message::Key(key)) => prompt::update_prompt(model, key),
 
-        // === Generating Screen ===
+        // === Generator/Serialize results (any screen) ===
+        // Results may arrive while the user is on the artifact list (the `a`
+        // generate-all flow leaves them there) or any other screen, so we
+        // accept them unconditionally. Screen transitions inside the handlers
+        // are gated to the matching `Screen::Generating` so they only kick the
+        // user back to the list when they were watching this very generation.
         (
-            Screen::Generating(_),
+            _,
             Message::GeneratorFinished {
                 artifact_index,
                 result,
             },
         ) => generating::handle_generator_finished(model, artifact_index, result),
         (
-            Screen::Generating(_),
+            _,
             Message::SerializeFinished {
                 artifact_index,
                 result,
@@ -140,50 +146,118 @@ fn handle_check_result(
     status: ArtifactStatus,
     result: Result<ScriptOutput, String>,
 ) -> (Model, Effect) {
-    let Some(entry) = model.entries.get_mut(artifact_index) else {
-        return (model, Effect::None);
-    };
-    match result {
-        Ok(output) => {
-            // Add captured script output to logs using helper methods
-            if !output.stdout_lines.is_empty() || !output.stderr_lines.is_empty() {
-                entry
-                    .step_logs_mut()
-                    .append_stdout(Step::Check, &output.stdout_lines);
-                entry
-                    .step_logs_mut()
-                    .append_stderr(Step::Check, &output.stderr_lines);
-            }
-
-            // Set status from check result
-            *entry.status_mut() = status.clone();
-
-            // Add status summary log entry
-            let (level, message) = match status {
-                ArtifactStatus::NeedsGeneration => {
-                    (LogLevel::Info, "Artifact needs regeneration".to_string())
+    {
+        let Some(entry) = model.entries.get_mut(artifact_index) else {
+            return (model, Effect::None);
+        };
+        match result {
+            Ok(output) => {
+                // Add captured script output to logs using helper methods
+                if !output.stdout_lines.is_empty() || !output.stderr_lines.is_empty() {
+                    entry
+                        .step_logs_mut()
+                        .append_stdout(Step::Check, &output.stdout_lines);
+                    entry
+                        .step_logs_mut()
+                        .append_stderr(Step::Check, &output.stderr_lines);
                 }
-                ArtifactStatus::UpToDate => (LogLevel::Success, "Already up to date".to_string()),
-                _ => (LogLevel::Info, "Unknown status".to_string()),
-            };
-            entry
-                .step_logs_mut()
-                .check
-                .push(LogEntry { level, message });
-        }
-        Err(e) => {
-            let artifact_error = ArtifactError::IoError { context: e.clone() };
-            entry.step_logs_mut().check.push(LogEntry {
-                level: LogLevel::Error,
-                message: e,
-            });
-            *entry.status_mut() = ArtifactStatus::Failed {
-                error: artifact_error,
-                output: String::new(),
-            };
+
+                // Set status from check result
+                *entry.status_mut() = status.clone();
+
+                // Add status summary log entry
+                let (level, message) = match status {
+                    ArtifactStatus::NeedsGeneration => {
+                        (LogLevel::Info, "Artifact needs regeneration".to_string())
+                    }
+                    ArtifactStatus::UpToDate => {
+                        (LogLevel::Success, "Already up to date".to_string())
+                    }
+                    _ => (LogLevel::Info, "Unknown status".to_string()),
+                };
+                entry
+                    .step_logs_mut()
+                    .check
+                    .push(LogEntry { level, message });
+            }
+            Err(e) => {
+                let artifact_error = ArtifactError::IoError { context: e.clone() };
+                entry.step_logs_mut().check.push(LogEntry {
+                    level: LogLevel::Error,
+                    message: e,
+                });
+                *entry.status_mut() = ArtifactStatus::Failed {
+                    error: artifact_error,
+                    output: String::new(),
+                };
+            }
         }
     }
+
+    // Drain the generate-all queue. Pending entries land here when the user
+    // hits `a`; once their check resolves we either dispatch a generator
+    // (NeedsGeneration, no prompts) or drop the entry from the queue
+    // (UpToDate, or anything else terminal). NeedsGeneration entries that need
+    // user input stay queued for the future inline-prompt flow to drain.
+    if model.generate_queue.contains(&artifact_index) {
+        let Some(entry) = model.entries.get(artifact_index) else {
+            return (model, Effect::None);
+        };
+        match entry.status() {
+            ArtifactStatus::NeedsGeneration => {
+                if let Some(effect) = build_run_generator_effect_for(entry, artifact_index) {
+                    model.generate_queue.remove(&artifact_index);
+                    return (model, effect);
+                }
+            }
+            ArtifactStatus::UpToDate | ArtifactStatus::Failed { .. } => {
+                model.generate_queue.remove(&artifact_index);
+            }
+            _ => {}
+        }
+    }
+
     (model, Effect::None)
+}
+
+/// Builds an `Effect::RunGenerator` for an entry that can be dispatched without
+/// further user interaction. Returns `None` if the entry has prompts to
+/// collect or (for shared artifacts) more than one generator to choose from —
+/// those need to flow through the prompt / generator-selection screens.
+pub(super) fn build_run_generator_effect_for(
+    entry: &ListEntry,
+    artifact_index: usize,
+) -> Option<Effect> {
+    match entry {
+        ListEntry::Single(single) => {
+            if !single.artifact.prompts.is_empty() {
+                return None;
+            }
+            Some(Effect::RunGenerator {
+                artifact_index,
+                artifact_name: single.artifact.name.clone(),
+                target_spec: TargetSpec::Single(single.target_type.clone()),
+                prompts: HashMap::new(),
+            })
+        }
+        ListEntry::Shared(shared) => {
+            if !shared.info.prompts.is_empty()
+                || shared.info.generators.len() != 1
+                || shared.info.error.is_some()
+            {
+                return None;
+            }
+            Some(Effect::RunGenerator {
+                artifact_index,
+                artifact_name: shared.info.artifact_name.clone(),
+                target_spec: TargetSpec::Multi {
+                    nixos_targets: shared.info.nixos_targets.clone(),
+                    home_targets: shared.info.home_targets.clone(),
+                },
+                prompts: HashMap::new(),
+            })
+        }
+    }
 }
 
 // === Helper for generation flow ===

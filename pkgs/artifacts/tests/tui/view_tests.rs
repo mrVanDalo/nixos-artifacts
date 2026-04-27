@@ -316,6 +316,7 @@ fn make_test_model() -> Model {
         error: None,
         warnings: Vec::new(),
         tick_count: 0,
+        generate_queue: Default::default(),
     }
 }
 
@@ -776,6 +777,7 @@ fn test_multiple_machines_before_generate_all() {
         error: None,
         warnings: Vec::new(),
         tick_count: 0,
+        generate_queue: Default::default(),
     };
 
     let backend = TestBackend::new(70, 12);
@@ -841,6 +843,7 @@ fn test_multiple_machines_after_generate_all() {
         error: None,
         warnings: Vec::new(),
         tick_count: 0,
+        generate_queue: Default::default(),
     };
 
     let backend = TestBackend::new(70, 12);
@@ -900,6 +903,7 @@ fn test_artifact_list_with_shared_artifacts() {
         error: None,
         warnings: Vec::new(),
         tick_count: 0,
+        generate_queue: Default::default(),
     };
 
     let backend = TestBackend::new(70, 10);
@@ -952,6 +956,7 @@ fn test_shared_artifact_pending_status() {
         error: None,
         warnings: Vec::new(),
         tick_count: 0,
+        generate_queue: Default::default(),
     };
 
     let backend = TestBackend::new(70, 10);
@@ -982,6 +987,7 @@ fn test_shared_artifact_needs_generation_status() {
         error: None,
         warnings: Vec::new(),
         tick_count: 0,
+        generate_queue: Default::default(),
     };
 
     let backend = TestBackend::new(70, 10);
@@ -1012,6 +1018,7 @@ fn test_shared_artifact_up_to_date_status() {
         error: None,
         warnings: Vec::new(),
         tick_count: 0,
+        generate_queue: Default::default(),
     };
 
     let backend = TestBackend::new(70, 10);
@@ -1062,6 +1069,7 @@ fn test_shared_artifact_failed_runtime_error() {
         error: None,
         warnings: Vec::new(),
         tick_count: 0,
+        generate_queue: Default::default(),
     };
 
     let backend = TestBackend::new(70, 15);
@@ -1106,6 +1114,7 @@ fn test_shared_artifact_failed_config_error() {
         error: None,
         warnings: Vec::new(),
         tick_count: 0,
+        generate_queue: Default::default(),
     };
 
     let backend = TestBackend::new(70, 15);
@@ -1598,6 +1607,7 @@ mod model_tests {
             error: None,
             warnings: Vec::new(),
             tick_count: 0,
+            generate_queue: Default::default(),
         }
     }
 
