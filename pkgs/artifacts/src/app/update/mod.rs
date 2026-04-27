@@ -41,6 +41,17 @@ use super::message::KeyEvent;
 /// Pure state transition: (Model, Message) -> (Model, Effect)
 /// This function has NO side effects - it only computes new state.
 pub fn update(model: Model, msg: Message) -> (Model, Effect) {
+    // Inline prompt input takes over keys whenever it is active and the user
+    // is on the artifact list. Other screens (Generating, ChronologicalLog,
+    // dialogs) keep their own key handling so the prompt is held but inert
+    // until the user returns to the list.
+    if model.active_prompt.is_some()
+        && matches!(model.screen, Screen::ArtifactList)
+        && let Message::Key(ref key) = msg
+    {
+        return prompt::update_prompt(model, key.clone());
+    }
+
     match (&model.screen, msg) {
         // === Artifact List Screen ===
         (Screen::ArtifactList, Message::Key(key)) => {
@@ -56,9 +67,6 @@ pub fn update(model: Model, msg: Message) -> (Model, Effect) {
         (Screen::ConfirmRegenerate(_), Message::Key(key)) => {
             confirm_regenerate::update_confirm_regenerate(model, key)
         }
-
-        // === Prompt Screen ===
-        (Screen::Prompt(_), Message::Key(key)) => prompt::update_prompt(model, key),
 
         // === Generator/Serialize results (any screen) ===
         // Results may arrive while the user is on the artifact list (the `a`
@@ -198,7 +206,7 @@ fn handle_check_result(
     // hits `a`; once their check resolves we either dispatch a generator
     // (NeedsGeneration, no prompts) or drop the entry from the queue
     // (UpToDate, or anything else terminal). NeedsGeneration entries that need
-    // user input stay queued for the future inline-prompt flow to drain.
+    // user input stay queued for the inline-prompt flow to drain.
     if model.generate_queue.contains(&artifact_index) {
         let Some(entry) = model.entries.get(artifact_index) else {
             return (model, Effect::None);
@@ -209,6 +217,11 @@ fn handle_check_result(
                     model.generate_queue.remove(&artifact_index);
                     return (model, effect);
                 }
+                // Prompt-bearing: keep queued, surface the inline prompt if
+                // nothing else is currently being collected.
+                if model.active_prompt.is_none() {
+                    set_next_active_prompt(&mut model);
+                }
             }
             ArtifactStatus::UpToDate | ArtifactStatus::Failed { .. } => {
                 model.generate_queue.remove(&artifact_index);
@@ -218,6 +231,94 @@ fn handle_check_result(
     }
 
     (model, Effect::None)
+}
+
+/// Pick the next queued prompt-bearing entry (lowest index wins for stable
+/// ordering) and seed `model.active_prompt` from it. Clears `active_prompt`
+/// when no queued entry is ready to collect prompts.
+///
+/// Called after every prompt submission and after a queued check resolves to
+/// `NeedsGeneration` with prompts. The single-Enter path bypasses this — it
+/// sets `active_prompt` directly without touching `generate_queue`.
+pub(crate) fn set_next_active_prompt(model: &mut Model) {
+    let mut candidates: Vec<usize> = model.generate_queue.iter().copied().collect();
+    candidates.sort_unstable();
+
+    for index in candidates {
+        let Some(entry) = model.entries.get(index) else {
+            continue;
+        };
+        if !matches!(entry.status(), ArtifactStatus::NeedsGeneration) {
+            continue;
+        }
+        if let Some(state) = build_prompt_state_for(entry, index) {
+            model.active_prompt = Some(state);
+            return;
+        }
+    }
+
+    model.active_prompt = None;
+}
+
+/// Build a [`PromptState`] from a list entry. Returns `None` for entries that
+/// don't need prompts or (for shared) need generator selection first.
+pub(crate) fn build_prompt_state_for(
+    entry: &ListEntry,
+    artifact_index: usize,
+) -> Option<PromptState> {
+    match entry {
+        ListEntry::Single(single) => {
+            if single.artifact.prompts.is_empty() {
+                return None;
+            }
+            Some(PromptState {
+                artifact_index,
+                artifact_name: single.artifact.name.clone(),
+                description: single.artifact.description.clone(),
+                prompts: single
+                    .artifact
+                    .prompts
+                    .values()
+                    .map(|p| PromptEntry {
+                        name: p.name.clone(),
+                        description: p.description.clone(),
+                    })
+                    .collect(),
+                current_prompt_index: 0,
+                input_mode: InputMode::Line,
+                buffer: String::new(),
+                collected: Default::default(),
+            })
+        }
+        ListEntry::Shared(shared) => {
+            // Generator must be resolved before prompts; an entry waiting for
+            // a generator-selection dialog isn't a prompt candidate yet.
+            if shared.info.prompts.is_empty()
+                || shared.info.generators.len() != 1
+                || shared.info.error.is_some()
+            {
+                return None;
+            }
+            Some(PromptState {
+                artifact_index,
+                artifact_name: shared.info.artifact_name.clone(),
+                description: shared.info.description.clone(),
+                prompts: shared
+                    .info
+                    .prompts
+                    .values()
+                    .map(|p| PromptEntry {
+                        name: p.name.clone(),
+                        description: p.description.clone(),
+                    })
+                    .collect(),
+                current_prompt_index: 0,
+                input_mode: InputMode::Line,
+                buffer: String::new(),
+                collected: Default::default(),
+            })
+        }
+    }
 }
 
 /// Builds an `Effect::RunGenerator` for an entry that can be dispatched without
@@ -359,7 +460,11 @@ pub(crate) fn start_generation_for_selected_internal(
                 });
                 (model, effect)
             } else {
-                model.screen = Screen::Prompt(prompt_state);
+                // Inline prompt: stay on the artifact list and swap the right
+                // pane via `active_prompt`. The runtime picks this up in
+                // `tui/views/list.rs::render_log_panel`.
+                model.active_prompt = Some(prompt_state);
+                model.screen = Screen::ArtifactList;
                 (model, Effect::None)
             }
         }
@@ -390,7 +495,7 @@ pub(crate) fn start_generation_for_selected_internal(
                     });
                     (model, effect)
                 } else {
-                    model.screen = Screen::Prompt(PromptState {
+                    model.active_prompt = Some(PromptState {
                         artifact_index,
                         artifact_name,
                         description,
@@ -406,6 +511,7 @@ pub(crate) fn start_generation_for_selected_internal(
                         buffer: String::new(),
                         collected: Default::default(),
                     });
+                    model.screen = Screen::ArtifactList;
                     (model, Effect::None)
                 }
             } else {

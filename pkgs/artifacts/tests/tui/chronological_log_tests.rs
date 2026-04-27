@@ -123,6 +123,7 @@ fn model_with_runs(runs: Vec<GenerationRun>) -> Model {
         warnings: Vec::new(),
         tick_count: 0,
         generate_queue: Default::default(),
+        active_prompt: None,
     };
 
     let num_runs = model.entries[0].runs().len();

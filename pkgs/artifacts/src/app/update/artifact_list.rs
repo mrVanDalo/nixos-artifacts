@@ -46,7 +46,8 @@ pub(super) fn update_artifact_list(mut model: Model, key: KeyEvent) -> (Model, E
 ///   drain in [`super::handle_check_result`] picks it up.
 /// - `NeedsGeneration`: dispatched as `Effect::RunGenerator` immediately when
 ///   the entry has no prompts and (for shared) exactly one generator. Entries
-///   that need user input are queued for the future inline-prompt flow.
+///   that need user input are queued and surfaced via the inline-prompt
+///   right-pane (see `set_next_active_prompt` in `super::mod`).
 fn generate_all(mut model: Model) -> (Model, Effect) {
     let mut effects: Vec<Effect> = Vec::new();
 
@@ -66,6 +67,13 @@ fn generate_all(mut model: Model) -> (Model, Effect) {
                 }
             },
         }
+    }
+
+    // Surface the first queued prompt-bearing entry inline (right pane). If
+    // none are ready (queue empty, or only Pending entries waiting on their
+    // check) `active_prompt` stays as it was — typically `None`.
+    if model.active_prompt.is_none() {
+        super::set_next_active_prompt(&mut model);
     }
 
     (model, Effect::batch(effects))

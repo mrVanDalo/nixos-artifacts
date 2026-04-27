@@ -317,6 +317,7 @@ fn make_test_model() -> Model {
         warnings: Vec::new(),
         tick_count: 0,
         generate_queue: Default::default(),
+        active_prompt: None,
     }
 }
 
@@ -342,6 +343,41 @@ fn test_artifact_list_initial() {
     let model = make_test_model();
 
     let backend = TestBackend::new(70, 10);
+    let mut terminal = Terminal::new(backend).unwrap();
+
+    terminal
+        .draw(|f| render_artifact_list(f, &model, f.area()))
+        .unwrap();
+
+    let result = ViewTestResult {
+        state: ArtifactListState::from_model(&model),
+        model: Some(ModelState::from_model(&model)),
+        rendered: terminal.backend().to_string(),
+    };
+    assert_snapshot!(result.to_string());
+}
+
+#[test]
+fn test_artifact_list_with_inline_prompt() {
+    // Inline prompt acceptance test: when `active_prompt` is set, the right
+    // pane swaps from the log panel to prompt input on the same screen, and
+    // the focused row shows a pen icon with "Awaiting input...".
+    let mut model = make_test_model();
+    model.active_prompt = Some(PromptState {
+        artifact_index: 0,
+        artifact_name: "ssh-key".to_string(),
+        description: None,
+        prompts: vec![PromptEntry {
+            name: "passphrase".to_string(),
+            description: Some("Enter the SSH key passphrase".to_string()),
+        }],
+        current_prompt_index: 0,
+        input_mode: InputMode::Line,
+        buffer: "my-secret".to_string(),
+        collected: Default::default(),
+    });
+
+    let backend = TestBackend::new(80, 14);
     let mut terminal = Terminal::new(backend).unwrap();
 
     terminal
@@ -778,6 +814,7 @@ fn test_multiple_machines_before_generate_all() {
         warnings: Vec::new(),
         tick_count: 0,
         generate_queue: Default::default(),
+        active_prompt: None,
     };
 
     let backend = TestBackend::new(70, 12);
@@ -844,6 +881,7 @@ fn test_multiple_machines_after_generate_all() {
         warnings: Vec::new(),
         tick_count: 0,
         generate_queue: Default::default(),
+        active_prompt: None,
     };
 
     let backend = TestBackend::new(70, 12);
@@ -904,6 +942,7 @@ fn test_artifact_list_with_shared_artifacts() {
         warnings: Vec::new(),
         tick_count: 0,
         generate_queue: Default::default(),
+        active_prompt: None,
     };
 
     let backend = TestBackend::new(70, 10);
@@ -957,6 +996,7 @@ fn test_shared_artifact_pending_status() {
         warnings: Vec::new(),
         tick_count: 0,
         generate_queue: Default::default(),
+        active_prompt: None,
     };
 
     let backend = TestBackend::new(70, 10);
@@ -988,6 +1028,7 @@ fn test_shared_artifact_needs_generation_status() {
         warnings: Vec::new(),
         tick_count: 0,
         generate_queue: Default::default(),
+        active_prompt: None,
     };
 
     let backend = TestBackend::new(70, 10);
@@ -1019,6 +1060,7 @@ fn test_shared_artifact_up_to_date_status() {
         warnings: Vec::new(),
         tick_count: 0,
         generate_queue: Default::default(),
+        active_prompt: None,
     };
 
     let backend = TestBackend::new(70, 10);
@@ -1070,6 +1112,7 @@ fn test_shared_artifact_failed_runtime_error() {
         warnings: Vec::new(),
         tick_count: 0,
         generate_queue: Default::default(),
+        active_prompt: None,
     };
 
     let backend = TestBackend::new(70, 15);
@@ -1115,6 +1158,7 @@ fn test_shared_artifact_failed_config_error() {
         warnings: Vec::new(),
         tick_count: 0,
         generate_queue: Default::default(),
+        active_prompt: None,
     };
 
     let backend = TestBackend::new(70, 15);
@@ -1556,12 +1600,14 @@ mod model_tests {
             let (new_model, _effect) = update(model, msg.clone());
             model = new_model;
 
-            // Render the view based on new state
+            // Render the view based on new state. The artifact list view
+            // dispatches the inline prompt on its own when `active_prompt`
+            // is set.
             terminal
-                .draw(|f| match &model.screen {
-                    Screen::ArtifactList => render_artifact_list(f, &model, f.area()),
-                    Screen::Prompt(state) => render_prompt(f, state, f.area()),
-                    _ => {}
+                .draw(|f| {
+                    if let Screen::ArtifactList = &model.screen {
+                        render_artifact_list(f, &model, f.area());
+                    }
                 })
                 .unwrap();
 
@@ -1608,6 +1654,7 @@ mod model_tests {
             warnings: Vec::new(),
             tick_count: 0,
             generate_queue: Default::default(),
+            active_prompt: None,
         }
     }
 

@@ -33,7 +33,6 @@ pub fn render(frame: &mut Frame, model: &Model) {
         Screen::ArtifactList => render_artifact_list(frame, model, content_area),
         Screen::SelectGenerator(state) => render_generator_selection(frame, state, content_area),
         Screen::ConfirmRegenerate(state) => render_confirm_regenerate(frame, state, content_area),
-        Screen::Prompt(state) => render_prompt(frame, state, content_area),
         Screen::Generating(state) => render_progress(frame, state, content_area),
         Screen::Done(state) => render_done(frame, state, content_area),
         Screen::ChronologicalLog(state) => {

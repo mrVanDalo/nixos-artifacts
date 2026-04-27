@@ -88,6 +88,7 @@ fn make_test_model() -> Model {
         warnings: Vec::new(),
         tick_count: 0,
         generate_queue: Default::default(),
+        active_prompt: None,
     }
 }
 

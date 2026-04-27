@@ -49,12 +49,23 @@ pub struct Model {
     /// resolves to `NeedsGeneration` its generator is dispatched and the index
     /// is removed; an `UpToDate` result drops the index silently.
     pub generate_queue: HashSet<usize>,
+    /// Inline prompt collection state. When `Some`, the artifact list view
+    /// swaps its right-side log panel for prompt input; key events are routed
+    /// to the prompt handler regardless of `selected_index`. Submission
+    /// dispatches `Effect::RunGenerator` and either advances to the next
+    /// queued prompt-bearing artifact (`a` flow) or clears back to logs
+    /// (single-Enter flow).
+    pub active_prompt: Option<PromptState>,
 }
 
 /// Current screen/view being displayed in the TUI.
 ///
 /// The screen determines which view is rendered and which update
 /// handler processes keyboard input.
+///
+/// Note: prompt input no longer has its own screen — it is collected inline
+/// on the `ArtifactList` view via [`Model::active_prompt`]. See the design
+/// in nixos-artifacts-psg.
 #[derive(Debug, Clone, Default)]
 pub enum Screen {
     /// Main artifact list view - the default screen
@@ -65,8 +76,6 @@ pub enum Screen {
     SelectGenerator(SelectGeneratorState),
     /// Confirmation dialog before regenerating existing artifacts
     ConfirmRegenerate(ConfirmRegenerateState),
-    /// Prompt input screen for collecting user input
-    Prompt(PromptState),
     /// Generation progress screen with live output
     Generating(GeneratingState),
     /// Completion screen showing generation summary

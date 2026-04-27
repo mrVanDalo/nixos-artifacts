@@ -488,6 +488,7 @@ mod tests {
             warnings: Vec::new(),
             tick_count: 0,
             generate_queue: Default::default(),
+            active_prompt: None,
         }
     }
 
@@ -558,20 +559,23 @@ mod tests {
     }
 
     #[test]
-    fn test_enter_prompt_screen() {
+    fn test_enter_opens_inline_prompt() {
         let model = make_test_model();
         let mut events = ScriptedEventSource::new(vec![
-            Message::Key(KeyEvent::enter()), // Enter prompt screen for first artifact
+            Message::Key(KeyEvent::enter()), // Open inline prompt for first artifact
         ]);
 
         let final_model = simulate(&mut events, model);
-        assert!(matches!(final_model.screen, Screen::Prompt(_)));
+        // Inline prompt: still on the artifact list, prompt collected via
+        // `active_prompt`.
+        assert!(matches!(final_model.screen, Screen::ArtifactList));
+        assert!(final_model.active_prompt.is_some());
     }
 
     #[test]
     fn test_complete_prompt_flow() {
         let model = make_test_model();
-        let mut events_vec = vec![Message::Key(KeyEvent::enter())]; // Enter prompt
+        let mut events_vec = vec![Message::Key(KeyEvent::enter())]; // Open inline prompt
         events_vec.extend(
             "my-passphrase"
                 .chars()
@@ -582,8 +586,13 @@ mod tests {
         let mut events = ScriptedEventSource::new(events_vec);
         let final_model = simulate(&mut events, model);
 
-        // Should be in generating state (or back to list if no handler)
-        assert!(matches!(final_model.screen, Screen::Generating(_)));
+        // Submission dispatches RunGenerator (handled by runtime, not visible
+        // here) and clears active_prompt back to plain log view.
+        assert!(matches!(final_model.screen, Screen::ArtifactList));
+        assert!(
+            final_model.active_prompt.is_none(),
+            "active_prompt should clear after final submission"
+        );
     }
 
     #[test]

@@ -15,9 +15,22 @@ pub struct ModelState {
     pub screen: &'static str,
     pub selected_index: usize,
     pub selected_log_step: &'static str,
+    // Read via Debug trait for snapshot output
+    #[allow(dead_code)]
+    pub active_prompt: Option<ActivePromptState>,
     pub artifacts: Vec<ArtifactState>,
     pub error: Option<String>,
     pub warnings_count: usize,
+}
+
+/// Snapshot view of the inline prompt that swaps the right pane.
+#[derive(Debug)]
+#[allow(dead_code)]
+pub struct ActivePromptState {
+    pub artifact_index: usize,
+    pub artifact_name: String,
+    pub current_prompt_index: usize,
+    pub total_prompts: usize,
 }
 
 /// Snapshot representation of an individual artifact in the list.
@@ -43,13 +56,18 @@ impl ModelState {
                 Screen::ArtifactList => "ArtifactList",
                 Screen::SelectGenerator(_) => "SelectGenerator",
                 Screen::ConfirmRegenerate(_) => "ConfirmRegenerate",
-                Screen::Prompt(_) => "Prompt",
                 Screen::Generating(_) => "Generating",
                 Screen::Done(_) => "Done",
                 Screen::ChronologicalLog(_) => "ChronologicalLog",
             },
             selected_index: model.selected_index,
             selected_log_step: model.selected_log_step.label(),
+            active_prompt: model.active_prompt.as_ref().map(|p| ActivePromptState {
+                artifact_index: p.artifact_index,
+                artifact_name: p.artifact_name.clone(),
+                current_prompt_index: p.current_prompt_index,
+                total_prompts: p.prompts.len(),
+            }),
             artifacts: model
                 .entries
                 .iter()
@@ -131,6 +149,7 @@ mod tests {
             warnings: vec![],
             tick_count: 0,
             generate_queue: Default::default(),
+            active_prompt: None,
         };
 
         let state = ModelState::from_model(&model);
@@ -169,6 +188,7 @@ mod tests {
             warnings: vec![],
             tick_count: 0,
             generate_queue: Default::default(),
+            active_prompt: None,
         };
 
         let state = ModelState::from_model(&model);

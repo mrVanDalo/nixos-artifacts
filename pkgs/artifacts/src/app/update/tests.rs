@@ -59,6 +59,7 @@ fn make_test_model() -> Model {
         warnings: Vec::new(),
         tick_count: 0,
         generate_queue: Default::default(),
+        active_prompt: None,
     }
 }
 
@@ -115,11 +116,17 @@ fn test_quit_with_esc() {
 }
 
 #[test]
-fn test_enter_opens_prompt_screen() {
+fn test_enter_opens_inline_prompt() {
     let model = make_test_model();
     let (new_model, _) = update(model, Message::Key(KeyEvent::enter()));
 
-    assert!(matches!(new_model.screen, Screen::Prompt(_)));
+    // Inline prompt: stays on the artifact list, prompt state lives in
+    // `active_prompt`.
+    assert!(matches!(new_model.screen, Screen::ArtifactList));
+    assert!(
+        new_model.active_prompt.is_some(),
+        "expected active_prompt to be set after Enter on prompt-bearing artifact"
+    );
 }
 
 #[test]
@@ -132,10 +139,8 @@ fn test_enter_skips_prompt_if_no_prompts() {
     assert!(matches!(effect, Effect::RunGenerator { .. }));
 }
 
-#[test]
-fn test_prompt_typing() {
-    let mut model = make_test_model();
-    model.screen = Screen::Prompt(PromptState {
+fn make_active_prompt(buffer: &str, mode: InputMode) -> PromptState {
+    PromptState {
         artifact_index: 0,
         artifact_name: "test".to_string(),
         description: None,
@@ -144,116 +149,72 @@ fn test_prompt_typing() {
             description: None,
         }],
         current_prompt_index: 0,
-        input_mode: InputMode::Line,
-        buffer: String::new(),
+        input_mode: mode,
+        buffer: buffer.to_string(),
         collected: Default::default(),
-    });
+    }
+}
+
+#[test]
+fn test_prompt_typing() {
+    let mut model = make_test_model();
+    model.active_prompt = Some(make_active_prompt("", InputMode::Line));
 
     let (model, _) = update(model, Message::Key(KeyEvent::char('h')));
     let (model, _) = update(model, Message::Key(KeyEvent::char('i')));
 
-    if let Screen::Prompt(state) = &model.screen {
-        assert_eq!(state.buffer, "hi");
-    } else {
-        panic!("Expected prompt screen");
-    }
+    let state = model
+        .active_prompt
+        .as_ref()
+        .expect("active_prompt should still be set after typing");
+    assert_eq!(state.buffer, "hi");
 }
 
 #[test]
 fn test_prompt_backspace() {
     let mut model = make_test_model();
-    model.screen = Screen::Prompt(PromptState {
-        artifact_index: 0,
-        artifact_name: "test".to_string(),
-        description: None,
-        prompts: vec![PromptEntry {
-            name: "pass".to_string(),
-            description: None,
-        }],
-        current_prompt_index: 0,
-        input_mode: InputMode::Line,
-        buffer: "hello".to_string(),
-        collected: Default::default(),
-    });
+    model.active_prompt = Some(make_active_prompt("hello", InputMode::Line));
 
     let (model, _) = update(model, Message::Key(KeyEvent::backspace()));
 
-    if let Screen::Prompt(state) = &model.screen {
-        assert_eq!(state.buffer, "hell");
-    } else {
-        panic!("Expected prompt screen");
-    }
+    let state = model.active_prompt.as_ref().unwrap();
+    assert_eq!(state.buffer, "hell");
 }
 
 #[test]
 fn test_prompt_tab_cycles_mode_when_empty() {
     let mut model = make_test_model();
-    model.screen = Screen::Prompt(PromptState {
-        artifact_index: 0,
-        artifact_name: "test".to_string(),
-        description: None,
-        prompts: vec![PromptEntry {
-            name: "pass".to_string(),
-            description: None,
-        }],
-        current_prompt_index: 0,
-        input_mode: InputMode::Line,
-        buffer: String::new(),
-        collected: Default::default(),
-    });
+    model.active_prompt = Some(make_active_prompt("", InputMode::Line));
 
     let (model, _) = update(model, Message::Key(KeyEvent::tab()));
 
-    if let Screen::Prompt(state) = &model.screen {
-        assert_eq!(state.input_mode, InputMode::Multiline);
-    } else {
-        panic!("Expected prompt screen");
-    }
+    let state = model.active_prompt.as_ref().unwrap();
+    assert_eq!(state.input_mode, InputMode::Multiline);
 }
 
 #[test]
 fn test_prompt_tab_does_nothing_when_buffer_has_content() {
     let mut model = make_test_model();
-    model.screen = Screen::Prompt(PromptState {
-        artifact_index: 0,
-        artifact_name: "test".to_string(),
-        description: None,
-        prompts: vec![PromptEntry {
-            name: "pass".to_string(),
-            description: None,
-        }],
-        current_prompt_index: 0,
-        input_mode: InputMode::Line,
-        buffer: "some text".to_string(),
-        collected: Default::default(),
-    });
+    model.active_prompt = Some(make_active_prompt("some text", InputMode::Line));
 
     let (model, _) = update(model, Message::Key(KeyEvent::tab()));
 
-    if let Screen::Prompt(state) = &model.screen {
-        assert_eq!(state.input_mode, InputMode::Line);
-    } else {
-        panic!("Expected prompt screen");
-    }
+    let state = model.active_prompt.as_ref().unwrap();
+    assert_eq!(state.input_mode, InputMode::Line);
 }
 
 #[test]
-fn test_prompt_esc_returns_to_list() {
+fn test_prompt_esc_clears_active_prompt() {
     let mut model = make_test_model();
-    model.screen = Screen::Prompt(PromptState {
-        artifact_index: 0,
-        artifact_name: "test".to_string(),
-        description: None,
-        prompts: vec![],
-        current_prompt_index: 0,
-        input_mode: InputMode::Line,
-        buffer: String::new(),
-        collected: Default::default(),
-    });
+    model.active_prompt = Some(make_active_prompt("", InputMode::Line));
 
     let (model, _) = update(model, Message::Key(KeyEvent::esc()));
 
     assert!(matches!(model.screen, Screen::ArtifactList));
+    assert!(
+        model.active_prompt.is_none(),
+        "Esc should clear active_prompt"
+    );
 }
 
 #[test]
@@ -560,16 +521,21 @@ fn test_single_generator_skips_dialog() {
         warnings: Vec::new(),
         tick_count: 0,
         generate_queue: Default::default(),
+        active_prompt: None,
     };
 
     // Press Enter on shared artifact
     let (new_model, effect) = update(model, Message::Key(KeyEvent::enter()));
 
-    // Should go directly to Prompt screen, not SelectGenerator
+    // Should stay on the artifact list and surface the prompt inline.
     assert!(
-        matches!(new_model.screen, Screen::Prompt(_)),
-        "Single generator should skip to Prompt screen, got {:?}",
+        matches!(new_model.screen, Screen::ArtifactList),
+        "Single generator + prompts should stay on ArtifactList, got {:?}",
         new_model.screen
+    );
+    assert!(
+        new_model.active_prompt.is_some(),
+        "expected active_prompt to be set for inline prompt collection"
     );
 
     // Effect should be None (prompts needed)
@@ -631,6 +597,7 @@ fn test_single_generator_no_prompts_goes_to_generating() {
         warnings: Vec::new(),
         tick_count: 0,
         generate_queue: Default::default(),
+        active_prompt: None,
     };
 
     // Press Enter on shared artifact
@@ -701,6 +668,7 @@ fn test_multiple_generators_shows_dialog() {
         warnings: Vec::new(),
         tick_count: 0,
         generate_queue: Default::default(),
+        active_prompt: None,
     };
 
     // Press Enter on shared artifact
@@ -769,6 +737,7 @@ fn test_single_generator_stores_selected_path() {
         warnings: Vec::new(),
         tick_count: 0,
         generate_queue: Default::default(),
+        active_prompt: None,
     };
 
     // Press Enter on shared artifact
@@ -830,6 +799,7 @@ fn make_test_model_with_shared() -> Model {
         warnings: Vec::new(),
         tick_count: 0,
         generate_queue: Default::default(),
+        active_prompt: None,
     }
 }
 
@@ -955,6 +925,7 @@ fn make_mixed_status_model() -> Model {
         warnings: Vec::new(),
         tick_count: 0,
         generate_queue: Default::default(),
+        active_prompt: None,
     }
 }
 
@@ -1026,6 +997,7 @@ fn test_a_skips_needs_generation_with_prompts() {
         warnings: Vec::new(),
         tick_count: 0,
         generate_queue: Default::default(),
+        active_prompt: None,
     };
 
     let (new_model, effect) = update(model, Message::Key(KeyEvent::char('a')));
@@ -1160,6 +1132,177 @@ fn test_generator_finished_works_from_artifact_list_screen() {
         !new_model.entries[1].step_logs().generate.is_empty(),
         "generator stdout should have been logged"
     );
+}
+
+// === Inline prompt: 'a' flow integration ===
+
+/// Build a model with two prompt-bearing NeedsGeneration entries so the 'a'
+/// flow has a non-trivial prompt queue to advance through.
+fn make_dual_prompt_model() -> Model {
+    let entry_a = ArtifactEntry {
+        target_type: TargetType::NixOS {
+            machine: "machine-a".to_string(),
+        },
+        artifact: make_test_artifact("artifact-a", vec!["secret"]),
+        status: ArtifactStatus::NeedsGeneration,
+        runs: Vec::new(),
+    };
+    let entry_b = ArtifactEntry {
+        target_type: TargetType::NixOS {
+            machine: "machine-b".to_string(),
+        },
+        artifact: make_test_artifact("artifact-b", vec!["secret"]),
+        status: ArtifactStatus::NeedsGeneration,
+        runs: Vec::new(),
+    };
+
+    Model {
+        screen: Screen::ArtifactList,
+        entries: vec![ListEntry::Single(entry_a), ListEntry::Single(entry_b)],
+        selected_index: 0,
+        selected_log_step: Step::default(),
+        error: None,
+        warnings: Vec::new(),
+        tick_count: 0,
+        generate_queue: Default::default(),
+        active_prompt: None,
+    }
+}
+
+#[test]
+fn test_a_flow_sets_active_prompt_for_first_queued_prompt_bearing() {
+    // Both entries are NeedsGeneration with prompts; 'a' enqueues both and
+    // surfaces the first inline.
+    let model = make_dual_prompt_model();
+    let (new_model, effect) = update(model, Message::Key(KeyEvent::char('a')));
+
+    assert_eq!(
+        new_model.generate_queue,
+        std::collections::HashSet::from([0, 1]),
+        "both prompt-bearing entries should be queued"
+    );
+    let active = new_model
+        .active_prompt
+        .as_ref()
+        .expect("active_prompt should surface the first queued prompt-bearing entry");
+    assert_eq!(
+        active.artifact_index, 0,
+        "lowest-index queued entry wins for stable ordering"
+    );
+    assert!(
+        effect.is_none(),
+        "no generator dispatches until the prompt is submitted"
+    );
+}
+
+#[test]
+fn test_prompt_submission_advances_to_next_queued_prompt() {
+    // After 'a' opens prompt for entry 0, submitting it should dispatch
+    // RunGenerator for 0, drop it from the queue, and advance to entry 1.
+    let model = make_dual_prompt_model();
+    let (model, _) = update(model, Message::Key(KeyEvent::char('a')));
+    assert_eq!(model.active_prompt.as_ref().unwrap().artifact_index, 0);
+
+    // Type a value and submit.
+    let (model, _) = update(model, Message::Key(KeyEvent::char('x')));
+    let (new_model, effect) = update(model, Message::Key(KeyEvent::enter()));
+
+    // Generator dispatches for the just-submitted entry.
+    assert!(
+        matches!(
+            effect,
+            Effect::RunGenerator {
+                artifact_index: 0,
+                ..
+            }
+        ),
+        "submission should dispatch generator for the entry whose prompt was completed, got {:?}",
+        effect
+    );
+
+    // Queue drops 0 and active_prompt advances to 1.
+    assert_eq!(
+        new_model.generate_queue,
+        std::collections::HashSet::from([1]),
+        "submitted entry must leave the queue"
+    );
+    let next = new_model
+        .active_prompt
+        .as_ref()
+        .expect("active_prompt should advance to the next queued entry");
+    assert_eq!(next.artifact_index, 1);
+}
+
+#[test]
+fn test_prompt_submission_clears_active_prompt_when_queue_empty() {
+    // Single-Enter on a prompt-bearing artifact: nothing queued, so submission
+    // dispatches and clears active_prompt back to plain log view.
+    let model = make_test_model();
+    let (model, _) = update(model, Message::Key(KeyEvent::enter()));
+    assert!(model.active_prompt.is_some());
+    assert!(model.generate_queue.is_empty());
+
+    let (model, _) = update(model, Message::Key(KeyEvent::char('s')));
+    let (new_model, effect) = update(model, Message::Key(KeyEvent::enter()));
+
+    assert!(matches!(effect, Effect::RunGenerator { .. }));
+    assert!(
+        new_model.active_prompt.is_none(),
+        "single-Enter flow clears active_prompt after submission"
+    );
+    assert!(matches!(new_model.screen, Screen::ArtifactList));
+}
+
+#[test]
+fn test_check_resolves_to_prompt_bearing_surfaces_active_prompt() {
+    // Pending entry queued by 'a'; when its check resolves to NeedsGeneration
+    // with prompts, the inline prompt should surface (no other prompt active).
+    let mut model = make_dual_prompt_model();
+    // Reset to Pending so check_serialization is meaningful.
+    *model.entries[0].status_mut() = ArtifactStatus::Pending;
+    *model.entries[1].status_mut() = ArtifactStatus::Pending;
+
+    let (model, _) = update(model, Message::Key(KeyEvent::char('a')));
+    assert_eq!(model.generate_queue.len(), 2);
+    assert!(
+        model.active_prompt.is_none(),
+        "no prompt yet — both entries are still Pending awaiting check"
+    );
+
+    let (new_model, _) = update(
+        model,
+        Message::CheckSerializationResult {
+            artifact_index: 0,
+            status: ArtifactStatus::NeedsGeneration,
+            result: Ok(ScriptOutput::default()),
+        },
+    );
+
+    let active = new_model
+        .active_prompt
+        .as_ref()
+        .expect("inline prompt should surface once a queued entry resolves to NeedsGeneration");
+    assert_eq!(active.artifact_index, 0);
+    assert!(
+        new_model.generate_queue.contains(&0),
+        "entry stays queued while its prompt is being collected"
+    );
+}
+
+#[test]
+fn test_navigation_keys_are_swallowed_while_prompt_active() {
+    // With active_prompt set, j/k must not navigate the artifact list — they
+    // are typed into the prompt buffer.
+    let mut model = make_test_model();
+    model.active_prompt = Some(make_active_prompt("", InputMode::Line));
+
+    let (model, _) = update(model, Message::Key(KeyEvent::char('j')));
+
+    assert_eq!(
+        model.selected_index, 0,
+        "j should not navigate when active_prompt is set"
+    );
+    assert_eq!(model.active_prompt.as_ref().unwrap().buffer, "j");
 }
 
 #[test]

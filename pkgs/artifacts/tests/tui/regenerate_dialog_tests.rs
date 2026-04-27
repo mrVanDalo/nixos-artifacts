@@ -66,6 +66,7 @@ fn make_test_model_with_existing_artifact() -> Model {
         warnings: Vec::new(),
         tick_count: 0,
         generate_queue: Default::default(),
+        active_prompt: None,
     }
 }
 
@@ -88,6 +89,7 @@ fn make_test_model_with_new_artifact() -> Model {
         warnings: Vec::new(),
         tick_count: 0,
         generate_queue: Default::default(),
+        active_prompt: None,
     }
 }
 
@@ -122,6 +124,7 @@ fn make_test_model_with_shared_artifact(status: ArtifactStatus) -> Model {
         warnings: Vec::new(),
         tick_count: 0,
         generate_queue: Default::default(),
+        active_prompt: None,
     }
 }
 
@@ -349,9 +352,13 @@ fn test_dialog_enter_confirms_selection() {
     // When: User presses Enter
     let (new_model, _effect) = update(model, Message::Key(KeyEvent::enter()));
 
-    // Then: Proceeds to generation
+    // Then: Proceeds to generation. With prompts, the inline prompt opens on
+    // the artifact list (`active_prompt` set); without prompts, generation
+    // starts immediately on the Generating screen.
+    let proceeded = matches!(new_model.screen, Screen::Generating(_))
+        || (matches!(new_model.screen, Screen::ArtifactList) && new_model.active_prompt.is_some());
     assert!(
-        matches!(new_model.screen, Screen::Generating(_) | Screen::Prompt(_)),
+        proceeded,
         "Expected to proceed to generation when Regenerate selected"
     );
 }
@@ -370,9 +377,11 @@ fn test_dialog_space_confirms_selection() {
     // When: User presses Space
     let (new_model, _effect) = update(model, Message::Key(KeyEvent::char(' ')));
 
-    // Then: Proceeds to generation
+    // Then: Proceeds to generation (Generating screen or inline prompt).
+    let proceeded = matches!(new_model.screen, Screen::Generating(_))
+        || (matches!(new_model.screen, Screen::ArtifactList) && new_model.active_prompt.is_some());
     assert!(
-        matches!(new_model.screen, Screen::Generating(_) | Screen::Prompt(_)),
+        proceeded,
         "Expected to proceed to generation when Space pressed with Regenerate selected"
     );
 }
@@ -467,15 +476,20 @@ fn test_dialog_regenerate_proceeds_to_prompts() {
         warnings: Vec::new(),
         tick_count: 0,
         generate_queue: Default::default(),
+        active_prompt: None,
     };
 
     // When: User presses Enter (confirming Regenerate)
     let (new_model, _effect) = update(model, Message::Key(KeyEvent::enter()));
 
-    // Then: Proceeds to Prompt
+    // Then: Inline prompt opens on the artifact list — `active_prompt` is set.
     assert!(
-        matches!(new_model.screen, Screen::Prompt(_)),
-        "Selecting Regenerate should proceed to Prompt when prompts are needed"
+        matches!(new_model.screen, Screen::ArtifactList),
+        "Selecting Regenerate should return to ArtifactList for inline prompt collection"
+    );
+    assert!(
+        new_model.active_prompt.is_some(),
+        "Inline prompt should be active when prompts are needed"
     );
 }
 
@@ -771,6 +785,7 @@ fn test_dialog_appears_only_for_needs_generation() {
         warnings: Vec::new(),
         tick_count: 0,
         generate_queue: Default::default(),
+        active_prompt: None,
     };
 
     // When: User presses Enter
@@ -818,6 +833,7 @@ fn test_dialog_with_many_targets_truncation() {
         warnings: Vec::new(),
         tick_count: 0,
         generate_queue: Default::default(),
+        active_prompt: None,
     };
 
     // When: User presses Enter

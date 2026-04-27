@@ -1,3 +1,4 @@
+use super::prompt::render_prompt;
 use crate::app::model::{ArtifactStatus, ListEntry, LogLevel, Model, Step, TargetType};
 use ratatui::{
     Frame,
@@ -12,10 +13,16 @@ pub fn render_artifact_list(frame: &mut Frame, model: &Model, area: Rect) {
         Layout::horizontal([Constraint::Percentage(50), Constraint::Percentage(50)]).split(area);
 
     let list_area = horizontal_chunks[0];
-    let log_area = horizontal_chunks[1];
+    let right_area = horizontal_chunks[1];
 
     render_artifact_list_panel(frame, model, list_area);
-    render_log_panel(frame, model, log_area);
+    // The right pane is normally the log panel for the focused artifact, but
+    // an active inline prompt swaps it out for prompt input on whichever
+    // entry the prompt was opened against.
+    match model.active_prompt.as_ref() {
+        Some(prompt) => render_prompt(frame, prompt, right_area),
+        None => render_log_panel(frame, model, right_area),
+    }
 }
 
 fn render_artifact_list_panel(frame: &mut Frame, model: &Model, area: Rect) {
@@ -23,11 +30,18 @@ fn render_artifact_list_panel(frame: &mut Frame, model: &Model, area: Rect) {
     let list_area = chunks[0];
     let legend_area = chunks[1];
 
+    let prompt_index = model.active_prompt.as_ref().map(|p| p.artifact_index);
+
     let items: Vec<ListItem> = model
         .entries
         .iter()
-        .map(|entry| {
-            let (icon, style, status_text) = status_display_with_text(entry);
+        .enumerate()
+        .map(|(index, entry)| {
+            let (icon, style, status_text) = if Some(index) == prompt_index {
+                ("✎", Style::default(), Some("Awaiting input...".to_string()))
+            } else {
+                status_display_with_text(entry)
+            };
 
             let content = match entry {
                 ListEntry::Single(single) => {
@@ -98,6 +112,7 @@ fn render_artifact_list_panel(frame: &mut Frame, model: &Model, area: Rect) {
     let legend = Line::from(vec![
         Span::raw("○ Pend "),
         Span::raw("◐ Need "),
+        Span::raw("✎ Input "),
         Span::raw("✓ OK "),
         Span::raw("✗ Fail"),
     ]);

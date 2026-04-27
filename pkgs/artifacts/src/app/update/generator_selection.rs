@@ -75,8 +75,9 @@ pub(super) fn update_generator_selection(mut model: Model, key: KeyEvent) -> (Mo
                     });
                     (model, effect)
                 } else {
-                    // Need to collect prompts first
-                    model.screen = Screen::Prompt(PromptState {
+                    // Need to collect prompts first — switch to inline prompt
+                    // input on the artifact list.
+                    model.active_prompt = Some(PromptState {
                         artifact_index,
                         artifact_name: shared.info.artifact_name.clone(),
                         description: shared.info.description.clone(),
@@ -86,6 +87,7 @@ pub(super) fn update_generator_selection(mut model: Model, key: KeyEvent) -> (Mo
                         buffer: String::new(),
                         collected: Default::default(),
                     });
+                    model.screen = Screen::ArtifactList;
                     (model, Effect::None)
                 }
             } else {
