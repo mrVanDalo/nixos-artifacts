@@ -336,8 +336,8 @@ async fn test_cancellation_token_shutdown() {
     // Cancel the token to trigger shutdown
     shutdown_token.cancel();
 
-    // Should be able to receive any pending results
-    // Background will process remaining queue before exiting
+    // Shutdown drops the queue without executing — no results should arrive,
+    // and the channel should close cleanly.
     let mut received = 0;
     while let Ok(result) = timeout(Duration::from_millis(500), rx_res.recv()).await {
         if result.is_none() {
@@ -346,12 +346,11 @@ async fn test_cancellation_token_shutdown() {
         received += 1;
     }
 
-    // Should have received results for the commands that were processed
-    assert!(
-        received > 0 || received <= 3,
-        "Should receive 0-3 results (received {})",
+    assert_eq!(
+        received, 0,
+        "shutdown must drop the queue (got {} results)",
         received
     );
 
-    println!("Received {} results before shutdown", received);
+    println!("Cancellation token triggered shutdown and dropped queued effects");
 }

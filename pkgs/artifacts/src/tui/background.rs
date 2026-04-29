@@ -887,6 +887,14 @@ impl BackgroundEffectHandler {
 /// queued at that moment, and a signal that arrives while the queue is empty
 /// is a no-op.
 ///
+/// # Shutdown
+///
+/// Cancelling `shutdown_token` (e.g. on Ctrl-C) follows the same drop-the-queue
+/// semantics as `cancel_tx`: queued effects are discarded without executing,
+/// the in-flight effect — if any — finishes naturally, then the loop exits.
+/// Users expect Ctrl-C to abort pending work, not kick it all off on the way
+/// out the door.
+///
 /// # Arguments
 ///
 /// * `backend` - Backend configuration for effect execution
@@ -934,15 +942,20 @@ pub fn spawn_background_task(
             tokio::select! {
                 biased;
 
-                // Check for shutdown signal first
+                // Check for shutdown signal first. Mirror cancel semantics:
+                // discard queued effects without executing them. The in-flight
+                // effect (if any) is already past select! and finishes
+                // naturally; we just refuse to start the rest.
                 _ = shutdown_token.cancelled() => {
-                    log_component("BACKGROUND", "Shutdown requested, finishing current work");
-                    // Process any remaining commands in queue before exiting
-                    while let Ok(cmd) = rx_cmd.try_recv() {
-                        log_component("BACKGROUND", "Processing queued command before shutdown");
-                        let result = handler.execute(cmd).await;
-                        let _ = tx_res.send(result); // Best effort
+                    log_component("BACKGROUND", "Shutdown requested, dropping queued effects");
+                    let mut dropped = 0usize;
+                    while rx_cmd.try_recv().is_ok() {
+                        dropped += 1;
                     }
+                    log_component(
+                        "BACKGROUND",
+                        &format!("Dropped {} queued effect(s) on shutdown", dropped),
+                    );
                     log_component("BACKGROUND", "Exiting cleanly");
                     break;
                 }

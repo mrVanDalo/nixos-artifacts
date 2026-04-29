@@ -229,10 +229,11 @@ async fn test_select_channel_closed_branch() {
 
 #[tokio::test]
 #[serial_test::serial]
-async fn test_select_with_in_flight_command() {
-    // Start command, signal shutdown before command completes,
-    // verify command completes before shutdown
-    // Tests fairness of select!
+async fn test_select_shutdown_wins_over_full_queue() {
+    // Synchronously enqueue a full queue and signal shutdown before yielding.
+    // Biased select! must pick the shutdown arm on the first poll and drop
+    // every queued effect — none should execute. Tests that the shutdown
+    // branch takes priority over the command branch when both are ready.
 
     let backend = create_test_backend_config();
     let make = create_test_make_config();
@@ -245,7 +246,6 @@ async fn test_select_with_in_flight_command() {
         shutdown_token.clone(),
     );
 
-    // Send multiple commands
     let num_commands = 5;
     for i in 0..num_commands {
         tx_cmd
@@ -258,12 +258,8 @@ async fn test_select_with_in_flight_command() {
             })
             .unwrap();
     }
-
-    // Immediately signal shutdown
     shutdown_token.cancel();
 
-    // Background should process remaining queue before exiting
-    // Collect all results
     let mut received_results = Vec::new();
     loop {
         match timeout(Duration::from_millis(500), rx_res.recv()).await {
@@ -272,29 +268,19 @@ async fn test_select_with_in_flight_command() {
                     received_results.push(artifact_index);
                 }
             }
-            Ok(None) => break, // Channel closed
-            Err(_) => break,   // Timeout - no more results
+            Ok(None) => break,
+            Err(_) => break,
         }
     }
 
-    // Should have received results for all commands (or most)
-    // The implementation processes queued commands before shutdown
     assert!(
-        received_results.len() >= num_commands || received_results.len() == num_commands,
-        "Should receive results for all {} commands (got {})",
-        num_commands,
+        received_results.is_empty(),
+        "shutdown must win over queued effects (got {} results)",
         received_results.len()
-    );
-
-    // Verify results are in order
-    let expected: Vec<usize> = (0..received_results.len()).collect();
-    assert_eq!(
-        received_results, expected,
-        "Results should be in FIFO order"
     );
 
     println!(
-        "In-flight command completion test passed: {} commands processed before shutdown",
-        received_results.len()
+        "Shutdown branch beat the command branch; all {} queued effects dropped",
+        num_commands
     );
 }

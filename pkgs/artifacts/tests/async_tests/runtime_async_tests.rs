@@ -657,8 +657,10 @@ async fn test_result_channel_disconnect() {
 
 #[tokio::test]
 #[serial_test::serial]
-async fn test_graceful_shutdown_with_in_flight_commands() {
-    // Shutdown while commands are processing
+async fn test_shutdown_drops_queued_effects() {
+    // Synchronous send-then-cancel before any .await: the background task's
+    // first poll sees both shutdown and a full queue. Biased select! must
+    // drop the queue without executing — no results should arrive.
     let backend = create_test_backend_config();
     let make = create_test_make_config();
     let shutdown_token = CancellationToken::new();
@@ -670,7 +672,6 @@ async fn test_graceful_shutdown_with_in_flight_commands() {
         shutdown_token.child_token(),
     );
 
-    // Send multiple commands
     for i in 0..5 {
         cmd_tx
             .send(Effect::CheckSerialization {
@@ -682,11 +683,8 @@ async fn test_graceful_shutdown_with_in_flight_commands() {
             })
             .unwrap();
     }
-
-    // Immediately signal shutdown
     shutdown_token.cancel();
 
-    // Collect results - should receive some or all before shutdown
     let mut received = Vec::new();
     loop {
         match timeout(Duration::from_millis(500), res_rx.recv()).await {
@@ -700,16 +698,11 @@ async fn test_graceful_shutdown_with_in_flight_commands() {
         }
     }
 
-    // Should have received at least some results
     assert!(
-        !received.is_empty() || received.len() == 5,
-        "Should receive results before shutdown (got {})",
+        received.is_empty(),
+        "shutdown must drop queued effects (got {} results)",
         received.len()
     );
-
-    // Results should be in order
-    let expected: Vec<usize> = (0..received.len()).collect();
-    assert_eq!(received, expected, "Results should be in FIFO order");
 }
 
 // ============================================================================
@@ -739,8 +732,11 @@ async fn test_timeout_handling() {
 
 #[tokio::test]
 #[serial_test::serial]
-async fn test_shutdown_drain_timeout() {
-    // Verify graceful shutdown timeout handling
+async fn test_shutdown_closes_result_channel_promptly() {
+    // After shutdown, the result channel closes within a bounded window
+    // regardless of what was queued. Drop semantics mean queued effects do
+    // not get executed, so the loop is purely waiting for the channel-closed
+    // signal.
     let backend = create_test_backend_config();
     let make = create_test_make_config();
     let shutdown_token = CancellationToken::new();
@@ -752,7 +748,6 @@ async fn test_shutdown_drain_timeout() {
         shutdown_token.child_token(),
     );
 
-    // Send some commands
     for i in 0..3 {
         cmd_tx
             .send(Effect::CheckSerialization {
@@ -765,23 +760,30 @@ async fn test_shutdown_drain_timeout() {
             .unwrap();
     }
 
-    // Signal shutdown
     shutdown_token.cancel();
 
-    // Use timeout to drain results
     let drain_start = tokio::time::Instant::now();
     let drain_timeout = Duration::from_secs(1);
 
     let mut received = 0;
+    let mut closed = false;
     while drain_start.elapsed() < drain_timeout {
         match timeout(Duration::from_millis(100), res_rx.recv()).await {
             Ok(Some(_)) => received += 1,
-            Ok(None) | Err(_) => break,
+            Ok(None) => {
+                closed = true;
+                break;
+            }
+            Err(_) => break,
         }
     }
 
-    // Should have received results
-    assert!(received > 0, "Should receive results during drain");
+    assert!(closed, "result channel must close after shutdown");
+    assert_eq!(
+        received, 0,
+        "shutdown must drop queued effects (got {} results)",
+        received
+    );
 
     drop(cmd_tx);
 }

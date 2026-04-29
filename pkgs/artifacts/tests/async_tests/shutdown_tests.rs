@@ -42,9 +42,10 @@ fn create_test_make_config() -> MakeConfiguration {
 
 #[tokio::test]
 #[serial_test::serial]
-async fn test_graceful_shutdown_completes_in_flight() {
-    // Send command A, signal shutdown, verify command A completes and result received
-    // Background exits cleanly
+async fn test_shutdown_after_completion_exits_cleanly() {
+    // Send a command, wait for it to complete, then signal shutdown. With no
+    // queued or in-flight work the shutdown arm has nothing to drain and the
+    // task exits cleanly, closing the result channel.
 
     let backend = create_test_backend_config();
     let make = create_test_make_config();
@@ -57,25 +58,20 @@ async fn test_graceful_shutdown_completes_in_flight() {
         shutdown_token.clone(),
     );
 
-    // Send one command
     tx_cmd
         .send(Effect::CheckSerialization {
             artifact_index: 0,
-            artifact_name: "in-flight".to_string(),
+            artifact_name: "first".to_string(),
             target_spec: artifacts::app::effect::TargetSpec::Single(TargetType::NixOS {
                 machine: "machine".to_string(),
             }),
         })
         .unwrap();
 
-    // Signal shutdown immediately
-    shutdown_token.cancel();
-
-    // Verify command completes before shutdown
     let result = timeout(Duration::from_secs(1), rx_res.recv())
         .await
-        .expect("Should not timeout - command should complete before shutdown")
-        .expect("Should receive result for in-flight command");
+        .expect("Should not timeout - command should complete")
+        .expect("Should receive result for completed command");
 
     match result {
         Message::CheckSerializationResult { artifact_index, .. } => {
@@ -84,10 +80,8 @@ async fn test_graceful_shutdown_completes_in_flight() {
         _ => panic!("Expected CheckSerialization result"),
     }
 
-    // Background should exit cleanly
-    tokio::time::sleep(Duration::from_millis(50)).await;
+    shutdown_token.cancel();
 
-    // Channel should be closed
     let closed_result = timeout(Duration::from_millis(500), rx_res.recv())
         .await
         .expect("Should not timeout");
@@ -97,14 +91,22 @@ async fn test_graceful_shutdown_completes_in_flight() {
         "Channel should be closed after graceful shutdown"
     );
 
-    println!("In-flight command completed before graceful shutdown");
+    println!("Background exits cleanly after completed work");
 }
 
 #[tokio::test]
 #[serial_test::serial]
-async fn test_shutdown_with_queued_commands() {
-    // Send commands A, B, C, signal shutdown, verify shutdown processes queued commands
-    // Implementation processes remaining queue before shutdown
+async fn test_shutdown_drops_queued_commands() {
+    // Synchronously enqueue 5 effects and signal shutdown before yielding to
+    // the runtime, so the background task's first poll sees both the shutdown
+    // token cancelled and rx_cmd full. The shutdown arm must drain rx_cmd and
+    // exit without executing any of the queued effects — Ctrl-C aborts
+    // pending work rather than draining-then-quitting.
+    //
+    // This relies on tokio's cooperative scheduling: spawn_background_task
+    // queues the task but it does not run until we hit an `.await`. All
+    // sync sends and the shutdown signal happen first, in the same poll
+    // context.
 
     let backend = create_test_backend_config();
     let make = create_test_make_config();
@@ -117,7 +119,8 @@ async fn test_shutdown_with_queued_commands() {
         shutdown_token.clone(),
     );
 
-    // Send multiple commands
+    // Synchronously enqueue 5 effects, then signal shutdown — no .await in
+    // between, so the background task has not run yet.
     let num_commands = 5;
     for i in 0..num_commands {
         tx_cmd
@@ -130,45 +133,22 @@ async fn test_shutdown_with_queued_commands() {
             })
             .unwrap();
     }
-
-    // Signal shutdown immediately
     shutdown_token.cancel();
 
-    // Collect all results - should process queued commands before shutdown
-    let mut received = Vec::new();
-    loop {
-        match timeout(Duration::from_millis(500), rx_res.recv()).await {
-            Ok(Some(result)) => {
-                if let Message::CheckSerializationResult { artifact_index, .. } = result {
-                    received.push(artifact_index);
-                }
-            }
-            Ok(None) => break,
-            Err(_) => break,
-        }
-    }
+    // Yield. The background task wakes, biased select picks the shutdown arm,
+    // drains rx_cmd, and exits. No results should ever flow on rx_res, and
+    // the channel should close cleanly.
+    let closed = timeout(Duration::from_millis(500), rx_res.recv())
+        .await
+        .expect("background must exit within timeout");
 
-    // Verify all commands were processed
-    assert_eq!(
-        received.len(),
-        num_commands,
-        "All {} queued commands should be processed before shutdown",
-        num_commands
+    assert!(
+        closed.is_none(),
+        "no results should arrive — every queued effect was dropped on shutdown, got {:?}",
+        closed
     );
 
-    // Verify FIFO order
-    for (i, &idx) in received.iter().enumerate() {
-        assert_eq!(
-            idx, i,
-            "FIFO order violated at position {}: expected {}, got {}",
-            i, i, idx
-        );
-    }
-
-    println!(
-        "All {} queued commands processed before shutdown",
-        received.len()
-    );
+    println!("All {} queued commands dropped on shutdown", num_commands);
 }
 
 #[tokio::test]
