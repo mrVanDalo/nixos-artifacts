@@ -89,6 +89,7 @@ fn make_test_model() -> Model {
         tick_count: 0,
         generate_queue: Default::default(),
         active_prompt: None,
+        last_esc_at: None,
     }
 }
 

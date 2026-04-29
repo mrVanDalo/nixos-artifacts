@@ -6,7 +6,9 @@ use crossterm::event::KeyCode;
 
 pub(super) fn update_artifact_list(mut model: Model, key: KeyEvent) -> (Model, Effect) {
     match key.code {
-        KeyCode::Char('q') | KeyCode::Esc => (model, Effect::Quit),
+        // Esc no longer quits — it is the trigger for the universal Esc-Esc
+        // cancel chord (see `super::update`). `q` remains the explicit quit.
+        KeyCode::Char('q') => (model, Effect::Quit),
 
         KeyCode::Up | KeyCode::Char('k') => {
             if model.selected_index > 0 {

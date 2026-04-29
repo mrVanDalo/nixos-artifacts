@@ -501,14 +501,16 @@ artifacts --log-file /tmp/log.txt  # Enable debug logging
 - `j`/`k` or arrows: Navigate
 - `Enter`: Generate selected artifact
 - `a`: Generate all artifacts
-- `q`/`Esc`: Quit
+- `Esc Esc` (within 500ms): Cancel queued generators and return to list
+- `q`: Quit
 
 **Keybindings** (prompt input):
 
 - `Tab`: Cycle input mode (line/multiline/hidden) - only when empty
 - `Enter`: Submit (line/hidden) or newline (multiline)
 - `Ctrl+D`: Submit multiline input
-- `Esc`: Cancel and return to list
+- `Esc`: Skip current artifact (during `a` flow) or cancel prompt
+- `Esc Esc` (within 500ms): Cancel the entire `a`-flow queue and return to list
 
 **Implementation**: `src/cli/mod.rs` → `run_tui()`
 

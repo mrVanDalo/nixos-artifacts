@@ -15,6 +15,7 @@
 //! - Cloning is cheap (most fields are small or reference-counted)
 
 use std::collections::HashSet;
+use std::time::Instant;
 
 use super::artifact::ListEntry;
 use super::log::{ChronologicalLogState, Step, Warning};
@@ -56,6 +57,14 @@ pub struct Model {
     /// queued prompt-bearing artifact (`a` flow) or clears back to logs
     /// (single-Enter flow).
     pub active_prompt: Option<PromptState>,
+    /// Timestamp of the most recent Esc keypress. Powers the universal
+    /// Esc-Esc cancel chord: a second Esc within 500ms of this instant
+    /// dispatches `cancel_queue` regardless of which screen the user is on.
+    /// Set on every Esc, cleared on every non-Esc key, and cleared again
+    /// after the chord fires. Non-key messages (Tick, async results) leave
+    /// it alone so a long-running tick stream cannot widen the chord window
+    /// or close it prematurely.
+    pub last_esc_at: Option<Instant>,
 }
 
 /// Current screen/view being displayed in the TUI.

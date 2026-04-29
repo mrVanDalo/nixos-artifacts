@@ -60,6 +60,7 @@ fn make_test_model() -> Model {
         tick_count: 0,
         generate_queue: Default::default(),
         active_prompt: None,
+        last_esc_at: None,
     }
 }
 
@@ -108,11 +109,20 @@ fn test_quit_with_q() {
 }
 
 #[test]
-fn test_quit_with_esc() {
+fn test_esc_on_artifact_list_does_not_quit() {
+    // Esc on the artifact list is reserved for the Esc-Esc cancel chord —
+    // single Esc must NOT quit (only `q` quits). The first Esc records the
+    // chord timestamp and otherwise leaves the model unchanged.
     let model = make_test_model();
-    let (_, effect) = update(model, Message::Key(KeyEvent::esc()));
+    let (new_model, effect) = update(model, Message::Key(KeyEvent::esc()));
 
-    assert!(effect.is_quit());
+    assert!(!effect.is_quit(), "single Esc on list must not quit");
+    assert!(effect.is_none());
+    assert!(matches!(new_model.screen, Screen::ArtifactList));
+    assert!(
+        new_model.last_esc_at.is_some(),
+        "first Esc must seed the chord timer"
+    );
 }
 
 #[test]
@@ -522,6 +532,7 @@ fn test_single_generator_skips_dialog() {
         tick_count: 0,
         generate_queue: Default::default(),
         active_prompt: None,
+        last_esc_at: None,
     };
 
     // Press Enter on shared artifact
@@ -598,6 +609,7 @@ fn test_single_generator_no_prompts_goes_to_generating() {
         tick_count: 0,
         generate_queue: Default::default(),
         active_prompt: None,
+        last_esc_at: None,
     };
 
     // Press Enter on shared artifact
@@ -669,6 +681,7 @@ fn test_multiple_generators_shows_dialog() {
         tick_count: 0,
         generate_queue: Default::default(),
         active_prompt: None,
+        last_esc_at: None,
     };
 
     // Press Enter on shared artifact
@@ -738,6 +751,7 @@ fn test_single_generator_stores_selected_path() {
         tick_count: 0,
         generate_queue: Default::default(),
         active_prompt: None,
+        last_esc_at: None,
     };
 
     // Press Enter on shared artifact
@@ -800,6 +814,7 @@ fn make_test_model_with_shared() -> Model {
         tick_count: 0,
         generate_queue: Default::default(),
         active_prompt: None,
+        last_esc_at: None,
     }
 }
 
@@ -926,6 +941,7 @@ fn make_mixed_status_model() -> Model {
         tick_count: 0,
         generate_queue: Default::default(),
         active_prompt: None,
+        last_esc_at: None,
     }
 }
 
@@ -998,6 +1014,7 @@ fn test_a_skips_needs_generation_with_prompts() {
         tick_count: 0,
         generate_queue: Default::default(),
         active_prompt: None,
+        last_esc_at: None,
     };
 
     let (new_model, effect) = update(model, Message::Key(KeyEvent::char('a')));
@@ -1166,6 +1183,7 @@ fn make_dual_prompt_model() -> Model {
         tick_count: 0,
         generate_queue: Default::default(),
         active_prompt: None,
+        last_esc_at: None,
     }
 }
 
@@ -1310,6 +1328,7 @@ fn test_prompt_esc_on_last_queued_artifact_clears_prompt() {
         tick_count: 0,
         generate_queue: Default::default(),
         active_prompt: None,
+        last_esc_at: None,
     };
     let (model, _) = update(model, Message::Key(KeyEvent::char('a')));
     assert_eq!(model.active_prompt.as_ref().unwrap().artifact_index, 0);
@@ -1512,4 +1531,132 @@ fn test_cancel_queue_dismisses_modal_screens() {
     let (new_model, _) = super::cancel_queue(model);
 
     assert!(matches!(new_model.screen, Screen::ArtifactList));
+}
+
+// === Esc-Esc cancel chord (universal, 500ms window) ===
+
+#[test]
+fn test_esc_chord_during_a_flow_cancels_queue() {
+    // 'a' flow with two prompt-bearing artifacts queued. First Esc skips
+    // entry 0 and surfaces entry 1's prompt (existing per-context behavior).
+    // Second Esc within 500ms fires the chord: queue cleared, prompt cleared,
+    // CancelQueue effect emitted, screen forced to ArtifactList.
+    let model = make_dual_prompt_model();
+    let (model, _) = update(model, Message::Key(KeyEvent::char('a')));
+    assert_eq!(model.generate_queue.len(), 2);
+
+    let (model, _) = update(model, Message::Key(KeyEvent::esc()));
+    assert!(
+        model.last_esc_at.is_some(),
+        "first Esc must seed the chord timer"
+    );
+    // After first Esc: entry 0 skipped, entry 1's prompt surfaced.
+    assert_eq!(model.active_prompt.as_ref().unwrap().artifact_index, 1);
+    assert_eq!(model.generate_queue.len(), 1);
+
+    // Second Esc, immediately — well within the 500ms window.
+    let (new_model, effect) = update(model, Message::Key(KeyEvent::esc()));
+
+    assert!(matches!(effect, Effect::CancelQueue));
+    assert!(new_model.generate_queue.is_empty());
+    assert!(new_model.active_prompt.is_none());
+    assert!(matches!(new_model.screen, Screen::ArtifactList));
+    assert!(
+        new_model.last_esc_at.is_none(),
+        "chord timer cleared after firing"
+    );
+}
+
+#[test]
+fn test_esc_chord_in_plain_view_emits_cancel_effect() {
+    // Plain artifact list, no queue, no active prompt. Two Esc presses
+    // within 500ms still dispatch CancelQueue (the runtime drains an empty
+    // FIFO — a no-op functionally) and return to the list (already there).
+    let model = make_test_model();
+    assert!(model.generate_queue.is_empty());
+    assert!(model.active_prompt.is_none());
+
+    let (model, effect) = update(model, Message::Key(KeyEvent::esc()));
+    assert!(effect.is_none(), "first Esc on plain list is a no-op");
+    assert!(model.last_esc_at.is_some());
+
+    let (new_model, effect) = update(model, Message::Key(KeyEvent::esc()));
+
+    assert!(matches!(effect, Effect::CancelQueue));
+    assert!(matches!(new_model.screen, Screen::ArtifactList));
+    assert!(new_model.generate_queue.is_empty());
+    assert!(new_model.last_esc_at.is_none());
+}
+
+#[test]
+fn test_esc_chord_times_out_after_window() {
+    // Two Esc presses >500ms apart must behave as two independent single-Esc
+    // events. We can't sleep in tests, so manually backdate `last_esc_at`
+    // past the chord window after the first Esc.
+    let model = make_test_model();
+    let (mut model, _) = update(model, Message::Key(KeyEvent::esc()));
+    let first_ts = model.last_esc_at.expect("first Esc seeds the timer");
+
+    // Backdate past the window — second Esc must be treated as a fresh first.
+    model.last_esc_at = Some(first_ts - Duration::from_millis(600));
+
+    let (new_model, effect) = update(model, Message::Key(KeyEvent::esc()));
+
+    assert!(
+        effect.is_none(),
+        "timed-out chord must NOT fire CancelQueue, got {:?}",
+        effect
+    );
+    assert!(
+        new_model.last_esc_at.is_some(),
+        "second Esc seeds a fresh chord timer instead of firing"
+    );
+    assert!(matches!(new_model.screen, Screen::ArtifactList));
+}
+
+#[test]
+fn test_non_esc_key_resets_chord_state() {
+    // Esc → 'j' → Esc (within 500ms total) must NOT fire the chord — the
+    // intervening non-Esc keypress breaks the sequence.
+    let model = make_test_model();
+    let (model, _) = update(model, Message::Key(KeyEvent::esc()));
+    assert!(model.last_esc_at.is_some());
+
+    let (model, _) = update(model, Message::Key(KeyEvent::char('j')));
+    assert!(
+        model.last_esc_at.is_none(),
+        "non-Esc key must clear the chord timer"
+    );
+
+    let (new_model, effect) = update(model, Message::Key(KeyEvent::esc()));
+
+    assert!(
+        effect.is_none(),
+        "second Esc after intervening key must not fire chord"
+    );
+    assert!(
+        new_model.last_esc_at.is_some(),
+        "second Esc seeds a fresh timer"
+    );
+}
+
+#[test]
+fn test_tick_does_not_clear_chord_state() {
+    // Tick messages arrive every ~50ms during animation; they must not
+    // close the chord window or the user's effective window would shrink to
+    // a single tick boundary.
+    let model = make_test_model();
+    let (model, _) = update(model, Message::Key(KeyEvent::esc()));
+    let seeded = model.last_esc_at.expect("first Esc seeds the timer");
+
+    let (model, _) = update(model, Message::Tick);
+    assert_eq!(
+        model.last_esc_at,
+        Some(seeded),
+        "Tick must leave the chord timer alone"
+    );
+
+    let (new_model, effect) = update(model, Message::Key(KeyEvent::esc()));
+    assert!(matches!(effect, Effect::CancelQueue));
+    assert!(new_model.last_esc_at.is_none());
 }

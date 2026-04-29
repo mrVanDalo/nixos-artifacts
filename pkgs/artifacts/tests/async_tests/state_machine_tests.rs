@@ -81,6 +81,7 @@ fn create_test_model(artifact_name: &str, has_prompts: bool) -> Model {
         tick_count: 0,
         generate_queue: Default::default(),
         active_prompt: None,
+        last_esc_at: None,
     }
 }
 
@@ -582,6 +583,7 @@ fn test_batch_effect_processing() {
         tick_count: 0,
         generate_queue: Default::default(),
         active_prompt: None,
+        last_esc_at: None,
     };
 
     let mut tracker = CommandTracker::new();

@@ -67,6 +67,7 @@ fn make_test_model_with_existing_artifact() -> Model {
         tick_count: 0,
         generate_queue: Default::default(),
         active_prompt: None,
+        last_esc_at: None,
     }
 }
 
@@ -90,6 +91,7 @@ fn make_test_model_with_new_artifact() -> Model {
         tick_count: 0,
         generate_queue: Default::default(),
         active_prompt: None,
+        last_esc_at: None,
     }
 }
 
@@ -125,6 +127,7 @@ fn make_test_model_with_shared_artifact(status: ArtifactStatus) -> Model {
         tick_count: 0,
         generate_queue: Default::default(),
         active_prompt: None,
+        last_esc_at: None,
     }
 }
 
@@ -477,6 +480,7 @@ fn test_dialog_regenerate_proceeds_to_prompts() {
         tick_count: 0,
         generate_queue: Default::default(),
         active_prompt: None,
+        last_esc_at: None,
     };
 
     // When: User presses Enter (confirming Regenerate)
@@ -786,6 +790,7 @@ fn test_dialog_appears_only_for_needs_generation() {
         tick_count: 0,
         generate_queue: Default::default(),
         active_prompt: None,
+        last_esc_at: None,
     };
 
     // When: User presses Enter
@@ -834,6 +839,7 @@ fn test_dialog_with_many_targets_truncation() {
         tick_count: 0,
         generate_queue: Default::default(),
         active_prompt: None,
+        last_esc_at: None,
     };
 
     // When: User presses Enter

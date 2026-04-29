@@ -318,6 +318,7 @@ fn make_test_model() -> Model {
         tick_count: 0,
         generate_queue: Default::default(),
         active_prompt: None,
+        last_esc_at: None,
     }
 }
 
@@ -815,6 +816,7 @@ fn test_multiple_machines_before_generate_all() {
         tick_count: 0,
         generate_queue: Default::default(),
         active_prompt: None,
+        last_esc_at: None,
     };
 
     let backend = TestBackend::new(70, 12);
@@ -882,6 +884,7 @@ fn test_multiple_machines_after_generate_all() {
         tick_count: 0,
         generate_queue: Default::default(),
         active_prompt: None,
+        last_esc_at: None,
     };
 
     let backend = TestBackend::new(70, 12);
@@ -943,6 +946,7 @@ fn test_artifact_list_with_shared_artifacts() {
         tick_count: 0,
         generate_queue: Default::default(),
         active_prompt: None,
+        last_esc_at: None,
     };
 
     let backend = TestBackend::new(70, 10);
@@ -997,6 +1001,7 @@ fn test_shared_artifact_pending_status() {
         tick_count: 0,
         generate_queue: Default::default(),
         active_prompt: None,
+        last_esc_at: None,
     };
 
     let backend = TestBackend::new(70, 10);
@@ -1029,6 +1034,7 @@ fn test_shared_artifact_needs_generation_status() {
         tick_count: 0,
         generate_queue: Default::default(),
         active_prompt: None,
+        last_esc_at: None,
     };
 
     let backend = TestBackend::new(70, 10);
@@ -1061,6 +1067,7 @@ fn test_shared_artifact_up_to_date_status() {
         tick_count: 0,
         generate_queue: Default::default(),
         active_prompt: None,
+        last_esc_at: None,
     };
 
     let backend = TestBackend::new(70, 10);
@@ -1113,6 +1120,7 @@ fn test_shared_artifact_failed_runtime_error() {
         tick_count: 0,
         generate_queue: Default::default(),
         active_prompt: None,
+        last_esc_at: None,
     };
 
     let backend = TestBackend::new(70, 15);
@@ -1159,6 +1167,7 @@ fn test_shared_artifact_failed_config_error() {
         tick_count: 0,
         generate_queue: Default::default(),
         active_prompt: None,
+        last_esc_at: None,
     };
 
     let backend = TestBackend::new(70, 15);
@@ -1655,6 +1664,7 @@ mod model_tests {
             tick_count: 0,
             generate_queue: Default::default(),
             active_prompt: None,
+            last_esc_at: None,
         }
     }
 

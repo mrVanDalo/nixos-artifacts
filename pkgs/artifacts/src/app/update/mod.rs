@@ -29,10 +29,18 @@ pub use init::init;
 
 use std::collections::HashMap;
 use std::fmt::Write;
+use std::time::{Duration, Instant};
+
+use crossterm::event::KeyCode;
 
 use super::effect::{Effect, TargetSpec};
 use super::message::{Message, ScriptOutput};
 use super::model::*;
+
+/// Window during which a second Esc keypress is interpreted as the cancel
+/// chord. Picked to match common UI chord conventions; tunable later if user
+/// feedback shows it's too tight or too loose.
+const ESC_CHORD_WINDOW: Duration = Duration::from_millis(500);
 
 // Re-exported for use by tests via `super::*`
 #[cfg(test)]
@@ -80,6 +88,35 @@ pub fn cancel_queue(mut model: Model) -> (Model, Effect) {
 /// Pure state transition: (Model, Message) -> (Model, Effect)
 /// This function has NO side effects - it only computes new state.
 pub fn update(model: Model, msg: Message) -> (Model, Effect) {
+    // Esc-Esc cancel chord (universal): a second Esc within
+    // [`ESC_CHORD_WINDOW`] of the first triggers `cancel_queue`, regardless
+    // of which screen the user is on. The first Esc records the timestamp
+    // and falls through to the screen-specific handler so its existing
+    // single-Esc behavior still runs. Any non-Esc key clears the timer so
+    // intervening input breaks the sequence; non-key messages (Tick, async
+    // results) are pass-through.
+    let model = match &msg {
+        Message::Key(key) if matches!(key.code, KeyCode::Esc) => {
+            let now = Instant::now();
+            if let Some(prev) = model.last_esc_at
+                && now.duration_since(prev) < ESC_CHORD_WINDOW
+            {
+                let mut model = model;
+                model.last_esc_at = None;
+                return cancel_queue(model);
+            }
+            let mut model = model;
+            model.last_esc_at = Some(now);
+            model
+        }
+        Message::Key(_) => {
+            let mut model = model;
+            model.last_esc_at = None;
+            model
+        }
+        _ => model,
+    };
+
     // Inline prompt input takes over keys whenever it is active and the user
     // is on the artifact list. Other screens (Generating, ChronologicalLog,
     // dialogs) keep their own key handling so the prompt is held but inert
