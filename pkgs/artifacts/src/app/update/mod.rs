@@ -38,6 +38,45 @@ use super::model::*;
 #[cfg(test)]
 use super::message::KeyEvent;
 
+/// Soft-cancel the in-flight 'a' (generate-all) batch.
+///
+/// This is the foundation other beads (Esc-Esc chord, Ctrl-C semantics fix)
+/// invoke from their key handlers. The function makes only model-side
+/// changes and returns the [`Effect::CancelQueue`] descriptor; the runtime
+/// turns that descriptor into a signal on the dedicated cancel channel,
+/// which drains the background FIFO of every effect that has not started
+/// executing yet. The currently-running effect, if any, runs to natural
+/// completion.
+///
+/// Concretely, this:
+/// * reverts every entry whose status is [`ArtifactStatus::Pending`] to
+///   [`ArtifactStatus::NeedsGeneration`]. After cancel we don't know whether
+///   their queued check would have resolved up-to-date or stale, and the
+///   yellow `!` is the safer default — the user can re-trigger generation
+///   from a known state instead of staring at a frozen `○`.
+/// * clears [`Model::generate_queue`] so future check results no longer
+///   auto-dispatch generators or pull entries into the inline-prompt flow.
+/// * clears [`Model::active_prompt`] so the right pane reverts to logs.
+/// * forces [`Screen::ArtifactList`]; any modal that was open (prompt
+///   confirmation, generator selection, log view) is dismissed.
+///
+/// Calling this when nothing is queued is a deliberate no-op except for the
+/// `Effect::CancelQueue` return value, which still routes to the background
+/// and drains an already-empty FIFO. No new
+/// [`crate::app::model::ArtifactStatus`] variant is introduced — entries
+/// that are mid-`Generating` are left alone and resolve naturally.
+pub fn cancel_queue(mut model: Model) -> (Model, Effect) {
+    for entry in &mut model.entries {
+        if matches!(entry.status(), ArtifactStatus::Pending) {
+            *entry.status_mut() = ArtifactStatus::NeedsGeneration;
+        }
+    }
+    model.generate_queue.clear();
+    model.active_prompt = None;
+    model.screen = Screen::ArtifactList;
+    (model, Effect::CancelQueue)
+}
+
 /// Pure state transition: (Model, Message) -> (Model, Effect)
 /// This function has NO side effects - it only computes new state.
 pub fn update(model: Model, msg: Message) -> (Model, Effect) {

@@ -50,7 +50,7 @@ async fn test_graceful_shutdown_completes_in_flight() {
     let make = create_test_make_config();
     let shutdown_token = CancellationToken::new();
 
-    let (tx_cmd, mut rx_res) = spawn_background_task(
+    let (tx_cmd, _cancel_tx, mut rx_res) = spawn_background_task(
         backend,
         make,
         artifacts::logging::LogLevel::Info,
@@ -110,7 +110,7 @@ async fn test_shutdown_with_queued_commands() {
     let make = create_test_make_config();
     let shutdown_token = CancellationToken::new();
 
-    let (tx_cmd, mut rx_res) = spawn_background_task(
+    let (tx_cmd, _cancel_tx, mut rx_res) = spawn_background_task(
         backend,
         make,
         artifacts::logging::LogLevel::Info,
@@ -206,7 +206,7 @@ async fn test_result_channel_disconnect() {
     let make = create_test_make_config();
     let shutdown_token = CancellationToken::new();
 
-    let (tx_cmd, rx_res) = spawn_background_task(
+    let (tx_cmd, _cancel_tx, rx_res) = spawn_background_task(
         backend,
         make,
         artifacts::logging::LogLevel::Info,
@@ -250,7 +250,7 @@ async fn test_command_timeout() {
     let make = create_test_make_config();
     let shutdown_token = CancellationToken::new();
 
-    let (tx_cmd, mut rx_res) = spawn_background_task(
+    let (tx_cmd, _cancel_tx, mut rx_res) = spawn_background_task(
         backend,
         make,
         artifacts::logging::LogLevel::Info,
@@ -297,4 +297,105 @@ async fn test_error_handling_timeout_with_mock_time() {
     );
 
     println!("Timeout constant verified: {:?}", BACKGROUND_TASK_TIMEOUT);
+}
+
+// === Cancel-queue: drain rx_cmd without executing ===
+
+#[tokio::test]
+#[serial_test::serial]
+async fn test_cancel_drops_queued_effects_without_executing() {
+    // Send 5 effects + cancel synchronously, before yielding to the runtime,
+    // so the background task's first poll sees both cancel_rx and rx_cmd
+    // ready. Biased select! must pick the cancel arm, drain rx_cmd, and emit
+    // zero results — none of the queued effects should be executed.
+    //
+    // This relies on tokio's cooperative scheduling: spawn_background_task
+    // queues the task but it does not run until we hit an `.await`. All
+    // sync sends happen first, in the same poll context.
+    let backend = create_test_backend_config();
+    let make = create_test_make_config();
+    let shutdown_token = CancellationToken::new();
+
+    let (tx_cmd, cancel_tx, mut rx_res) = spawn_background_task(
+        backend,
+        make,
+        artifacts::logging::LogLevel::Info,
+        shutdown_token,
+    );
+
+    // Synchronously enqueue 5 effects, then a cancel — no .await in between,
+    // so the background task has not run yet.
+    for i in 0..5 {
+        tx_cmd
+            .send(Effect::CheckSerialization {
+                artifact_index: i,
+                artifact_name: format!("queued-{}", i),
+                target_spec: artifacts::app::effect::TargetSpec::Single(TargetType::NixOS {
+                    machine: "machine".to_string(),
+                }),
+            })
+            .unwrap();
+    }
+    cancel_tx.send(()).expect("cancel must deliver");
+
+    // Now yield. The background task wakes, biased select picks cancel arm,
+    // drains rx_cmd. We expect no results to flow on rx_res.
+    let result = timeout(Duration::from_millis(300), rx_res.recv()).await;
+    assert!(
+        result.is_err(),
+        "no results should arrive — every queued effect was dropped, got {:?}",
+        result
+    );
+}
+
+#[tokio::test]
+#[serial_test::serial]
+async fn test_cancel_on_empty_queue_is_noop_and_loop_continues() {
+    // Cancel arriving with nothing to drain must not break the select! loop:
+    // once the cancel signal has been consumed, subsequent effects flow
+    // through normally. The sleep between the two sends is what makes this
+    // test "empty-queue at cancel time" — without it, the post-cancel
+    // command would be sitting in rx_cmd when cancel fires and would be
+    // drained, which is the *intended* drain semantics covered by the test
+    // above.
+    let backend = create_test_backend_config();
+    let make = create_test_make_config();
+    let shutdown_token = CancellationToken::new();
+
+    let (tx_cmd, cancel_tx, mut rx_res) = spawn_background_task(
+        backend,
+        make,
+        artifacts::logging::LogLevel::Info,
+        shutdown_token,
+    );
+
+    // Cancel an empty FIFO and let the background consume it.
+    cancel_tx.send(()).expect("cancel must deliver");
+    tokio::time::sleep(Duration::from_millis(100)).await;
+
+    // Send a real command after the cancel was consumed — it must complete.
+    tx_cmd
+        .send(Effect::CheckSerialization {
+            artifact_index: 42,
+            artifact_name: "post-cancel".to_string(),
+            target_spec: artifacts::app::effect::TargetSpec::Single(TargetType::NixOS {
+                machine: "machine".to_string(),
+            }),
+        })
+        .unwrap();
+
+    let result = timeout(Duration::from_secs(1), rx_res.recv())
+        .await
+        .expect("background must process the post-cancel command")
+        .expect("background must produce a result");
+
+    match result {
+        Message::CheckSerializationResult { artifact_index, .. } => {
+            assert_eq!(
+                artifact_index, 42,
+                "post-cancel command should be processed normally"
+            );
+        }
+        _ => panic!("expected CheckSerializationResult, got {:?}", result),
+    }
 }

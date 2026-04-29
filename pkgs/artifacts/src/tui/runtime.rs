@@ -12,18 +12,40 @@ use std::time::{Duration, Instant};
 use tokio_util::sync::CancellationToken;
 
 /// Helper to send effect to background if it needs execution.
-fn send_effect(effect: Effect, tx: &tokio::sync::mpsc::UnboundedSender<Effect>) -> bool {
+fn send_effect(
+    effect: Effect,
+    tx: &tokio::sync::mpsc::UnboundedSender<Effect>,
+    cancel_tx: &tokio::sync::mpsc::UnboundedSender<()>,
+) -> bool {
     match effect {
         Effect::None | Effect::Quit => true,
+        Effect::CancelQueue => cancel_tx.send(()).is_ok(),
         Effect::Batch(effects) => {
             for e in effects {
-                if !send_effect(e, tx) {
+                if !send_effect(e, tx, cancel_tx) {
                     return false;
                 }
             }
             true
         }
         _ => tx.send(effect).is_ok(),
+    }
+}
+
+/// Route a single command to the right channel: `Effect::CancelQueue` goes
+/// to the dedicated cancel channel so it can drain the FIFO with priority;
+/// every other effect goes through the regular command channel.
+///
+/// Returns `true` on successful delivery, `false` if the target channel
+/// has been closed (background task exited).
+fn dispatch_command(
+    cmd: Effect,
+    cmd_tx: &tokio::sync::mpsc::UnboundedSender<Effect>,
+    cancel_tx: &tokio::sync::mpsc::UnboundedSender<()>,
+) -> bool {
+    match cmd {
+        Effect::CancelQueue => cancel_tx.send(()).is_ok(),
+        other => cmd_tx.send(other).is_ok(),
     }
 }
 
@@ -79,7 +101,7 @@ where
     let shutdown_token = CancellationToken::new();
     let child_token = shutdown_token.child_token();
     let log_level = crate::logging::current_level();
-    let (cmd_tx, mut res_rx) =
+    let (cmd_tx, cancel_tx, mut res_rx) =
         crate::tui::background::spawn_background_task(backend, make, log_level, child_token);
     log_component("RUNTIME", "Background task spawned");
 
@@ -100,7 +122,7 @@ where
 
     // Execute initial effect (check serialization for all pending artifacts)
     let initial_effect = init(&mut model);
-    model = execute_initial_effect(&cmd_tx, model, initial_effect).await?;
+    model = execute_initial_effect(&cmd_tx, &cancel_tx, model, initial_effect).await?;
 
     loop {
         // Render the current state
@@ -132,7 +154,7 @@ where
                 );
                 for cmd in cmds {
                     log_component("RUNTIME", &format!("Sending command: {:?}", cmd));
-                    if cmd_tx.send(cmd).is_err() {
+                    if !dispatch_command(cmd, &cmd_tx, &cancel_tx) {
                         log_component("RUNTIME", "Background task closed, exiting");
                         model.error = Some("Connection to background task lost".to_string());
                         return Ok(RunResult {
@@ -219,7 +241,7 @@ where
                 );
                 for cmd in cmds {
                     log_component("RUNTIME", &format!("Sending command: {:?}", cmd));
-                    if cmd_tx.send(cmd).is_err() {
+                    if !dispatch_command(cmd, &cmd_tx, &cancel_tx) {
                         log_component("RUNTIME", "Background task closed, exiting");
                         model.error = Some("Connection to background task lost".to_string());
                         break;
@@ -245,7 +267,7 @@ where
                         );
                         for cmd in cmds {
                             log_component("RUNTIME", &format!("Sending command: {:?}", cmd));
-                            if cmd_tx.send(cmd).is_err() {
+                            if !dispatch_command(cmd, &cmd_tx, &cancel_tx) {
                                 log_component("RUNTIME", "Background task closed, exiting");
                                 model.error =
                                     Some("Connection to background task lost".to_string());
@@ -311,7 +333,7 @@ where
                         log_component("RUNTIME", &format!("Executing {} commands from select result", cmds.len()));
                         for cmd in cmds {
                             log_component("RUNTIME", &format!("Sending command: {:?}", cmd));
-                            if cmd_tx.send(cmd).is_err() {
+                            if !dispatch_command(cmd, &cmd_tx, &cancel_tx) {
                                 log_component("RUNTIME", "Background task closed, exiting");
                                 model.error = Some("Connection to background task lost".to_string());
                                 return Ok(RunResult {
@@ -351,12 +373,13 @@ where
 /// Returns the updated model after processing the result.
 async fn execute_initial_effect(
     cmd_tx: &tokio::sync::mpsc::UnboundedSender<Effect>,
+    cancel_tx: &tokio::sync::mpsc::UnboundedSender<()>,
     model: Model,
     effect: Effect,
 ) -> Result<Model> {
     // Send initial effects to background
     log_component("RUNTIME", &format!("Sending initial effect: {:?}", effect));
-    if send_effect(effect, cmd_tx) {
+    if send_effect(effect, cmd_tx, cancel_tx) {
         log_component("RUNTIME", "Initial effect sent successfully");
     } else {
         log_component(
@@ -647,6 +670,54 @@ mod tests {
         assert!(matches!(cmd[0], Effect::RunGenerator { .. }));
     }
 
+    #[test]
+    fn test_dispatch_command_routes_cancel_to_cancel_channel() {
+        // Effect::CancelQueue is a control-plane signal — it must reach
+        // cancel_tx (where the background's biased select! arm consumes it),
+        // never cmd_tx (the FIFO). Routing it through cmd_tx would queue it
+        // behind the very generators it is meant to drop.
+        let (cmd_tx, mut cmd_rx) = tokio::sync::mpsc::unbounded_channel::<Effect>();
+        let (cancel_tx, mut cancel_rx) = tokio::sync::mpsc::unbounded_channel::<()>();
+
+        let ok = dispatch_command(Effect::CancelQueue, &cmd_tx, &cancel_tx);
+        assert!(ok, "CancelQueue should be deliverable on cancel_tx");
+        assert!(
+            cmd_rx.try_recv().is_err(),
+            "CancelQueue must NOT land in the FIFO"
+        );
+        assert!(
+            cancel_rx.try_recv().is_ok(),
+            "CancelQueue should land on cancel_tx"
+        );
+    }
+
+    #[test]
+    fn test_dispatch_command_routes_other_effects_to_cmd_channel() {
+        use crate::app::effect::TargetSpec;
+        use crate::app::model::TargetType;
+
+        let (cmd_tx, mut cmd_rx) = tokio::sync::mpsc::unbounded_channel::<Effect>();
+        let (cancel_tx, mut cancel_rx) = tokio::sync::mpsc::unbounded_channel::<()>();
+
+        let effect = Effect::CheckSerialization {
+            artifact_index: 0,
+            artifact_name: "test".to_string(),
+            target_spec: TargetSpec::Single(TargetType::NixOS {
+                machine: "machine".to_string(),
+            }),
+        };
+        let ok = dispatch_command(effect, &cmd_tx, &cancel_tx);
+        assert!(ok);
+        assert!(
+            matches!(cmd_rx.try_recv(), Ok(Effect::CheckSerialization { .. })),
+            "regular effects should land in the FIFO"
+        );
+        assert!(
+            cancel_rx.try_recv().is_err(),
+            "regular effects must NOT signal cancel"
+        );
+    }
+
     // === Async Runtime Tests ===
 
     /// Test that channels are properly connected for async communication
@@ -676,7 +747,7 @@ mod tests {
         };
 
         let shutdown_token = CancellationToken::new();
-        let (cmd_tx, mut res_rx) = spawn_background_task(
+        let (cmd_tx, _cancel_tx, mut res_rx) = spawn_background_task(
             backend_config,
             make_config,
             crate::logging::LogLevel::Info,
@@ -778,7 +849,7 @@ mod tests {
         };
 
         let shutdown_token = CancellationToken::new();
-        let (cmd_tx, mut res_rx) = spawn_background_task(
+        let (cmd_tx, _cancel_tx, mut res_rx) = spawn_background_task(
             backend_config,
             make_config,
             crate::logging::LogLevel::Info,

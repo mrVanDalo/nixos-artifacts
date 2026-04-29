@@ -811,11 +811,16 @@ impl BackgroundEffectHandler {
     pub async fn execute(&mut self, effect: Effect) -> Message {
         log_component("BACKGROUND", "Starting execution of effect");
         match effect {
-            Effect::None | Effect::Quit => Message::CheckSerializationResult {
-                artifact_index: 0,
-                status: ArtifactStatus::Pending,
-                result: Ok(ScriptOutput::default()),
-            },
+            // CancelQueue is a control-plane signal handled by the runtime via
+            // a dedicated channel; it must never reach the FIFO. If it does,
+            // treat it as a no-op to avoid blocking the loop.
+            Effect::None | Effect::Quit | Effect::CancelQueue => {
+                Message::CheckSerializationResult {
+                    artifact_index: 0,
+                    status: ArtifactStatus::Pending,
+                    result: Ok(ScriptOutput::default()),
+                }
+            }
 
             Effect::CheckSerialization {
                 artifact_index,
@@ -873,6 +878,15 @@ impl BackgroundEffectHandler {
 /// receiver), the background task exits cleanly. The shutdown_token can also
 /// be cancelled to initiate graceful shutdown.
 ///
+/// # Cancellation
+///
+/// Sending `()` on `cancel_tx` drops every effect currently sitting in the
+/// FIFO. The currently-executing effect — if any — runs to natural completion
+/// because the select! loop only re-evaluates between commands. Cancellation
+/// is repeatable and idempotent: every signal drains whatever happens to be
+/// queued at that moment, and a signal that arrives while the queue is empty
+/// is a no-op.
+///
 /// # Arguments
 ///
 /// * `backend` - Backend configuration for effect execution
@@ -882,16 +896,22 @@ impl BackgroundEffectHandler {
 ///
 /// # Returns
 ///
-/// Returns `(tx_cmd, rx_res)` where:
+/// Returns `(tx_cmd, cancel_tx, rx_res)` where:
 /// - `tx_cmd`: Send `Effect` messages to the background
+/// - `cancel_tx`: Send `()` to drop all currently-queued effects
 /// - `rx_res`: Receive `Message` messages from the background
 pub fn spawn_background_task(
     backend: BackendConfiguration,
     make: MakeConfiguration,
     log_level: crate::logging::LogLevel,
     shutdown_token: CancellationToken,
-) -> (UnboundedSender<Effect>, UnboundedReceiver<Message>) {
+) -> (
+    UnboundedSender<Effect>,
+    UnboundedSender<()>,
+    UnboundedReceiver<Message>,
+) {
     let (tx_cmd, mut rx_cmd) = unbounded_channel::<Effect>();
+    let (cancel_tx, mut cancel_rx) = unbounded_channel::<()>();
     let (tx_res, rx_res) = unbounded_channel::<Message>();
 
     log_component("SPAWN", "About to spawn background task");
@@ -902,9 +922,18 @@ pub fn spawn_background_task(
         handler.set_result_sender(tx_res.clone());
         log_component("BACKGROUND", "Handler initialized");
 
-        // Process effects sequentially with graceful shutdown support
+        // Process effects sequentially with graceful shutdown support.
+        //
+        // The select! is `biased` so that, when multiple arms are ready at the
+        // same iteration, shutdown wins over cancel and cancel wins over
+        // pulling the next command. That ordering is what gives cancel its
+        // semantics: any effects that piled up in `rx_cmd` while an in-flight
+        // effect was running get drained before any of them get a chance to
+        // execute on the next iteration.
         loop {
             tokio::select! {
+                biased;
+
                 // Check for shutdown signal first
                 _ = shutdown_token.cancelled() => {
                     log_component("BACKGROUND", "Shutdown requested, finishing current work");
@@ -916,6 +945,21 @@ pub fn spawn_background_task(
                     }
                     log_component("BACKGROUND", "Exiting cleanly");
                     break;
+                }
+
+                // Cancel signal: drop everything currently queued in rx_cmd
+                // without executing it. We drain whatever `try_recv` returns
+                // and stop. In-flight work is unaffected — the select! arm
+                // only fires between commands.
+                Some(_) = cancel_rx.recv() => {
+                    let mut drained = 0usize;
+                    while rx_cmd.try_recv().is_ok() {
+                        drained += 1;
+                    }
+                    log_component(
+                        "BACKGROUND",
+                        &format!("Cancel signal received, dropped {} queued effect(s)", drained),
+                    );
                 }
 
                 // Process next command
@@ -948,5 +992,5 @@ pub fn spawn_background_task(
 
     log_component("SPAWN", "Background task spawned");
 
-    (tx_cmd, rx_res)
+    (tx_cmd, cancel_tx, rx_res)
 }

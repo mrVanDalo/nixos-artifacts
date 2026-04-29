@@ -116,7 +116,7 @@ impl CommandTracker {
             Effect::CheckSerialization { .. } => "CheckSerialization",
             Effect::RunGenerator { .. } => "RunGenerator",
             Effect::Serialize { .. } => "Serialize",
-            Effect::None | Effect::Batch(_) | Effect::Quit => "None",
+            Effect::None | Effect::Batch(_) | Effect::Quit | Effect::CancelQueue => "None",
         };
         assert_eq!(actual, expected_name, "Command at index {} mismatch", index);
     }
@@ -127,7 +127,7 @@ impl CommandTracker {
             Effect::CheckSerialization { artifact_index, .. } => *artifact_index,
             Effect::RunGenerator { artifact_index, .. } => *artifact_index,
             Effect::Serialize { artifact_index, .. } => *artifact_index,
-            Effect::None | Effect::Batch(_) | Effect::Quit => 0,
+            Effect::None | Effect::Batch(_) | Effect::Quit | Effect::CancelQueue => 0,
         }
     }
 }

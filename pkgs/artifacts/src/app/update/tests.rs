@@ -1405,3 +1405,111 @@ fn test_serialize_finished_does_not_kick_user_off_unrelated_screen() {
         "background result still updates status"
     );
 }
+
+// === Cancel-queue: soft-cancel of the 'a' generate-all flow ===
+
+#[test]
+fn test_cancel_queue_clears_state_and_returns_cancel_effect() {
+    // Mid-'a': two prompt-bearing entries queued, the first surfaced as the
+    // active inline prompt. cancel_queue must clear both the queue and the
+    // prompt, force the artifact list, and emit Effect::CancelQueue for the
+    // runtime to drain the background FIFO.
+    let model = make_dual_prompt_model();
+    let (model, _) = update(model, Message::Key(KeyEvent::char('a')));
+    assert_eq!(model.generate_queue.len(), 2);
+    assert!(model.active_prompt.is_some());
+
+    let (new_model, effect) = super::cancel_queue(model);
+
+    assert!(matches!(effect, Effect::CancelQueue));
+    assert!(
+        new_model.generate_queue.is_empty(),
+        "queue must be empty after cancel"
+    );
+    assert!(
+        new_model.active_prompt.is_none(),
+        "active inline prompt must clear so the right pane reverts to logs"
+    );
+    assert!(matches!(new_model.screen, Screen::ArtifactList));
+}
+
+#[test]
+fn test_cancel_queue_reverts_pending_entries_to_needs_generation() {
+    // Pending entries (their CheckSerialization may have been queued behind
+    // the cancel-target generators) revert to NeedsGeneration so the user
+    // sees a stable, retriggerable state. Other statuses are left alone.
+    let mut model = make_mixed_status_model();
+    // Layout: [Pending, NeedsGeneration, UpToDate]. Add a Generating entry
+    // to confirm in-flight statuses are not touched.
+    let generating = ArtifactEntry {
+        target_type: TargetType::NixOS {
+            machine: "machine-gen".to_string(),
+        },
+        artifact: make_test_artifact("running", vec![]),
+        status: ArtifactStatus::Generating(GeneratingSubstate::default()),
+        runs: Vec::new(),
+    };
+    model.entries.push(ListEntry::Single(generating));
+
+    let (new_model, _) = super::cancel_queue(model);
+
+    assert_eq!(
+        new_model.entries[0].status(),
+        &ArtifactStatus::NeedsGeneration,
+        "Pending → NeedsGeneration after cancel"
+    );
+    assert_eq!(
+        new_model.entries[1].status(),
+        &ArtifactStatus::NeedsGeneration,
+        "NeedsGeneration entries are unchanged"
+    );
+    assert_eq!(
+        new_model.entries[2].status(),
+        &ArtifactStatus::UpToDate,
+        "UpToDate entries are unchanged — no destructive resets"
+    );
+    assert!(
+        matches!(new_model.entries[3].status(), ArtifactStatus::Generating(_)),
+        "in-flight Generating is left to resolve naturally (soft cancel)"
+    );
+}
+
+#[test]
+fn test_cancel_queue_when_idle_is_a_noop_aside_from_effect() {
+    // No queue, no active prompt, no Pending entries. cancel_queue should
+    // still return Effect::CancelQueue (the runtime forwards an empty drain),
+    // and the model should be byte-identical aside from the screen forced to
+    // ArtifactList.
+    let mut model = make_mixed_status_model();
+    *model.entries[0].status_mut() = ArtifactStatus::UpToDate;
+    *model.entries[1].status_mut() = ArtifactStatus::UpToDate;
+    *model.entries[2].status_mut() = ArtifactStatus::UpToDate;
+    model.screen = Screen::ArtifactList;
+
+    let (new_model, effect) = super::cancel_queue(model);
+
+    assert!(matches!(effect, Effect::CancelQueue));
+    assert!(new_model.generate_queue.is_empty());
+    assert!(new_model.active_prompt.is_none());
+    for entry in &new_model.entries {
+        assert_eq!(entry.status(), &ArtifactStatus::UpToDate);
+    }
+}
+
+#[test]
+fn test_cancel_queue_dismisses_modal_screens() {
+    // Cancel during a generator-selection or confirm-regenerate dialog must
+    // dismiss the dialog and return the user to the artifact list — those
+    // dialogs were started by the same flow being cancelled.
+    let mut model = make_mixed_status_model();
+    model.screen = Screen::ConfirmRegenerate(ConfirmRegenerateState {
+        artifact_index: 2,
+        artifact_name: "up-to-date-art".to_string(),
+        affected_targets: vec!["machine-up".to_string()],
+        leave_selected: true,
+    });
+
+    let (new_model, _) = super::cancel_queue(model);
+
+    assert!(matches!(new_model.screen, Screen::ArtifactList));
+}

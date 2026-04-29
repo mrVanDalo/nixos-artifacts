@@ -42,7 +42,7 @@ async fn test_background_processes_check_command() {
     let make = create_test_make_config();
     let shutdown_token = CancellationToken::new();
 
-    let (tx_cmd, mut rx_res) = spawn_background_task(
+    let (tx_cmd, _cancel_tx, mut rx_res) = spawn_background_task(
         backend,
         make,
         artifacts::logging::LogLevel::Info,
@@ -99,7 +99,7 @@ async fn test_background_processes_generator_command() {
     let make = create_test_make_config();
     let shutdown_token = CancellationToken::new();
 
-    let (tx_cmd, mut rx_res) = spawn_background_task(
+    let (tx_cmd, _cancel_tx, mut rx_res) = spawn_background_task(
         backend,
         make,
         artifacts::logging::LogLevel::Info,
@@ -152,7 +152,7 @@ async fn test_timeout_behavior() {
     let make = create_test_make_config();
     let shutdown_token = CancellationToken::new();
 
-    let (tx_cmd, mut rx_res) = spawn_background_task(
+    let (tx_cmd, _cancel_tx, mut rx_res) = spawn_background_task(
         backend,
         make,
         artifacts::logging::LogLevel::Info,
@@ -192,7 +192,7 @@ async fn test_graceful_shutdown_on_channel_close() {
     let make = create_test_make_config();
     let shutdown_token = CancellationToken::new();
 
-    let (tx_cmd, mut rx_res) = spawn_background_task(
+    let (tx_cmd, _cancel_tx, mut rx_res) = spawn_background_task(
         backend,
         make,
         artifacts::logging::LogLevel::Info,
@@ -235,7 +235,7 @@ async fn test_fifo_ordering_with_real_background() {
     let make = create_test_make_config();
     let shutdown_token = CancellationToken::new();
 
-    let (tx_cmd, mut rx_res) = spawn_background_task(
+    let (tx_cmd, _cancel_tx, mut rx_res) = spawn_background_task(
         backend,
         make,
         artifacts::logging::LogLevel::Info,
@@ -313,7 +313,7 @@ async fn test_cancellation_token_shutdown() {
     let make = create_test_make_config();
     let shutdown_token = CancellationToken::new();
 
-    let (tx_cmd, mut rx_res) = spawn_background_task(
+    let (tx_cmd, _cancel_tx, mut rx_res) = spawn_background_task(
         backend,
         make,
         artifacts::logging::LogLevel::Info,

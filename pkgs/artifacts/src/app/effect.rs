@@ -76,6 +76,12 @@ pub enum Effect {
         artifact_name: String,
         target_spec: TargetSpec,
     },
+
+    /// Drop all queued effects from the background FIFO without executing
+    /// them. The currently-executing effect runs to natural completion (soft
+    /// cancel). Routed by the runtime to a dedicated cancel signal channel
+    /// instead of the FIFO itself.
+    CancelQueue,
 }
 
 impl Effect {
