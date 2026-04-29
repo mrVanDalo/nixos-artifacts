@@ -1254,6 +1254,75 @@ fn test_prompt_submission_clears_active_prompt_when_queue_empty() {
 }
 
 #[test]
+fn test_prompt_esc_during_a_flow_skips_to_next_queued_artifact() {
+    // 'a' opens prompt for entry 0 with entry 1 also queued. Esc must skip
+    // entry 0 (drop from queue, no generator), advance to entry 1's prompt,
+    // and leave entry 0's status untouched.
+    let model = make_dual_prompt_model();
+    let (model, _) = update(model, Message::Key(KeyEvent::char('a')));
+    assert_eq!(model.active_prompt.as_ref().unwrap().artifact_index, 0);
+    assert_eq!(model.generate_queue.len(), 2);
+
+    let (new_model, effect) = update(model, Message::Key(KeyEvent::esc()));
+
+    assert!(
+        effect.is_none(),
+        "skip must not dispatch a generator, got {:?}",
+        effect
+    );
+    assert!(
+        !new_model.generate_queue.contains(&0),
+        "skipped entry must leave the queue"
+    );
+    let next = new_model
+        .active_prompt
+        .as_ref()
+        .expect("active_prompt should advance to the next queued entry after skip");
+    assert_eq!(next.artifact_index, 1);
+    assert!(
+        matches!(
+            new_model.entries[0].status(),
+            ArtifactStatus::NeedsGeneration
+        ),
+        "skipped entry retains NeedsGeneration — no Failed mark, no dispatch"
+    );
+}
+
+#[test]
+fn test_prompt_esc_on_last_queued_artifact_clears_prompt() {
+    // 'a' run with a single prompt-bearing artifact: Esc skips, leaving the
+    // queue empty and the prompt cleared (right pane reverts to logs).
+    let entry = ArtifactEntry {
+        target_type: TargetType::NixOS {
+            machine: "machine".to_string(),
+        },
+        artifact: make_test_artifact("only-one", vec!["secret"]),
+        status: ArtifactStatus::NeedsGeneration,
+        runs: Vec::new(),
+    };
+    let model = Model {
+        screen: Screen::ArtifactList,
+        entries: vec![ListEntry::Single(entry)],
+        selected_index: 0,
+        selected_log_step: Step::default(),
+        error: None,
+        warnings: Vec::new(),
+        tick_count: 0,
+        generate_queue: Default::default(),
+        active_prompt: None,
+    };
+    let (model, _) = update(model, Message::Key(KeyEvent::char('a')));
+    assert_eq!(model.active_prompt.as_ref().unwrap().artifact_index, 0);
+    assert_eq!(model.generate_queue.len(), 1);
+
+    let (new_model, effect) = update(model, Message::Key(KeyEvent::esc()));
+
+    assert!(effect.is_none());
+    assert!(new_model.active_prompt.is_none());
+    assert!(new_model.generate_queue.is_empty());
+}
+
+#[test]
 fn test_check_resolves_to_prompt_bearing_surfaces_active_prompt() {
     // Pending entry queued by 'a'; when its check resolves to NeedsGeneration
     // with prompts, the inline prompt should surface (no other prompt active).

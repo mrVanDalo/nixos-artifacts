@@ -16,9 +16,16 @@ pub(super) fn update_prompt(mut model: Model, key: KeyEvent) -> (Model, Effect) 
 
     match key.code {
         KeyCode::Esc => {
-            // Cancel: drop the active prompt entirely. Skip semantics for the
-            // 'a' flow live in nixos-artifacts-s1f.
+            // 'a' flow → skip: drop this artifact from the queue (status stays
+            // NeedsGeneration, no generator dispatched) and advance to the next
+            // queued prompt-bearing entry, or revert to plain log view if none
+            // remain. Single-Enter flow (artifact not queued) → cancel: just
+            // clear the prompt.
+            let artifact_index = state.artifact_index;
             model.active_prompt = None;
+            if model.generate_queue.remove(&artifact_index) {
+                super::set_next_active_prompt(&mut model);
+            }
             (model, Effect::None)
         }
 
