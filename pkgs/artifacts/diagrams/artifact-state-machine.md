@@ -1,206 +1,134 @@
 # Artifact State Machine
 
-This diagram shows the different states an artifact can go through and the
-transitions between them.
+This diagram tracks the lifecycle of an artifact's `ArtifactStatus` — the
+per-artifact state that drives the right pane and decides what action a key
+press performs.
 
-## State Overview
+The TUI's `Screen` enum is a separate, smaller concern (covered at the bottom).
 
-| State           | Symbol | Description                              |
-| --------------- | ------ | ---------------------------------------- |
-| Pending         | ○      | Initial state, check not yet run         |
-| NeedsGeneration | !      | Artifact missing/stale, needs generation |
-| UpToDate        | ✓      | Artifact exists and is current           |
-| Generating      | ⟳      | Currently running generation pipeline    |
-| Failed          | ✗      | Generation failed, can retry             |
+## Status overview
 
-## Diagram
+| Status            | Symbol | Description                                                     |
+| ----------------- | ------ | --------------------------------------------------------------- |
+| `Pending`         | ○      | Initial state, backend `check` has not run yet                  |
+| `NeedsGeneration` | !      | Artifact missing or stale in backend storage                    |
+| `UpToDate`        | ✓      | Artifact exists in backend storage and is current               |
+| `Generating(_)`   | ⟳      | Pipeline running; inner `GeneratingSubstate` tracks step/output |
+| `Failed { … }`    | ✗      | Check, generator, or serialize step failed; can retry           |
+| `Cancelled { … }` | ⊘      | User cancelled an in-flight generator (Esc-Esc chord)           |
 
-```
-                         ┌──────────────────┐
-                         │                  │
-                         │     PENDING      │  ◀── Initial state
-                         │   (○ symbol)     │      (before check)
-                         │                  │
-                         └────────┬─────────┘
-                                  │
-                    ┌─────────────┴───────────┐
-                    │                         │
-                    │  init() creates         │
-                    │  CheckSerialization     │
-                    │  effect for all         │
-                    │  pending artifacts      │
-                    ▼                         │
-         ┌──────────────────────┐             │
-         │                      │             │
-         │  CheckSerialization  │             │
-         │  (background task)   │             │
-         │                      │             │
-         └──────────┬───────────┘             │
-                    │                         │
-          ┌─────────┴─────────┐               │
-          │                   │               │
-          ▼                   ▼               │
-┌─────────────────┐  ┌─────────────────┐      │
-│                 │  │                 │      │
-│ NEEDS_GENERATION│  │    UP_TO_DATE   │      │
-│   (! symbol)    │  │   (✓ symbol)    │      │
-│                 │  │                 │      │
-│ Artifact does   │  │ Artifact exists │      │
-│ NOT exist in    │  │ and is current  │      │
-│ backend storage │  │ in backend      │      │
-│                 │  │                 │      │
-└────────┬────────┘  └────────┬────────┘      │
-         │                    │               │
-         │                    │   ┌───────────┘
-         │                    │   │ User can still
-         │                    │   │ trigger regen
-         │  User presses      │   │ from UpToDate
-         │  Enter (Generate)  │   │
-         │                    │   │
-         │                    ▼   │
-         │           ┌───────────────────────┐
-         │           │                       │
-         │           │  ConfirmRegenerate    │
-         │           │  (confirmation dialog │
-         │           │   for existing art.)  │
-         │           │                       │
-         │           └───────────┬───────────┘
-         │                       │
-         │                       │ User selects
-         │                       │ "Regenerate"
-         │                       │
-         └───────────┬───────────┘
-                     │
-                     ▼
-         ┌──────────────────────┐
-         │                      │
-         │     GENERATING       │
-         │    (⟳ symbol)        │
-         │                      │
-         └──────────┬───────────┘
-                    │
-         ┌──────────┴─────────┬──────────────────┐
-         │                    │                  │
-         ▼                    ▼                  ▼
-┌──────────────────┐  ┌────────────────┐  ┌─────────────────┐
-│CheckSerialization│  │RunningGenerator│  │   Serializing   │
-│   (step 1)       │  │   (step 2)     │  │    (step 3)     │
-└────────┬─────────┘  └──────┬─────────┘  └───────┬─────────┘
-         │                   │                    │
-         │                   │                    │
-         │  skip if          │                    │
-         │  already checked  │                    │
-         └───────────────────┘                    │
-                                                  │
-                     ┌────────────────────────────┘
-                     │
-           ┌─────────┴─────────┐
-           │                   │
-           ▼                   ▼
-┌─────────────────┐   ┌─────────────────┐
-│                 │   │                 │
-│   UP_TO_DATE    │   │     FAILED      │
-│   (✓ symbol)    │   │   (✗ symbol)    │
-│                 │   │                 │
-│ Success path    │   │ Error path      │
-│ generation      │   │ retry_available │
-│ complete        │   │ = true          │
-│                 │   │                 │
-└─────────────────┘   └────────┬────────┘
-                               │
-                               │ User can retry
-                               │ (press Enter)
-                               │
-                               └──────┬────────┘
-                                      │
-                                      ▼
-                         ┌──────────────────────┐
-                         │                      │
-                         │    (back to Generate │
-                         │     flow from        │
-                         │     NEEDS_GENERATION │
-                         │     or UpToDate)     │
-                         │                      │
-                         └──────────────────────┘
-```
-
-## State Transitions
-
-### Initial Flow
+## Lifecycle
 
 ```
-┌─────────┐                   ┌────────────────────┐                    ┌──────────────────┐
-│ PENDING │ ──(init Effect)──▶│ CheckSerialization │──(success)────────▶│ UP_TO_DATE       │
-│         │                   │ (background task)  │                    │                  │
-│         │                   │                    │──(needs gen)──────▶│ NEEDS_GENERATION │
-│         │                   │                    │                    │                  │
-│         │                   │                    │──(error)──────────▶│ FAILED           │
-└─────────┘                   └────────────────────┘                    └──────────────────┘
+                   ┌──────────────────┐
+                   │     Pending      │   init() emits CheckSerialization
+                   │       (○)        │   for every artifact at startup
+                   └────────┬─────────┘
+                            │
+                            │  CheckFinished
+                            ▼
+                ┌───────────────────────┐
+                │                       │
+        ┌───────┤  CheckSerialization   ├──────┐
+        │       │   (background task)   │      │
+        │       │                       │      │
+        │       └───────────┬───────────┘      │
+        │                   │                  │
+        │ needs_generation  │ up_to_date       │ error
+        ▼                   ▼                  ▼
+┌────────────────┐  ┌────────────────┐  ┌───────────────┐
+│ NeedsGeneration│  │   UpToDate     │  │    Failed     │
+│      (!)       │  │     (✓)        │  │     (✗)       │
+└───────┬────────┘  └───────┬────────┘  └───────┬───────┘
+        │                   │                   │
+        │ Enter             │ Enter             │ Enter (retry)
+        │ (or 'a' queues)   │  ↓                │
+        │                   │ ConfirmRegenerate │
+        │                   │   dialog          │
+        │                   │ Regenerate ──┐    │
+        │                   │              │    │
+        ▼                   ▼              ▼    ▼
+   ┌──────────────────────────────────────────────────┐
+   │  prompts? ── yes ──▶ collect via Model.active_prompt
+   │     │                       │
+   │     │ no / submitted        │
+   │     ▼                       ▼
+   │              RunGenerator (Effect)
+   └──────────────────┬───────────────────────────────┘
+                      │ generator started
+                      ▼
+            ┌────────────────────────┐
+            │  Generating(substate)  │
+            │           (⟳)          │
+            │  step = Check |        │
+            │         Generate |     │
+            │         Serialize      │
+            └───────────┬────────────┘
+                        │
+   ┌────────────────────┼─────────────────────┐
+   │                    │                     │
+   │ all steps OK       │ step failed         │ Esc-Esc / Effect::CancelQueue
+   ▼                    ▼                     ▼
+┌──────────────┐   ┌──────────────┐    ┌──────────────────┐
+│   UpToDate   │   │    Failed    │    │    Cancelled     │
+│      (✓)     │   │     (✗)      │    │       (⊘)        │
+└──────────────┘   └──────┬───────┘    └─────────┬────────┘
+                          │                      │
+                          │ Enter (retry)        │ Enter (retry)
+                          └──────────────────────┘
+                                     │
+                                     ▼
+                        (re-enters Generating)
 ```
 
-### Generation Flow
+## Pipeline / 'a' flow
 
-```
-┌──────────────────┐   (Enter)   ┌───────────────────┐   (no prompts)   ┌────────────────┐
-│ NEEDS_GENERATION │ ───────────▶│ Screen::Generating│ ────────────────▶│ RunGenerator   │
-│                  │             │                   │                  │ (Effect)       │
-└──────────────────┘             └───────────────────┘                  └────────────────┘
-                                                                          │
-┌──────────────────┐   (Enter)   ┌───────────────────┐   (has prompts)    │
-│ UP_TO_DATE       │ ───────────▶│ ConfirmRegenerate │ ───────────────┐   │
-│                  │             │ (dialog)          │                │   │
-└──────────────────┘             └───────────────────┘                │   │
-                                                                      │   │
-                                          ┌───────────────────┐◀──────┘   │
-                                          │ Screen::Prompt    │           │
-                                          │ (collect inputs) │            │
-                                          └────────┬─────────┘            │
-                                                   │ (submit)             │
-                                                   ▼                      │
-                                          ┌────────────────┐              │
-                                          │ RunGenerator   │◀─────────────┘
-                                          │ (Effect)       │
-                                          └────────────────┘
-                                                   │
-                                                   ▼
-┌────────────────────────────────────────────────────────────┐
-│                   GENERATING STATE                         │
-├────────────────────────────────────────────────────────────┤
-│                                                            │
-│   Step::Check ──▶ Step::Generate                           │
-│                           │                                │
-│                           ▼                                │
-│                      Step::Serialize                       │
-│                           │                                │
-│         ┌─────────────────┴──────────────────────┐         │
-│         │                                        │         │
-│         ▼                                        ▼         │
-│  ┌─────────────────┐                     ┌──────────────┐  │
-│  │ UP_TO_DATE      │                     │ FAILED       │  │
-│  │ (success)       │                     │ (error)      │  │
-│  └─────────────────┘                     └──────────────┘  │
-│                                                            │
-└────────────────────────────────────────────────────────────┘
-```
+The `'a'` keybind generates **all** artifacts. It does _not_ run them in
+parallel. Instead it:
 
-## Key Functions
+1. Enqueues a `RunGenerator` effect per artifact onto `Model.pipeline_queue`.
+2. Drains one effect at a time into `Model.in_flight`.
+3. Waits for that artifact's `gen → serialize` cycle to finish before popping
+   the next one. Pattern: `gen0 → ser0 → gen1 → ser1 → …` (not
+   `gen0 → gen1 → … → ser0 → ser1 → …`).
+4. On `Esc-Esc` (held within 500 ms), `Effect::CancelQueue` drains the pending
+   queue and signals the in-flight generator's process group (SIGTERM, then
+   SIGKILL). Any artifact already running transitions to `Cancelled`; queued
+   ones reset to `NeedsGeneration`.
 
-The state transitions are implemented in:
+Backends always run sequentially — generators are dispatched through one FIFO
+channel in `background.rs`. The frontend may emit individual effects or an
+`Effect::Batch` (flattened by `runtime.rs`); the end result is the same.
 
-- **`app/update.rs`**: `update()` function handles all state transitions
-- **`app/update.rs`**: `init()` creates initial `CheckSerialization` effects
-- **`tui/effect_handler.rs`**: Executes effects and returns `Message` results
+## Screen transitions
 
-## Screen Transitions
+`Screen` selects which view dispatcher renders. Inline UI (prompts, generation
+progress) is **not** a screen.
 
-The `Screen` enum determines what the user sees:
+| Screen              | Entry                                    | Exit                 |
+| ------------------- | ---------------------------------------- | -------------------- |
+| `ArtifactList`      | Default                                  | `q`, navigation, `l` |
+| `SelectGenerator`   | Shared artifact with multiple generators | Enter (select), Esc  |
+| `ConfirmRegenerate` | Enter on `UpToDate` artifact             | Regenerate / Leave   |
+| `Done`              | After all artifacts processed (auto)     | Any key              |
+| `ChronologicalLog`  | `l` from `ArtifactList`                  | Esc                  |
 
-| Screen              | Entry Point                              | Exit Condition               |
-| ------------------- | ---------------------------------------- | ---------------------------- |
-| `ArtifactList`      | Default                                  | Enter key, 'l' key           |
-| `SelectGenerator`   | Shared artifact with multiple generators | Enter (select), Esc (cancel) |
-| `ConfirmRegenerate` | Enter on UpToDate artifact               | Regenerate/Leave selection   |
-| `Prompt`            | Artifact has prompts                     | Enter (submit), Esc (cancel) |
-| `Generating`        | After prompts or generator selection     | Generation complete          |
-| `Done`              | After all artifacts processed            | Any key                      |
-| `ChronologicalLog`  | 'l' key from list                        | Esc key                      |
+Inline UI on `ArtifactList`:
+
+- Prompt input: `Model.active_prompt: Option<PromptState>`. When set, key events
+  route to the prompt handler and `selected_index` is locked to
+  `active_prompt.artifact_index`.
+- Generation progress: rendered in the right pane from the selected artifact's
+  `ArtifactStatus::Generating(GeneratingSubstate)` — current step and
+  accumulated stdout/stderr.
+
+## Key code
+
+- `app/model/artifact.rs` — `ArtifactStatus` enum and `GeneratingSubstate`.
+- `app/model/core.rs` — `Screen` enum, `Model.active_prompt`,
+  `Model.pipeline_queue`, `Model.in_flight`.
+- `app/update/mod.rs` — main `update()`; pipeline draining at
+  `pipeline_queue.pop_front()`.
+- `app/update/artifact_list.rs` — `'a'` enqueue, Enter handling.
+- `app/update/generating.rs` — clears the queue on cancel.
+- `tui/background.rs` — single FIFO consumer of generator/serialize effects.

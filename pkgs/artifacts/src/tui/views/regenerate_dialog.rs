@@ -10,7 +10,7 @@ use ratatui::{
 pub fn render_confirm_regenerate(frame: &mut Frame, state: &ConfirmRegenerateState, area: Rect) {
     frame.render_widget(Clear, area);
 
-    let dialog_area = centered_rect(60, 40, area);
+    let dialog_area = super::centered_rect(60, 40, area);
 
     let title = format!("Regenerating artifact: {}", state.artifact_name);
     let block = Block::default()
@@ -107,13 +107,4 @@ fn render_button(frame: &mut Frame, label: &str, is_selected: bool, area: Rect) 
 
 fn add_margin(area: Rect, horizontal: u16, _vertical: u16) -> Rect {
     area.inner(Margin::new(horizontal, 0))
-}
-
-fn centered_rect(percent_x: u16, percent_y: u16, area: Rect) -> Rect {
-    let vertical = Layout::vertical([Constraint::Percentage(percent_y)]).flex(Flex::Center);
-    let horizontal = Layout::horizontal([Constraint::Percentage(percent_x)]).flex(Flex::Center);
-
-    let [area] = vertical.areas(area);
-    let [area] = horizontal.areas(area);
-    area
 }

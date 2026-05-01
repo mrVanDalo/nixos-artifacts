@@ -43,11 +43,11 @@ self.lib.mkBackend {
 
 | `nixos_check`
 | Yes
-| Path to script that checks if a NixOS artifact already exists. See xref:backend-scripts-reference.adoc#_check_serialization[check_serialization script].
+| Path to script that checks if a NixOS artifact already exists. See xref:backend-scripts-reference.adoc#_check_scripts[check scripts].
 
 | `nixos_serialize`
 | Yes
-| Path to script that serializes a NixOS artifact. See xref:backend-scripts-reference.adoc#_serialize[serialize script].
+| Path to script that serializes a NixOS artifact. See xref:backend-scripts-reference.adoc#_serialize_scripts[serialize scripts].
 
 | `home_check`
 | Yes

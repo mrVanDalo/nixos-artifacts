@@ -19,9 +19,9 @@ abstraction over multiple backends (agenix, sops-nix, colmena, etc.).
    - Generator script/binary
    - Backend reference
 3. **Backend**: Technical implementation providing:
-   - `serialize` operations
-   - `deserialize` operations
-   - `check_serialization` program (determines if regeneration is needed)
+   - `check` script (determines if regeneration is needed)
+   - `serialize` script (writes generated files into backend storage)
+   - Optional `shared_check` / `shared_serialize` variants for shared artifacts
 4. **Machines vs Shared**: Artifacts can be per-machine or shared, with
    directory layout mirroring this split
 
@@ -63,7 +63,8 @@ nix fmt          # Format code (REQUIRED before commits)
 ### When Making Changes
 
 1. **Keep changes small and focused** — One logical change per commit
-2. **Update documentation** — Modify guidelines.md if adding:
+2. **Update documentation** — Update Antora pages under
+   `docs/modules/ROOT/pages/` and the relevant `CLAUDE.md` when adding:
    - User-facing commands
    - New options
    - Structural changes
@@ -101,7 +102,8 @@ Follow this format for all commits and squashed merges:
 
 - **Artifact**: Logical secret bundle producing one or more deployable files
 - **Generator**: Script/binary consuming prompts to produce files in `$out`
-- **Backend**: Storage engine with serialize/deserialize/check operations
+- **Backend**: Storage engine providing `check` and `serialize` scripts
+  (per-target: `nixos`, `home`, optional `shared`)
 - **Make**: JSON structure extracted from Nix options that drives the CLI
 
 ## Common Tasks
@@ -119,13 +121,15 @@ Follow this format for all commits and squashed merges:
 
 - Current test backend: Wired in flake.nix for development
 - Production targets: agenix, sops-nix, colmena
-- Backend must implement: serialize, deserialize, check_serialization
+- Backend must implement: `check` and `serialize` scripts (and optional
+  `shared_check` / `shared_serialize`)
 
 ### Modifying Options
 
 - Store options: `modules/store.nix`
 - Backend options: `modules/backend.nix`
-- Always update guidelines.md with option changes
+- Always update the relevant Antora pages under `docs/modules/ROOT/pages/` with
+  option changes
 
 ## Quick Reference
 

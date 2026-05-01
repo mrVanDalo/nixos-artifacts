@@ -413,23 +413,30 @@ fn test_prompt_view() {
 #[test]
 fn test_complete_flow() {
     let mut events = ScriptedEventSource::new(vec![
-        enter(),                    // Start generation
-        ...type_string("secret"),   // Type prompt value
-        enter(),                    // Submit
+        enter(),                    // Start generation (opens inline prompt)
+        type_string("secret"),      // Type prompt value
+        enter(),                    // Submit prompt; generator effect emitted
     ]);
     let final_model = simulate(&mut events, model);
-    assert!(matches!(final_model.screen, Screen::Generating(_)));
+    // simulate() does not execute effects — assert on Model state instead.
+    assert!(matches!(final_model.screen, Screen::ArtifactList));
+    assert!(final_model.active_prompt.is_none());
 }
 ```
 
 ### Adding a New Screen
 
-1. Add variant to `Screen` enum in `app/model.rs`
+1. Add variant to `Screen` enum in `app/model/core.rs`
 2. Add state struct if needed (e.g., `NewScreenState`)
 3. Handle in `update()` - add match arm for `(Screen::NewScreen, Msg::Key(_))`
 4. Create view in `tui/views/new_screen.rs`
 5. Add to dispatcher in `tui/views/mod.rs`
 6. Write tests: state transitions + view snapshots
+
+NOTE: prompt collection and generation progress are **not** screens — prompts
+live inline via `Model.active_prompt` and generation progress renders in the
+right pane based on `ArtifactStatus::Generating(GeneratingSubstate)`. Prefer
+that pattern over adding new screens for transient UI states.
 
 ### Adding a New Effect
 

@@ -1,16 +1,19 @@
 # Component Architecture
 
 This diagram shows the main components of the artifacts CLI and how they
-interact with each other.
+interact.
 
 ## Overview
 
-The system follows an Elm Architecture pattern with a clear separation between:
+The system follows the Elm Architecture pattern with a clear separation between:
 
-1. **Configuration** - Loading and parsing backend.toml and flake.nix
-2. **TUI** - Terminal UI with Model-Update-View pattern
-3. **Runtime** - Async event loop coordinating foreground and background tasks
-4. **Backend** - Script execution for generation, serialization, and checking
+1. **Configuration** — Loading and parsing `backend.toml` and the `make` JSON
+   produced from `flake.nix`.
+2. **TUI** — Terminal UI with Model-Update-View, plus inline UI state.
+3. **Runtime** — Async loop coordinating the foreground render loop with a
+   single FIFO background task.
+4. **Backend** — Script execution for the `check` and `serialize` steps, plus
+   the bubblewrapped generator.
 
 ## Diagram
 
@@ -20,120 +23,145 @@ The system follows an Elm Architecture pattern with a clear separation between:
 ├────────────────────────────────────────────────────────────────────────────┤
 │                                                                            │
 │   ┌──────────────────────┐          ┌──────────────────────┐               │
-│   │   backend.toml       │          │   flake.nix          │               │
-│   │   (Backend Config)   │          │   (Artifact Defs)    │               │
+│   │   backend.toml       │          │   make.json          │               │
+│   │   (Backend scripts   │          │   (Extracted from    │               │
+│   │    per target)       │          │    flake.nix opts)   │               │
 │   └──────────┬───────────┘          └──────────┬───────────┘               │
-│              │                                 │                           │
 │              ▼                                 ▼                           │
 │   ┌──────────────────────┐          ┌──────────────────────┐               │
 │   │ BackendConfiguration │          │  MakeConfiguration   │               │
-│   │   (src/config/)      │          │  (src/config/)       │               │
+│   │ (config/backend.rs)  │          │  (config/make.rs)    │               │
 │   └──────────────────────┘          └──────────────────────┘               │
 │                                                                            │
-└────────────────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
+└──────────────────────────────────────┬─────────────────────────────────────┘
+                                       ▼
 ┌────────────────────────────────────────────────────────────────────────────┐
-│                              TUI (Elm Architecture)                        │
+│                          TUI (Elm Architecture)                            │
 ├────────────────────────────────────────────────────────────────────────────┤
 │                                                                            │
 │   ┌─────────────┐     ┌─────────────┐     ┌──────────────┐                 │
 │   │   Events    │────▶│    Model    │────▶│   Effect     │                 │
-│   │  (Message)  │     │   (State)   │     │ (side-effect)│                 │
+│   │ (Message)   │     │   (state)   │     │ (side-effect)│                 │
 │   └─────────────┘     └──────┬──────┘     └──────┬───────┘                 │
 │                              │                   │                         │
 │                              ▼                   │                         │
 │   ┌──────────────┐    ┌─────────────┐            │                         │
-│   │    Views     │◀───│   Update    │◀───────────┘                         │
-│   │  (Render)    │    │  (update()) │                                      │
+│   │    Views     │◀───│   update()  │◀───────────┘                         │
+│   │  (render)    │    │  (pure fn)  │                                      │
 │   └──────────────┘    └─────────────┘                                      │
 │                                                                            │
-│   ┌─────────────────────────────────────────────────────────────────┐      │
-│   │                          SCREENS                                │      │
-│   ├─────────────────────────────────────────────────────────────────┤      │
-│   │  ArtifactList  │  SelectGenerator   │  Prompt  │  Generating    │      │
-│   │  ConfirmRegen  │  ChronologicalLog  │  Done                     │      │
-│   └─────────────────────────────────────────────────────────────────┘      │
+│   ┌──────────────────────────────────────────────────────────────────┐     │
+│   │                           SCREENS (Screen enum)                  │     │
+│   │   ArtifactList │ SelectGenerator │ ConfirmRegenerate │ Done      │     │
+│   │   ChronologicalLog                                               │     │
+│   └──────────────────────────────────────────────────────────────────┘     │
 │                                                                            │
-└────────────────────────────────────────────────────────────────────────────┘
-
-                              │
-                              ▼
+│   ┌──────────────────────────────────────────────────────────────────┐     │
+│   │   INLINE UI on ArtifactList (Model fields, NOT Screens)          │     │
+│   │ • active_prompt: Option<PromptState>  — inline prompt input      │     │
+│   │   when Some, key events route to prompt handler;                 │     │
+│   │   selected_index is locked to active_prompt.artifact_index       │     │
+│   │ • Per-artifact ArtifactStatus::Generating(GeneratingSubstate)    │     │
+│   │   drives the right pane (current step + accumulated output)      │     │
+│   │ • pipeline_queue + in_flight  — drive the 'a' generate-all flow  │     │
+│   └──────────────────────────────────────────────────────────────────┘     │
+│                                                                            │
+└──────────────────────────────────────┬─────────────────────────────────────┘
+                                       ▼
 ┌────────────────────────────────────────────────────────────────────────────┐
 │                              RUNTIME                                       │
 ├────────────────────────────────────────────────────────────────────────────┤
 │                                                                            │
-│   ┌─────────────────────┐         ┌───────────────────────┐                │
-│   │  Foreground Loop    │         │  Background Task      │                │
-│   │  (tui/runtime.rs)   │         │  (tui/background.rs)  │                │
-│   │                     │         │                       │                │
-│   │  - Render UI        │◄───────▶│  - Execute Effects    │                │
-│   │  - Handle Keys      │  Msgs   │  - Run Scripts        │                │
-│   │  - Update State     │  Effects│  - Check Serialization│                │
-│   └─────────────────────┘         └───────────────────────┘                │
+│   ┌─────────────────────┐   cmd_tx   ┌────────────────────────────┐        │
+│   │  Foreground loop    │ ─────────▶ │  Background task (FIFO)    │        │
+│   │  (tui/runtime.rs)   │            │  (tui/background.rs)       │        │
+│   │                     │ ◀───────── │                            │        │
+│   │  - Render UI        │  result_tx │  - Sequential consumer of  │        │
+│   │  - Handle keys      │            │    Effect commands         │        │
+│   │  - Run update()     │            │  - One generator at a time │        │
+│   │  - Flatten          │            │  - Emits Msg::*Finished    │        │
+│   │    Effect::Batch    │            │    keyed by artifact_index │        │
+│   └────────┬────────────┘            └────────────────────────────┘        │
+│            │                                                               │
+│            │ cancel_tx (separate channel)                                  │
+│            ▼                                                               │
+│   ┌─────────────────────┐                                                  │
+│   │ CancelSignal stream │  Esc-Esc / Effect::CancelQueue                   │
+│   │ - Drains queued     │  drains pipeline_queue and signals the           │
+│   │   effects           │  in-flight generator's process group             │
+│   │ - SIGTERM→SIGKILL   │  (SIGTERM, then SIGKILL).                        │
+│   └─────────────────────┘                                                  │
 │                                                                            │
-└────────────────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
+└──────────────────────────────────────┬─────────────────────────────────────┘
+                                       ▼
 ┌────────────────────────────────────────────────────────────────────────────┐
 │                              BACKEND                                       │
 ├────────────────────────────────────────────────────────────────────────────┤
 │                                                                            │
 │   ┌─────────────────┐  ┌──────────────────┐  ┌─────────────────┐           │
 │   │   Generator     │  │  Serialization   │  │   Helpers       │           │
-│   │  (generator.rs) │  │(serialization.rs)│  │  (helpers.rs)   │           │
+│   │ (generator.rs)  │  │(serialization.rs)│  │  (helpers.rs)   │           │
 │   │                 │  │                  │  │                 │           │
-│   │ - Run script    │  │ - check_serial   │  │ - Path resolve  │           │
-│   │ - Verify output │  │ - serialize      │  │ - Validation    │           │
-│   │ - Bubblewrap    │  │ - deserialize    │  │ - Escaping      │           │
+│   │ - Run script    │  │ - run_check_…    │  │ - Path resolve  │           │
+│   │   in bubblewrap │  │ - run_serialize  │  │ - Validation    │           │
+│   │ - Verify output │  │ - shared_*       │  │ - Escaping      │           │
+│   │   files         │  │   variants       │  │                 │           │
 │   └────────┬────────┘  └────────┬─────────┘  └─────────────────┘           │
-│            │                    │                                          │
 │            └──────────┬─────────┘                                          │
 │                       ▼                                                    │
 │            ┌──────────────────────┐                                        │
 │            │   Output Capture     │                                        │
 │            │  (output_capture.rs) │                                        │
-│            │                      │                                        │
 │            │ - stdout/stderr      │                                        │
 │            │ - timeout support    │                                        │
+│            │ - process-group kill │                                        │
 │            └──────────────────────┘                                        │
 │                                                                            │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Component Descriptions
+## Component descriptions
 
-### Configuration Layer (`src/config/`)
+### Configuration layer (`src/config/`)
 
-- **backend.rs**: Parses `backend.toml` to get backend scripts and settings
-- **make.rs**: Parses JSON from `flake.nix` evaluation to get artifact
-  definitions
-- **nix.rs**: Helper functions for evaluating Nix expressions
+- `backend.rs` — parses `backend.toml`. Each backend has nested
+  `[<name>.nixos]`, `[<name>.home]`, and optional `[<name>.shared]` sections
+  with `check` and `serialize` script paths.
+- `make.rs` — parses the `make.json` produced from `flake.nix` evaluation;
+  builds `ArtifactDef`/`SharedArtifactInfo` records.
 
-### TUI Layer (`src/app/` + `src/tui/`)
+### TUI layer (`src/app/` + `src/tui/`)
 
-The TUI follows the Elm Architecture:
-
-- **Model** (`app/model.rs`): Immutable application state
-- **Message** (`app/message.rs`): Events that trigger state changes
-- **Effect** (`app/effect.rs`): Descriptions of side effects to execute
-- **Update** (`app/update.rs`): Pure function
-  `(Model, Message) -> (Model, Effect)`
-- **Views** (`tui/views/`): Render functions `(&Model) -> Frame`
+- `app/model/` — immutable `Model`, the `Screen` enum, `ArtifactStatus`,
+  `PromptState`, etc.
+- `app/message.rs` — input events (`Msg::Key`, `Msg::CheckFinished`,
+  `Msg::GeneratorFinished`, `Msg::SerializeFinished`, …).
+- `app/effect.rs` — descriptions of side effects (`Effect::CheckSerialization`,
+  `Effect::RunGenerator`, `Effect::Serialize`, `Effect::CancelQueue`,
+  `Effect::Batch`).
+- `app/update/` — the pure `update()` function, split per screen/feature.
+- `tui/views/` — ratatui renderers, dispatched by `Screen`.
 
 ### Runtime (`src/tui/runtime.rs`, `src/tui/background.rs`)
 
-The runtime coordinates:
-
-1. **Foreground loop**: Renders UI, handles keyboard input, updates state
-2. **Background task**: Executes effects (check, generate, serialize) in
-   parallel
-3. **Channel communication**: Messages flow between foreground and background
-   via Tokio channels
+- Foreground loop renders the UI, polls events, runs `update()`, and dispatches
+  effects. `Effect::Batch` is flattened into individual commands here (it must
+  not reach the background task — `BackgroundEffectHandler::execute` panics if
+  it does, by design).
+- Background task is a single FIFO consumer. Generators **always** run
+  sequentially. Each command produces exactly one `Msg::*Finished` keyed by
+  `artifact_index`.
+- A separate cancel channel carries `Effect::CancelQueue`, draining queued
+  effects and killing the in-flight generator's process group.
 
 ### Backend (`src/backend/`)
 
-- **generator.rs**: Runs generator scripts with bubblewrap isolation
-- **serialization.rs**: Runs check, serialize, deserialize scripts
-- **output_capture.rs**: Captures stdout/stderr from script execution
-- **helpers.rs**: Utility functions for path resolution and validation
+- `generator.rs` — runs the user's generator inside `bubblewrap` for
+  filesystem/network isolation, then verifies that the declared files were
+  produced.
+- `serialization.rs` — runs the backend's `check` and `serialize` scripts (plus
+  `shared_*` variants), passing artifact metadata via environment variables and
+  a `targets.json` file.
+- `output_capture.rs` — captures stdout/stderr, applies the per-step timeout,
+  and kills the entire process group on cancel.
+- `helpers.rs` — path resolution, script validation, shell escaping.

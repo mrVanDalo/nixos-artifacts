@@ -146,7 +146,7 @@ fn render_warning_banner_to_area(
     frame.render_widget(warning_text, area);
 }
 
-fn centered_rect(
+pub(super) fn centered_rect(
     percent_x: u16,
     percent_y: u16,
     area: ratatui::layout::Rect,

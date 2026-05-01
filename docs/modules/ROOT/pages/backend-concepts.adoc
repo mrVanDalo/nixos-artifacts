@@ -78,7 +78,7 @@ Scripts populate the secret store at generation time. They run before deployment
 [mermaid]
 ----
 flowchart TD
-    Start([TUI starts]) --> Check[Run check_serialization]
+    Start([TUI starts]) --> Check[Run check]
     Check --> Status{Exit code?}
     Status --"needs_generation"--> RunGen[User triggers generate]
     Status --"up_to_date"--> RunRegen[User triggers regenerate]
