@@ -62,10 +62,13 @@ enum TimeoutResult<T> {
 pub struct BackgroundEffectHandler {
     backend: BackendConfiguration,
     make: MakeConfiguration,
-    /// Temporary output directory from generator, preserved for serialize
-    current_output_dir: Option<tempfile::TempDir>,
-    /// Collected prompts for generator execution
-    current_prompts: Option<HashMap<String, String>>,
+    /// Temporary output directories from generators, keyed by artifact_index
+    /// so the matching Serialize for each artifact can pick the right one.
+    /// The 'a' generate-all flow runs N generators back-to-back in the FIFO
+    /// before any Serialize is dispatched (Serialize is enqueued by the
+    /// runtime *after* it processes GeneratorFinished), so a single shared
+    /// slot would be clobbered. See nixos-artifacts-3kx.
+    output_dirs: HashMap<usize, tempfile::TempDir>,
     /// Channel sender for streaming output during script execution
     result_tx: Option<UnboundedSender<Message>>,
     /// Log level to pass to executed scripts
@@ -93,8 +96,7 @@ impl BackgroundEffectHandler {
         Self {
             backend,
             make,
-            current_output_dir: None,
-            current_prompts: None,
+            output_dirs: HashMap::new(),
             result_tx: None,
             log_level,
             kill_slot: new_kill_slot(),
@@ -503,7 +505,6 @@ impl BackgroundEffectHandler {
             result,
             temp_dir,
             prompts_dir,
-            prompts,
             artifact_for_verify,
             output_path_for_verify,
         )
@@ -608,7 +609,6 @@ impl BackgroundEffectHandler {
             result,
             out_dir,
             prompts_dir,
-            prompts,
             artifact_for_verify,
             out_path_for_verify,
         )
@@ -623,7 +623,6 @@ impl BackgroundEffectHandler {
         result: TimeoutResult<backend::output_capture::CapturedOutput>,
         temp_dir: tempfile::TempDir,
         prompts_dir: tempfile::TempDir,
-        prompts: HashMap<String, String>,
         artifact_for_verify: ArtifactDef,
         output_path_for_verify: std::path::PathBuf,
     ) -> Message {
@@ -635,8 +634,11 @@ impl BackgroundEffectHandler {
                 );
                 match verify_result {
                     Ok(()) => {
-                        self.current_output_dir = Some(temp_dir);
-                        self.current_prompts = Some(prompts);
+                        // Keyed by artifact_index — the 'a' flow has multiple
+                        // generators in flight back-to-back, and each one
+                        // needs its own temp_dir to survive until the matching
+                        // Serialize runs. See nixos-artifacts-3kx.
+                        self.output_dirs.insert(artifact_index, temp_dir);
                         std::mem::forget(prompts_dir);
                         Message::GeneratorFinished {
                             artifact_index,
@@ -707,12 +709,15 @@ impl BackgroundEffectHandler {
         artifact_name: String,
         target_type: TargetType,
     ) -> Message {
-        let output_dir = match self.current_output_dir.take() {
+        let output_dir = match self.output_dirs.remove(&artifact_index) {
             Some(dir) => dir,
             None => {
                 return Message::SerializeFinished {
                     artifact_index,
-                    result: Err("No output directory from generator - RunGenerator must be called before Serialize".to_string()),
+                    result: Err(format!(
+                        "No output directory from generator for artifact_index {} - RunGenerator must be called before Serialize",
+                        artifact_index
+                    )),
                 };
             }
         };
@@ -759,12 +764,15 @@ impl BackgroundEffectHandler {
         nixos_targets: Vec<String>,
         home_targets: Vec<String>,
     ) -> Message {
-        let output_dir = match self.current_output_dir.take() {
+        let output_dir = match self.output_dirs.remove(&artifact_index) {
             Some(dir) => dir,
             None => {
                 return Message::SerializeFinished {
                     artifact_index,
-                    result: Err("No output directory from generator".to_string()),
+                    result: Err(format!(
+                        "No output directory from generator for artifact_index {}",
+                        artifact_index
+                    )),
                 };
             }
         };
