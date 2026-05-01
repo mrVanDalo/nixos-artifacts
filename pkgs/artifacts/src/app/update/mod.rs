@@ -147,11 +147,10 @@ pub fn update(model: Model, msg: Message) -> (Model, Effect) {
         }
 
         // === Generator/Serialize results (any screen) ===
-        // Results may arrive while the user is on the artifact list (the `a`
-        // generate-all flow leaves them there) or any other screen, so we
-        // accept them unconditionally. Screen transitions inside the handlers
-        // are gated to the matching `Screen::Generating` so they only kick the
-        // user back to the list when they were watching this very generation.
+        // Results may arrive while the user is on the artifact list or any
+        // other screen, so we accept them unconditionally. Generation progress
+        // renders into the right pane via the selected entry's status, so
+        // there is no separate screen to leave on completion.
         (
             _,
             Message::GeneratorFinished {
@@ -575,13 +574,6 @@ pub(crate) fn start_generation_for_selected_internal(
                     target_spec: TargetSpec::Single(target_type),
                     prompts: Default::default(),
                 };
-                model.screen = Screen::Generating(GeneratingState {
-                    artifact_index,
-                    artifact_name,
-                    step: Step::Generate,
-                    log_lines: vec![],
-                    exists: exists_before,
-                });
                 let effect = enqueue_or_dispatch(&mut model, run_gen);
                 (model, effect)
             } else {
@@ -612,13 +604,6 @@ pub(crate) fn start_generation_for_selected_internal(
                         },
                         prompts: Default::default(),
                     };
-                    model.screen = Screen::Generating(GeneratingState {
-                        artifact_index,
-                        artifact_name,
-                        step: Step::Generate,
-                        log_lines: vec![],
-                        exists: exists_before,
-                    });
                     let effect = enqueue_or_dispatch(&mut model, run_gen);
                     (model, effect)
                 } else {

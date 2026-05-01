@@ -43,11 +43,6 @@ fn handle_generator_success(
         message: "Generated files".to_string(),
     });
 
-    // Move to serialization
-    if let Screen::Generating(ref mut state) = model.screen {
-        state.step = Step::Serialize;
-    }
-
     // Build serialization effect based on entry type (using unified TargetSpec)
     let effect = match &model.entries[artifact_index] {
         ListEntry::Single(single) => Effect::Serialize {
@@ -77,7 +72,6 @@ pub(super) fn handle_generator_cancelled(
     artifact_index: usize,
 ) -> (Model, Effect) {
     let Some(entry) = model.entries.get_mut(artifact_index) else {
-        leave_generating_for(&mut model, artifact_index);
         clear_in_flight(&mut model, artifact_index);
         model.pipeline_queue.clear();
         return (model, Effect::None);
@@ -97,7 +91,6 @@ pub(super) fn handle_generator_cancelled(
     model.pipeline_queue.clear();
     model.active_prompt = None;
 
-    leave_generating_for(&mut model, artifact_index);
     clear_in_flight(&mut model, artifact_index);
     (model, Effect::None)
 }
@@ -109,7 +102,6 @@ fn handle_generator_failure(
     error: String,
 ) -> (Model, Effect) {
     let Some(entry) = model.entries.get_mut(artifact_index) else {
-        leave_generating_for(&mut model, artifact_index);
         clear_in_flight(&mut model, artifact_index);
         {
             let effect = super::pump_pipeline(&mut model);
@@ -136,7 +128,6 @@ fn handle_generator_failure(
         output,
     };
 
-    leave_generating_for(&mut model, artifact_index);
     clear_in_flight(&mut model, artifact_index);
     let effect = super::pump_pipeline(&mut model);
     (model, effect)
@@ -162,7 +153,6 @@ fn handle_serialize_success(
     output: ScriptOutput,
 ) -> (Model, Effect) {
     let Some(entry) = model.entries.get_mut(artifact_index) else {
-        leave_generating_for(&mut model, artifact_index);
         clear_in_flight(&mut model, artifact_index);
         {
             let effect = super::pump_pipeline(&mut model);
@@ -188,7 +178,6 @@ fn handle_serialize_success(
     });
     *entry.status_mut() = ArtifactStatus::UpToDate;
 
-    leave_generating_for(&mut model, artifact_index);
     clear_in_flight(&mut model, artifact_index);
     let effect = super::pump_pipeline(&mut model);
     (model, effect)
@@ -201,7 +190,6 @@ fn handle_serialize_failure(
     error: String,
 ) -> (Model, Effect) {
     let Some(entry) = model.entries.get_mut(artifact_index) else {
-        leave_generating_for(&mut model, artifact_index);
         clear_in_flight(&mut model, artifact_index);
         {
             let effect = super::pump_pipeline(&mut model);
@@ -228,22 +216,9 @@ fn handle_serialize_failure(
         output,
     };
 
-    leave_generating_for(&mut model, artifact_index);
     clear_in_flight(&mut model, artifact_index);
     let effect = super::pump_pipeline(&mut model);
     (model, effect)
-}
-
-/// Returns the screen to the artifact list iff the user was watching this
-/// artifact's `Screen::Generating`. Background results from the generate-all
-/// flow arrive while the user is on the list (or any other screen), so we
-/// only force the transition for the matching watched artifact.
-fn leave_generating_for(model: &mut Model, artifact_index: usize) {
-    if let Screen::Generating(state) = &model.screen
-        && state.artifact_index == artifact_index
-    {
-        model.screen = Screen::ArtifactList;
-    }
 }
 
 /// Clear the pipeline's in-flight slot iff the message belongs to the

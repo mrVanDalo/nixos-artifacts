@@ -22,9 +22,7 @@ use crate::app::effect::Effect;
 use super::artifact::ListEntry;
 use super::log::{ChronologicalLogState, Step, Warning};
 use super::prompt::PromptState;
-use super::screen_state::{
-    ConfirmRegenerateState, DoneState, GeneratingState, SelectGeneratorState,
-};
+use super::screen_state::{ConfirmRegenerateState, DoneState, SelectGeneratorState};
 
 /// Root application state containing all UI data.
 ///
@@ -100,8 +98,6 @@ pub enum Screen {
     SelectGenerator(SelectGeneratorState),
     /// Confirmation dialog before regenerating existing artifacts
     ConfirmRegenerate(ConfirmRegenerateState),
-    /// Generation progress screen with live output
-    Generating(GeneratingState),
     /// Completion screen showing generation summary
     Done(DoneState),
     /// Chronological log view with expandable sections per generation step

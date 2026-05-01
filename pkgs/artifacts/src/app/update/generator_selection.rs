@@ -54,7 +54,9 @@ pub(super) fn update_generator_selection(mut model: Model, key: KeyEvent) -> (Mo
                     .collect();
 
                 if prompts.is_empty() {
-                    // No prompts needed, go straight to generating
+                    // No prompts needed — drop back to the list and dispatch
+                    // the generator. Progress is rendered into the right pane
+                    // from `ArtifactStatus::Generating`, no screen transition.
                     let run_gen = Effect::RunGenerator {
                         artifact_index,
                         artifact_name: shared.info.artifact_name.clone(),
@@ -64,15 +66,8 @@ pub(super) fn update_generator_selection(mut model: Model, key: KeyEvent) -> (Mo
                         },
                         prompts: Default::default(),
                     };
-                    // exists = true if status is UpToDate (regenerating existing)
-                    let exists_before = matches!(shared.status, ArtifactStatus::UpToDate);
-                    model.screen = Screen::Generating(GeneratingState {
-                        artifact_index,
-                        artifact_name: shared.info.artifact_name.clone(),
-                        step: Step::Generate,
-                        log_lines: vec![],
-                        exists: exists_before,
-                    });
+                    model.screen = Screen::ArtifactList;
+                    model.selected_index = artifact_index;
                     let effect = super::enqueue_or_dispatch(&mut model, run_gen);
                     (model, effect)
                 } else {

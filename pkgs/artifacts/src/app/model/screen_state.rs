@@ -1,18 +1,6 @@
 //! Screen-specific state types for dialogs and generation views.
 
-use super::log::Step;
 use crate::config::make::{GeneratorInfo, PromptDef};
-
-/// State while generating an artifact (screen state)
-#[derive(Debug, Clone)]
-pub struct GeneratingState {
-    pub artifact_index: usize,
-    pub artifact_name: String,
-    pub step: Step,
-    pub log_lines: Vec<String>,
-    /// true if regenerating existing artifact, false if creating new
-    pub exists: bool,
-}
 
 /// State when generation is complete
 #[derive(Debug, Clone, Default)]

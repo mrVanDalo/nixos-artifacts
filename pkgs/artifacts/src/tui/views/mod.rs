@@ -13,7 +13,7 @@ use ratatui::layout::{Constraint, Layout};
 
 pub use generator_selection::render_generator_selection;
 pub use list::render_artifact_list;
-pub use progress::{render_progress, render_progress_pane};
+pub use progress::render_progress_pane;
 pub use prompt::render_prompt;
 pub use regenerate_dialog::render_confirm_regenerate;
 
@@ -33,7 +33,6 @@ pub fn render(frame: &mut Frame, model: &Model) {
         Screen::ArtifactList => render_artifact_list(frame, model, content_area),
         Screen::SelectGenerator(state) => render_generator_selection(frame, state, content_area),
         Screen::ConfirmRegenerate(state) => render_confirm_regenerate(frame, state, content_area),
-        Screen::Generating(state) => render_progress(frame, state, content_area),
         Screen::Done(state) => render_done(frame, state, content_area),
         Screen::ChronologicalLog(state) => {
             render_chronological_log(frame, model, state, content_area)
