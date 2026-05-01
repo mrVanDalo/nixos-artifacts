@@ -3,6 +3,13 @@ set -e
 
 # Serialize secrets to filesystem
 # Uses unified environment: $artifact, $artifact_context, $targets, $out
+
+# Debug: dump every env var the artifacts CLI injected so we can verify what's
+# being passed to backend serialize operations.
+echo "=== test backend serialize.sh: injected environment ==="
+env | sort
+echo "======================================================="
+
 project_root="${NIXOS_ARTIFACTS_PROJECT_ROOT:-$(pwd)}"
 secrets_dir="$project_root/secrets"
 
