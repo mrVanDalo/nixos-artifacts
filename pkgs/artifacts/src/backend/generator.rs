@@ -38,9 +38,68 @@ use anyhow::{Context, Result, bail};
 use std::collections::HashSet;
 use std::fs;
 use std::io::Write;
+use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
+use std::sync::{Arc, Mutex};
 use tempfile::NamedTempFile;
+
+/// Shared slot for the in-flight bwrap process group id.
+///
+/// When a generator is running, the background task writes the spawned `nix-shell`
+/// child's pid into this slot (which doubles as its pgid because the command is
+/// configured with `process_group(0)`). External cancellation logic reads this
+/// slot to signal the entire process group with SIGTERM/SIGKILL, killing bwrap
+/// and any descendants.
+///
+/// The slot is `None` when no generator is in flight, `Some(pgid)` while the
+/// child is alive, and reset to `None` once the child exits naturally or is
+/// killed.
+pub type KillSlot = Arc<Mutex<Option<u32>>>;
+
+/// Build a fresh, empty `KillSlot`.
+pub fn new_kill_slot() -> KillSlot {
+    Arc::new(Mutex::new(None))
+}
+
+/// Signal the process group registered in `slot` with SIGTERM, then SIGKILL
+/// after a short grace period.
+///
+/// Returns the pgid that was signalled, or `None` if the slot was empty (no
+/// generator in flight). The grace period gives well-behaved scripts a chance
+/// to clean up; bwrap's `--unshare-all` containers usually exit on SIGTERM
+/// promptly, but a stuck script that ignores SIGTERM is force-killed by the
+/// follow-up SIGKILL.
+///
+/// Shells out to `kill` rather than pulling in `nix` as a dependency — same
+/// approach `output_capture.rs` already uses for its timeout escalator.
+pub fn signal_kill_slot(slot: &KillSlot) -> Option<u32> {
+    let pgid = match slot.lock() {
+        Ok(guard) => *guard,
+        Err(_) => return None,
+    }?;
+
+    // Use the negative pgid form to address the whole process group.
+    let neg = format!("-{}", pgid);
+    let _ = std::process::Command::new("kill")
+        .arg("-TERM")
+        .arg(&neg)
+        .status();
+
+    // Spawn a delayed SIGKILL on a separate thread so we don't block the
+    // background runtime. If the child already exited from SIGTERM, the
+    // SIGKILL is a no-op (the pgid no longer exists).
+    let neg_kill = neg.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(500));
+        let _ = std::process::Command::new("kill")
+            .arg("-KILL")
+            .arg(&neg_kill)
+            .status();
+    });
+
+    Some(pgid)
+}
 
 /// Describes the generator invocation context.
 ///
@@ -213,10 +272,17 @@ fn build_shared_env_exports(
 }
 
 /// Execute generator in nix-shell with bwrap containerization.
+///
+/// The spawned process is placed in its own process group via
+/// `process_group(0)` so external cancellation logic can signal the whole tree
+/// (bwrap + descendants) with one `kill -<sig> -<pgid>`. When a `kill_slot` is
+/// supplied, the child's pid (= pgid) is published into the slot for the
+/// duration of the run and cleared when the child returns.
 fn execute_generator_in_bwrap(
     nix_shell: &Path,
     arguments: &[String],
     env_exports: &str,
+    kill_slot: Option<&KillSlot>,
 ) -> Result<CapturedOutput> {
     let bwrap_command = arguments.join(" ");
     let run_command = format!("{} {}", env_exports, bwrap_command);
@@ -228,12 +294,32 @@ fn execute_generator_in_bwrap(
         .arg("--run")
         .arg(&run_command)
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
+        .stderr(Stdio::piped())
+        // pgid = pid: makes the whole subtree killable as a group.
+        .process_group(0);
 
     let child = cmd
         .spawn()
         .context("failed to start generator in nix-shell")?;
-    run_with_captured_output(child).context("failed to capture generator output")
+    let child_pid = child.id();
+
+    if let Some(slot) = kill_slot
+        && let Ok(mut guard) = slot.lock()
+    {
+        *guard = Some(child_pid);
+    }
+
+    let output = run_with_captured_output(child).context("failed to capture generator output");
+
+    // Clear the slot — child has returned, no further signal can target it
+    // safely.
+    if let Some(slot) = kill_slot
+        && let Ok(mut guard) = slot.lock()
+    {
+        *guard = None;
+    }
+
+    output
 }
 
 /// Log the bwrap command with formatted output.
@@ -261,13 +347,16 @@ fn log_bwrap_command(_arguments: &[String]) {}
 /// Internal unified implementation for running generator scripts.
 ///
 /// This function contains the common logic shared by both per-target and shared
-/// generator execution paths.
+/// generator execution paths. When `kill_slot` is `Some`, the spawned child's
+/// pgid is published there so external cancellation can signal the process
+/// group.
 fn run_generator_inner(
     ctx: &GeneratorContext<'_>,
     make_base: &Path,
     prompts: &Path,
     out: &Path,
     log_level: LogLevel,
+    kill_slot: Option<&KillSlot>,
 ) -> Result<CapturedOutput> {
     let generator_path = resolve_generator_path(make_base, ctx.generator_script());
     let nix_shell = which::which("nix-shell")
@@ -283,7 +372,7 @@ fn run_generator_inner(
     log_bwrap_command(&arguments);
 
     let env_exports = ctx.env_exports(out, prompts, log_level);
-    let output = execute_generator_in_bwrap(&nix_shell, &arguments, &env_exports)?;
+    let output = execute_generator_in_bwrap(&nix_shell, &arguments, &env_exports, kill_slot)?;
 
     // `temp_passwd` is deleted automatically when it goes out of scope.
 
@@ -397,12 +486,13 @@ pub fn run_generator_script(
     prompts: &Path,
     out: &Path,
     log_level: LogLevel,
+    kill_slot: Option<&KillSlot>,
 ) -> Result<CapturedOutput> {
     let ctx = GeneratorContext::PerTarget {
         artifact,
         target_type,
     };
-    run_generator_inner(&ctx, make_base, prompts, out, log_level)
+    run_generator_inner(&ctx, make_base, prompts, out, log_level, kill_slot)
 }
 
 /// Run a generator script by its direct path (for shared artifacts).
@@ -454,7 +544,58 @@ pub fn run_generator_script_with_path(
     prompts: &Path,
     out: &Path,
     log_level: LogLevel,
+    kill_slot: Option<&KillSlot>,
 ) -> Result<CapturedOutput> {
     let ctx = GeneratorContext::Shared { generator_path };
-    run_generator_inner(&ctx, make_base, prompts, out, log_level)
+    run_generator_inner(&ctx, make_base, prompts, out, log_level, kill_slot)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::process::Command;
+    use std::time::{Duration, Instant};
+
+    #[test]
+    fn signal_kill_slot_returns_none_when_empty() {
+        let slot = new_kill_slot();
+        assert!(signal_kill_slot(&slot).is_none());
+    }
+
+    #[test]
+    fn signal_kill_slot_terminates_process_group_within_grace() {
+        // End-to-end exercise of the cancel path without bwrap: spawn a long
+        // sleep in its own process group, publish its pgid to a KillSlot, ask
+        // signal_kill_slot to do the SIGTERM/SIGKILL dance, and assert the
+        // child is reaped within the grace window. If this test ever flakes
+        // by timing out, that's a regression in the kill plumbing — the
+        // sleep itself is 30s, so a 3s wait gives the kill mechanism plenty
+        // of headroom over its 500ms SIGTERM→SIGKILL cadence.
+        let mut child = Command::new("sh")
+            .arg("-c")
+            .arg("sleep 30")
+            .process_group(0)
+            .spawn()
+            .expect("spawn sleep child");
+        let pid = child.id();
+
+        let slot = new_kill_slot();
+        *slot.lock().unwrap() = Some(pid);
+
+        let signalled = signal_kill_slot(&slot).expect("slot held a pid");
+        assert_eq!(signalled, pid);
+
+        let deadline = Instant::now() + Duration::from_secs(3);
+        loop {
+            if let Some(_status) = child.try_wait().expect("try_wait") {
+                break;
+            }
+            if Instant::now() >= deadline {
+                let _ = child.kill();
+                let _ = child.wait();
+                panic!("child was not killed within grace window");
+            }
+            std::thread::sleep(Duration::from_millis(50));
+        }
+    }
 }

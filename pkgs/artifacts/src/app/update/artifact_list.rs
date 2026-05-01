@@ -58,7 +58,8 @@ fn generate_all(mut model: Model) -> (Model, Effect) {
         match entry.status() {
             ArtifactStatus::UpToDate
             | ArtifactStatus::Generating(_)
-            | ArtifactStatus::Failed { .. } => {}
+            | ArtifactStatus::Failed { .. }
+            | ArtifactStatus::Cancelled { .. } => {}
             ArtifactStatus::Pending => {
                 model.generate_queue.insert(index);
             }

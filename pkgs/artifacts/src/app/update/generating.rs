@@ -67,6 +67,37 @@ fn handle_generator_success(
     (model, effect)
 }
 
+/// Handles user cancellation of an in-flight generator. The bwrap process
+/// group has already been signalled by the background runtime; we just need
+/// to flip the artifact's status to `Cancelled` and drop back to the list.
+/// Also drops the artifact (and any peers) from the generate-all queue so
+/// the user gets a clean stop, not a half-resumed flow.
+pub(super) fn handle_generator_cancelled(
+    mut model: Model,
+    artifact_index: usize,
+) -> (Model, Effect) {
+    let Some(entry) = model.entries.get_mut(artifact_index) else {
+        leave_generating_for(&mut model, artifact_index);
+        return (model, Effect::None);
+    };
+    let artifact_name = entry.artifact_name().to_string();
+    entry.step_logs_mut().generate.push(LogEntry {
+        level: LogLevel::Info,
+        message: format!("Generator cancelled by user for '{}'", artifact_name),
+    });
+
+    let output = super::format_step_logs(entry);
+    *entry.status_mut() = ArtifactStatus::Cancelled { output };
+
+    // The generate-all queue is moot now — drop everything queued so we don't
+    // resurrect work the user explicitly stopped.
+    model.generate_queue.clear();
+    model.active_prompt = None;
+
+    leave_generating_for(&mut model, artifact_index);
+    (model, Effect::None)
+}
+
 /// Handles generator failure by logging and setting failed status.
 fn handle_generator_failure(
     mut model: Model,

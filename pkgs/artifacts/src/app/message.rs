@@ -38,6 +38,13 @@ pub enum Message {
         result: Result<ScriptOutput, String>,
     },
 
+    /// User cancelled an in-flight generator. The bwrap process group was
+    /// killed; this message tells the update layer to mark the artifact as
+    /// `ArtifactStatus::Cancelled` rather than `Failed`. Only emitted for
+    /// generator cancellation — serialize is allowed to finish naturally to
+    /// preserve the no-corrupt-backend invariant.
+    GeneratorCancelled { artifact_index: usize },
+
     /// Serialize script finished (single or shared)
     SerializeFinished {
         artifact_index: usize,

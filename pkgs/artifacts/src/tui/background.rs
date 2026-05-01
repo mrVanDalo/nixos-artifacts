@@ -18,6 +18,8 @@
 //! - **No shared mutable state:** Handler is owned by background task
 
 use std::collections::HashMap;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel};
@@ -28,6 +30,7 @@ use crate::app::effect::{Effect, TargetSpec};
 use crate::app::message::{Message, ScriptOutput};
 use crate::app::model::{ArtifactError, ArtifactStatus, TargetType};
 use crate::backend;
+use crate::backend::generator::{KillSlot, new_kill_slot, signal_kill_slot};
 use crate::config::backend::BackendConfiguration;
 use crate::config::make::{ArtifactDef, MakeConfiguration};
 use crate::logging::{log, log_component};
@@ -67,6 +70,15 @@ pub struct BackgroundEffectHandler {
     result_tx: Option<UnboundedSender<Message>>,
     /// Log level to pass to executed scripts
     log_level: crate::logging::LogLevel,
+    /// Slot holding the in-flight bwrap pgid while a generator runs.
+    /// Cleared when the generator returns (success, failure, or kill).
+    /// Read by the cancel arm of the runtime loop to signal SIGTERM/SIGKILL.
+    kill_slot: KillSlot,
+    /// Set by the cancel arm when it signalled an in-flight generator. The
+    /// runtime loop checks this flag after a generator effect finishes; if
+    /// set, the result message is replaced with `GeneratorCancelled` instead
+    /// of `GeneratorFinished`. Reset to false at the start of each effect.
+    was_cancelled: Arc<AtomicBool>,
 }
 
 impl BackgroundEffectHandler {
@@ -85,7 +97,23 @@ impl BackgroundEffectHandler {
             current_prompts: None,
             result_tx: None,
             log_level,
+            kill_slot: new_kill_slot(),
+            was_cancelled: Arc::new(AtomicBool::new(false)),
         }
+    }
+
+    /// Clone of the kill slot for external cancellation. The runtime loop
+    /// holds this clone so its cancel arm can signal an in-flight generator
+    /// without taking a `&mut` lock on the handler.
+    pub fn kill_slot_handle(&self) -> KillSlot {
+        self.kill_slot.clone()
+    }
+
+    /// Clone of the cancellation flag. Set by the runtime loop's cancel arm,
+    /// read by the loop after the in-flight effect finishes to decide whether
+    /// to translate the result into a `GeneratorCancelled` message.
+    pub fn cancel_flag_handle(&self) -> Arc<AtomicBool> {
+        self.was_cancelled.clone()
     }
 
     /// Set the result channel sender for streaming output.
@@ -454,6 +482,7 @@ impl BackgroundEffectHandler {
         let log_level = self.log_level;
         let artifact_for_verify = artifact.clone();
         let output_path_for_verify = output_path.clone();
+        let kill_slot = self.kill_slot.clone();
 
         let result = Self::run_with_timeout(&artifact_name, "Generator", move || {
             backend::generator::run_generator_script(
@@ -463,6 +492,7 @@ impl BackgroundEffectHandler {
                 &prompts_path,
                 &output_path,
                 log_level,
+                Some(&kill_slot),
             )
         })
         .await;
@@ -547,6 +577,7 @@ impl BackgroundEffectHandler {
         let generator_path_clone = generator_path.clone();
         let out_path_for_verify = out_path.clone();
         let log_level = self.log_level;
+        let kill_slot = self.kill_slot.clone();
 
         // Build an ArtifactDef for verification
         let artifact_for_verify = ArtifactDef {
@@ -566,6 +597,7 @@ impl BackgroundEffectHandler {
                 &prompts_path,
                 &out_path,
                 log_level,
+                Some(&kill_slot),
             )
         })
         .await;
@@ -880,19 +912,22 @@ impl BackgroundEffectHandler {
 /// # Cancellation
 ///
 /// Sending `()` on `cancel_tx` drops every effect currently sitting in the
-/// FIFO. The currently-executing effect — if any — runs to natural completion
-/// because the select! loop only re-evaluates between commands. Cancellation
-/// is repeatable and idempotent: every signal drains whatever happens to be
-/// queued at that moment, and a signal that arrives while the queue is empty
-/// is a no-op.
+/// FIFO. If a generator is currently in flight, the bwrap process group is
+/// signalled (SIGTERM, then SIGKILL after a short grace) so the in-flight
+/// work also stops within ~1s — the artifact is reported back as
+/// `Message::GeneratorCancelled`. Serialize and check phases run to natural
+/// completion: serialize is the corruption-risk window (we do NOT interrupt
+/// it), and check is short enough not to bother. Cancellation is repeatable
+/// and idempotent: every signal drains whatever happens to be queued at that
+/// moment, and a signal that arrives while no generator is in flight is a
+/// no-op for the kill side.
 ///
 /// # Shutdown
 ///
-/// Cancelling `shutdown_token` (e.g. on Ctrl-C) follows the same drop-the-queue
-/// semantics as `cancel_tx`: queued effects are discarded without executing,
-/// the in-flight effect — if any — finishes naturally, then the loop exits.
-/// Users expect Ctrl-C to abort pending work, not kick it all off on the way
-/// out the door.
+/// Cancelling `shutdown_token` (e.g. on Ctrl-C) follows the same semantics as
+/// `cancel_tx`: queued effects are discarded without executing, an in-flight
+/// generator is killed, and the loop exits. Users expect Ctrl-C to abort
+/// pending work, not kick it all off on the way out the door.
 ///
 /// # Arguments
 ///
@@ -927,24 +962,21 @@ pub fn spawn_background_task(
         log_component("BACKGROUND", "Task started");
         let mut handler = BackgroundEffectHandler::new(backend, make, log_level);
         handler.set_result_sender(tx_res.clone());
+        let kill_slot = handler.kill_slot_handle();
+        let cancel_flag = handler.cancel_flag_handle();
         log_component("BACKGROUND", "Handler initialized");
 
         // Process effects sequentially with graceful shutdown support.
         //
-        // The select! is `biased` so that, when multiple arms are ready at the
-        // same iteration, shutdown wins over cancel and cancel wins over
-        // pulling the next command. That ordering is what gives cancel its
-        // semantics: any effects that piled up in `rx_cmd` while an in-flight
-        // effect was running get drained before any of them get a chance to
-        // execute on the next iteration.
+        // Outer select! is `biased`: shutdown wins over cancel wins over
+        // command. While a command is being executed, an inner select! polls
+        // shutdown / cancel concurrently with the in-flight future so cancel
+        // can signal a running generator (SIGTERM the pgid) within ~1s
+        // instead of waiting for the 35s timeout.
         loop {
             tokio::select! {
                 biased;
 
-                // Check for shutdown signal first. Mirror cancel semantics:
-                // discard queued effects without executing them. The in-flight
-                // effect (if any) is already past select! and finishes
-                // naturally; we just refuse to start the rest.
                 _ = shutdown_token.cancelled() => {
                     log_component("BACKGROUND", "Shutdown requested, dropping queued effects");
                     let mut dropped = 0usize;
@@ -955,31 +987,114 @@ pub fn spawn_background_task(
                         "BACKGROUND",
                         &format!("Dropped {} queued effect(s) on shutdown", dropped),
                     );
+                    // Best-effort: if a generator is in flight at shutdown
+                    // time we won't be reaping its result anyway, but we
+                    // still want bwrap dead so the host shell isn't left
+                    // with an orphan.
+                    let _ = signal_kill_slot(&kill_slot);
                     log_component("BACKGROUND", "Exiting cleanly");
                     break;
                 }
 
-                // Cancel signal: drop everything currently queued in rx_cmd
-                // without executing it. We drain whatever `try_recv` returns
-                // and stop. In-flight work is unaffected — the select! arm
-                // only fires between commands.
                 Some(_) = cancel_rx.recv() => {
+                    // Idle-time cancel (no command currently executing). Just
+                    // drain whatever happens to be queued. The kill slot is
+                    // empty between commands, so nothing to signal.
                     let mut drained = 0usize;
                     while rx_cmd.try_recv().is_ok() {
                         drained += 1;
                     }
                     log_component(
                         "BACKGROUND",
-                        &format!("Cancel signal received, dropped {} queued effect(s)", drained),
+                        &format!(
+                            "Cancel signal received (idle), dropped {} queued effect(s)",
+                            drained
+                        ),
                     );
                 }
 
-                // Process next command
                 Some(cmd) = rx_cmd.recv() => {
                     log_component("BACKGROUND", &format!("Received command: {:?}", cmd));
+                    cancel_flag.store(false, Ordering::SeqCst);
+
                     log_component("BACKGROUND", "Executing command...");
-                    let result = handler.execute(cmd).await;
+                    let exec_fut = handler.execute(cmd);
+                    tokio::pin!(exec_fut);
+
+                    // Inner loop: poll the in-flight future together with
+                    // shutdown / cancel signals. The future eventually
+                    // resolves either naturally or because we killed the
+                    // bwrap pgid out from under it.
+                    let result = loop {
+                        tokio::select! {
+                            biased;
+
+                            _ = shutdown_token.cancelled() => {
+                                log_component("BACKGROUND", "Shutdown during in-flight effect");
+                                if signal_kill_slot(&kill_slot).is_some() {
+                                    cancel_flag.store(true, Ordering::SeqCst);
+                                    log_component(
+                                        "BACKGROUND",
+                                        "Signalled in-flight generator on shutdown",
+                                    );
+                                }
+                                // Keep awaiting exec_fut — the kill should
+                                // make it return promptly. The outer loop's
+                                // shutdown arm handles the actual exit on
+                                // the next iteration.
+                            }
+
+                            Some(_) = cancel_rx.recv() => {
+                                let mut drained = 0usize;
+                                while rx_cmd.try_recv().is_ok() {
+                                    drained += 1;
+                                }
+                                log_component(
+                                    "BACKGROUND",
+                                    &format!(
+                                        "Cancel during in-flight: drained {} queued",
+                                        drained
+                                    ),
+                                );
+                                if signal_kill_slot(&kill_slot).is_some() {
+                                    cancel_flag.store(true, Ordering::SeqCst);
+                                    log_component(
+                                        "BACKGROUND",
+                                        "Signalled in-flight generator (SIGTERM, SIGKILL queued)",
+                                    );
+                                } else {
+                                    // No generator in flight — must be a
+                                    // serialize or check phase. Per the
+                                    // no-corrupt-backend invariant we let
+                                    // those finish naturally; the queue
+                                    // drain above is the only effect.
+                                    log_component(
+                                        "BACKGROUND",
+                                        "Cancel during non-generator phase: not killing",
+                                    );
+                                }
+                            }
+
+                            r = &mut exec_fut => break r,
+                        }
+                    };
                     log_component("BACKGROUND", "Command complete");
+
+                    // Translate a generator failure into a Cancelled message
+                    // if the cancel arm fired during this effect. Other
+                    // message types pass through unchanged — a cancel during
+                    // serialize doesn't reshape its result, since the
+                    // serialize completes naturally.
+                    let result = if cancel_flag.load(Ordering::SeqCst) {
+                        match result {
+                            Message::GeneratorFinished { artifact_index, .. } => {
+                                Message::GeneratorCancelled { artifact_index }
+                            }
+                            other => other,
+                        }
+                    } else {
+                        result
+                    };
 
                     // Send result back; if TUI closed, exit cleanly
                     log_component("BACKGROUND", "Sending result");
@@ -990,7 +1105,6 @@ pub fn spawn_background_task(
                     log_component("BACKGROUND", "Result sent successfully");
                 }
 
-                // Channel closed
                 else => {
                     log_component("BACKGROUND", "Command channel closed, exiting");
                     break;

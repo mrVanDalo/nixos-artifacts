@@ -325,6 +325,7 @@ impl TestHarness {
             prompt_dir.path(),
             out_dir.path(),
             log_level,
+            None,
         );
 
         if let Err(e) = gen_result {

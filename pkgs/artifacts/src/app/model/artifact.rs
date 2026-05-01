@@ -236,6 +236,15 @@ pub enum ArtifactStatus {
         /// Formatted step logs from the generation process
         output: String,
     },
+    /// The user cancelled an in-flight generator. The bwrap process group was
+    /// signalled (SIGTERM then SIGKILL) and any partial output captured before
+    /// the kill is preserved for display. Distinct from `Failed` because the
+    /// outcome was user-initiated, not a script error — retrying is the same
+    /// as starting fresh.
+    Cancelled {
+        /// Formatted step logs captured before cancellation
+        output: String,
+    },
 }
 
 impl ArtifactStatus {
@@ -247,6 +256,7 @@ impl ArtifactStatus {
             ArtifactStatus::UpToDate => "✓",
             ArtifactStatus::Generating(_) => "⟳",
             ArtifactStatus::Failed { .. } => "✗",
+            ArtifactStatus::Cancelled { .. } => "⊘",
         }
     }
 
@@ -258,6 +268,7 @@ impl ArtifactStatus {
             ArtifactStatus::UpToDate => Style::default().fg(Color::Green),
             ArtifactStatus::Generating(_) => Style::default().fg(Color::Cyan),
             ArtifactStatus::Failed { .. } => Style::default().fg(Color::Red),
+            ArtifactStatus::Cancelled { .. } => Style::default().fg(Color::Yellow),
         }
     }
 
@@ -273,6 +284,7 @@ impl ArtifactStatus {
             ArtifactStatus::Pending
                 | ArtifactStatus::NeedsGeneration
                 | ArtifactStatus::Failed { .. }
+                | ArtifactStatus::Cancelled { .. }
         )
     }
 }

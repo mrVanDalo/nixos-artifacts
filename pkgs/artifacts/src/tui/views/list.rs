@@ -114,7 +114,8 @@ fn render_artifact_list_panel(frame: &mut Frame, model: &Model, area: Rect) {
         Span::raw("◐ Need "),
         Span::raw("✎ Input "),
         Span::raw("✓ OK "),
-        Span::raw("✗ Fail"),
+        Span::raw("✗ Fail "),
+        Span::raw("⊘ Cancel"),
     ]);
     frame.render_widget(Paragraph::new(legend), legend_area);
 }
@@ -235,6 +236,7 @@ fn status_display_with_text(entry: &ListEntry) -> (&'static str, Style, Option<S
         ArtifactStatus::UpToDate => "✓",
         ArtifactStatus::Generating(_) => "⟳",
         ArtifactStatus::Failed { .. } => "✗",
+        ArtifactStatus::Cancelled { .. } => "⊘",
     };
 
     let status_text = if matches!(status, ArtifactStatus::Generating(_)) {

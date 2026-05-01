@@ -157,6 +157,9 @@ pub fn update(model: Model, msg: Message) -> (Model, Effect) {
                 result,
             },
         ) => generating::handle_generator_finished(model, artifact_index, result),
+        (_, Message::GeneratorCancelled { artifact_index }) => {
+            generating::handle_generator_cancelled(model, artifact_index)
+        }
         (
             _,
             Message::SerializeFinished {
@@ -299,7 +302,9 @@ fn handle_check_result(
                     set_next_active_prompt(&mut model);
                 }
             }
-            ArtifactStatus::UpToDate | ArtifactStatus::Failed { .. } => {
+            ArtifactStatus::UpToDate
+            | ArtifactStatus::Failed { .. }
+            | ArtifactStatus::Cancelled { .. } => {
                 model.generate_queue.remove(&artifact_index);
             }
             _ => {}
