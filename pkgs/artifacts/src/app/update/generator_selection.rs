@@ -88,6 +88,7 @@ pub(super) fn update_generator_selection(mut model: Model, key: KeyEvent) -> (Mo
                         buffer: String::new(),
                         collected: Default::default(),
                     });
+                    model.selected_index = artifact_index;
                     model.screen = Screen::ArtifactList;
                     (model, Effect::None)
                 }

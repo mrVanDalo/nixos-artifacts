@@ -340,6 +340,11 @@ pub(crate) fn set_next_active_prompt(model: &mut Model) {
         }
         if let Some(state) = build_prompt_state_for(entry, index) {
             model.active_prompt = Some(state);
+            // Lock selection to the prompt's artifact so the right pane
+            // renders the prompt against a stable target. The dispatcher
+            // already routes j/k to the prompt handler while a prompt is
+            // open, so this only needs to be set at assignment time.
+            model.selected_index = index;
             return;
         }
     }
@@ -584,6 +589,7 @@ pub(crate) fn start_generation_for_selected_internal(
                 // pane via `active_prompt`. The runtime picks this up in
                 // `tui/views/list.rs::render_log_panel`.
                 model.active_prompt = Some(prompt_state);
+                model.selected_index = artifact_index;
                 model.screen = Screen::ArtifactList;
                 (model, Effect::None)
             }
@@ -632,6 +638,7 @@ pub(crate) fn start_generation_for_selected_internal(
                         buffer: String::new(),
                         collected: Default::default(),
                     });
+                    model.selected_index = artifact_index;
                     model.screen = Screen::ArtifactList;
                     (model, Effect::None)
                 }
