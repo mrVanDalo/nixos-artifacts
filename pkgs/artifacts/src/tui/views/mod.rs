@@ -13,7 +13,7 @@ use ratatui::layout::{Constraint, Layout};
 
 pub use generator_selection::render_generator_selection;
 pub use list::render_artifact_list;
-pub use progress::render_progress;
+pub use progress::{render_progress, render_progress_pane};
 pub use prompt::render_prompt;
 pub use regenerate_dialog::render_confirm_regenerate;
 

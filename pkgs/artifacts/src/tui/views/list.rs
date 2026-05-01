@@ -1,3 +1,4 @@
+use super::progress::render_progress_pane;
 use super::prompt::render_prompt;
 use crate::app::model::{ArtifactStatus, ListEntry, LogLevel, Model, Step, TargetType};
 use ratatui::{
@@ -16,12 +17,17 @@ pub fn render_artifact_list(frame: &mut Frame, model: &Model, area: Rect) {
     let right_area = horizontal_chunks[1];
 
     render_artifact_list_panel(frame, model, list_area);
-    // The right pane is normally the log panel for the focused artifact, but
-    // an active inline prompt swaps it out for prompt input on whichever
-    // entry the prompt was opened against.
-    match model.active_prompt.as_ref() {
-        Some(prompt) => render_prompt(frame, prompt, right_area),
-        None => render_log_panel(frame, model, right_area),
+    // Right-pane precedence: an open prompt wins (it owns user focus); else if
+    // the selected entry is mid-generation we show step + live logs; otherwise
+    // the default log panel for the selection.
+    if let Some(prompt) = model.active_prompt.as_ref() {
+        render_prompt(frame, prompt, right_area);
+    } else if let Some(entry) = model.entries.get(model.selected_index)
+        && matches!(entry.status(), ArtifactStatus::Generating(_))
+    {
+        render_progress_pane(frame, entry, right_area);
+    } else {
+        render_log_panel(frame, model, right_area);
     }
 }
 
