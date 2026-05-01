@@ -850,17 +850,16 @@ impl BackgroundEffectHandler {
                     .await
             }
 
-            Effect::Batch(effects) => {
-                // Execute first effect in batch
-                if let Some(first) = effects.into_iter().next() {
-                    Box::pin(self.execute(first)).await
-                } else {
-                    Message::CheckSerializationResult {
-                        artifact_index: 0,
-                        status: ArtifactStatus::Pending,
-                        result: Ok(ScriptOutput::default()),
-                    }
-                }
+            Effect::Batch(_) => {
+                // Batch is flattened upstream before reaching the FIFO — see
+                // runtime::send_effect and runtime::effect_to_command. If a
+                // Batch ever surfaces here (e.g. a future refactor routes one
+                // through execute() directly) the previous behavior silently
+                // dropped N-1 effects. Fail loud instead so the broken
+                // invariant is caught in tests, not in production.
+                unreachable!(
+                    "Effect::Batch must be flattened before reaching BackgroundEffectHandler::execute"
+                )
             }
         }
     }
