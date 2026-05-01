@@ -10,6 +10,7 @@ ModelState {
     screen: "ArtifactList",
     selected_index: 0,
     selected_log_step: "Check",
+    active_prompt: None,
     artifacts: [
         ArtifactState {
             target: "machine-one",
@@ -35,39 +36,47 @@ ModelState {
 }
 
 Rendered:
-"Prompt: ssh-key [1/1]                                                           "
-"                                                                                "
-"────────────────────────────────────────────────────────────────────────────────"
-"Field: passphrase                                                               "
-"Enter the passphrase value                                                      "
-"                                                                                "
-"                                                                                "
-"┌Input [line]──────────────────────────────────────────────────────────────────┐"
-"│> █                                                                           │"
-"└──────────────────────────────────────────────────────────────────────────────┘"
-"Tab: change mode | Enter: submit | Esc: cancel                                  "
-"                                                                                "
-"                                                                                "
-"                                                                                "
-"                                                                                "
-"                                                                                "
-"                                                                                "
-"                                                                                "
-"                                                                                "
-"                                                                                "
-"                                                                                "
-"                                                                                "
-"                                                                                "
-"                                                                                "
+"┌Artifacts (3) - j/k: move, Enter: gen,┐Prompt: ssh-key [1/1]                   "
+"│> ✎ [N] machine-one/ssh-key Awaiting i│                                        "
+"│  ✓ [N] machine-two/api-token         │────────────────────────────────────────"
+"│  ◐ [H] user@host/gpg-key             │Field: passphrase                       "
+"│                                      │Enter the passphrase value              "
+"│                                      │                                        "
+"│                                      │                                        "
+"│                                      │┌Input [line]──────────────────────────┐"
+"│                                      ││> █                                   │"
+"│                                      │└──────────────────────────────────────┘"
+"│                                      │Tab: change mode | Enter: submit | Esc: "
+"│                                      │                                        "
+"│                                      │                                        "
+"│                                      │                                        "
+"│                                      │                                        "
+"│                                      │                                        "
+"│                                      │                                        "
+"│                                      │                                        "
+"│                                      │                                        "
+"│                                      │                                        "
+"│                                      │                                        "
+"│                                      │                                        "
+"└──────────────────────────────────────┘                                        "
+"○ Pend ◐ Need ✎ Input ✓ OK ✗ Fail ⊘ Canc                                        "
 
 Step 1:
 Message: Key(KeyEvent { code: Esc, modifiers: KeyModifiers(0x0) })
 
 Model:
 ModelState {
-    screen: "Prompt",
+    screen: "ArtifactList",
     selected_index: 0,
     selected_log_step: "Check",
+    active_prompt: Some(
+        ActivePromptState {
+            artifact_index: 0,
+            artifact_name: "ssh-key",
+            current_prompt_index: 0,
+            total_prompts: 1,
+        },
+    ),
     artifacts: [
         ArtifactState {
             target: "machine-one",
@@ -116,4 +125,4 @@ Rendered:
 "│                                      ││                                      │"
 "│                                      ││                                      │"
 "└──────────────────────────────────────┘│                                      │"
-"○ Pend ◐ Need ✓ OK ✗ Fail               └──────────────────────────────────────┘"
+"○ Pend ◐ Need ✎ Input ✓ OK ✗ Fail ⊘ Canc└──────────────────────────────────────┘"

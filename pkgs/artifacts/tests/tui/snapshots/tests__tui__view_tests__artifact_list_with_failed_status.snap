@@ -37,6 +37,7 @@ ModelState {
     screen: "ArtifactList",
     selected_index: 0,
     selected_log_step: "Generate",
+    active_prompt: None,
     artifacts: [
         ArtifactState {
             target: "machine-one",
@@ -71,4 +72,4 @@ Rendered:
 "│                                 ││▶ Check                          │"
 "│                                 ││▼ Generate                       │"
 "└─────────────────────────────────┘│  | Generating SSH key pair...   │"
-"○ Pend ◐ Need ✓ OK ✗ Fail          └─────────────────────────────────┘"
+"○ Pend ◐ Need ✎ Input ✓ OK ✗ Fail ⊘└─────────────────────────────────┘"

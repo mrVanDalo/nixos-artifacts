@@ -11,6 +11,7 @@ TestResult {
         screen: "ArtifactList",
         selected_index: 0,
         selected_log_step: "Check",
+        active_prompt: None,
         artifacts: [
             ArtifactState {
                 target: "machine-name",
@@ -32,6 +33,7 @@ TestResult {
         screen: "ArtifactList",
         selected_index: 0,
         selected_log_step: "Check",
+        active_prompt: None,
         artifacts: [
             ArtifactState {
                 target: "machine-name",

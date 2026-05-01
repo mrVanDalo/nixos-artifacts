@@ -1,21 +1,55 @@
 ---
 source: tests/tui/view_tests.rs
-expression: StateCaptures(captures).to_string()
+expression: result.to_string()
 ---
-Step 0:
-Message: Key(KeyEvent { code: Enter, modifiers: KeyModifiers(0x0) })
+State:
+ArtifactListState {
+    selected_index: 0,
+    selected_log_step: "Check",
+    artifacts: [
+        ArtifactSnapshot {
+            target: "machine-one",
+            target_type: "nixos",
+            name: "ssh-key",
+            status: "Pending",
+            has_logs: false,
+        },
+        ArtifactSnapshot {
+            target: "machine-two",
+            target_type: "nixos",
+            name: "api-token",
+            status: "UpToDate",
+            has_logs: false,
+        },
+        ArtifactSnapshot {
+            target: "user@host",
+            target_type: "homemanager",
+            name: "gpg-key",
+            status: "NeedsGeneration",
+            has_logs: false,
+        },
+    ],
+    error: None,
+}
 
 Model:
 ModelState {
     screen: "ArtifactList",
     selected_index: 0,
     selected_log_step: "Check",
-    active_prompt: None,
+    active_prompt: Some(
+        ActivePromptState {
+            artifact_index: 0,
+            artifact_name: "ssh-key",
+            current_prompt_index: 0,
+            total_prompts: 1,
+        },
+    ),
     artifacts: [
         ArtifactState {
             target: "machine-one",
             name: "ssh-key",
-            status: "NeedsGeneration",
+            status: "Pending",
             target_type: "nixos",
         },
         ArtifactState {
@@ -40,23 +74,13 @@ Rendered:
 "│> ✎ [N] machine-one/ssh-key Awaiting i│                                        "
 "│  ✓ [N] machine-two/api-token         │────────────────────────────────────────"
 "│  ◐ [H] user@host/gpg-key             │Field: passphrase                       "
-"│                                      │Enter the passphrase value              "
+"│                                      │Enter the SSH key passphrase            "
 "│                                      │                                        "
 "│                                      │                                        "
 "│                                      │┌Input [line]──────────────────────────┐"
-"│                                      ││> █                                   │"
+"│                                      ││> my-secret█                          │"
 "│                                      │└──────────────────────────────────────┘"
-"│                                      │Tab: change mode | Enter: submit | Esc: "
-"│                                      │                                        "
-"│                                      │                                        "
-"│                                      │                                        "
-"│                                      │                                        "
-"│                                      │                                        "
-"│                                      │                                        "
-"│                                      │                                        "
-"│                                      │                                        "
-"│                                      │                                        "
-"│                                      │                                        "
+"│                                      │Enter: submit | Esc: cancel             "
 "│                                      │                                        "
 "└──────────────────────────────────────┘                                        "
 "○ Pend ◐ Need ✎ Input ✓ OK ✗ Fail ⊘ Canc                                        "

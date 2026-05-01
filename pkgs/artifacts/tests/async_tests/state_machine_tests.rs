@@ -14,7 +14,7 @@ use std::collections::{BTreeMap, HashMap};
 use artifacts::app::effect::Effect;
 use artifacts::app::message::{Message, ScriptOutput};
 use artifacts::app::model::{
-    ArtifactEntry, ArtifactStatus, GeneratingState, ListEntry, Model, Screen, Step, TargetType,
+    ArtifactEntry, ArtifactStatus, GeneratingSubstate, ListEntry, Model, Screen, Step, TargetType,
 };
 use artifacts::app::update::update;
 use artifacts::config::make::{ArtifactDef, FileDef, PromptDef};
@@ -82,6 +82,8 @@ fn create_test_model(artifact_name: &str, has_prompts: bool) -> Model {
         generate_queue: Default::default(),
         active_prompt: None,
         last_esc_at: None,
+        pipeline_queue: Default::default(),
+        in_flight: None,
     }
 }
 
@@ -275,13 +277,10 @@ fn test_generator_flow_success() {
     // Start at Pending state
     assert_eq!(model.entries[0].status(), &ArtifactStatus::Pending);
 
-    // Set screen to Generating (normally done by start_generation_for_selected)
-    model.screen = Screen::Generating(GeneratingState {
-        artifact_index: 0,
-        artifact_name: "test-artifact".to_string(),
+    // Mark the entry as Generating (normally done by start_generation_for_selected)
+    *model.entries[0].status_mut() = ArtifactStatus::Generating(GeneratingSubstate {
         step: Step::Generate,
-        log_lines: vec![],
-        exists: false,
+        output: String::new(),
     });
 
     // Simulate generation effect
@@ -314,13 +313,13 @@ fn test_generator_flow_success() {
         },
     );
 
-    // After generator, we should have moved to serialization step
-    if let Screen::Generating(state) = &model_after_gen.screen {
-        assert_eq!(state.step, Step::Serialize);
+    // After generator, the entry's substate should have advanced to Serialize.
+    if let ArtifactStatus::Generating(substate) = model_after_gen.entries[0].status() {
+        assert_eq!(substate.step, Step::Serialize);
     } else {
         panic!(
-            "Expected screen to be Generating, got {:?}",
-            model_after_gen.screen
+            "Expected status to remain Generating after generator success, got {:?}",
+            model_after_gen.entries[0].status()
         );
     }
 
@@ -330,15 +329,9 @@ fn test_generator_flow_success() {
     tracker.assert_command_count(1);
     tracker.assert_command_at(0, "Serialize");
 
-    // Simulate successful serialize result - set screen back to Generating with Serializing step
-    let mut model_for_serialize = model_after_gen;
-    model_for_serialize.screen = Screen::Generating(GeneratingState {
-        artifact_index: 0,
-        artifact_name: "test-artifact".to_string(),
-        step: Step::Serialize,
-        log_lines: vec![],
-        exists: false,
-    });
+    // The entry's status is already Generating(Serialize) from the previous
+    // step; no further setup needed before the SerializeFinished message.
+    let model_for_serialize = model_after_gen;
 
     let serialize_output = ScriptOutput {
         stdout_lines: vec!["Serialized to backend".to_string()],
@@ -370,13 +363,10 @@ fn test_generator_flow_failure() {
     let mut model = create_test_model("test-artifact", false);
     let mut tracker = CommandTracker::new();
 
-    // Set screen to Generating (normally done by start_generation_for_selected)
-    model.screen = Screen::Generating(GeneratingState {
-        artifact_index: 0,
-        artifact_name: "test-artifact".to_string(),
+    // Mark the entry as Generating (normally done by start_generation_for_selected)
+    *model.entries[0].status_mut() = ArtifactStatus::Generating(GeneratingSubstate {
         step: Step::Generate,
-        log_lines: vec![],
-        exists: false,
+        output: String::new(),
     });
 
     // Simulate generation effect
@@ -428,13 +418,10 @@ fn test_serialize_flow_failure() {
     let mut model = create_test_model("test-artifact", false);
     let mut tracker = CommandTracker::new();
 
-    // Set screen to Generating with RunningGenerator step
-    model.screen = Screen::Generating(GeneratingState {
-        artifact_index: 0,
-        artifact_name: "test-artifact".to_string(),
+    // Mark the entry as Generating(Generate)
+    *model.entries[0].status_mut() = ArtifactStatus::Generating(GeneratingSubstate {
         step: Step::Generate,
-        log_lines: vec![],
-        exists: false,
+        output: String::new(),
     });
 
     // Simulate successful generation first
@@ -462,15 +449,9 @@ fn test_serialize_flow_failure() {
     process_effects_and_track(&mut model, serialize_effect, &mut tracker);
     tracker.assert_command_at(0, "Serialize");
 
-    // Set screen to Generating with Serializing step for handle_serialize_finished
-    let mut model_for_serialize = model_after_gen;
-    model_for_serialize.screen = Screen::Generating(GeneratingState {
-        artifact_index: 0,
-        artifact_name: "test-artifact".to_string(),
-        step: Step::Serialize,
-        log_lines: vec![],
-        exists: false,
-    });
+    // The substate already advanced to Serialize via the GeneratorFinished
+    // handler — no further setup needed before SerializeFinished.
+    let model_for_serialize = model_after_gen;
 
     // Simulate failed serialize result
     let (final_model, _) = update(
@@ -584,6 +565,8 @@ fn test_batch_effect_processing() {
         generate_queue: Default::default(),
         active_prompt: None,
         last_esc_at: None,
+        pipeline_queue: Default::default(),
+        in_flight: None,
     };
 
     let mut tracker = CommandTracker::new();
@@ -677,14 +660,11 @@ fn test_complete_lifecycle_success() {
     );
     assert_eq!(model.entries[0].status(), &ArtifactStatus::NeedsGeneration);
 
-    // Step 2: RunGenerator (user triggered) - need Generating screen
+    // Step 2: RunGenerator (user triggered) — flip the entry to Generating
     let mut model_with_screen = model.clone();
-    model_with_screen.screen = Screen::Generating(GeneratingState {
-        artifact_index: 0,
-        artifact_name: "test-artifact".to_string(),
+    *model_with_screen.entries[0].status_mut() = ArtifactStatus::Generating(GeneratingSubstate {
         step: Step::Generate,
-        log_lines: vec![],
-        exists: false,
+        output: String::new(),
     });
 
     let gen_effect = Effect::RunGenerator {
@@ -709,15 +689,9 @@ fn test_complete_lifecycle_success() {
         },
     );
 
-    // Step 3: Serialize - need Generating screen with Serializing step
-    let mut model_for_serialize = model_after_gen;
-    model_for_serialize.screen = Screen::Generating(GeneratingState {
-        artifact_index: 0,
-        artifact_name: "test-artifact".to_string(),
-        step: Step::Serialize,
-        log_lines: vec![],
-        exists: false,
-    });
+    // Step 3: Serialize — the substate already advanced to Serialize via the
+    // GeneratorFinished handler, so no further setup is needed.
+    let model_for_serialize = model_after_gen;
 
     process_effects_and_track(&mut model.clone(), serialize_effect, &mut tracker);
 

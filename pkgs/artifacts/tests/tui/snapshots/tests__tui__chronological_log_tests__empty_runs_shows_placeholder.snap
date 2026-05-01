@@ -1,0 +1,28 @@
+---
+source: tests/tui/chronological_log_tests.rs
+expression: render(&model)
+---
+"┌──────────────────────────────────────────────────────────────────────────────┐"
+"│Artifact: ssh-key (Press 'q' to return, 'e' to expand all, 'c' to collapse all│"
+"└──────────────────────────────────────────────────────────────────────────────┘"
+"  (no runs recorded yet)                                                        "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"Space/Enter: Toggle  +/-: Expand/Collapse  j/k: Navigate  PgUp/PgDn: Scroll  Esc"

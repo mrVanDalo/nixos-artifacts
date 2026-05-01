@@ -37,6 +37,7 @@ ModelState {
     screen: "ArtifactList",
     selected_index: 1,
     selected_log_step: "Generate",
+    active_prompt: None,
     artifacts: [
         ArtifactState {
             target: "machine-one",
@@ -71,4 +72,4 @@ Rendered:
 "│                                 ││▶ Serialize                      │"
 "│                                 ││                                 │"
 "└─────────────────────────────────┘│                                 │"
-"○ Pend ◐ Need ✓ OK ✗ Fail          └─────────────────────────────────┘"
+"○ Pend ◐ Need ✎ Input ✓ OK ✗ Fail ⊘└─────────────────────────────────┘"

@@ -125,6 +125,8 @@ fn model_with_runs(runs: Vec<GenerationRun>) -> Model {
         generate_queue: Default::default(),
         active_prompt: None,
         last_esc_at: None,
+        pipeline_queue: Default::default(),
+        in_flight: None,
     };
 
     let num_runs = model.entries[0].runs().len();

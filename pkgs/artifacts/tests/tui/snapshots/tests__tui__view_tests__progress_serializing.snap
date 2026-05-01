@@ -6,21 +6,22 @@ State:
 GeneratingSnapshot {
     artifact_name: "ssh-key",
     step: "Serializing",
-    log_line_count: 2,
+    is_regen: true,
+    log_line_count: 1,
 }
 
 Rendered:
-"Regenerating artifact: ssh-key                              "
-"                                                            "
+"Regenerating: ssh-key                                       "
 "────────────────────────────────────────────────────────────"
-"✓ Running generator                                         "
-"⟳ Serializing files                                         "
+"✓ Check  ✓ Generate  ⟳ Serializing                          "
 "                                                            "
-"                                                            "
-"                                                            "
-"┌Output────────────────────────────────────────────────────┐"
-"│Generator completed successfully                          │"
-"│Starting serialization...                                 │"
+"┌Serialize output──────────────────────────────────────────┐"
+"│| Starting serialization...                               │"
+"│                                                          │"
+"│                                                          │"
+"│                                                          │"
+"│                                                          │"
+"│                                                          │"
 "│                                                          │"
 "│                                                          │"
 "│                                                          │"

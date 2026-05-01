@@ -431,6 +431,10 @@ pub(super) fn enqueue_or_dispatch(model: &mut Model, effect: Effect) -> Effect {
 /// If nothing is currently in flight, pop the next `RunGenerator` from the
 /// pipeline queue, mark it in flight, and return it for dispatch. Otherwise
 /// return `Effect::None`.
+///
+/// Dispatch flips the artifact's status to
+/// [`ArtifactStatus::Generating`] with the `Generate` substep so the right
+/// pane in `Screen::ArtifactList` switches from logs to live progress.
 pub(super) fn pump_pipeline(model: &mut Model) -> Effect {
     if model.in_flight.is_some() {
         return Effect::None;
@@ -440,6 +444,12 @@ pub(super) fn pump_pipeline(model: &mut Model) -> Effect {
     };
     if let Effect::RunGenerator { artifact_index, .. } = &effect {
         model.in_flight = Some(*artifact_index);
+        if let Some(entry) = model.entries.get_mut(*artifact_index) {
+            *entry.status_mut() = ArtifactStatus::Generating(GeneratingSubstate {
+                step: Step::Generate,
+                output: String::new(),
+            });
+        }
     }
     effect
 }
@@ -560,6 +570,11 @@ pub(crate) fn start_generation_for_selected_internal(
     let Some(entry) = model.entries.get(artifact_index) else {
         return (model, Effect::None);
     };
+
+    // Default screen for any path that just dispatches a generator effect.
+    // Inline-prompt branches and the multi-generator selection branch will
+    // override this below.
+    model.screen = Screen::ArtifactList;
 
     match entry {
         ListEntry::Single(single) => {

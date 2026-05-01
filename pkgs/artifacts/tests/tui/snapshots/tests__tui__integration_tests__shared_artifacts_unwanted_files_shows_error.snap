@@ -12,6 +12,7 @@ TestResult {
         screen: "ArtifactList",
         selected_index: 0,
         selected_log_step: "Check",
+        active_prompt: None,
         artifacts: [
             ArtifactState {
                 target: "[shared]",
@@ -24,14 +25,15 @@ TestResult {
         warnings_count: 0,
     },
     after: ModelState {
-        screen: "Generating",
+        screen: "ArtifactList",
         selected_index: 0,
         selected_log_step: "Check",
+        active_prompt: None,
         artifacts: [
             ArtifactState {
                 target: "[shared]",
                 name: "shared-secret",
-                status: "Pending",
+                status: "Generating(GeneratingSubstate { step: Generate, output: \"\" })",
                 target_type: "shared",
             },
         ],

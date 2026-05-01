@@ -1,0 +1,28 @@
+---
+source: tests/tui/chronological_log_tests.rs
+expression: render(&model)
+---
+"┌──────────────────────────────────────────────────────────────────────────────┐"
+"│Artifact: ssh-key (Press 'q' to return, 'e' to expand all, 'c' to collapse all│"
+"└──────────────────────────────────────────────────────────────────────────────┘"
+"  ▼ Run 1                                                                       "
+"      ▼ Check (1 line)                                                          "
+"        [INFO] Artifact missing                                                 "
+"      ▼ Generate (2 lines, 1 error)                                             "
+"        Attempting generation                                                   "
+"        [ERROR] ssh-keygen failed                                               "
+"      ▼ Serialize (0 lines)                                                     "
+"  ▼ Run 2                                                                       "
+"    → ▼ Check (1 line)                                                          "
+"        [INFO] Artifact stale                                                   "
+"      ▼ Generate (2 lines, 1 success)                                           "
+"        Generating ssh key                                                      "
+"        [OK] Generated 1 file                                                   "
+"      ▼ Serialize (1 line, 1 success)                                           "
+"        [OK] Serialized                                                         "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"                                                                                "
+"Space/Enter: Toggle  +/-: Expand/Collapse  j/k: Navigate  PgUp/PgDn: Scroll  Esc"

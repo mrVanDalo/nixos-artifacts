@@ -1,6 +1,6 @@
 use crate::tui::model_state::ModelState;
 use artifacts::app::model::{
-    ArtifactEntry, ArtifactError, ArtifactStatus, GeneratingState, GenerationRun, InputMode,
+    ArtifactEntry, ArtifactError, ArtifactStatus, GeneratingSubstate, GenerationRun, InputMode,
     ListEntry, LogEntry, LogLevel, Model, PromptEntry, PromptState, Screen, SelectGeneratorState,
     SharedEntry, Step, TargetType,
 };
@@ -8,7 +8,7 @@ use artifacts::config::make::{
     ArtifactDef, FileDef, GeneratorInfo, GeneratorSource, PromptDef, TargetType as ConfigTargetType,
 };
 use artifacts::tui::views::{
-    render_artifact_list, render_generator_selection, render_progress, render_prompt,
+    render_artifact_list, render_generator_selection, render_progress_pane, render_prompt,
 };
 use insta::assert_snapshot;
 use ratatui::{Terminal, backend::TestBackend};
@@ -144,26 +144,37 @@ impl PromptSnapshot {
     }
 }
 
-/// Snapshot representation of GeneratingState
+/// Snapshot representation of an artifact entry that is currently generating.
+///
+/// Progress is now rendered from the entry itself (via
+/// [`ArtifactStatus::Generating`] and the entry's per-step log buckets), so
+/// the snapshot captures those fields.
 // #[allow(dead_code)] needed because fields are read via Debug trait for snapshot testing
 #[derive(Debug)]
 #[allow(dead_code)]
 struct GeneratingSnapshot {
     artifact_name: String,
     step: &'static str,
+    is_regen: bool,
     log_line_count: usize,
 }
 
 impl GeneratingSnapshot {
-    fn from_state(state: &GeneratingState) -> Self {
+    fn from_entry(entry: &ListEntry) -> Self {
+        let step = match entry.status() {
+            ArtifactStatus::Generating(substate) => substate.step,
+            _ => Step::default(),
+        };
+        let logs = entry.step_logs();
         Self {
-            artifact_name: state.artifact_name.clone(),
-            step: match state.step {
+            artifact_name: entry.artifact_name().to_string(),
+            step: match step {
                 Step::Check => "CheckSerialization",
                 Step::Generate => "RunningGenerator",
                 Step::Serialize => "Serializing",
             },
-            log_line_count: state.log_lines.len(),
+            is_regen: entry.runs().len() > 1,
+            log_line_count: logs.get(step).len(),
         }
     }
 }
@@ -319,6 +330,8 @@ fn make_test_model() -> Model {
         generate_queue: Default::default(),
         active_prompt: None,
         last_esc_at: None,
+        pipeline_queue: Default::default(),
+        in_flight: None,
     }
 }
 
@@ -691,23 +704,31 @@ fn test_prompt_second_of_three() {
 
 #[test]
 fn test_progress_running_generator() {
-    let state = GeneratingState {
-        artifact_index: 0,
-        artifact_name: "ssh-key".to_string(),
-        step: Step::Generate,
-        log_lines: vec![],
-        exists: false,
+    // Build an entry whose status is Generating(Generate). render_progress_pane
+    // pulls the step from the substate and the logs from the entry's per-step
+    // buckets — no separate screen state required.
+    let entry = ArtifactEntry {
+        target_type: TargetType::NixOS {
+            machine: "machine-one".to_string(),
+        },
+        artifact: make_test_artifact("ssh-key", vec![]),
+        status: ArtifactStatus::Generating(GeneratingSubstate {
+            step: Step::Generate,
+            output: String::new(),
+        }),
+        runs: Vec::new(),
     };
+    let entry = ListEntry::Single(entry);
 
     let backend = TestBackend::new(60, 15);
     let mut terminal = Terminal::new(backend).unwrap();
 
     terminal
-        .draw(|f| render_progress(f, &state, f.area()))
+        .draw(|f| render_progress_pane(f, &entry, f.area()))
         .unwrap();
 
     let result = ViewTestResult {
-        state: GeneratingSnapshot::from_state(&state),
+        state: GeneratingSnapshot::from_entry(&entry),
         model: None,
         rendered: terminal.backend().to_string(),
     };
@@ -716,26 +737,49 @@ fn test_progress_running_generator() {
 
 #[test]
 fn test_progress_serializing() {
-    let state = GeneratingState {
-        artifact_index: 0,
-        artifact_name: "ssh-key".to_string(),
-        step: Step::Serialize,
-        log_lines: vec![
-            "Generator completed successfully".to_string(),
-            "Starting serialization...".to_string(),
+    // Regeneration case: a previous run is recorded so the header reads
+    // "Regenerating", and the substate is on the Serialize step. Logs that
+    // would have appeared before serialization are seeded into the current
+    // run's per-step buckets.
+    let entry = ArtifactEntry {
+        target_type: TargetType::NixOS {
+            machine: "machine-one".to_string(),
+        },
+        artifact: make_test_artifact("ssh-key", vec![]),
+        status: ArtifactStatus::Generating(GeneratingSubstate {
+            step: Step::Serialize,
+            output: String::new(),
+        }),
+        runs: vec![
+            GenerationRun::default(), // prior successful run → is_regen
+            GenerationRun::default(), // current run
         ],
-        exists: true, // Test regeneration case
     };
+    let mut entry = ListEntry::Single(entry);
+    entry
+        .step_logs_mut()
+        .get_mut(Step::Generate)
+        .push(LogEntry {
+            level: LogLevel::Output,
+            message: "Generator completed successfully".to_string(),
+        });
+    entry
+        .step_logs_mut()
+        .get_mut(Step::Serialize)
+        .push(LogEntry {
+            level: LogLevel::Output,
+            message: "Starting serialization...".to_string(),
+        });
 
     let backend = TestBackend::new(60, 15);
     let mut terminal = Terminal::new(backend).unwrap();
 
     terminal
-        .draw(|f| render_progress(f, &state, f.area()))
+        .draw(|f| render_progress_pane(f, &entry, f.area()))
         .unwrap();
 
     let result = ViewTestResult {
-        state: GeneratingSnapshot::from_state(&state),
+        state: GeneratingSnapshot::from_entry(&entry),
         model: None,
         rendered: terminal.backend().to_string(),
     };
@@ -817,6 +861,8 @@ fn test_multiple_machines_before_generate_all() {
         generate_queue: Default::default(),
         active_prompt: None,
         last_esc_at: None,
+        pipeline_queue: Default::default(),
+        in_flight: None,
     };
 
     let backend = TestBackend::new(70, 12);
@@ -885,6 +931,8 @@ fn test_multiple_machines_after_generate_all() {
         generate_queue: Default::default(),
         active_prompt: None,
         last_esc_at: None,
+        pipeline_queue: Default::default(),
+        in_flight: None,
     };
 
     let backend = TestBackend::new(70, 12);
@@ -947,6 +995,8 @@ fn test_artifact_list_with_shared_artifacts() {
         generate_queue: Default::default(),
         active_prompt: None,
         last_esc_at: None,
+        pipeline_queue: Default::default(),
+        in_flight: None,
     };
 
     let backend = TestBackend::new(70, 10);
@@ -1002,6 +1052,8 @@ fn test_shared_artifact_pending_status() {
         generate_queue: Default::default(),
         active_prompt: None,
         last_esc_at: None,
+        pipeline_queue: Default::default(),
+        in_flight: None,
     };
 
     let backend = TestBackend::new(70, 10);
@@ -1035,6 +1087,8 @@ fn test_shared_artifact_needs_generation_status() {
         generate_queue: Default::default(),
         active_prompt: None,
         last_esc_at: None,
+        pipeline_queue: Default::default(),
+        in_flight: None,
     };
 
     let backend = TestBackend::new(70, 10);
@@ -1068,6 +1122,8 @@ fn test_shared_artifact_up_to_date_status() {
         generate_queue: Default::default(),
         active_prompt: None,
         last_esc_at: None,
+        pipeline_queue: Default::default(),
+        in_flight: None,
     };
 
     let backend = TestBackend::new(70, 10);
@@ -1121,6 +1177,8 @@ fn test_shared_artifact_failed_runtime_error() {
         generate_queue: Default::default(),
         active_prompt: None,
         last_esc_at: None,
+        pipeline_queue: Default::default(),
+        in_flight: None,
     };
 
     let backend = TestBackend::new(70, 15);
@@ -1168,6 +1226,8 @@ fn test_shared_artifact_failed_config_error() {
         generate_queue: Default::default(),
         active_prompt: None,
         last_esc_at: None,
+        pipeline_queue: Default::default(),
+        in_flight: None,
     };
 
     let backend = TestBackend::new(70, 15);
@@ -1665,6 +1725,8 @@ mod model_tests {
             generate_queue: Default::default(),
             active_prompt: None,
             last_esc_at: None,
+            pipeline_queue: Default::default(),
+            in_flight: None,
         }
     }
 

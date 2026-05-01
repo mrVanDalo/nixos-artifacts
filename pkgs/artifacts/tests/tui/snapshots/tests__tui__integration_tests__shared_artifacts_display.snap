@@ -10,6 +10,7 @@ TestResult {
         screen: "ArtifactList",
         selected_index: 0,
         selected_log_step: "Check",
+        active_prompt: None,
         artifacts: [
             ArtifactState {
                 target: "[shared]",
@@ -37,6 +38,7 @@ TestResult {
         screen: "ArtifactList",
         selected_index: 0,
         selected_log_step: "Check",
+        active_prompt: None,
         artifacts: [
             ArtifactState {
                 target: "[shared]",

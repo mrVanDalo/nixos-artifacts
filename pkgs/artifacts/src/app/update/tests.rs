@@ -147,7 +147,11 @@ fn test_enter_skips_prompt_if_no_prompts() {
     model.selected_index = 1; // api-token has no prompts
     let (new_model, effect) = update(model, Message::Key(KeyEvent::enter()));
 
-    assert!(matches!(new_model.screen, Screen::Generating(_)));
+    assert!(matches!(new_model.screen, Screen::ArtifactList));
+    assert!(matches!(
+        new_model.entries[1].status(),
+        ArtifactStatus::Generating(_)
+    ));
     assert!(matches!(effect, Effect::RunGenerator { .. }));
 }
 
@@ -255,10 +259,12 @@ fn test_update_returns_run_generator_effect() {
 
     let (new_model, effect) = update(model, Message::Key(KeyEvent::enter()));
 
-    // Should be generating screen
+    // Generation no longer takes over the screen — progress renders in the
+    // right pane while the user stays on ArtifactList.
+    assert!(matches!(new_model.screen, Screen::ArtifactList));
     assert!(
-        matches!(new_model.screen, Screen::Generating(_)),
-        "Should enter generating screen"
+        matches!(new_model.entries[1].status(), ArtifactStatus::Generating(_)),
+        "Selected artifact should be Generating"
     );
     assert!(
         matches!(effect, Effect::RunGenerator { .. }),
@@ -271,12 +277,9 @@ fn test_update_returns_run_generator_effect() {
 fn test_update_returns_serialize_effect() {
     let mut model = make_test_model();
     model.selected_index = 0;
-    model.screen = Screen::Generating(GeneratingState {
-        artifact_index: 0,
-        artifact_name: "ssh-key".to_string(),
+    *model.entries[0].status_mut() = ArtifactStatus::Generating(GeneratingSubstate {
         step: Step::Generate,
-        log_lines: vec![],
-        exists: false,
+        output: String::new(),
     });
 
     // Simulate successful generator completion
@@ -291,10 +294,12 @@ fn test_update_returns_serialize_effect() {
         },
     );
 
-    // Should move to serializing step
+    // Status stays Generating while serialize runs; the screen never leaves
+    // the artifact list.
+    assert!(matches!(new_model.screen, Screen::ArtifactList));
     assert!(
-        matches!(new_model.screen, Screen::Generating(_)),
-        "Should stay on generating screen"
+        matches!(new_model.entries[0].status(), ArtifactStatus::Generating(_)),
+        "Should stay Generating until serialize completes"
     );
     assert!(
         matches!(effect, Effect::Serialize { .. }),
@@ -336,15 +341,6 @@ fn test_update_handles_async_result() {
     let mut model = make_test_model();
     model.selected_index = 0;
 
-    // Set generating state
-    model.screen = Screen::Generating(GeneratingState {
-        artifact_index: 0,
-        artifact_name: "ssh-key".to_string(),
-        step: Step::Generate,
-        log_lines: vec![],
-        exists: false,
-    });
-
     // Update first entry to Generating status
     if let Some(entry) = model.entries.get_mut(0) {
         *entry.status_mut() = ArtifactStatus::Generating(GeneratingSubstate {
@@ -365,14 +361,19 @@ fn test_update_handles_async_result() {
         },
     );
 
-    // Verify model state updated
-    assert!(matches!(new_model.screen, Screen::Generating(_)));
-    // Verify logs were added
-    if let Screen::Generating(state) = &new_model.screen {
+    // Status still Generating, but the substate has advanced to the
+    // Serialize step. Screen never leaves the artifact list.
+    assert!(matches!(new_model.screen, Screen::ArtifactList));
+    if let ArtifactStatus::Generating(substate) = new_model.entries[0].status() {
         assert_eq!(
-            state.step,
+            substate.step,
             Step::Serialize,
             "Should move to serializing step"
+        );
+    } else {
+        panic!(
+            "expected Generating substate, got {:?}",
+            new_model.entries[0].status()
         );
     }
 }
@@ -621,11 +622,13 @@ fn test_single_generator_no_prompts_goes_to_generating() {
     // Press Enter on shared artifact
     let (new_model, effect) = update(model, Message::Key(KeyEvent::enter()));
 
-    // Should go directly to Generating screen
+    // Generation now happens in-place — screen stays on the list and the
+    // shared entry's status flips to Generating.
+    assert!(matches!(new_model.screen, Screen::ArtifactList));
     assert!(
-        matches!(new_model.screen, Screen::Generating(_)),
-        "Single generator without prompts should go to Generating screen, got {:?}",
-        new_model.screen
+        matches!(new_model.entries[0].status(), ArtifactStatus::Generating(_)),
+        "Single generator without prompts should mark the shared entry Generating, got {:?}",
+        new_model.entries[0].status()
     );
 
     // Effect should be RunGenerator with TargetSpec::Multi
@@ -1263,9 +1266,8 @@ fn test_check_result_does_not_dispatch_if_not_queued() {
 
 #[test]
 fn test_generator_finished_works_from_artifact_list_screen() {
-    // The 'a' flow leaves the user on Screen::ArtifactList while generators
-    // run. GeneratorFinished must still be processed (previously the dispatch
-    // was guarded on Screen::Generating, silently dropping these results).
+    // Sanity check: GeneratorFinished is processed while the user is on
+    // Screen::ArtifactList (which is now the only place generation runs from).
     let mut model = make_mixed_status_model();
     *model.entries[1].status_mut() = ArtifactStatus::NeedsGeneration;
     assert!(matches!(model.screen, Screen::ArtifactList));

@@ -1,7 +1,7 @@
 use artifacts::app::message::{KeyEvent, Message};
 use artifacts::app::model::{
-    ArtifactEntry, ArtifactStatus, ConfirmRegenerateState, GeneratingState, ListEntry, Model,
-    Screen, SharedEntry, Step, TargetType,
+    ArtifactEntry, ArtifactStatus, ConfirmRegenerateState, ListEntry, Model, Screen, SharedEntry,
+    TargetType,
 };
 use artifacts::app::update::update;
 use artifacts::config::make::{ArtifactDef, FileDef, PromptDef, SharedArtifactInfo};
@@ -68,6 +68,8 @@ fn make_test_model_with_existing_artifact() -> Model {
         generate_queue: Default::default(),
         active_prompt: None,
         last_esc_at: None,
+        pipeline_queue: Default::default(),
+        in_flight: None,
     }
 }
 
@@ -92,6 +94,8 @@ fn make_test_model_with_new_artifact() -> Model {
         generate_queue: Default::default(),
         active_prompt: None,
         last_esc_at: None,
+        pipeline_queue: Default::default(),
+        in_flight: None,
     }
 }
 
@@ -128,6 +132,8 @@ fn make_test_model_with_shared_artifact(status: ArtifactStatus) -> Model {
         generate_queue: Default::default(),
         active_prompt: None,
         last_esc_at: None,
+        pipeline_queue: Default::default(),
+        in_flight: None,
     }
 }
 
@@ -192,17 +198,23 @@ fn test_dialog_appears_for_existing_artifact() {
 
 #[test]
 fn test_dialog_skips_for_new_artifact() {
-    // Given: Artifact with exists=false and status=NeedsGeneration
+    // Given: Artifact with status=NeedsGeneration (does not exist yet)
     let model = make_test_model_with_new_artifact();
 
     // When: User presses Enter on artifact list
     let (new_model, _effect) = update(model, Message::Key(KeyEvent::enter()));
 
-    // Then: Screen transitions directly to generating (no dialog)
+    // Then: No dialog — generation starts in place. Screen stays on the
+    // list and the entry's status flips to Generating.
     assert!(
-        matches!(new_model.screen, Screen::Generating(_)),
-        "Expected Generating screen for new artifact, got {:?}",
+        matches!(new_model.screen, Screen::ArtifactList),
+        "Expected ArtifactList screen for new artifact (no dialog), got {:?}",
         new_model.screen
+    );
+    assert!(
+        matches!(new_model.entries[0].status(), ArtifactStatus::Generating(_)),
+        "Expected entry status Generating, got {:?}",
+        new_model.entries[0].status()
     );
 }
 
@@ -355,11 +367,12 @@ fn test_dialog_enter_confirms_selection() {
     // When: User presses Enter
     let (new_model, _effect) = update(model, Message::Key(KeyEvent::enter()));
 
-    // Then: Proceeds to generation. With prompts, the inline prompt opens on
-    // the artifact list (`active_prompt` set); without prompts, generation
-    // starts immediately on the Generating screen.
-    let proceeded = matches!(new_model.screen, Screen::Generating(_))
-        || (matches!(new_model.screen, Screen::ArtifactList) && new_model.active_prompt.is_some());
+    // Then: Proceeds to generation. The screen always returns to
+    // ArtifactList; with prompts, `active_prompt` is set; without prompts,
+    // the entry's status flips to Generating.
+    assert!(matches!(new_model.screen, Screen::ArtifactList));
+    let proceeded = new_model.active_prompt.is_some()
+        || matches!(new_model.entries[0].status(), ArtifactStatus::Generating(_));
     assert!(
         proceeded,
         "Expected to proceed to generation when Regenerate selected"
@@ -380,9 +393,11 @@ fn test_dialog_space_confirms_selection() {
     // When: User presses Space
     let (new_model, _effect) = update(model, Message::Key(KeyEvent::char(' ')));
 
-    // Then: Proceeds to generation (Generating screen or inline prompt).
-    let proceeded = matches!(new_model.screen, Screen::Generating(_))
-        || (matches!(new_model.screen, Screen::ArtifactList) && new_model.active_prompt.is_some());
+    // Then: Proceeds to generation. Screen stays on ArtifactList; either
+    // the inline prompt opens or the entry flips to Generating directly.
+    assert!(matches!(new_model.screen, Screen::ArtifactList));
+    let proceeded = new_model.active_prompt.is_some()
+        || matches!(new_model.entries[0].status(), ArtifactStatus::Generating(_));
     assert!(
         proceeded,
         "Expected to proceed to generation when Space pressed with Regenerate selected"
@@ -445,10 +460,17 @@ fn test_dialog_regenerate_proceeds_to_generation() {
     // When: User presses Enter (confirming Regenerate)
     let (new_model, _effect) = update(model, Message::Key(KeyEvent::enter()));
 
-    // Then: Proceeds to Generating (no prompts for this artifact)
+    // Then: No prompts on this artifact, so generation starts immediately —
+    // the screen returns to the artifact list and the entry's status is
+    // Generating.
     assert!(
-        matches!(new_model.screen, Screen::Generating(_)),
-        "Selecting Regenerate should proceed to Generating for artifact without prompts"
+        matches!(new_model.screen, Screen::ArtifactList),
+        "Screen should return to ArtifactList; progress is rendered in the right pane"
+    );
+    assert!(
+        matches!(new_model.entries[0].status(), ArtifactStatus::Generating(_)),
+        "Selecting Regenerate should flip the entry status to Generating, got {:?}",
+        new_model.entries[0].status()
     );
 }
 
@@ -481,6 +503,8 @@ fn test_dialog_regenerate_proceeds_to_prompts() {
         generate_queue: Default::default(),
         active_prompt: None,
         last_esc_at: None,
+        pipeline_queue: Default::default(),
+        in_flight: None,
     };
 
     // When: User presses Enter (confirming Regenerate)
@@ -542,62 +566,8 @@ fn test_dialog_skips_for_new_shared_artifact() {
 }
 
 // ============================================================================
-// Status Text Tests (Regenerating vs Generating)
+// Existence-Derived Behavior
 // ============================================================================
-
-#[test]
-fn test_status_text_generating_state_for_existing() {
-    // Given: GeneratingState with exists=true
-    let state = GeneratingState {
-        artifact_index: 0,
-        artifact_name: "ssh-key".to_string(),
-        step: Step::Generate,
-        log_lines: vec![],
-        exists: true, // EXISTING
-    };
-
-    // Then: The exists flag is properly set
-    assert!(
-        state.exists,
-        "GeneratingState should have exists=true for regeneration"
-    );
-}
-
-#[test]
-fn test_status_text_generating_state_for_new() {
-    // Given: GeneratingState with exists=false
-    let state = GeneratingState {
-        artifact_index: 0,
-        artifact_name: "ssh-key".to_string(),
-        step: Step::Generate,
-        log_lines: vec![],
-        exists: false, // NEW
-    };
-
-    // Then: The exists flag is properly set
-    assert!(
-        !state.exists,
-        "GeneratingState should have exists=false for new artifact"
-    );
-}
-
-#[test]
-fn test_generating_state_exists_flows_from_entry() {
-    // Verify that exists flag flows correctly from entry to GeneratingState
-    let model_existing = make_test_model_with_existing_artifact();
-    let (new_model, _) = update(model_existing, Message::Key(KeyEvent::enter()));
-
-    // Should proceed to generation (dialog skipped due to no prompts, but for this test
-    // we need an artifact WITH prompts so we can check the dialog flow)
-    // Actually, let's check the flow properly:
-    // For existing artifact with no prompts, it goes directly to Generating
-    if let Screen::Generating(state) = &new_model.screen {
-        assert!(
-            state.exists,
-            "GeneratingState should inherit exists=true from entry"
-        );
-    }
-}
 
 #[test]
 fn test_entry_exists_used_for_dialog_decision() {
@@ -613,7 +583,8 @@ fn test_entry_exists_used_for_dialog_decision() {
         runs: Vec::new(),
     };
 
-    // The exists_before flag for GeneratingState comes from checking status == UpToDate
+    // The `exists_before` flag passed to the generator effect is derived
+    // from `status == UpToDate`.
     let exists_from_status = matches!(entry_up_to_date.status, ArtifactStatus::UpToDate);
 
     assert!(
@@ -791,6 +762,8 @@ fn test_dialog_appears_only_for_needs_generation() {
         generate_queue: Default::default(),
         active_prompt: None,
         last_esc_at: None,
+        pipeline_queue: Default::default(),
+        in_flight: None,
     };
 
     // When: User presses Enter
@@ -840,6 +813,8 @@ fn test_dialog_with_many_targets_truncation() {
         generate_queue: Default::default(),
         active_prompt: None,
         last_esc_at: None,
+        pipeline_queue: Default::default(),
+        in_flight: None,
     };
 
     // When: User presses Enter

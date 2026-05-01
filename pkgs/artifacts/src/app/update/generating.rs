@@ -43,6 +43,13 @@ fn handle_generator_success(
         message: "Generated files".to_string(),
     });
 
+    // Advance the substate so the right pane progress indicator switches
+    // from "Generating" to "Serializing" while the entry stays in the
+    // Generating status until SerializeFinished resolves it.
+    if let ArtifactStatus::Generating(substate) = entry.status_mut() {
+        substate.step = Step::Serialize;
+    }
+
     // Build serialization effect based on entry type (using unified TargetSpec)
     let effect = match &model.entries[artifact_index] {
         ListEntry::Single(single) => Effect::Serialize {

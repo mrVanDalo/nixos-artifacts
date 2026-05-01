@@ -56,7 +56,6 @@ impl ModelState {
                 Screen::ArtifactList => "ArtifactList",
                 Screen::SelectGenerator(_) => "SelectGenerator",
                 Screen::ConfirmRegenerate(_) => "ConfirmRegenerate",
-                Screen::Generating(_) => "Generating",
                 Screen::Done(_) => "Done",
                 Screen::ChronologicalLog(_) => "ChronologicalLog",
             },
@@ -151,6 +150,8 @@ mod tests {
             generate_queue: Default::default(),
             active_prompt: None,
             last_esc_at: None,
+            pipeline_queue: Default::default(),
+            in_flight: None,
         };
 
         let state = ModelState::from_model(&model);
@@ -165,23 +166,22 @@ mod tests {
 
     #[test]
     fn test_model_state_with_single_entry() {
+        // Generation no longer takes over the screen — the entry's status
+        // carries the Generating substate instead.
         let entry = ArtifactEntry {
             target_type: TargetType::NixOS {
                 machine: "machine-one".to_string(),
             },
             artifact: make_test_artifact("test-artifact"),
-            status: ArtifactStatus::NeedsGeneration,
+            status: ArtifactStatus::Generating(artifacts::app::model::GeneratingSubstate {
+                step: Step::Generate,
+                output: String::new(),
+            }),
             runs: Vec::new(),
         };
 
         let model = Model {
-            screen: Screen::Generating(artifacts::app::model::GeneratingState {
-                artifact_index: 0,
-                artifact_name: "test-artifact".to_string(),
-                step: artifacts::app::model::Step::Generate,
-                log_lines: vec![],
-                exists: false,
-            }),
+            screen: Screen::ArtifactList,
             entries: vec![ListEntry::Single(entry)],
             selected_index: 0,
             selected_log_step: Step::Generate,
@@ -191,11 +191,13 @@ mod tests {
             generate_queue: Default::default(),
             active_prompt: None,
             last_esc_at: None,
+            pipeline_queue: Default::default(),
+            in_flight: None,
         };
 
         let state = ModelState::from_model(&model);
 
-        assert_eq!(state.screen, "Generating");
+        assert_eq!(state.screen, "ArtifactList");
         assert_eq!(state.selected_log_step, "Generate");
         assert_eq!(state.artifacts.len(), 1);
         assert_eq!(state.artifacts[0].target, "machine-one");
