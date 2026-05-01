@@ -55,7 +55,7 @@ pub(super) fn update_generator_selection(mut model: Model, key: KeyEvent) -> (Mo
 
                 if prompts.is_empty() {
                     // No prompts needed, go straight to generating
-                    let effect = Effect::RunGenerator {
+                    let run_gen = Effect::RunGenerator {
                         artifact_index,
                         artifact_name: shared.info.artifact_name.clone(),
                         target_spec: TargetSpec::Multi {
@@ -73,6 +73,7 @@ pub(super) fn update_generator_selection(mut model: Model, key: KeyEvent) -> (Mo
                         log_lines: vec![],
                         exists: exists_before,
                     });
+                    let effect = super::enqueue_or_dispatch(&mut model, run_gen);
                     (model, effect)
                 } else {
                     // Need to collect prompts first — switch to inline prompt

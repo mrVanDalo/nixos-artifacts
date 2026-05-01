@@ -513,6 +513,8 @@ mod tests {
             generate_queue: Default::default(),
             active_prompt: None,
             last_esc_at: None,
+            pipeline_queue: Default::default(),
+            in_flight: None,
         }
     }
 

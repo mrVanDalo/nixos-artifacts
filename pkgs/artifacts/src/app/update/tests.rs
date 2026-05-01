@@ -61,6 +61,8 @@ fn make_test_model() -> Model {
         generate_queue: Default::default(),
         active_prompt: None,
         last_esc_at: None,
+        pipeline_queue: Default::default(),
+        in_flight: None,
     }
 }
 
@@ -533,6 +535,8 @@ fn test_single_generator_skips_dialog() {
         generate_queue: Default::default(),
         active_prompt: None,
         last_esc_at: None,
+        pipeline_queue: Default::default(),
+        in_flight: None,
     };
 
     // Press Enter on shared artifact
@@ -610,6 +614,8 @@ fn test_single_generator_no_prompts_goes_to_generating() {
         generate_queue: Default::default(),
         active_prompt: None,
         last_esc_at: None,
+        pipeline_queue: Default::default(),
+        in_flight: None,
     };
 
     // Press Enter on shared artifact
@@ -682,6 +688,8 @@ fn test_multiple_generators_shows_dialog() {
         generate_queue: Default::default(),
         active_prompt: None,
         last_esc_at: None,
+        pipeline_queue: Default::default(),
+        in_flight: None,
     };
 
     // Press Enter on shared artifact
@@ -752,6 +760,8 @@ fn test_single_generator_stores_selected_path() {
         generate_queue: Default::default(),
         active_prompt: None,
         last_esc_at: None,
+        pipeline_queue: Default::default(),
+        in_flight: None,
     };
 
     // Press Enter on shared artifact
@@ -815,6 +825,8 @@ fn make_test_model_with_shared() -> Model {
         generate_queue: Default::default(),
         active_prompt: None,
         last_esc_at: None,
+        pipeline_queue: Default::default(),
+        in_flight: None,
     }
 }
 
@@ -942,6 +954,8 @@ fn make_mixed_status_model() -> Model {
         generate_queue: Default::default(),
         active_prompt: None,
         last_esc_at: None,
+        pipeline_queue: Default::default(),
+        in_flight: None,
     }
 }
 
@@ -1015,6 +1029,8 @@ fn test_a_skips_needs_generation_with_prompts() {
         generate_queue: Default::default(),
         active_prompt: None,
         last_esc_at: None,
+        pipeline_queue: Default::default(),
+        in_flight: None,
     };
 
     let (new_model, effect) = update(model, Message::Key(KeyEvent::char('a')));
@@ -1033,11 +1049,15 @@ fn test_a_skips_needs_generation_with_prompts() {
 
 #[test]
 fn test_check_result_drains_queue_on_needs_generation() {
-    // Press 'a' on a Pending entry, then have its check come back as
-    // NeedsGeneration — generator must dispatch now.
+    // Press 'a': entry 0 (Pending) is queued, entry 1 (NeedsGeneration) goes
+    // straight onto the gen→ser pipeline and is dispatched (in_flight = 1).
+    // When entry 0's check resolves to NeedsGeneration the queue drains it
+    // onto the pipeline, but the effect is None until 1 finishes — that's
+    // the whole point of the pipelined order. See nixos-artifacts-tje.
     let model = make_mixed_status_model();
     let (model, _) = update(model, Message::Key(KeyEvent::char('a')));
     assert!(model.generate_queue.contains(&0));
+    assert_eq!(model.in_flight, Some(1));
 
     let (new_model, effect) = update(
         model,
@@ -1053,15 +1073,24 @@ fn test_check_result_drains_queue_on_needs_generation() {
         "queue should drain when check resolves to NeedsGeneration"
     );
     assert!(
+        effect.is_none(),
+        "pipeline already in flight for entry 1 — entry 0's RunGenerator must wait, got {:?}",
+        effect
+    );
+    assert_eq!(
+        new_model.pipeline_queue.len(),
+        1,
+        "entry 0's RunGenerator should be queued behind the in-flight entry 1"
+    );
+    assert!(
         matches!(
-            effect,
-            Effect::RunGenerator {
+            new_model.pipeline_queue.front(),
+            Some(Effect::RunGenerator {
                 artifact_index: 0,
                 ..
-            }
+            })
         ),
-        "expected RunGenerator for the previously queued entry, got {:?}",
-        effect
+        "expected entry 0's RunGenerator at the head of the pipeline queue"
     );
 }
 
@@ -1091,6 +1120,122 @@ fn test_check_result_drops_up_to_date_silently() {
         "no effect should fire for UpToDate result, got {:?}",
         effect
     );
+}
+
+#[test]
+fn test_pipeline_dispatches_one_at_a_time_then_advances_on_serialize() {
+    // Three NeedsGeneration entries (no prompts) — pressing 'a' should
+    // dispatch only the first via Effect::RunGenerator and queue the rest
+    // in pipeline_queue. SerializeFinished for the in-flight entry then
+    // pops the next from the pipeline. Locks in the gen0→ser0→gen1→ser1
+    // ordering. See nixos-artifacts-tje.
+    let entries: Vec<ListEntry> = (0..3)
+        .map(|i| {
+            ListEntry::Single(ArtifactEntry {
+                target_type: TargetType::NixOS {
+                    machine: format!("m{}", i),
+                },
+                artifact: make_test_artifact(&format!("art{}", i), vec![]),
+                status: ArtifactStatus::NeedsGeneration,
+                runs: Vec::new(),
+            })
+        })
+        .collect();
+    let model = Model {
+        screen: Screen::ArtifactList,
+        entries,
+        selected_index: 0,
+        selected_log_step: Step::default(),
+        error: None,
+        warnings: Vec::new(),
+        tick_count: 0,
+        generate_queue: Default::default(),
+        active_prompt: None,
+        last_esc_at: None,
+        pipeline_queue: Default::default(),
+        in_flight: None,
+    };
+
+    let (model, effect) = update(model, Message::Key(KeyEvent::char('a')));
+
+    assert!(
+        matches!(
+            effect,
+            Effect::RunGenerator {
+                artifact_index: 0,
+                ..
+            }
+        ),
+        "first NeedsGeneration entry should dispatch immediately, got {:?}",
+        effect
+    );
+    assert_eq!(model.in_flight, Some(0));
+    assert_eq!(
+        model.pipeline_queue.len(),
+        2,
+        "remaining two entries should be queued behind the in-flight one"
+    );
+
+    // Serialize for entry 0 finishes — pipeline must advance to entry 1.
+    let (model, effect) = update(
+        model,
+        Message::SerializeFinished {
+            artifact_index: 0,
+            result: Ok(ScriptOutput::default()),
+        },
+    );
+
+    assert!(
+        matches!(
+            effect,
+            Effect::RunGenerator {
+                artifact_index: 1,
+                ..
+            }
+        ),
+        "pipeline should advance to entry 1 after entry 0 serializes, got {:?}",
+        effect
+    );
+    assert_eq!(model.in_flight, Some(1));
+    assert_eq!(model.pipeline_queue.len(), 1);
+
+    // And again — entry 2 is the last.
+    let (model, effect) = update(
+        model,
+        Message::SerializeFinished {
+            artifact_index: 1,
+            result: Ok(ScriptOutput::default()),
+        },
+    );
+
+    assert!(
+        matches!(
+            effect,
+            Effect::RunGenerator {
+                artifact_index: 2,
+                ..
+            }
+        ),
+        "pipeline should advance to entry 2 after entry 1 serializes, got {:?}",
+        effect
+    );
+    assert_eq!(model.in_flight, Some(2));
+    assert!(model.pipeline_queue.is_empty());
+
+    // Final serialize → pipeline drained, no further effect.
+    let (model, effect) = update(
+        model,
+        Message::SerializeFinished {
+            artifact_index: 2,
+            result: Ok(ScriptOutput::default()),
+        },
+    );
+    assert!(
+        effect.is_none(),
+        "no effect once the pipeline is drained, got {:?}",
+        effect
+    );
+    assert_eq!(model.in_flight, None);
 }
 
 #[test]
@@ -1184,6 +1329,8 @@ fn make_dual_prompt_model() -> Model {
         generate_queue: Default::default(),
         active_prompt: None,
         last_esc_at: None,
+        pipeline_queue: Default::default(),
+        in_flight: None,
     }
 }
 
@@ -1329,6 +1476,8 @@ fn test_prompt_esc_on_last_queued_artifact_clears_prompt() {
         generate_queue: Default::default(),
         active_prompt: None,
         last_esc_at: None,
+        pipeline_queue: Default::default(),
+        in_flight: None,
     };
     let (model, _) = update(model, Message::Key(KeyEvent::char('a')));
     assert_eq!(model.active_prompt.as_ref().unwrap().artifact_index, 0);

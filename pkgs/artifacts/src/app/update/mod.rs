@@ -80,6 +80,8 @@ pub fn cancel_queue(mut model: Model) -> (Model, Effect) {
         }
     }
     model.generate_queue.clear();
+    model.pipeline_queue.clear();
+    model.in_flight = None;
     model.active_prompt = None;
     model.screen = Screen::ArtifactList;
     (model, Effect::CancelQueue)
@@ -294,7 +296,11 @@ fn handle_check_result(
             ArtifactStatus::NeedsGeneration => {
                 if let Some(effect) = build_run_generator_effect_for(entry, artifact_index) {
                     model.generate_queue.remove(&artifact_index);
-                    return (model, effect);
+                    // Push onto the gen→ser pipeline so a check resolving
+                    // mid-batch doesn't bypass the in-flight artifact. See
+                    // nixos-artifacts-tje.
+                    let dispatched = enqueue_or_dispatch(&mut model, effect);
+                    return (model, dispatched);
                 }
                 // Prompt-bearing: keep queued, surface the inline prompt if
                 // nothing else is currently being collected.
@@ -400,6 +406,38 @@ pub(crate) fn build_prompt_state_for(
             })
         }
     }
+}
+
+/// Push a `RunGenerator` to the pipeline and return either that effect
+/// (if the pipeline is empty and we can dispatch immediately) or
+/// `Effect::None` (if a previous artifact is still in flight). Other effect
+/// variants pass through unchanged. The pipeline is drained one slot at a
+/// time so the user sees gen0→ser0→gen1→ser1 rather than all-gens-then-all-
+/// sers. See nixos-artifacts-tje.
+pub(super) fn enqueue_or_dispatch(model: &mut Model, effect: Effect) -> Effect {
+    match effect {
+        Effect::RunGenerator { .. } => {
+            model.pipeline_queue.push_back(effect);
+            pump_pipeline(model)
+        }
+        other => other,
+    }
+}
+
+/// If nothing is currently in flight, pop the next `RunGenerator` from the
+/// pipeline queue, mark it in flight, and return it for dispatch. Otherwise
+/// return `Effect::None`.
+pub(super) fn pump_pipeline(model: &mut Model) -> Effect {
+    if model.in_flight.is_some() {
+        return Effect::None;
+    }
+    let Some(effect) = model.pipeline_queue.pop_front() else {
+        return Effect::None;
+    };
+    if let Effect::RunGenerator { artifact_index, .. } = &effect {
+        model.in_flight = Some(*artifact_index);
+    }
+    effect
 }
 
 /// Builds an `Effect::RunGenerator` for an entry that can be dispatched without
@@ -526,7 +564,7 @@ pub(crate) fn start_generation_for_selected_internal(
             let target_type = single.target_type.clone();
 
             if prompt_state.prompts.is_empty() {
-                let effect = Effect::RunGenerator {
+                let run_gen = Effect::RunGenerator {
                     artifact_index,
                     artifact_name: artifact_name.clone(),
                     target_spec: TargetSpec::Single(target_type),
@@ -539,6 +577,7 @@ pub(crate) fn start_generation_for_selected_internal(
                     log_lines: vec![],
                     exists: exists_before,
                 });
+                let effect = enqueue_or_dispatch(&mut model, run_gen);
                 (model, effect)
             } else {
                 // Inline prompt: stay on the artifact list and swap the right
@@ -558,7 +597,7 @@ pub(crate) fn start_generation_for_selected_internal(
                 }
 
                 if prompts.is_empty() {
-                    let effect = Effect::RunGenerator {
+                    let run_gen = Effect::RunGenerator {
                         artifact_index,
                         artifact_name: artifact_name.clone(),
                         target_spec: TargetSpec::Multi {
@@ -574,6 +613,7 @@ pub(crate) fn start_generation_for_selected_internal(
                         log_lines: vec![],
                         exists: exists_before,
                     });
+                    let effect = enqueue_or_dispatch(&mut model, run_gen);
                     (model, effect)
                 } else {
                     model.active_prompt = Some(PromptState {

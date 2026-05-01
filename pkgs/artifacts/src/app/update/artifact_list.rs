@@ -46,13 +46,11 @@ pub(super) fn update_artifact_list(mut model: Model, key: KeyEvent) -> (Model, E
 /// - `Pending`: enqueued in `model.generate_queue`. The check is already in
 ///   flight (started by [`super::init::init`]); when it resolves, the queue
 ///   drain in [`super::handle_check_result`] picks it up.
-/// - `NeedsGeneration`: dispatched as `Effect::RunGenerator` immediately when
-///   the entry has no prompts and (for shared) exactly one generator. Entries
-///   that need user input are queued and surfaced via the inline-prompt
-///   right-pane (see `set_next_active_prompt` in `super::mod`).
+/// - `NeedsGeneration`: pushed onto `model.pipeline_queue` so the gen→ser
+///   pipeline drains them one at a time (gen0→ser0→gen1→ser1…). Prompt-
+///   bearing entries stay in `generate_queue` and the inline-prompt right-
+///   pane drives them through `set_next_active_prompt` in `super::mod`.
 fn generate_all(mut model: Model) -> (Model, Effect) {
-    let mut effects: Vec<Effect> = Vec::new();
-
     for index in 0..model.entries.len() {
         let entry = &model.entries[index];
         match entry.status() {
@@ -64,7 +62,7 @@ fn generate_all(mut model: Model) -> (Model, Effect) {
                 model.generate_queue.insert(index);
             }
             ArtifactStatus::NeedsGeneration => match build_run_generator_effect_for(entry, index) {
-                Some(effect) => effects.push(effect),
+                Some(effect) => model.pipeline_queue.push_back(effect),
                 None => {
                     model.generate_queue.insert(index);
                 }
@@ -79,7 +77,8 @@ fn generate_all(mut model: Model) -> (Model, Effect) {
         super::set_next_active_prompt(&mut model);
     }
 
-    (model, Effect::batch(effects))
+    let effect = super::pump_pipeline(&mut model);
+    (model, effect)
 }
 
 fn start_generation_for_selected(mut model: Model) -> (Model, Effect) {

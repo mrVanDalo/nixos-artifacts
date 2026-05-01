@@ -78,6 +78,8 @@ pub(super) fn handle_generator_cancelled(
 ) -> (Model, Effect) {
     let Some(entry) = model.entries.get_mut(artifact_index) else {
         leave_generating_for(&mut model, artifact_index);
+        clear_in_flight(&mut model, artifact_index);
+        model.pipeline_queue.clear();
         return (model, Effect::None);
     };
     let artifact_name = entry.artifact_name().to_string();
@@ -92,9 +94,11 @@ pub(super) fn handle_generator_cancelled(
     // The generate-all queue is moot now — drop everything queued so we don't
     // resurrect work the user explicitly stopped.
     model.generate_queue.clear();
+    model.pipeline_queue.clear();
     model.active_prompt = None;
 
     leave_generating_for(&mut model, artifact_index);
+    clear_in_flight(&mut model, artifact_index);
     (model, Effect::None)
 }
 
@@ -106,7 +110,11 @@ fn handle_generator_failure(
 ) -> (Model, Effect) {
     let Some(entry) = model.entries.get_mut(artifact_index) else {
         leave_generating_for(&mut model, artifact_index);
-        return (model, Effect::None);
+        clear_in_flight(&mut model, artifact_index);
+        {
+            let effect = super::pump_pipeline(&mut model);
+            return (model, effect);
+        }
     };
     let artifact_name = entry.artifact_name().to_string();
     let error_msg = format!("Generator failed for '{}': {}", artifact_name, error);
@@ -129,7 +137,9 @@ fn handle_generator_failure(
     };
 
     leave_generating_for(&mut model, artifact_index);
-    (model, Effect::None)
+    clear_in_flight(&mut model, artifact_index);
+    let effect = super::pump_pipeline(&mut model);
+    (model, effect)
 }
 
 // === Serialize Handlers (unified for single and shared) ===
@@ -153,7 +163,11 @@ fn handle_serialize_success(
 ) -> (Model, Effect) {
     let Some(entry) = model.entries.get_mut(artifact_index) else {
         leave_generating_for(&mut model, artifact_index);
-        return (model, Effect::None);
+        clear_in_flight(&mut model, artifact_index);
+        {
+            let effect = super::pump_pipeline(&mut model);
+            return (model, effect);
+        }
     };
     let step_logs = entry.step_logs_mut();
     for line in &output.stdout_lines {
@@ -175,7 +189,9 @@ fn handle_serialize_success(
     *entry.status_mut() = ArtifactStatus::UpToDate;
 
     leave_generating_for(&mut model, artifact_index);
-    (model, Effect::None)
+    clear_in_flight(&mut model, artifact_index);
+    let effect = super::pump_pipeline(&mut model);
+    (model, effect)
 }
 
 /// Handles serialization failure.
@@ -186,7 +202,11 @@ fn handle_serialize_failure(
 ) -> (Model, Effect) {
     let Some(entry) = model.entries.get_mut(artifact_index) else {
         leave_generating_for(&mut model, artifact_index);
-        return (model, Effect::None);
+        clear_in_flight(&mut model, artifact_index);
+        {
+            let effect = super::pump_pipeline(&mut model);
+            return (model, effect);
+        }
     };
     let artifact_name = entry.artifact_name().to_string();
     let error_msg = format!("Serialization failed for '{}': {}", artifact_name, error);
@@ -209,7 +229,9 @@ fn handle_serialize_failure(
     };
 
     leave_generating_for(&mut model, artifact_index);
-    (model, Effect::None)
+    clear_in_flight(&mut model, artifact_index);
+    let effect = super::pump_pipeline(&mut model);
+    (model, effect)
 }
 
 /// Returns the screen to the artifact list iff the user was watching this
@@ -221,5 +243,15 @@ fn leave_generating_for(model: &mut Model, artifact_index: usize) {
         && state.artifact_index == artifact_index
     {
         model.screen = Screen::ArtifactList;
+    }
+}
+
+/// Clear the pipeline's in-flight slot iff the message belongs to the
+/// artifact currently in flight. Skipping the match guards against a stray
+/// terminal message for a different artifact_index resetting the slot
+/// underneath an unrelated, still-running pipeline entry.
+fn clear_in_flight(model: &mut Model, artifact_index: usize) {
+    if model.in_flight == Some(artifact_index) {
+        model.in_flight = None;
     }
 }

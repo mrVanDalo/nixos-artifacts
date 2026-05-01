@@ -14,8 +14,10 @@
 //! - Update functions create new instances rather than mutate
 //! - Cloning is cheap (most fields are small or reference-counted)
 
-use std::collections::HashSet;
+use std::collections::{HashSet, VecDeque};
 use std::time::Instant;
+
+use crate::app::effect::Effect;
 
 use super::artifact::ListEntry;
 use super::log::{ChronologicalLogState, Step, Warning};
@@ -65,6 +67,19 @@ pub struct Model {
     /// it alone so a long-running tick stream cannot widen the chord window
     /// or close it prematurely.
     pub last_esc_at: Option<Instant>,
+    /// `RunGenerator` effects waiting for an open pipeline slot. The 'a'
+    /// flow used to batch every generator into the FIFO at once, which made
+    /// all generators run before any serialize (each Serialize is only
+    /// enqueued after the runtime drains its `GeneratorFinished`). Now every
+    /// dispatcher pushes here instead; the pipeline drains one entry at a
+    /// time so the user-visible order is gen0→ser0→gen1→ser1→… See
+    /// nixos-artifacts-tje.
+    pub pipeline_queue: VecDeque<Effect>,
+    /// `artifact_index` of the artifact currently mid-pipeline (gen or ser
+    /// in flight). `None` between artifacts and at start. Set when a
+    /// `RunGenerator` is dispatched; cleared in the serialize/generator
+    /// terminal handlers. The pipeline only advances when this is `None`.
+    pub in_flight: Option<usize>,
 }
 
 /// Current screen/view being displayed in the TUI.

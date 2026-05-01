@@ -127,7 +127,7 @@ fn finish_prompts_and_dispatch(mut model: Model) -> (Model, Effect) {
     // is a no-op for that path.
     model.generate_queue.remove(&artifact_index);
 
-    let effect = match &model.entries[artifact_index] {
+    let run_gen = match &model.entries[artifact_index] {
         ListEntry::Single(single) => Effect::RunGenerator {
             artifact_index,
             artifact_name,
@@ -150,5 +150,10 @@ fn finish_prompts_and_dispatch(mut model: Model) -> (Model, Effect) {
     // `active_prompt` stays `None`, and the right pane reverts to logs.
     super::set_next_active_prompt(&mut model);
 
+    // Push onto the gen→ser pipeline. If nothing is currently in flight the
+    // pump returns this very effect for immediate dispatch; otherwise it
+    // returns Effect::None and the pipeline picks it up after the current
+    // artifact's serialize finishes. See nixos-artifacts-tje.
+    let effect = super::enqueue_or_dispatch(&mut model, run_gen);
     (model, effect)
 }
