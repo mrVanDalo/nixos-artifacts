@@ -70,8 +70,7 @@ NOTE: Test scenarios with their own `flake.nix` + `backend.toml` live under
 - `homeModules.default` — Home Manager module (imports `modules/hm/`)
 - `homeModules.examples` — Example home-manager artifacts
 - `nixosConfigurations.{machine-one,machine-two}` — Test NixOS systems
-- `homeConfiguration.test` — Test home-manager configuration (note: singular,
-  matches home-manager's own naming)
+- `homeConfigurations.test` — Test home-manager configuration
 - `lib.mkBackend` / `lib.mkArtifactCli` — Public Nix API for downstream flakes
   (defined in `backends/default.nix`)
 

@@ -84,7 +84,7 @@
             machine-two = machineConfiguration "machine-two";
           };
 
-        homeConfiguration.test = inputs.home-manager.lib.homeManagerConfiguration {
+        homeConfigurations.test = inputs.home-manager.lib.homeManagerConfiguration {
           pkgs = inputs.nixpkgs.legacyPackages."x86_64-linux".pkgs;
           modules = [
             self.homeModules.default
