@@ -63,9 +63,9 @@
 //! ```toml
 //! include = ["./backends/agenix.toml", "./backends/sops.toml"]
 //!
-//! [test]
-//! nixos_check_serialization = "./test_check.sh"
-//! nixos_serialize = "./test_serialize.sh"
+//! [test.nixos]
+//! check = "./test_check.sh"
+//! serialize = "./test_serialize.sh"
 //! ```
 //!
 //! Paths in `include` are resolved relative to the file containing the directive.
