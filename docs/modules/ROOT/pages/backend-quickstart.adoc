@@ -52,6 +52,7 @@ All scripts receive the same environment variables:
 | `$targets` | File | Path to targets.json with all target info
 | `$inputs` | Directory | File metadata JSONs (check only)
 | `$out` | Directory | Generated files (serialize only)
+| `$LOG_LEVEL` | String | Log level (`error`, `warn`, `info`, `debug`)
 |===
 
 == check.sh

@@ -578,9 +578,15 @@ defined in `src/cli/args.rs`.
    the entry `UpToDate`, non-zero marks `NeedsGeneration`.
 3. The user (or the `a` flow) triggers `Effect::RunGenerator`. The handler
    creates a temp `out` dir and a temp `prompts` dir, writes prompt values to
-   files, and runs the generator inside a bubblewrap container with `$out`,
-   `$prompts`, `$artifact`, `$artifact_context`, `$machine`/`$username`
-   (context-dependent), `$LOG_LEVEL`.
+   files, and runs the generator inside a bubblewrap container. The exported
+   environment depends on the artifact kind:
+   - **Per-target generators** (NixOS or Home Manager): `$out`, `$prompts`,
+     `$artifact`, `$artifact_context` (`"nixos"` or `"homemanager"`), `$machine`
+     _or_ `$username`, `$LOG_LEVEL`.
+   - **Shared generators**: `$out`, `$prompts`, `$artifact_context = "shared"`,
+     `$LOG_LEVEL` only. Shared generators do **not** receive `$artifact`,
+     `$machine`, or `$username` — see `build_shared_env_exports` in
+     `src/backend/generator.rs`.
 4. Generated files are verified against the artifact's `files` schema.
 5. `Effect::Serialize` runs the backend `serialize` script with `$artifact`,
    `$artifact_context`, `$targets`, `$out`, `$LOG_LEVEL`.

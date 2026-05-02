@@ -29,27 +29,51 @@ abstraction over multiple backends (agenix, sops-nix, colmena, etc.).
 
 ```
 .
-├── README.md              # Design overview, workflows, concepts
-├── flake.nix              # Flake outputs, packages, modules, examples
-├── modules/               # NixOS modules
-│   ├── default.nix        # Module aggregation
-│   ├── backend.nix        # Backend serialization options
-│   └── store.nix          # Artifacts store tree options
-├── pkgs/artifacts/        # Rust CLI implementation (has own CLAUDE.md)
-└── examples/              # Example scenarios (backend.toml, flake.nix)
+├── README.md                       # Design overview, workflows, concepts
+├── flake.nix                       # Flake outputs, packages, modules, examples
+├── backends/                       # Reference backend(s) wired into the dev flake
+│   ├── default.nix                 # Defines `lib.mkBackend` and `lib.mkArtifactCli`
+│   └── test/                       # Test backend used by dev nixosConfigurations
+├── modules/                        # NixOS modules
+│   ├── default.nix                 # Module aggregation
+│   ├── backend.nix                 # `artifacts.default.backend` option
+│   ├── store.nix                   # NixOS `artifacts.store` tree (with owner/group)
+│   ├── common-store-options.nix    # Shared option fragments for store + hm
+│   └── hm/                         # Home Manager module variant
+├── pkgs/artifacts/                 # Rust CLI implementation (has own CLAUDE.md)
+├── examples/                       # NixOS module fragments demoing artifacts.store
+│   ├── simple-generator.nix
+│   ├── simple-prompt.nix
+│   ├── shared-generator.nix
+│   ├── hm/                         # Home Manager equivalents
+│   └── ideas/                      # Sketches of scenarios still under design
+└── docs/                           # Antora documentation site (has own CLAUDE.md)
 ```
+
+NOTE: Test scenarios with their own `flake.nix` + `backend.toml` live under
+`pkgs/artifacts/examples/scenarios/`, not the top-level `examples/`. See
+`pkgs/artifacts/CLAUDE.md` for that catalogue.
 
 ## Flake Outputs Reference
 
-- `packages.artifacts-bin` — Pure Rust CLI binary
-- `packages.artifacts` — Bash wrapper that:
-  - Generates backends.toml from Nix attrset
-  - Computes path to make file generator derivation
-  - Invokes CLI with proper arguments
-- `packages.default` — Points to artifacts
-- `nixosModules.default` — Main module system
-- `nixosModules.examples` — Example configurations
+- `packages.artifacts-bin` — Pure Rust CLI binary built from `pkgs/artifacts/`
+- `packages.artifacts` — Bash wrapper produced by `lib.mkArtifactCli` that sets
+  `NIXOS_ARTIFACTS_BACKEND_CONFIG` to a merged `backends.toml` (using
+  `include = [...]` directives over each backend package) and exec's
+  `artifacts-bin`. The CLI itself evaluates the flake via `nix build` to derive
+  the make.json — there is no separate make-file derivation
+- `packages.default` — Alias for `packages.artifacts`
+- `packages.example-backend` — Test backend produced by `lib.mkBackend` (defined
+  under `backends/test/`); used as the default in dev
+- `nixosModules.default` — Main module system (imports `modules/`)
+- `nixosModules.examples` — Example artifacts.store configurations
+- `homeModules.default` — Home Manager module (imports `modules/hm/`)
+- `homeModules.examples` — Example home-manager artifacts
 - `nixosConfigurations.{machine-one,machine-two}` — Test NixOS systems
+- `homeConfiguration.test` — Test home-manager configuration (note: singular,
+  matches home-manager's own naming)
+- `lib.mkBackend` / `lib.mkArtifactCli` — Public Nix API for downstream flakes
+  (defined in `backends/default.nix`)
 
 ## Testing & Validation
 
@@ -126,8 +150,14 @@ Follow this format for all commits and squashed merges:
 
 ### Modifying Options
 
-- Store options: `modules/store.nix`
-- Backend options: `modules/backend.nix`
+- Store options (NixOS): `modules/store.nix` — adds `path`, `owner`, `group`,
+  `shared` on top of the common artifact options
+- Common store options: `modules/common-store-options.nix` — option fragments
+  shared by NixOS and Home Manager (`prompts`, `generator`, `backend`,
+  `description`, `name`, file-level `mode`)
+- Home Manager store options: `modules/hm/` — reuses `common-store-options.nix`
+  minus the system-only fields
+- Backend options: `modules/backend.nix` — `artifacts.default.backend`
 - Always update the relevant Antora pages under `docs/modules/ROOT/pages/` with
   option changes
 

@@ -6,23 +6,14 @@ with lib;
 with types;
 {
 
-  # folder structure
-  # ----------------
+  # Backend selection options.
   #
-  # $out/shared/<artifact-name>/<file-name>
-  # $out/machines/<machine-name>/<artifact-name>/<file-name>
-  #
-  # $input/shared/<artifact-name>/<file-name>
-  # $input/machines/<machine-name>/<artifact-name>/<file-name>
-  #
-  #
-  # deserialization:
-  # ----------------
-  # $input -> program -> $out
-  #
-  # serialization:
-  # --------------
-  # $out -> program
+  # `artifacts.default.backend` declares which backend serializes an artifact
+  # when `artifacts.store.<name>.backend` is not set explicitly. The actual
+  # serialization scripts and per-target environment (including the unified
+  # `$targets` JSON, `$artifact`, `$artifact_context`, `$out`, `$inputs`,
+  # `$LOG_LEVEL`) are owned by the backend package — see
+  # `docs/modules/ROOT/pages/backend-scripts-reference.adoc`.
 
   options = {
 

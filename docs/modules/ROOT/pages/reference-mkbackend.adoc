@@ -35,7 +35,7 @@ self.lib.mkBackend {
 
 | `system`
 | One of `pkgs` or `system`
-| System architecture string (e.g., `"x86_64-linux"`). Used to lookup `inputs.nixpkgs.legacyPackages.${system}`.
+| System architecture string (e.g., `"x86_64-linux"`). Used to lookup `inputs.nixpkgs.legacyPackages.$\{system}`.
 
 | `name`
 | Yes
