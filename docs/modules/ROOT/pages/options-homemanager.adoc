@@ -200,7 +200,7 @@ pkgs.write.writeBash "random" ''
 
 
 
-Prompts end up in $prompt/{zwsp}+<+{zwsp}name{gt} in the generator script
+Prompts end up in $prompts/{zwsp}+<+{zwsp}name{gt} in the generator script
 
 
 
@@ -221,7 +221,7 @@ __Default:__
 
 
 
-description shown during prompt entry
+Description shown during prompt entry
 
 
 

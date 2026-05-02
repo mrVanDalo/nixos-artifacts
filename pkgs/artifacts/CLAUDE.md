@@ -185,64 +185,104 @@ pkgs/artifacts/
 │   │   │   ├── check.sh                # Check serialization script
 │   │   │   ├── serialize.sh            # Serialize script
 │   │   │   └── deserialize.sh          # Deserialize script
-│   │   └── test-skip-one/              # Test backend that skips one artifact
-│   │       └── ...                     # Same structure as test/
+│   │   ├── test-skip-one/              # Test backend that skips one artifact
+│   │   │   └── ...                     # Same structure as test/
+│   │   ├── test-shared/                # Test backend exercising shared scripts
+│   │   └── test-config-verify/         # Test backend that asserts settings round-trip
 │   └── scenarios/                      # Test scenarios (each is a complete flake)
 │       ├── single-artifact-with-prompts/   # Simple scenario with prompts
 │       ├── two-artifacts-no-prompts/       # Multiple artifacts, no prompts
 │       ├── multiple-machines/              # Multi-machine NixOS setup
-│       ├── home-manager/                   # Home-manager configuration
+│       ├── home-manager/                   # Mixed NixOS + home-manager config
+│       ├── home-manager-only/              # Home-manager-only configuration
+│       ├── shared-artifacts/               # Shared artifact across targets
 │       ├── artifact-name-formats/          # Various artifact naming patterns
 │       ├── backend-include/                # Backend include directive test
 │       ├── backend-circular-include/       # Circular include detection test
-│       ├── no-config-section/              # Backend without [config] section
-│       ├── error-missing-files/            # Error case: missing generated files
-│       ├── error-missing-generator/        # Error case: missing generator
-│       ├── error-unwanted-files/           # Error case: unwanted extra files
-│       └── error-wrong-file-type/          # Error case: wrong file type
+│       ├── config-verify/                  # settings round-trip verification
+│       ├── no-config-section/              # Backend without [<name>.settings]
+│       ├── python-scripts/                 # Generator written in Python
+│       ├── error-missing-files/            # Error: missing generated files
+│       ├── error-missing-generator/        # Error: missing generator
+│       ├── error-unwanted-files/           # Error: unwanted extra files
+│       ├── error-shared-unwanted-files/    # Error: unwanted files for shared artifact
+│       ├── error-wrong-file-type/          # Error: wrong file type
+│       ├── error-script-not-exists/        # Error: backend script missing
+│       ├── error-script-not-executable/    # Error: backend script not executable
+│       ├── error-script-is-directory/      # Error: backend script path is a directory
+│       └── error-bubblewrap-blocks-network-calls/  # Error: generator hits network
 ├── src/
 │   ├── bin/
-│   │   └── artifacts.rs     # CLI entry point
-│   ├── app/                 # TUI application state (Elm Architecture)
-│   │   ├── mod.rs           # Module exports
-│   │   ├── model.rs         # State types (Model, Screen, PromptState)
-│   │   ├── message.rs       # Event types (Msg, KeyEvent)
-│   │   ├── effect.rs        # Side effect descriptors
-│   │   └── update.rs        # Pure state transitions
-│   ├── tui/                 # Terminal UI
-│   │   ├── mod.rs           # Module exports
-│   │   ├── views/           # Render functions
-│   │   │   ├── list.rs      # Artifact list view
-│   │   │   ├── prompt.rs    # Prompt input view
-│   │   │   ├── progress.rs  # Generation progress view
-│   │   │   └── generator_selection.rs  # Generator selection for shared artifacts
-│   │   ├── events.rs        # EventSource trait + implementations
-│   │   ├── runtime.rs       # Main loop, effect execution
-│   │   ├── terminal.rs      # Terminal setup/teardown
-│   │   ├── effect_handler.rs # Backend integration
-│   │   └── model_builder.rs # Build Model from config
-│   ├── backend/             # Backend operations
-│   │   ├── generator.rs     # Generator script execution
-│   │   ├── serialization.rs # Serialization operations
-│   │   ├── helpers.rs       # Helper functions
-│   │   └── temp_dir.rs      # Temporary directory management
-│   ├── cli/                 # Command-line interface
-│   │   ├── commands/        # Command implementations
-│   │   ├── args.rs          # Argument parsing (clap)
-│   │   └── mod.rs           # CLI orchestration
-│   ├── config/              # Configuration management
-│   │   ├── backend.rs       # Backend config parsing
-│   │   ├── make.rs          # Make config parsing
-│   │   └── nix.rs           # Nix evaluation helpers
-│   ├── lib.rs               # Library root
-│   └── macros.rs            # Utility macros
+│   │   └── artifacts.rs                  # CLI entry point
+│   ├── app/                              # Pure functional core (Elm Architecture)
+│   │   ├── mod.rs                        # Module exports
+│   │   ├── model/                        # State types
+│   │   │   ├── core.rs                   # Model + Screen
+│   │   │   ├── artifact.rs               # ListEntry, ArtifactStatus, GeneratingSubstate
+│   │   │   ├── prompt.rs                 # PromptState, InputMode
+│   │   │   ├── target.rs                 # TargetType
+│   │   │   ├── log.rs                    # ChronologicalLogState, Step, Warning
+│   │   │   └── screen_state.rs           # SelectGeneratorState, ConfirmRegenerateState, DoneState
+│   │   ├── message.rs                    # Event types (Message, KeyEvent, ScriptOutput)
+│   │   ├── effect.rs                     # Side effect descriptors (Effect, TargetSpec)
+│   │   └── update/                       # Pure state transitions
+│   │       ├── mod.rs                    # Top-level dispatch + pipeline pumping
+│   │       ├── init.rs                   # Initial check fan-out
+│   │       ├── artifact_list.rs          # Artifact list keybindings
+│   │       ├── prompt.rs                 # Inline prompt handling
+│   │       ├── confirm_regenerate.rs     # Regenerate dialog
+│   │       ├── generator_selection.rs    # Generator selection dialog
+│   │       ├── generating.rs             # Generation progress messages
+│   │       ├── chronological_log.rs      # Log view navigation
+│   │       └── tests.rs                  # Update-layer unit tests
+│   ├── tui/                              # Terminal UI
+│   │   ├── mod.rs                        # Module exports
+│   │   ├── views/                        # Render functions
+│   │   │   ├── list.rs                   # Artifact list view
+│   │   │   ├── prompt.rs                 # Inline prompt view (right pane)
+│   │   │   ├── progress.rs               # Generation progress (right pane)
+│   │   │   ├── generator_selection.rs    # Generator selection dialog
+│   │   │   ├── regenerate_dialog.rs      # Regenerate confirmation dialog
+│   │   │   └── chronological_log.rs      # Chronological log screen
+│   │   ├── events.rs                     # EventSource trait + implementations
+│   │   ├── runtime.rs                    # Async main loop, effect dispatch
+│   │   ├── terminal.rs                   # Terminal setup/teardown
+│   │   ├── background.rs                 # BackgroundEffectHandler (FIFO task)
+│   │   └── model_builder.rs              # Build Model from configuration
+│   ├── backend/                          # Backend operations
+│   │   ├── mod.rs                        # Module exports
+│   │   ├── generator.rs                  # Generator script execution (bwrap)
+│   │   ├── serialization.rs              # check / serialize execution
+│   │   ├── helpers.rs                    # Helper functions
+│   │   ├── output_capture.rs             # Streaming stdout/stderr capture
+│   │   └── tempfile.rs                   # Temporary file/directory management
+│   ├── cli/                              # Command-line interface
+│   │   ├── args.rs                       # Argument parsing (clap)
+│   │   └── mod.rs                        # CLI orchestration → run_tui()
+│   ├── config/                           # Configuration management
+│   │   ├── backend.rs                    # backend.toml parsing
+│   │   ├── make.rs                       # Make JSON parsing
+│   │   ├── nix.rs                        # Nix evaluation helpers
+│   │   └── make_expr.nix                 # Nix expression that emits Make JSON
+│   ├── lib.rs                            # Library root
+│   ├── logging.rs                        # File-based logging + macros
+│   └── macros.rs                         # Utility macros
 ├── tests/
-│   ├── tui/                 # TUI tests
-│   │   ├── view_tests.rs    # View snapshot tests
-│   │   └── snapshots/       # View snapshots
-│   ├── cli/                 # CLI command tests
-│   ├── backend/             # Backend tests
-│   └── tests.rs             # Test entry point
+│   ├── tests.rs                          # Test entry point (integration tests)
+│   ├── test_helpers.rs                   # Shared helpers
+│   ├── tui/                              # TUI tests (views, integration, model state)
+│   │   ├── view_tests.rs                 # View snapshot tests
+│   │   ├── integration_tests.rs          # End-to-end TUI flows
+│   │   ├── chronological_log_tests.rs    # Log view tests
+│   │   ├── regenerate_dialog_tests.rs    # Regenerate dialog tests
+│   │   ├── model_state.rs                # Shared model fixtures
+│   │   └── snapshots/                    # View snapshots
+│   ├── cli/                              # CLI integration tests
+│   ├── backend/                          # Backend tests
+│   ├── config/                           # Config parsing tests
+│   ├── async_tests/                      # Async runtime tests
+│   ├── e2e/                              # End-to-end scenario tests
+│   └── common/                           # Shared test utilities
 ├── Cargo.toml
 └── CLAUDE.md
 ```
@@ -309,7 +349,7 @@ temp_file.write_all(b"content")?;
 let path = temp_file.keep()?; // File persists, returns PathBuf
 ```
 
-**See also:** `src/backend/temp_dir.rs` for the project's temp directory
+**See also:** `src/backend/tempfile.rs` for the project's temp directory
 utilities.
 
 ## TUI Architecture (Elm Architecture)
@@ -327,58 +367,124 @@ transitions are pure functions, and side effects are described as data.
        ▲
        │
 ┌──────┴──────┐
-│   Update    │◀──── Msg (event)
+│   Update    │◀──── Message (event)
 │ (pure func) │────▶ Effect (side effect descriptor)
 └─────────────┘
 ```
 
-- **Model** (`app/model.rs`): Application state - Screen, artifacts, prompts
-- **Msg** (`app/message.rs`): Events - keyboard input, async results
+- **Model** (`app/model/`): Application state — Screen, entries, prompts, queues
+- **Message** (`app/message.rs`): Events — keyboard input, async results, log
+  nav
 - **Effect** (`app/effect.rs`): Side effect descriptors (not executed in update)
-- **Update** (`app/update.rs`): `(Model, Msg) -> (Model, Effect)` - pure!
-- **View** (`tui/views/`): `(&Model) -> Frame` - pure rendering
+- **Update** (`app/update/`): `(Model, Message) -> (Model, Effect)` — pure!
+- **View** (`tui/views/`): `(&Model) -> Frame` — pure rendering
 
 ### Key Types
 
 ```rust
 // State
-enum Screen { ArtifactList, SelectGenerator(..), Prompt(..), Generating(..), Done(..) }
+enum Screen {
+    ArtifactList,
+    SelectGenerator(SelectGeneratorState),
+    ConfirmRegenerate(ConfirmRegenerateState),
+    Done(DoneState),
+    ChronologicalLog(ChronologicalLogState),
+}
 enum InputMode { Line, Multiline, Hidden }
-enum ArtifactStatus { Pending, NeedsGeneration, UpToDate, Generating, Done, Failed }
+enum ArtifactStatus {
+    Pending,
+    NeedsGeneration,
+    UpToDate,
+    Generating(GeneratingSubstate),
+    Failed { error: ArtifactError, .. },
+    Cancelled { .. },
+}
 
-// List entries (for artifact list)
+// List entries (for artifact list).
+// Prompt collection and generation progress are NOT screens — prompts live
+// inline via `Model.active_prompt`, progress renders in the right pane based
+// on the entry's `ArtifactStatus::Generating(..)`.
 enum ListEntry { Single(ArtifactEntry), Shared(SharedEntry) }
 
 // Events
-enum Msg { Key(KeyEvent), Tick, GeneratorFinished{..}, SerializeFinished{..},
-           SharedGeneratorFinished{..}, SharedSerializeFinished{..}, Quit }
+enum Message {
+    Key(KeyEvent),
+    Tick,
+    CheckSerializationResult { artifact_index, status, result },
+    GeneratorFinished      { artifact_index, result },
+    GeneratorCancelled     { artifact_index },
+    SerializeFinished      { artifact_index, result },
+    GeneratorSelected      { artifact_index, generator_path },
+    OutputLine             { artifact_index, stream, content },
+    ToggleSection          { step },
+    ScrollLogs             { delta },
+    ExpandAllSections,
+    CollapseAllSections,
+    FocusNextSection,
+    FocusPreviousSection,
+    Quit,
+}
 
-// Side effects (descriptors, not actions)
-enum Effect { None, Quit, CheckSerialization{..}, RunGenerator{..}, Serialize{..},
-              ShowGeneratorSelection{..}, RunSharedGenerator{..}, SharedSerialize{..} }
+// Unified target spec — single (one machine/user) or multi (shared artifact).
+enum TargetSpec {
+    Single(TargetType),
+    Multi { nixos_targets: Vec<String>, home_targets: Vec<String> },
+}
+
+// Side effects (descriptors, not actions).
+// All artifact-level effects carry a TargetSpec, so single and shared
+// artifacts share the same Effect variants.
+enum Effect {
+    None,
+    Batch(Vec<Self>),
+    Quit,
+    CheckSerialization { artifact_index, artifact_name, target_spec },
+    RunGenerator       { artifact_index, artifact_name, target_spec, prompts },
+    Serialize          { artifact_index, artifact_name, target_spec },
+    CancelQueue,
+}
 ```
 
 ### Runtime Loop (`tui/runtime.rs`)
 
-```rust
-loop {
-    terminal.draw(|f| render(f, &model))?;  // View
-    let msg = events.next_event()?;          // Get event
-    let (model, effect) = update(model, msg); // Pure update
-    execute_effect(effect)?;                  // Side effects
-}
+The runtime is async. The TUI thread renders frames and pulls events; a single
+`BackgroundEffectHandler` task (`tui/background.rs`) drains a FIFO of effects
+and feeds results back as `Message`s.
+
+```text
+TUI thread                              Background task (FIFO)
+──────────                              ──────────────────────
+render(model)                           recv Effect
+event = next_event()      ──Effect──▶   execute (run check / generator /
+(model, effect) = update(model, event)    serialize, capture output)
+dispatch_command(effect)  ◀──Message──  send Message (and OutputLine ticks
+repeat                                    while the script runs)
 ```
 
-### Effect Handler (`tui/effect_handler.rs`)
+`Effect::CancelQueue` is routed through a dedicated cancel channel so it can
+drain the FIFO with priority; every other effect goes through the regular
+command channel.
 
-Connects TUI to existing backend:
+### Background Effect Handler (`tui/background.rs`)
 
-- `Effect::CheckSerialization` → `run_check_serialization()`
-- `Effect::RunGenerator` → `run_generator_script()` + `verify_generated_files()`
-- `Effect::Serialize` → `run_serialize()`
-- `Effect::ShowGeneratorSelection` → Screen transition (no async work)
-- `Effect::RunSharedGenerator` → `run_generator_script_with_path()`
-- `Effect::SharedSerialize` → `run_shared_serialize()`
+`BackgroundEffectHandler` connects the TUI to the backend module. It owns the
+`BackendConfiguration`, `MakeConfiguration`, and the per-artifact output
+`TempDir`s (keyed by `artifact_index` so generator output cannot be clobbered
+when the pipeline is mid-flight).
+
+- `Effect::CheckSerialization` → `backend::serialization::check` →
+  `Message::CheckSerializationResult`
+- `Effect::RunGenerator` → `backend::generator::run` (+ generated-file
+  verification) → `Message::GeneratorFinished` (or `Message::GeneratorCancelled`
+  on user cancel)
+- `Effect::Serialize` → `backend::serialization::serialize` →
+  `Message::SerializeFinished`
+- `Effect::CancelQueue` → drain pending FIFO entries; the in-flight generator's
+  bwrap process group is signalled via the handler's `KillSlot` (serialize is
+  allowed to finish so the backend never sees a half-written artifact).
+
+Single vs. shared artifacts share the same Effect variants; the handler
+dispatches on `TargetSpec::Single` vs. `TargetSpec::Multi`.
 
 ### Testing Patterns
 
@@ -388,7 +494,7 @@ Connects TUI to existing backend:
 #[test]
 fn test_navigate_down() {
     let model = make_test_model();
-    let (new_model, effect) = update(model, Msg::Key(KeyEvent::char('j')));
+    let (new_model, effect) = update(model, Message::Key(KeyEvent::char('j')));
     assert_eq!(new_model.selected_index, 1);
     assert!(effect.is_none());
 }
@@ -428,7 +534,8 @@ fn test_complete_flow() {
 
 1. Add variant to `Screen` enum in `app/model/core.rs`
 2. Add state struct if needed (e.g., `NewScreenState`)
-3. Handle in `update()` - add match arm for `(Screen::NewScreen, Msg::Key(_))`
+3. Handle in `update()` — add match arm for
+   `(Screen::NewScreen, Message::Key(_))`
 4. Create view in `tui/views/new_screen.rs`
 5. Add to dispatcher in `tui/views/mod.rs`
 6. Write tests: state transitions + view snapshots
@@ -442,88 +549,90 @@ that pattern over adding new screens for transient UI states.
 
 1. Add variant to `Effect` enum in `app/effect.rs`
 2. Return it from `update()` when appropriate
-3. Handle in `BackendEffectHandler::execute()`
-4. Return result `Msg` to feed back into update loop
+3. Handle in `BackgroundEffectHandler::execute()` (`tui/background.rs`)
+4. Return a result `Message` to feed back into the update loop
 
-## Commands
+## CLI
 
-### `generate` Command
-
-**Arguments**:
-
-- `backend.toml` - Path to backend configuration
-
-**Working Directory**:
-
-- Must be run in a directory containing `flake.nix`
-- CLI automatically discovers and evaluates the flake
-- Extracts `nixosConfigurations` and `homeConfigurations`
-
-**Workflow** (for each artifact):
-
-1. Create temporary `inputs` directory
-2. Create file for every artifact file entry containing JSON with `path`,
-   `owner`, `group`
-3. Call `check` script:
-   - Environment: `$artifact`, `$artifact_context`, `$targets`, `$inputs`,
-     `$LOG_LEVEL`
-   - Exit code 0: Skip to next artifact
-   - Non-zero: Continue generation
-4. Create temporary `prompts` directory
-5. Create temporary `out` directory
-6. Prompt user for input, save to `prompts` directory
-7. Call `generator` script:
-   - Execute in bubblewrap container
-   - Environment: `$out`, `$prompts`, `$artifact`, `$artifact_context`,
-     `$machine`/`$username` (context-dependent), `$LOG_LEVEL`
-   - Verify success
-   - Verify all demanded files generated
-8. Call `serialize` script:
-   - Environment: `$artifact`, `$artifact_context`, `$targets`, `$out`,
-     `$LOG_LEVEL`
-9. Remove temporary folders
-
-**Implementation**: `src/cli/commands/generate.rs`
-
-### `list` Command
-
-List all artifacts defined in the configuration.
-
-**Implementation**: `src/cli/commands/list.rs`
-
-### `tui` Command
-
-Launch interactive TUI for managing artifacts.
-
-**Usage**:
+The binary takes no subcommands. Invoking `artifacts` always launches the
+interactive TUI; the only positional argument is an optional flake path, plus
+`--log-file` / `--log-level` for diagnostics.
 
 ```bash
-artifacts                          # Show all artifacts (current directory as flake)
-artifacts /path/to/flake           # Specify flake directory
-artifacts --log-file /tmp/log.txt  # Enable debug logging
+artifacts                                      # Use current directory as flake
+artifacts /path/to/flake                       # Point at another flake directory
+artifacts --log-file /tmp/log.txt              # Enable file logging
+artifacts --log-file /tmp/log.txt --log-level debug
 ```
 
-**Keybindings** (artifact list):
+**Implementation**: `src/cli/mod.rs` → `run()` → `run_tui()`. CLI flags are
+defined in `src/cli/args.rs`.
 
-- `j`/`k` or arrows: Navigate
-- `Enter`: Generate selected artifact
-- `a`: Generate all artifacts
-- `Esc Esc` (within 500ms): Cancel queued generators and return to list
+### Lifecycle (per artifact, executed by the runtime + background task)
+
+1. Resolve `flake.nix` and `backend.toml`, build the Make JSON via
+   `config::nix::build_make_from_flake`.
+2. `init` dispatches an initial `Effect::CheckSerialization` for every entry.
+   The background task runs the backend `check` script with `$artifact`,
+   `$artifact_context`, `$targets`, `$inputs`, `$LOG_LEVEL` — exit code 0 marks
+   the entry `UpToDate`, non-zero marks `NeedsGeneration`.
+3. The user (or the `a` flow) triggers `Effect::RunGenerator`. The handler
+   creates a temp `out` dir and a temp `prompts` dir, writes prompt values to
+   files, and runs the generator inside a bubblewrap container with `$out`,
+   `$prompts`, `$artifact`, `$artifact_context`, `$machine`/`$username`
+   (context-dependent), `$LOG_LEVEL`.
+4. Generated files are verified against the artifact's `files` schema.
+5. `Effect::Serialize` runs the backend `serialize` script with `$artifact`,
+   `$artifact_context`, `$targets`, `$out`, `$LOG_LEVEL`.
+6. Temp directories are dropped on success or failure.
+
+Generators run sequentially in a single FIFO background task — parallelism would
+change the user-visible gen→ser→gen→ser order and is deliberately not
+introduced.
+
+### Keybindings
+
+**Artifact list** (`Screen::ArtifactList`)
+
+- `j`/`k` or arrows: Navigate the list
+- `Tab`: Cycle the selected log step in the right pane
+- `Enter`: Generate (or re-generate via the confirm dialog) the selected
+  artifact
+- `a`: Generate every artifact that needs generation
+- `l`: Open the chronological log view for the selected artifact
+- `Esc`: First press arms the universal cancel chord
+- `Esc Esc` (within 500ms): Cancel queued generators / abort the in-flight one
 - `q`: Quit
 
-**Keybindings** (prompt input):
+**Inline prompt** (right pane when `Model.active_prompt` is `Some`)
 
-- `Tab`: Cycle input mode (line/multiline/hidden) - only when empty
-- `Enter`: Submit (line/hidden) or newline (multiline)
+- `Tab` (only when buffer is empty): Cycle input mode (line / multiline /
+  hidden)
+- `Enter`: Submit (line/hidden) or insert a newline (multiline)
 - `Ctrl+D`: Submit multiline input
-- `Esc`: Skip current artifact (during `a` flow) or cancel prompt
-- `Esc Esc` (within 500ms): Cancel the entire `a`-flow queue and return to list
+- `Esc`: Skip the current artifact (during the `a` flow) or cancel the prompt
+- `Esc Esc` (within 500ms): Cancel the entire `a`-flow queue
 
-**Implementation**: `src/cli/mod.rs` → `run_tui()`
+**Generator selection** (`Screen::SelectGenerator`)
 
-### `help` Command
+- `j`/`k` or arrows: Move between candidate generators
+- `Enter`: Confirm the highlighted generator
+- `Esc` / `q`: Cancel and return to the artifact list
 
-Print help message
+**Confirm regenerate** (`Screen::ConfirmRegenerate`)
+
+- `Left`/`h` ↔ `Right`/`l`, or `Tab`: Toggle between Leave / Regenerate
+- `Enter` / `Space`: Apply the highlighted choice
+- `Esc`: Cancel (equivalent to Leave)
+
+**Chronological log** (`Screen::ChronologicalLog`)
+
+- `j`/`k` or arrows, plus `Tab`: Focus next / previous section
+- `PageDown` / `PageUp`: Scroll the log content
+- `Enter` / `Space`: Toggle the focused section
+- `+` / `=` / `e`: Expand all sections
+- `-` / `c`: Collapse all sections
+- `Esc` / `q`: Back to the artifact list
 
 ## Testing Strategy
 
@@ -576,9 +685,13 @@ the snapshots manually. NEVER run `cargo insta accept` or
 
 **Test Organization**:
 
-- `tests/backend/` - Backend operation tests
-- `tests/cli/` - CLI command tests
-- Snapshots stored in respective `snapshots/` subdirectories
+- `tests/tui/` — view snapshots, integration flows, model fixtures
+- `tests/cli/` — top-level CLI integration tests (insta-cmd)
+- `tests/backend/` — backend operation tests
+- `tests/config/` — config parsing tests
+- `tests/async_tests/` — async runtime tests
+- `tests/e2e/` — end-to-end scenario tests against `examples/scenarios/`
+- Snapshots are stored in each subdirectory's `snapshots/` folder
 
 ## Linting
 
@@ -596,25 +709,18 @@ cargo clippy
 
 ## Common Tasks
 
-### Adding a New Command
-
-1. Create command module in `src/cli/commands/`
-2. Add argument parsing in `src/cli/args.rs`
-3. Wire into `src/bin/artifacts.rs`
-4. Add tests in `tests/cli/command_tests.rs` using insta-cmd pattern
-5. Update this documentation
-
 ### Adding a Backend Operation
 
 1. Define script paths in `backend.toml`
-2. Implement caller in `src/backend/`
-   - `generator.rs` - Generator script execution
-   - `serialization.rs` - Serialization operations
-   - `prompt.rs` - User prompt handling
-3. Ensure bubblewrap container isolation
-4. Pass required environment variables
-5. Add error handling for script failures
-6. Use helper functions from `src/backend/helpers.rs`
+2. Implement the caller in `src/backend/`
+   - `generator.rs` — Generator script execution (bubblewrap)
+   - `serialization.rs` — `check` / `serialize` execution
+   - `output_capture.rs` — Streaming stdout/stderr capture used by both
+3. Keep bubblewrap container isolation for any process running user code
+4. Pass required environment variables (see Lifecycle section above)
+5. Add error handling for script failures (return `ArtifactError`)
+6. Use helper functions from `src/backend/helpers.rs` and the `tempfile`-based
+   utilities in `src/backend/tempfile.rs`
 
 ### Working with Configuration
 
@@ -646,21 +752,27 @@ cargo clippy
 
 - **Language**: Rust 1.87.0
 - **Entry point**: `src/bin/artifacts.rs`
-- **TUI entry**: `src/cli/mod.rs` → `run_tui()`
-- **Elm Architecture**: `src/app/` (model, message, effect, update)
-- **TUI views**: `src/tui/views/` (list, prompt, progress)
-- **Backend operations**: `src/backend/` directory
-- **Backends**: `examples/backends/{test,test-skip-one,test-shared}/`
-- **Test scenarios**: `examples/scenarios/{single-artifact-with-prompts,...}/`
-- **Unit tests**: `cargo test --lib` (63 tests)
-- **View snapshots**: `tests/tui/snapshots/` (13 snapshots)
+- **TUI entry**: `src/cli/mod.rs` → `run()` → `run_tui()`
+- **Elm Architecture**: `src/app/` (`model/`, `message.rs`, `effect.rs`,
+  `update/`)
+- **TUI views**: `src/tui/views/` (list, prompt, progress, generator_selection,
+  regenerate_dialog, chronological_log)
+- **Background task**: `src/tui/background.rs` (`BackgroundEffectHandler`)
+- **Backend operations**: `src/backend/` (generator, serialization, helpers,
+  output_capture, tempfile)
+- **Example backends**:
+  `examples/backends/{test,test-skip-one,test-shared,test-config-verify}/`
+- **Test scenarios**: `examples/scenarios/` (one directory per scenario; see the
+  Project Structure tree above for the full list)
+- **Unit tests**: `cargo test --lib`
+- **View snapshots**: `tests/tui/snapshots/`
 - **Snapshot review**: `cargo insta review`
-- **Container isolation**: bubblewrap for generator and serialize scripts
+- **Container isolation**: bubblewrap for generator scripts
 
 ## Test Commands
 
 ```bash
-cargo test --lib                    # Run all unit tests (63 tests)
+cargo test --lib                    # Run all unit tests
 cargo test app::                    # Test app module only
 cargo test tui::                    # Test TUI module only
 cargo test --test tests             # Run integration tests

@@ -6,12 +6,9 @@
 //!
 //! ## Core Functionality
 //!
-//! The CLI provides three main operations:
-//!
-//! - **TUI Mode** (`artifacts` or `artifacts tui`): Interactive terminal UI for
-//!   managing artifacts with real-time status updates
-//! - **Generate** (`artifacts generate`): Headless artifact generation
-//! - **List** (`artifacts list`): Display all configured artifacts
+//! The CLI launches an interactive terminal UI that drives the full
+//! check / generate / serialize lifecycle for every artifact declared in the
+//! flake. It is the only mode of operation; there are no subcommands.
 //!
 //! ## Architecture
 //!
@@ -47,14 +44,14 @@
 //! ## Example Usage
 //!
 //! ```bash
-//! # Launch interactive TUI
-//! artifacts tui
+//! # Launch interactive TUI in the current flake directory
+//! artifacts
 //!
-//! # Generate all artifacts that need regeneration
-//! artifacts generate
+//! # Point the TUI at a different flake directory
+//! artifacts /path/to/flake
 //!
-//! # List all configured artifacts
-//! artifacts list
+//! # Enable file logging for debugging
+//! artifacts --log-file /tmp/artifacts.log --log-level debug
 //! ```
 //!
 //! ## Configuration

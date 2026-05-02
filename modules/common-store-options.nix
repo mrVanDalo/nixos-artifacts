@@ -40,7 +40,7 @@ let
         )
       );
       default = { };
-      description = "Prompts end up in $prompt/<name> in the generator script";
+      description = "Prompts end up in $prompts/<name> in the generator script";
     };
 
     backend = mkOption {

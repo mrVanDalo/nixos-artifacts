@@ -1,13 +1,13 @@
 //! Artifacts CLI - Main entry point
 //!
-//! This binary provides the `artifacts` command for managing NixOS artifacts
-//! through interactive TUI, headless generation, and artifact listing.
+//! This binary provides the `artifacts` command, an interactive TUI for
+//! managing NixOS artifacts. The TUI is the only mode; there are no
+//! subcommands.
 //!
-//! ## Commands
+//! ## Usage
 //!
-//! - `artifacts` or `artifacts tui` - Launch interactive TUI for artifact management
-//! - `artifacts list` - List all configured artifacts
-//! - `artifacts generate` - Generate artifacts in headless mode
+//! - `artifacts` — Launch the TUI against the flake in the current directory
+//! - `artifacts /path/to/flake` — Launch the TUI against a different flake
 //!
 //! ## Configuration
 //!
