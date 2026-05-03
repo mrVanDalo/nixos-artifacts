@@ -47,7 +47,7 @@ Define `artifacts.config.<backend-name>` options for backend-specific settings (
 }
 ----
 
-These settings are passed to scripts via `$config` as JSON.
+These per-target settings are surfaced to scripts as the `config` field of each entry in the `targets.json` file pointed to by `$targets`. See xref:backend-scripts-reference.adoc[Scripts Reference] for the full schema.
 
 ==== Render Module (store.nix)
 

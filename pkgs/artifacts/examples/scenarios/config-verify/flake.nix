@@ -18,10 +18,10 @@
               { pkgs, ... }:
               {
                 networking.hostName = "test-machine";
-                # Backend config that should appear in $config
+                # Backend config that should appear in each $targets[].config entry
                 artifacts.default.backend = "test-config-verify";
                 artifacts.store = {
-                  # Regular NixOS artifact (will verify $config)
+                  # Regular NixOS artifact (will verify $targets points at a valid JSON file)
                   nixos-secret = {
                     files.secret-file = {
                       path = "/run/secrets/nixos-secret";
@@ -30,7 +30,7 @@
                       echo "nixos-secret-value" > "$out/secret-file"
                     '';
                   };
-                  # Shared artifact (will verify $machines/$users)
+                  # Shared artifact (will verify $targets contains all machines and users)
                   shared-config-secret = {
                     shared = true;
                     files.shared-file = {

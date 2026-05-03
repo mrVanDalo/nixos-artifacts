@@ -1,5 +1,6 @@
-# Test backend that verifies $config environment variable
-# Used by tests to ensure $config is properly set and contains valid JSON
+# Test backend that verifies the unified $targets environment variable
+# Used by tests to ensure $targets points to a valid JSON file with the
+# expected context and target entries.
 
 [test-config-verify.nixos]
 check = "./check.sh"

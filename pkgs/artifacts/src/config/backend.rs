@@ -85,8 +85,11 @@ use std::path::{Path, PathBuf};
 
 /// Backend-specific settings as a flexible key-value map.
 ///
-/// This type allows backends to declare arbitrary configuration settings
-/// that are passed through to serialization scripts via environment variables.
+/// Parsed from the optional `[<name>.settings]` table in `backend.toml`.
+/// The values are stored on `BackendEntry.settings` but are not currently
+/// surfaced to scripts (neither as env vars nor inside `targets.json`).
+/// See issue nixos-artifacts-v7c for the open question on whether to wire
+/// this through or drop the field.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct BackendSettings(pub BTreeMap<String, serde_json::Value>);
 

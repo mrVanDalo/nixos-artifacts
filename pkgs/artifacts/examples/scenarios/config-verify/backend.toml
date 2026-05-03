@@ -1,5 +1,5 @@
 # Test scenario that uses the test-config-verify backend
-# This backend validates that $config is properly set for NixOS/Home targets
-# and $machines/$users are set for shared targets
+# This backend validates that $targets is properly set with the expected
+# context, target list, and per-target config (single + shared cases).
 
 include = ["../../backends/test-config-verify/backend.toml"]

@@ -12,8 +12,10 @@
     #     (artifacts.store.<name>.backend = "<name>")
     #
     #   settings :: attribute set (default: { })
-    #     Backend-specific configuration passed to scripts via environment.
-    #     Arbitrary key-value pairs.
+    #     Arbitrary key-value pairs emitted as a `[<name>.settings]` table in
+    #     the generated backend.toml. Currently parsed by the CLI but not yet
+    #     surfaced to scripts (no env var, not added to targets.json) — see
+    #     beads issue nixos-artifacts-v7c.
     #
     #   home_enabled :: bool (default: true)
     #     Whether the backend is active for homeConfigurations.
