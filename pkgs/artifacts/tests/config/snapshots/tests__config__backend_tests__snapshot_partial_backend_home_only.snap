@@ -22,7 +22,4 @@ BackendEntry {
         },
     ),
     shared: None,
-    settings: BackendSettings(
-        {},
-    ),
 }

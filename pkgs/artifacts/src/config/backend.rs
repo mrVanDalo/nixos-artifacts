@@ -23,9 +23,6 @@
 //! enabled = true
 //! check = "./agenix_shared_check.sh"
 //! serialize = "./agenix_shared_serialize.sh"
-//!
-//! [agenix.settings]
-//! key = "value"
 //! ```
 //!
 //! ## Validation Rules
@@ -79,19 +76,9 @@
 
 use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
-
-/// Backend-specific settings as a flexible key-value map.
-///
-/// Parsed from the optional `[<name>.settings]` table in `backend.toml`.
-/// The values are stored on `BackendEntry.settings` but are not currently
-/// surfaced to scripts (neither as env vars nor inside `targets.json`).
-/// See issue nixos-artifacts-v7c for the open question on whether to wire
-/// this through or drop the field.
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct BackendSettings(pub BTreeMap<String, serde_json::Value>);
 
 /// Target type for configuration sections (nixos, home, shared).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -199,9 +186,6 @@ pub struct BackendEntry {
     /// Shared artifacts configuration (for multi-machine artifacts).
     #[serde(default)]
     pub shared: Option<TargetConfig>,
-    /// Backend-specific settings from `[backend_name.settings]` table.
-    #[serde(default)]
-    pub settings: BackendSettings,
 }
 
 impl BackendEntry {
@@ -380,7 +364,6 @@ impl BackendConfiguration {
                 shared: entry
                     .shared
                     .map(|t| Self::resolve_target_config(base_dir, t)),
-                settings: entry.settings,
             };
             result.insert(name, resolved_entry);
         }

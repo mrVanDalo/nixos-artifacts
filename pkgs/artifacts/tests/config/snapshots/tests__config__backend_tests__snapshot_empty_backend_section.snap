@@ -10,7 +10,4 @@ BackendEntry {
     nixos: None,
     home: None,
     shared: None,
-    settings: BackendSettings(
-        {},
-    ),
 }

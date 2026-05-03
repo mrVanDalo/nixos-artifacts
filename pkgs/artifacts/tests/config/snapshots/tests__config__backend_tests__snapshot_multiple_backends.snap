@@ -32,9 +32,6 @@ BackendEntry {
     ),
     home: None,
     shared: None,
-    settings: BackendSettings(
-        {},
-    ),
 }
 
 backend2:
@@ -62,7 +59,4 @@ BackendEntry {
         },
     ),
     shared: None,
-    settings: BackendSettings(
-        {},
-    ),
 }

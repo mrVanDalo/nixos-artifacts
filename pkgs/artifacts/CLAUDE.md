@@ -13,7 +13,6 @@ interactive user prompts for secret generation.
 
 1. **Backend Configuration (`backend.toml`)**
    - Defines serialization backends with custom scripts
-   - Backend-specific settings
    - Supports multiple backends (agenix, sops-nix, colmena, test)
 
 2. **Flake Configuration (`flake.nix`)**
@@ -45,10 +44,6 @@ serialize = "./serialize.sh"
 enabled = true
 check = "./shared_check.sh"
 serialize = "./shared_serialize.sh"
-
-[backend_name.settings]            # Optional backend-specific config
-key = "value"
-another_key = 123
 ```
 
 **Validation Rules:**
@@ -188,7 +183,7 @@ pkgs/artifacts/
 │   │   ├── test-skip-one/              # Test backend that skips one artifact
 │   │   │   └── ...                     # Same structure as test/
 │   │   ├── test-shared/                # Test backend exercising shared scripts
-│   │   └── test-config-verify/         # Test backend that asserts settings round-trip
+│   │   └── test-config-verify/         # Test backend that asserts the unified $targets env interface
 │   └── scenarios/                      # Test scenarios (each is a complete flake)
 │       ├── single-artifact-with-prompts/   # Simple scenario with prompts
 │       ├── two-artifacts-no-prompts/       # Multiple artifacts, no prompts
@@ -199,8 +194,8 @@ pkgs/artifacts/
 │       ├── artifact-name-formats/          # Various artifact naming patterns
 │       ├── backend-include/                # Backend include directive test
 │       ├── backend-circular-include/       # Circular include detection test
-│       ├── config-verify/                  # settings round-trip verification
-│       ├── no-config-section/              # Backend without [<name>.settings]
+│       ├── config-verify/                  # $targets env-var round-trip verification
+│       ├── no-config-section/              # Minimal backend.toml (no per-target config)
 │       ├── python-scripts/                 # Generator written in Python
 │       ├── error-missing-files/            # Error: missing generated files
 │       ├── error-missing-generator/        # Error: missing generator

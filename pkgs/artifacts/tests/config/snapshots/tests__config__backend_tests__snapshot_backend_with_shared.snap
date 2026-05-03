@@ -50,7 +50,4 @@ BackendEntry {
             ),
         },
     ),
-    settings: BackendSettings(
-        {},
-    ),
 }

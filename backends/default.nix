@@ -11,12 +11,6 @@
     #     Backend identifier used in artifact declarations
     #     (artifacts.store.<name>.backend = "<name>")
     #
-    #   settings :: attribute set (default: { })
-    #     Arbitrary key-value pairs emitted as a `[<name>.settings]` table in
-    #     the generated backend.toml. Currently parsed by the CLI but not yet
-    #     surfaced to scripts (no env var, not added to targets.json) — see
-    #     beads issue nixos-artifacts-v7c.
-    #
     #   home_enabled :: bool (default: true)
     #     Whether the backend is active for homeConfigurations.
     #
@@ -58,7 +52,6 @@
         pkgs ? null,
         system ? null,
         name,
-        settings ? { },
         home_enabled ? true,
         home_check,
         home_serialize,
@@ -105,9 +98,6 @@
           }
           // lib.optionalAttrs (shared_check != null && shared_serialize != null) {
             shared = sharedConfig;
-          }
-          // lib.optionalAttrs (settings != { }) {
-            inherit settings;
           };
         };
 

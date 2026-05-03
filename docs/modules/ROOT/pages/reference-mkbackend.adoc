@@ -16,7 +16,6 @@ self.lib.mkBackend {
   home_serialize,
   shared_check ? null,
   shared_serialize ? null,
-  settings ? { },
   nixos_enabled ? true,
   home_enabled ? true,
   shared_enabled ? true,
@@ -65,10 +64,6 @@ self.lib.mkBackend {
 | No
 | Path to script that serializes shared artifacts for all targets. Required if `shared_check` is provided.
 
-| `settings`
-| No
-| Attribute set of backend-specific settings. These are available in the `$targets` JSON file under each target's `config` field at runtime. Default: `{ }`
-
 | `nixos_enabled`
 | No
 | Whether the NixOS target is enabled. Default: `true`
@@ -114,9 +109,6 @@ serialize = "./home_serialize.sh"
 enabled = true
 check = "./shared_check.sh"
 serialize = "./shared_serialize.sh"
-
-[<name>.settings]  # Only when settings are provided
-key = "value"
 ----
 
 == Example
@@ -140,9 +132,6 @@ key = "value"
         # Optional: shared artifact support
         shared_check = ./check.sh;
         shared_serialize = ./serialize.sh;
-
-        # Optional: backend-specific settings
-        settings.storage_path = "/var/lib/my-backend";
       };
     in
     {

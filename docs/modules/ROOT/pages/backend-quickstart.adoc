@@ -33,10 +33,6 @@ serialize = "./serialize.sh"
 enabled = true
 check = "./check.sh"
 serialize = "./serialize.sh"
-
-[mybackend.settings]
-# Optional: backend-specific configuration (available in targets.json)
-storage_path = "/var/lib/secrets"
 ----
 
 == Unified Environment Variables

@@ -25,7 +25,4 @@ BackendEntry {
     ),
     home: None,
     shared: None,
-    settings: BackendSettings(
-        {},
-    ),
 }

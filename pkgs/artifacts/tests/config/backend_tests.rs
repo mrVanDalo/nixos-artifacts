@@ -106,23 +106,6 @@ serialize = "./serialize.sh"
 }
 
 #[test]
-fn snapshot_backend_with_settings() {
-    let input = r#"
-[test.nixos]
-check = "./check.sh"
-serialize = "./serialize.sh"
-
-[test.settings]
-key = "value"
-another = 123
-"#;
-    let config = load_toml(input);
-    let backend = get_backend(&config, "test").unwrap();
-
-    assert_snapshot_temp_filtered!(make_snapshot!(input, backend));
-}
-
-#[test]
 fn snapshot_multiple_backends() {
     let input = r#"
 [backend1.nixos]
