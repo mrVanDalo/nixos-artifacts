@@ -61,14 +61,21 @@ let
       type = nullOr package;
       default = null;
       description = ''
-        Generator Script. These environment variables are handed over to this script.
+        Generator Script.
+
+        Per-target generators (the artifact is not `shared`) receive:
         - `$out` a folder the generator script must create a file for each file definition of the artifact.
         - `$prompts` a folder containing files containing the prompt inputs (defined by the prompts option).
         - `$artifact` artifact name.
-        - `$artifact_context` context type: "nixos", "homemanager", or "shared".
+        - `$artifact_context` context type: `"nixos"` or `"homemanager"`.
         - `$machine` machine name (only for NixOS targets).
         - `$username` username (only for Home Manager targets).
         - `$LOG_LEVEL` log level.
+
+        Shared generators (`shared = true`) only receive `$out`, `$prompts`,
+        `$artifact_context = "shared"`, and `$LOG_LEVEL`. The artifact name
+        and target identifiers are intentionally not exported because shared
+        generators must produce identical output regardless of target.
       '';
       example = literalExpression ''
         pkgs.write.writeBash "random" ${"''"}

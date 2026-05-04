@@ -18,8 +18,10 @@
 //!
 //! # Exit Codes
 //!
-//! - `0` - Success (all artifacts processed)
-//! - `1` - Error (failed artifacts or configuration error)
+//! - `0` - The TUI ran to completion. Per-artifact failures are summarised on
+//!   stderr but do not change the exit code.
+//! - `1` - The CLI itself failed (e.g. backend config load, nix evaluation,
+//!   terminal init, async runtime error).
 
 pub mod args;
 

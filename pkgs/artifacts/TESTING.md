@@ -5,27 +5,37 @@ for the artifacts CLI project.
 
 ## Overview
 
-The artifacts CLI uses a comprehensive testing strategy:
+The artifacts CLI uses a layered testing strategy:
 
-- **Unit tests** - Testing individual functions and modules
-- **Integration tests** - Testing backend operations and CLI commands
-- **End-to-end (e2e) tests** - Testing the complete artifact generation flow
-- **Async tests** - Testing the TUI runtime and event handling
-- **Snapshot tests** - Testing CLI output formatting
+- **Unit tests** — Inline `#[cfg(test)]` modules in `src/` for individual
+  functions
+- **Integration tests** (`tests/`) — Driven through `tests/tests.rs` which
+  aggregates every other module in `tests/`
+- **End-to-end (e2e) tests** (`tests/e2e/`) — Drive the real backend pipeline
+  (check → generate → serialize) against scenarios in `examples/scenarios/`
+- **Async tests** (`tests/async_tests/`) — Tokio runtime, channel, and
+  state-machine tests for the TUI background plumbing
+- **Snapshot tests** — `insta` (TUI views, config parsing) and `insta-cmd` (CLI
+  surface)
 
 ## Test Structure
 
 ```
 tests/
-├── async_tests/         # Async runtime tests
-├── backend/            # Backend operation tests
-├── cli/                # CLI command tests (insta-cmd)
-├── e2e/                # End-to-end integration tests
-│   ├── mod.rs          # Core e2e tests
+├── async_tests/        # Async runtime / channel / shutdown tests
+├── backend/            # Generator + serialization unit-style tests
+├── cli/                # CLI integration tests (insta-cmd)
+├── common/             # Shared TestHarness + diagnostic helpers
+├── config/             # backend.toml + make.json parser tests
+├── e2e/                # End-to-end pipeline tests
+│   ├── mod.rs              # Core e2e tests
 │   ├── backend_verify.rs   # Backend storage verification
-│   ├── diagnostics.rs  # Diagnostic tooling
-│   ├── edge_cases.rs   # Edge case and error handling
+│   ├── config_env_tests.rs # $targets / $config env wiring
+│   ├── diagnostics.rs      # Diagnostic-system tests
+│   ├── edge_cases.rs       # Error scenarios
 │   └── shared_artifact.rs  # Shared artifact tests
+├── tui/                # View snapshots + interaction tests
+├── test_helpers.rs     # Misc helpers
 └── tests.rs            # Test entry point
 ```
 
@@ -61,134 +71,121 @@ cargo test --test tests e2e_single_artifact_is_created -- --test-threads=1
 
 ### Important flags
 
-- `--test-threads=1`: Required for e2e tests to prevent shared state conflicts
-- `--no-run`: Compile tests without running (useful for checking compilation)
+- `--test-threads=1`: Required for e2e tests because they share temp output
+  state via `ARTIFACTS_TEST_OUTPUT_DIR`
+- `--no-run`: Compile tests without running (useful for type-check loops)
 
-## Diagnostic System
+## Test Harness
 
-The diagnostic system captures detailed information during test execution to
-help debug failures.
-
-### Diagnostic Information Captured
-
-When tests fail, the diagnostic system captures:
-
-1. **Configuration**
-   - Backend configuration (backend.toml contents)
-   - Make configuration (nixos_map and home_map keys)
-
-2. **Environment Variables**
-   - ARTIFACTS_ prefixed variables
-   - CARGO_ prefixed variables
-   - RUST_ prefixed variables
-
-3. **Temporary Files**
-   - Input file contents
-   - Prompt file names (values redacted for security)
-
-4. **Generated Files**
-   - Paths to generated files
-   - File contents
-
-5. **Error Information**
-   - Error messages
-   - Generator stderr (if captured)
-   - Backend stderr (if captured)
-
-### Security Considerations
-
-The diagnostic system automatically redacts:
-
-- Prompt values (replaced with `[REDACTED]`)
-- Environment variables containing sensitive keywords:
-  - Variables with "SECRET" in the name
-  - Variables with "PASSWORD" in the name
-  - Variables with "TOKEN" in the name
-  - Variables with "KEY" in the name
-
-### Using Diagnostics in Tests
-
-To capture diagnostics on test failure:
+`tests/common/mod.rs` exposes `TestHarness`, the entry point used by every e2e
+and most integration tests. It owns the loaded `BackendConfiguration`,
+`MakeConfiguration`, and a per-test `TempDir` for backend storage.
 
 ```rust
 use artifacts::app::model::TargetType;
-use artifacts::cli::headless::generate_single_artifact_with_diagnostics_and_target_type;
-use crate::e2e::dump_test_diagnostics;
+use std::collections::BTreeMap;
+use crate::common::{TestHarness, dump_test_diagnostics};
 
-#[test]
-fn my_test() -> Result<()> {
-    let (result, diagnostics) = generate_single_artifact_with_diagnostics_and_target_type(
-        "machine-name",
-        &artifact_def,
-        &prompt_values,
-        &backend,
-        &make_config,
-        TargetType::NixOS {
-            machine: "machine-name".to_string(),
-        },
-    );
+let harness = TestHarness::load_example("scenarios/single-artifact-with-prompts")?;
 
-    match result {
-        Ok(r) => r,
-        Err(e) => {
-            // Dump diagnostics on failure
-            let diag_path = PathBuf::from("/tmp/diagnostics.txt");
-            dump_test_diagnostics(&diagnostics, &diag_path)?;
-            return Err(e);
-        }
-    }
+let (artifact_name, artifact_def) = harness
+    .find_artifact("machine-name", None)
+    .ok_or_else(|| anyhow::anyhow!("no artifacts for machine-name"))?;
 
-    // Test assertions...
-    Ok(())
+let target_type = TargetType::NixOS {
+    machine: "machine-name".to_string(),
+};
+
+let prompts: BTreeMap<String, String> = BTreeMap::from([
+    ("secret1".to_string(), "test-secret-one".to_string()),
+]);
+
+let result = harness.generate_artifact(
+    "machine-name",
+    &artifact_def,
+    target_type,
+    &prompts,
+)?;
+
+assert!(result.success, "generation should succeed");
+```
+
+`generate_artifact` runs the full backend pipeline directly
+(`run_check_serialization` → `run_generator_script` → `run_serialize`) so tests
+exercise the production code paths without going through the TUI.
+
+## Diagnostic System
+
+When a generation fails, `generate_artifact_with_diagnostics` returns a
+`DiagnosticInfo` alongside the result. Persist it to disk on failure to
+investigate later:
+
+```rust
+let (result, diagnostics) = harness.generate_artifact_with_diagnostics(
+    "machine-name",
+    &artifact_def,
+    target_type,
+    &prompts,
+)?;
+
+if !result.success {
+    let diag_dir = std::path::PathBuf::from("/tmp/artifacts_test_failures");
+    let diag_path = diag_dir.join("my_test.txt");
+    dump_test_diagnostics(&diagnostics, &diag_path)?;
+    anyhow::bail!("generation failed: see {}", diag_path.display());
 }
 ```
 
-### Automatic Diagnostic Dump
+### What gets captured
 
-The `e2e_single_artifact_is_created` test now automatically dumps diagnostics on
-failure to `/tmp/artifacts_test_failures/` with a timestamp in the filename.
+`DiagnosticInfo` (see `tests/common/mod.rs`) records:
 
-## Troubleshooting Failed Tests
+1. **Configuration** — `backend.toml` contents and a summary of
+   `MakeConfiguration` (base path + map keys)
+2. **Environment variables** — `ARTIFACTS_*` and `CARGO_*` only; other prefixes
+   are not collected
+3. **Prompt files** — names only; values are stored as `[REDACTED]`
+4. **Generated files** — paths under `ARTIFACTS_TEST_OUTPUT_DIR`
+5. **Errors** — propagated error message from the failed pipeline step
 
-### Finding Diagnostic Output
+### Redaction
 
-When e2e tests fail, check:
+`DiagnosticInfo::format` redacts any captured environment variable whose key
+(uppercased) contains `SECRET`, `PASSWORD`, `TOKEN`, or `KEY`. Prompt values are
+never captured in plaintext — only the prompt name is recorded.
 
-```
-/tmp/artifacts_test_failures/
-├── {timestamp}_{test_name}.txt
-└── ...
-```
+### Diagnostic report layout
 
-### Reading Diagnostic Output
-
-Diagnostic files are formatted with clear sections:
+`format()` produces a report like this:
 
 ```
 ═══════════════════════════════════════════════════════════
-Diagnostic Report for: test-artifact
+Diagnostic Report for: my-artifact
 Target: machine-name
 ═══════════════════════════════════════════════════════════
 
 ─── Configuration ───
 Backend Config:
-[backend contents]
+[backend.toml contents]
 
 Make Config:
-[configuration summary]
+make_base: /…
+nixos_map keys: [...]
+home_map keys: [...]
 
 ─── Environment Variables ───
+ARTIFACTS_TEST_OUTPUT_DIR=…
 CARGO_PKG_NAME=artifacts
-...
+…
 
 ─── Input Files ───
 (no input files)
 
 ─── Prompt Files ───
-(no prompt files - prompt values redacted)
+secret1: [REDACTED]
 
 ─── Generated Files ───
-- /tmp/artifacts-headless-xxx/out/very-simple-secrets
+- /tmp/…/my-artifact
 
 ─── Generator Output ───
 stdout: (not captured)
@@ -199,137 +196,133 @@ stdout: (not captured)
 stderr: (not captured)
 
 ─── Error Information ───
-Error: [error message if present]
+Error: <message>
 
 ═══════════════════════════════════════════════════════════
 End of Diagnostic Report
 ═══════════════════════════════════════════════════════════
 ```
 
-### Common Test Failures
+## Troubleshooting Failed Tests
+
+### Common failure modes
 
 **1. Generator failed with non-zero exit status**
 
 - Check the artifact's generator script
-- Verify prompts are being passed correctly
-- Look at the prompt file contents in diagnostics
+- Verify prompt values are passed correctly (look at the prompt file names in
+  the diagnostic report)
+- Check the generator's stderr in the diagnostic, if captured
 
 **2. Backend configuration not found**
 
-- Verify backend.toml exists in the scenario directory
-- Check the backend.toml syntax
+- Verify `backend.toml` exists in the scenario directory
+- Check the TOML for syntax errors and that `check` / `serialize` are paired
 
 **3. Serialization failed**
 
-- Check the serialize script exists and is executable
-- Verify the backend configuration is correct
+- Ensure the serialize script exists and is executable
+- Verify backend storage paths under `ARTIFACTS_TEST_OUTPUT_DIR`
 
-### Debug Mode
+### Verbose logging
 
-Enable debug logging for more verbose output:
+The CLI uses its own logger, not `RUST_LOG`. To get debug output from a
+production run:
 
 ```bash
-RUST_LOG=debug cargo test --test tests e2e -- --test-threads=1
+artifacts --log-file /tmp/artifacts.log --log-level debug
 ```
+
+Test code constructs a `LogLevel` directly (see
+`TestHarness::generate_artifact`, which currently uses `LogLevel::Info`).
+
+## Snapshot Workflow
+
+TUI view tests, CLI surface tests, and config parsing tests use `insta`. After a
+code change that alters a snapshot:
+
+```bash
+cargo test --test tests …
+cargo insta review
+```
+
+Do **not** run `cargo insta accept` or `cargo insta test --accept` unattended —
+the project policy is to review snapshots manually before accepting.
 
 ## Test Requirements
 
-All e2e tests require:
+E2E tests require:
 
-- Nix installation with flake support
-- Scenarios in `examples/scenarios/` directory
-- serial_test for test isolation (`#[serial]`)
-- Tests run single-threaded (`--test-threads=1`)
+- A working Nix installation with flake support (the harness calls `nix build`
+  to materialise `make.json`)
+- Scenarios under `pkgs/artifacts/examples/scenarios/`
+- `serial_test`'s `#[serial]` attribute on tests that touch
+  `ARTIFACTS_TEST_OUTPUT_DIR`
+- `--test-threads=1` at the cargo command line
 
 ## CI Testing
 
-Tests are configured to run in CI with:
+CI runs the test suite with:
 
 - Single-threaded execution (`--test-threads=1`)
-- Serial test isolation (`#[serial]` attribute)
-- Nix environment with flake support
-- Automatic diagnostic dump on failure
+- Serial test isolation (`#[serial]`)
+- A Nix environment with flake support
+- Diagnostic dumps on failure under `/tmp/artifacts_test_failures/`
 
 ## Adding New Tests
 
-### E2E Test Template
+### E2E test template
 
 ```rust
+use anyhow::Result;
 use artifacts::app::model::TargetType;
-use artifacts::cli::headless::{
-    generate_single_artifact_with_diagnostics_and_target_type, PromptValues,
-};
-    // Load example configuration
-    let (backend, make_config) = load_example("scenarios/my-scenario")?;
+use std::collections::BTreeMap;
 
-    // Get artifact
-    let (_, artifact_def) = find_first_artifact(&make_config, "machine-name")
-        .ok_or_else(|| anyhow::anyhow!("No artifacts found"))?;
+use crate::common::{TestHarness, dump_test_diagnostics};
 
-    // Set up prompts
-    let prompt_values: PromptValues = BTreeMap::from([
-        ("prompt1".to_string(), "value1".to_string()),
-    ]);
+#[test]
+#[serial_test::serial]
+fn my_new_e2e_test() -> Result<()> {
+    let harness = TestHarness::load_example("scenarios/my-scenario")?;
 
-    // Generate with diagnostics
-    let (result, diagnostics) = generate_single_artifact_with_diagnostics_and_target_type(
-        "machine-name",
-        &artifact_def,
-        &prompt_values,
-        &backend,
-        &make_config,
-        TargetType::NixOS {
-            machine: "machine-name".to_string(),
-        },
-    );
+    let (_name, artifact_def) = harness
+        .find_artifact("machine-name", None)
+        .ok_or_else(|| anyhow::anyhow!("no artifacts for machine-name"))?;
 
-    // Handle with diagnostic dump on failure
-    let result = match result {
-        Ok(r) => r,
-        Err(e) => {
-            let diag_dir = PathBuf::from("/tmp/artifacts_test_failures");
-            let _ = fs::create_dir_all(&diag_dir);
-            let diag_path = diag_dir.join("my_new_test.txt");
-            let _ = dump_test_diagnostics(&diagnostics, &diag_path);
-            return Err(e);
-        }
+    let target_type = TargetType::NixOS {
+        machine: "machine-name".to_string(),
     };
 
-    // Assert success
-    assert!(result.success, "Generation should succeed");
+    let prompts: BTreeMap<String, String> =
+        BTreeMap::from([("prompt1".to_string(), "value1".to_string())]);
+
+    let (result, diagnostics) = harness.generate_artifact_with_diagnostics(
+        "machine-name",
+        &artifact_def,
+        target_type,
+        &prompts,
+    )?;
+
+    if !result.success {
+        let diag_dir = std::path::PathBuf::from("/tmp/artifacts_test_failures");
+        let _ = std::fs::create_dir_all(&diag_dir);
+        let _ = dump_test_diagnostics(
+            &diagnostics,
+            &diag_dir.join("my_new_e2e_test.txt"),
+        );
+        anyhow::bail!(
+            "generation failed: {}",
+            result.error.unwrap_or_default()
+        );
+    }
 
     Ok(())
 }
 ```
 
-## Test Categories
-
-### TEST-01: Programmatic Invocation
-
-Verify the headless API can be called programmatically without TUI.
-
-### TEST-02: Single Artifact Creation
-
-Verify single artifacts can be created with simple configurations.
-
-### TEST-03: Artifact Existence Verification
-
-Verify artifacts exist at expected backend locations.
-
-### TEST-04: Content Verification
-
-Verify artifact content matches expected format.
-
-### TEST-05: Shared Artifacts
-
-Verify shared artifacts work correctly across multiple targets.
-
-### TEST-06: CI Failure Messages
-
-Verify tests provide meaningful failure messages for CI debugging.
-
 ## Related Files
 
-- `tests/e2e/diagnostics.rs` - Diagnostic utilities
-- `src/cli/headless.rs` - Headless API with diagnostic capture
-- `tests/tests.rs` - Test entry point
+- `tests/common/mod.rs` — `TestHarness`, `DiagnosticInfo`,
+  `dump_test_diagnostics`
+- `tests/e2e/diagnostics.rs` — Tests for the diagnostic system itself
+- `tests/tests.rs` — Test entry point (declares all modules)

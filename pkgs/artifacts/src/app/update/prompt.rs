@@ -153,7 +153,7 @@ fn finish_prompts_and_dispatch(mut model: Model) -> (Model, Effect) {
     // Push onto the gen→ser pipeline. If nothing is currently in flight the
     // pump returns this very effect for immediate dispatch; otherwise it
     // returns Effect::None and the pipeline picks it up after the current
-    // artifact's serialize finishes. See nixos-artifacts-tje.
+    // artifact's serialize finishes.
     let effect = super::enqueue_or_dispatch(&mut model, run_gen);
     (model, effect)
 }

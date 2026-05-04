@@ -50,8 +50,9 @@
 //!
 //! ### supports_shared Inference
 //!
-//! - `true` if `[backend.shared]` section exists AND `enabled = true` (explicit or inferred)
-//! - `false` otherwise
+//! - `true` if `[backend.shared]` exists, is enabled (explicit or inferred),
+//!   and has both `check` and `serialize` scripts
+//! - `false` otherwise (section absent, disabled, or missing scripts)
 //!
 //! ## Include Directive
 //!
@@ -191,9 +192,9 @@ pub struct BackendEntry {
 impl BackendEntry {
     /// Check if this backend supports shared artifacts.
     ///
-    /// Returns true if:
-    /// - The `[backend.shared]` section exists
-    /// - AND the shared target is enabled
+    /// Returns true when the `[backend.shared]` section exists, is enabled
+    /// (explicit or inferred), AND has both `check` and `serialize` scripts.
+    /// A passthrough shared section (no scripts) does not count as support.
     pub fn supports_shared(&self) -> bool {
         self.shared
             .as_ref()

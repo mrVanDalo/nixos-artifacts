@@ -296,8 +296,7 @@ fn handle_check_result(
                 if let Some(effect) = build_run_generator_effect_for(entry, artifact_index) {
                     model.generate_queue.remove(&artifact_index);
                     // Push onto the gen→ser pipeline so a check resolving
-                    // mid-batch doesn't bypass the in-flight artifact. See
-                    // nixos-artifacts-tje.
+                    // mid-batch doesn't bypass the in-flight artifact.
                     let dispatched = enqueue_or_dispatch(&mut model, effect);
                     return (model, dispatched);
                 }
@@ -417,7 +416,7 @@ pub(crate) fn build_prompt_state_for(
 /// `Effect::None` (if a previous artifact is still in flight). Other effect
 /// variants pass through unchanged. The pipeline is drained one slot at a
 /// time so the user sees gen0→ser0→gen1→ser1 rather than all-gens-then-all-
-/// sers. See nixos-artifacts-tje.
+/// sers.
 pub(super) fn enqueue_or_dispatch(model: &mut Model, effect: Effect) -> Effect {
     match effect {
         Effect::RunGenerator { .. } => {

@@ -10,7 +10,10 @@
 //! Generator scripts are executed in a bubblewrap container with:
 //! - `$prompts` directory containing prompt values as files
 //! - `$out` directory where generated files should be written
-//! - Environment variables: `$out`, `$prompts`, `$artifact_context`, `$machine`/`$username`, `$artifact`
+//! - Per-target generators (NixOS / Home Manager): `$out`, `$prompts`,
+//!   `$artifact`, `$artifact_context`, `$machine` or `$username`, `$LOG_LEVEL`
+//! - Shared generators: `$out`, `$prompts`, `$artifact_context = "shared"`,
+//!   `$LOG_LEVEL` only (no `$artifact`, `$machine`, or `$username`)
 //!
 //! # Verification
 //!
@@ -463,7 +466,7 @@ pub fn verify_generated_files(artifact: &ArtifactDef, out_path: &Path) -> Result
 /// # Arguments
 ///
 /// * `artifact` - The artifact definition containing the generator script path
-/// * `target_type` - Target type with name (Nixos { machine }, HomeManager { username }, or Shared)
+/// * `target_type` - Target type with name (`NixOS { machine }` or `HomeManager { username }`)
 /// * `make_base` - Base path for resolving relative script paths
 /// * `prompts` - Directory containing prompt values as files
 /// * `out` - Directory where generator should create output files

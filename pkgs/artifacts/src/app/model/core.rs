@@ -70,8 +70,7 @@ pub struct Model {
     /// all generators run before any serialize (each Serialize is only
     /// enqueued after the runtime drains its `GeneratorFinished`). Now every
     /// dispatcher pushes here instead; the pipeline drains one entry at a
-    /// time so the user-visible order is gen0→ser0→gen1→ser1→… See
-    /// nixos-artifacts-tje.
+    /// time so the user-visible order is gen0→ser0→gen1→ser1→…
     pub pipeline_queue: VecDeque<Effect>,
     /// `artifact_index` of the artifact currently mid-pipeline (gen or ser
     /// in flight). `None` between artifacts and at start. Set when a
@@ -86,8 +85,7 @@ pub struct Model {
 /// handler processes keyboard input.
 ///
 /// Note: prompt input no longer has its own screen — it is collected inline
-/// on the `ArtifactList` view via [`Model::active_prompt`]. See the design
-/// in nixos-artifacts-psg.
+/// on the `ArtifactList` view via [`Model::active_prompt`].
 #[derive(Debug, Clone, Default)]
 pub enum Screen {
     /// Main artifact list view - the default screen

@@ -1056,7 +1056,7 @@ fn test_check_result_drains_queue_on_needs_generation() {
     // straight onto the gen→ser pipeline and is dispatched (in_flight = 1).
     // When entry 0's check resolves to NeedsGeneration the queue drains it
     // onto the pipeline, but the effect is None until 1 finishes — that's
-    // the whole point of the pipelined order. See nixos-artifacts-tje.
+    // the whole point of the pipelined order.
     let model = make_mixed_status_model();
     let (model, _) = update(model, Message::Key(KeyEvent::char('a')));
     assert!(model.generate_queue.contains(&0));
@@ -1131,7 +1131,7 @@ fn test_pipeline_dispatches_one_at_a_time_then_advances_on_serialize() {
     // dispatch only the first via Effect::RunGenerator and queue the rest
     // in pipeline_queue. SerializeFinished for the in-flight entry then
     // pops the next from the pipeline. Locks in the gen0→ser0→gen1→ser1
-    // ordering. See nixos-artifacts-tje.
+    // ordering.
     let entries: Vec<ListEntry> = (0..3)
         .map(|i| {
             ListEntry::Single(ArtifactEntry {

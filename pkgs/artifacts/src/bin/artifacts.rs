@@ -12,13 +12,16 @@
 //! ## Configuration
 //!
 //! The CLI requires:
-//! - A `flake.nix` in the current directory (or specified via `--flake`)
+//! - A `flake.nix` in the current directory (or in the directory passed as the
+//!   positional argument)
 //! - A `backend.toml` defining serialization backends (agenix, sops-nix, etc.)
 //!
 //! ## Exit Codes
 //!
-//! - **0** - Success
-//! - **1** - General error
+//! - **0** - The TUI ran to completion. Per-artifact failures are reported on
+//!   stderr but do not change the exit code.
+//! - **1** - The TUI itself failed (configuration load, terminal init, runtime
+//!   error).
 //!
 //! ## Logging
 //!
