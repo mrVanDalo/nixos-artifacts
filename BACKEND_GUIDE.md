@@ -40,7 +40,7 @@ backends. It separates the concerns of:
 ### What is a Backend?
 
 A **backend** is a set of shell scripts that implement the storage contract for
-artifact files. When you run `artifacts generate`, the CLI orchestrates:
+artifact files. When you run the `artifacts` TUI, it orchestrates:
 
 1. **Check Phase**: Calls `check` to see if the artifact already exists
 2. **Generation Phase**: Runs generator scripts to create files (if needed)
@@ -106,8 +106,7 @@ can use the same script for all target types.
 **Purpose:** Determine whether an artifact already exists in your backend's
 storage. This prevents accidental overwrites of existing secrets.
 
-**When Called:** Before the generator script runs, during the
-`artifacts generate` workflow.
+**When Called:** Before the generator script runs, during the TUI workflow.
 
 **Exit Codes:**
 
@@ -262,12 +261,12 @@ serialize = "./scripts/home_serialize.sh"
 enabled = true
 check = "./scripts/shared_check.sh"
 serialize = "./scripts/shared_serialize.sh"
-
-# Backend-specific settings (optional)
-[mybackend.settings]
-storage_path = "/var/lib/mybackend"
-encryption = "aes256-gcm"
 ```
+
+Per-target backend settings (storage paths, public keys, etc.) are not declared
+in `backend.toml`. Define them in your backend's NixOS module under
+`artifacts.config.<backend-name>`; they are surfaced to scripts as the `config`
+field of each entry in the `$targets` JSON file.
 
 ### Validation Rules
 

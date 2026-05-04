@@ -292,7 +292,7 @@ pkgs/artifacts/
 
 ### Rust Standards
 
-- **Version**: Rust 1.87.0
+- **Edition**: Rust edition 2024 (requires rustc ≥ 1.85)
 - **Linting**: Clippy with default settings (treat warnings as errors)
 - **Error Handling**: Use `anyhow::Result<T>` for application errors, avoid
   panicking
@@ -751,7 +751,7 @@ cargo clippy
 
 ## Quick Reference
 
-- **Language**: Rust 1.87.0
+- **Language**: Rust (edition 2024, rustc ≥ 1.85)
 - **Entry point**: `src/bin/artifacts.rs`
 - **TUI entry**: `src/cli/mod.rs` → `run()` → `run_tui()`
 - **Elm Architecture**: `src/app/` (`model/`, `message.rs`, `effect.rs`,
