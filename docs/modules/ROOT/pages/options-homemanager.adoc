@@ -151,7 +151,9 @@ ${XDG_CONFIG_DIR}/artifacts/‹name›/‹name›
 
 
 
-Generator Script{zwsp}. These environment variables are handed over to this script{zwsp}.
+Generator Script{zwsp}.
+
+Per-target generators (the artifact is not ``shared``) receive:
 
 [options="compact"]
 * {empty}``$out`` a folder the generator script must create a file for each file definition of the artifact{zwsp}.
@@ -160,7 +162,7 @@ Generator Script{zwsp}. These environment variables are handed over to this scri
 
 * {empty}``$artifact`` artifact name{zwsp}.
 
-* {empty}``$artifact_context`` context type: “nixos”, “homemanager”, or “shared”{zwsp}.
+* {empty}``$artifact_context`` context type: ``{quot}nixos{quot}`` or ``{quot}homemanager{quot}``{zwsp}.
 
 * {empty}``$machine`` machine name (only for NixOS targets){zwsp}.
 
@@ -168,6 +170,8 @@ Generator Script{zwsp}. These environment variables are handed over to this scri
 
 * {empty}``$LOG_LEVEL`` log level{zwsp}.
 
+
+Shared generators (``shared = true``) only receive ``$out``, ``$prompts``, ``$artifact_context = {quot}shared{quot}``, and ``$LOG_LEVEL``{zwsp}. The artifact name and target identifiers are intentionally not exported because shared generators must produce identical output regardless of target{zwsp}.
 
 
 
