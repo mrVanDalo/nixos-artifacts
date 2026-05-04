@@ -93,6 +93,8 @@ The generator must:
 
 The backend will then handle serialization of $out.
 
+The generator script also receives `$artifact_context` (`"nixos"`, `"homemanager"`, or `"shared"`) and `$LOG_LEVEL`. Per-target generators additionally get `$artifact` plus `$machine` (NixOS) or `$username` (Home Manager); shared generators do not. See xref:getting-started.adoc[Getting Started] for the full list.
+
 See also xref:backend-concepts.adoc[Backend Concepts] for how serialization/deserialization is provided.
 
 [#shared-artifacts]

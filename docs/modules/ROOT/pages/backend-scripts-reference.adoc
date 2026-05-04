@@ -292,6 +292,8 @@ done
 
 If you have existing backends using the old interface (`$config`, `$machine`, `$username`, `$machines`, `$users`), update them to use the unified interface:
 
+NOTE: This migration applies to backend `check` and `serialize` scripts only. Per-target generator scripts continue to receive `$machine` (NixOS) or `$username` (Home Manager) directly — see xref:getting-started.adoc[Getting Started] for the generator environment.
+
 .Old variables → New approach
 [cols="1,2"]
 |===
