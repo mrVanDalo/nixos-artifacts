@@ -173,6 +173,14 @@ since home-manager doesn't manage system-level permissions.
 
 ```
 pkgs/artifacts/
+├── default.nix                         # Nix package definition (consumed by flake)
+├── Cargo.toml
+├── CLAUDE.md
+├── TESTING.md                          # Testing guide
+├── diagrams/                           # Architecture sketches (markdown)
+│   ├── artifact-state-machine.md
+│   ├── component-architecture.md
+│   └── effect-flow.md
 ├── examples/
 │   ├── backends/                       # Reusable backend definitions
 │   │   ├── test/                       # Standard test backend (always passes)
@@ -183,7 +191,17 @@ pkgs/artifacts/
 │   │   ├── test-skip-one/              # Test backend that skips one artifact
 │   │   │   └── ...                     # Same structure as test/
 │   │   ├── test-shared/                # Test backend exercising shared scripts
-│   │   └── test-config-verify/         # Test backend that asserts the unified $targets env interface
+│   │   │   ├── backend.toml
+│   │   │   ├── check.sh
+│   │   │   ├── serialize.sh
+│   │   │   ├── shared_check.sh         # Shared-artifact check script
+│   │   │   └── shared_serialize.sh     # Shared-artifact serialize script
+│   │   └── test-config-verify/         # Asserts the unified $targets env interface
+│   │       ├── backend.toml
+│   │       ├── check.sh
+│   │       ├── serialize.sh
+│   │       ├── shared_check.sh
+│   │       └── shared_serialize.sh
 │   └── scenarios/                      # Test scenarios (each is a complete flake)
 │       ├── single-artifact-with-prompts/   # Simple scenario with prompts
 │       ├── two-artifacts-no-prompts/       # Multiple artifacts, no prompts
@@ -212,6 +230,7 @@ pkgs/artifacts/
 │   ├── app/                              # Pure functional core (Elm Architecture)
 │   │   ├── mod.rs                        # Module exports
 │   │   ├── model/                        # State types
+│   │   │   ├── mod.rs                    # Module exports
 │   │   │   ├── core.rs                   # Model + Screen
 │   │   │   ├── artifact.rs               # ListEntry, ArtifactStatus, GeneratingSubstate
 │   │   │   ├── prompt.rs                 # PromptState, InputMode
@@ -233,6 +252,7 @@ pkgs/artifacts/
 │   ├── tui/                              # Terminal UI
 │   │   ├── mod.rs                        # Module exports
 │   │   ├── views/                        # Render functions
+│   │   │   ├── mod.rs                    # View dispatcher
 │   │   │   ├── list.rs                   # Artifact list view
 │   │   │   ├── prompt.rs                 # Inline prompt view (right pane)
 │   │   │   ├── progress.rs               # Generation progress (right pane)
@@ -255,6 +275,7 @@ pkgs/artifacts/
 │   │   ├── args.rs                       # Argument parsing (clap)
 │   │   └── mod.rs                        # CLI orchestration → run_tui()
 │   ├── config/                           # Configuration management
+│   │   ├── mod.rs                        # Module exports
 │   │   ├── backend.rs                    # backend.toml parsing
 │   │   ├── make.rs                       # Make JSON parsing
 │   │   ├── nix.rs                        # Nix evaluation helpers
@@ -262,24 +283,22 @@ pkgs/artifacts/
 │   ├── lib.rs                            # Library root
 │   ├── logging.rs                        # File-based logging + macros
 │   └── macros.rs                         # Utility macros
-├── tests/
-│   ├── tests.rs                          # Test entry point (integration tests)
-│   ├── test_helpers.rs                   # Shared helpers
-│   ├── tui/                              # TUI tests (views, integration, model state)
-│   │   ├── view_tests.rs                 # View snapshot tests
-│   │   ├── integration_tests.rs          # End-to-end TUI flows
-│   │   ├── chronological_log_tests.rs    # Log view tests
-│   │   ├── regenerate_dialog_tests.rs    # Regenerate dialog tests
-│   │   ├── model_state.rs                # Shared model fixtures
-│   │   └── snapshots/                    # View snapshots
-│   ├── cli/                              # CLI integration tests
-│   ├── backend/                          # Backend tests
-│   ├── config/                           # Config parsing tests
-│   ├── async_tests/                      # Async runtime tests
-│   ├── e2e/                              # End-to-end scenario tests
-│   └── common/                           # Shared test utilities
-├── Cargo.toml
-└── CLAUDE.md
+└── tests/
+    ├── tests.rs                          # Test entry point (integration tests)
+    ├── test_helpers.rs                   # Shared helpers
+    ├── tui/                              # TUI tests (views, integration, model state)
+    │   ├── view_tests.rs                 # View snapshot tests
+    │   ├── integration_tests.rs          # End-to-end TUI flows
+    │   ├── chronological_log_tests.rs    # Log view tests
+    │   ├── regenerate_dialog_tests.rs    # Regenerate dialog tests
+    │   ├── model_state.rs                # Shared model fixtures
+    │   └── snapshots/                    # View snapshots
+    ├── cli/                              # CLI integration tests
+    ├── backend/                          # Backend tests
+    ├── config/                           # Config parsing tests
+    ├── async_tests/                      # Async runtime tests
+    ├── e2e/                              # End-to-end scenario tests
+    └── common/                           # Shared test utilities
 ```
 
 ## Development Standards
