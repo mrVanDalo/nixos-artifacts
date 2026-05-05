@@ -78,9 +78,12 @@ pub enum Effect {
     },
 
     /// Drop all queued effects from the background FIFO without executing
-    /// them. The currently-executing effect runs to natural completion (soft
-    /// cancel). Routed by the runtime to a dedicated cancel signal channel
-    /// instead of the FIFO itself.
+    /// them. If a generator is currently in flight, its bwrap process group
+    /// is signalled (SIGTERM, then SIGKILL after a short grace) and the
+    /// affected artifact is reported back as `Message::GeneratorCancelled`.
+    /// An in-flight serialize or check phase is allowed to finish naturally
+    /// to preserve the no-corrupt-backend invariant. Routed by the runtime
+    /// to a dedicated cancel signal channel instead of the FIFO itself.
     CancelQueue,
 }
 

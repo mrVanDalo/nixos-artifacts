@@ -53,8 +53,11 @@ use super::message::KeyEvent;
 /// changes and returns the [`Effect::CancelQueue`] descriptor; the runtime
 /// turns that descriptor into a signal on the dedicated cancel channel,
 /// which drains the background FIFO of every effect that has not started
-/// executing yet. The currently-running effect, if any, runs to natural
-/// completion.
+/// executing yet. If a generator is in flight, the runtime additionally
+/// signals its bwrap process group (SIGTERM, then SIGKILL after a short
+/// grace) and reports the artifact back via `Message::GeneratorCancelled`.
+/// An in-flight serialize or check phase is allowed to finish naturally so
+/// the backend never sees a half-written artifact.
 ///
 /// Concretely, this:
 /// * reverts every entry whose status is [`ArtifactStatus::Pending`] to

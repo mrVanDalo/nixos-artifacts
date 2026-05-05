@@ -1640,7 +1640,8 @@ fn test_cancel_queue_reverts_pending_entries_to_needs_generation() {
     );
     assert!(
         matches!(new_model.entries[3].status(), ArtifactStatus::Generating(_)),
-        "in-flight Generating is left to resolve naturally (soft cancel)"
+        "model-side cancel_queue does not transition Generating; the runtime kills \
+         the bwrap process group and the status flips on GeneratorCancelled"
     );
 }
 

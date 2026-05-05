@@ -16,7 +16,7 @@ All backend scripts receive the same unified environment variables, regardless o
 | `$targets` | File | Path to `targets.json` with target info and config
 | `$inputs` | Directory | JSON files with file metadata (check only)
 | `$out` | Directory | Generated files (serialize only)
-| `$LOG_LEVEL` | String | Log level
+| `$LOG_LEVEL` | String | Log level (`error`, `warn`, `info`, `debug`)
 |===
 
 == targets.json Structure
