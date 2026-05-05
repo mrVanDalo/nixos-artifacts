@@ -2,9 +2,11 @@
 
 use std::collections::HashMap;
 
-/// State for the prompt input screen.
+/// State for the inline prompt input on the artifact list.
 ///
-/// Collects user input for artifact prompts before generation.
+/// When `Model.active_prompt` is `Some(PromptState)`, the artifact list view
+/// swaps its right pane for a prompt input field; key events are routed to
+/// the prompt handler. Prompt collection is **not** a separate `Screen`.
 /// Supports three input modes: line, multiline, and hidden (for secrets).
 #[derive(Debug, Clone)]
 pub struct PromptState {

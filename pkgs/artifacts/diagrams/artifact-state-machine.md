@@ -25,7 +25,7 @@ The TUI's `Screen` enum is a separate, smaller concern (covered at the bottom).
                    │       (○)        │   for every artifact at startup
                    └────────┬─────────┘
                             │
-                            │  CheckFinished
+                            │  Message::CheckSerializationResult
                             ▼
                 ┌───────────────────────┐
                 │                       │
@@ -110,8 +110,12 @@ progress) is **not** a screen.
 | `ArtifactList`      | Default                                  | `q`, navigation, `l` |
 | `SelectGenerator`   | Shared artifact with multiple generators | Enter (select), Esc  |
 | `ConfirmRegenerate` | Enter on `UpToDate` artifact             | Regenerate / Leave   |
-| `Done`              | After all artifacts processed (auto)     | Any key              |
-| `ChronologicalLog`  | `l` from `ArtifactList`                  | Esc                  |
+| `ChronologicalLog`  | `l` from `ArtifactList`                  | Esc / `q`            |
+
+`Screen::Done` exists in the enum and has a renderer, but no code path currently
+transitions into it — completion is communicated through individual
+`ArtifactStatus::UpToDate` / `Failed` / `Cancelled` states on the artifact list
+rather than a dedicated summary screen.
 
 Inline UI on `ArtifactList`:
 

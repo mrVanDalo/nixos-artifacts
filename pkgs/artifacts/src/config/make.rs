@@ -85,11 +85,14 @@ pub struct FileDef {
 
 /// Prompt definition for user input during generation.
 ///
-/// Prompts are collected from the user before running the generator
-/// and passed to the generator script via environment variables.
+/// Prompts are collected from the user before running the generator. Each
+/// collected value is written to a file named after the prompt inside the
+/// generator's `$prompts` directory (e.g. `$prompts/passphrase`). The
+/// generator reads them with `cat "$prompts/<name>"`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PromptDef {
-    /// Name identifier for this prompt (used as env var name)
+    /// Name identifier for this prompt. Used as the filename under
+    /// `$prompts/<name>` that the generator script reads.
     pub name: String,
     /// Human-readable description shown in the TUI
     pub description: Option<String>,

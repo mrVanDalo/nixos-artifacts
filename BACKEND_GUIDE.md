@@ -272,12 +272,15 @@ field of each entry in the `$targets` JSON file.
 
 The `check` and `serialize` scripts must be provided together or both omitted:
 
-| `check` | `serialize` | Result                                |
-| ------- | ----------- | ------------------------------------- |
-| absent  | absent      | Valid: `enabled = true` (passthrough) |
-| present | present     | Valid: `enabled = true`, `serializes` |
-| present | absent      | **ERROR**: "check requires serialize" |
-| absent  | present     | **ERROR**: "serialize requires check" |
+| `check` | `serialize` | Result                                         |
+| ------- | ----------- | ---------------------------------------------- |
+| absent  | absent      | Valid: `serializes = false` (passthrough mode) |
+| present | present     | Valid: `serializes = true`                     |
+| present | absent      | **ERROR**: "check requires serialize"          |
+| absent  | present     | **ERROR**: "serialize requires check"          |
+
+`serializes` describes whether the section runs scripts; `enabled` is a separate
+flag (see below) that can override the inferred state.
 
 ### enabled Inference
 
@@ -294,10 +297,12 @@ The `enabled` field is inferred if not explicitly set:
 
 ### supports_shared Inference
 
-A backend supports shared artifacts if:
+A backend supports shared artifacts if all of the following hold:
 
-- The `[backend.shared]` section exists AND
-- `enabled = true` (explicit or inferred)
+- The `[backend.shared]` section exists, AND
+- `enabled = true` (explicit or inferred), AND
+- both `check` and `serialize` scripts are set (a passthrough section with no
+  scripts does not count as support).
 
 ### Target-Specific Scripts
 

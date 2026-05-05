@@ -46,26 +46,29 @@ The pipeline has two channels:
 │                        ▼                                                   │
 │   ┌──────────────────────────────────────────────────────────────────┐     │
 │   │                BACKGROUND TASK (single FIFO consumer)            │     │
-│   │                background.rs ~lines 888-952                      │     │
+│   │                tui/background.rs::spawn_background_task          │     │
 │   │                                                                  │     │
 │   │   Generators ALWAYS run sequentially. Each effect produces       │     │
-│   │   exactly one Msg::*Finished keyed by artifact_index.            │     │
+│   │   exactly one Message keyed by artifact_index.                   │     │
 │   │                                                                  │     │
 │   │   Effect::CheckSerialization {..}                                │     │
-│   │      └──▶ run_check_serialization() ──▶ Msg::CheckFinished       │     │
+│   │      └──▶ run_check_serialization()                              │     │
+│   │           ──▶ Message::CheckSerializationResult                  │     │
 │   │                                                                  │     │
 │   │   Effect::RunGenerator {..}                                      │     │
 │   │      └──▶ run_generator_script() (in bubblewrap)                 │     │
 │   │           │  process group is kill-target on cancel              │     │
 │   │           ▼                                                      │     │
-│   │           verify_generated_files() ──▶ Msg::GeneratorFinished    │     │
+│   │           verify_generated_files()                               │     │
+│   │           ──▶ Message::GeneratorFinished (or                     │     │
+│   │               Message::GeneratorCancelled on user cancel)        │     │
 │   │                                                                  │     │
 │   │   Effect::Serialize {..}                                         │     │
-│   │      └──▶ run_serialize() ──▶ Msg::SerializeFinished             │     │
+│   │      └──▶ run_serialize() ──▶ Message::SerializeFinished         │     │
 │   │                                                                  │     │
-│   │   Shared* variants (SharedCheck, SharedRunGenerator,             │     │
-│   │   SharedSerialize) — handled identically, route to               │     │
-│   │   run_shared_* helpers in serialization.rs                       │     │
+│   │   TargetSpec::Multi dispatches to the run_shared_* helpers in    │     │
+│   │   serialization.rs and the shared generator path in              │     │
+│   │   generator.rs; the Effect variants are the same.                │     │
 │   │                                                                  │     │
 │   │   Cancel signal (separate channel):                              │     │
 │   │   cancel_tx ──▶ drains pipeline_queue inside the runtime,        │     │
@@ -79,7 +82,7 @@ The pipeline has two channels:
 │   ┌──────────────────────────────────────────────────────────────────┐     │
 │   │                    RUNTIME LOOP (foreground)                     │     │
 │   │   1. Poll user input (non-blocking)                              │     │
-│   │   2. Drain pending Msg::*Finished from result_tx                 │     │
+│   │   2. Drain pending Message variants from result_tx               │     │
 │   │   3. update(model, msg) → (model, effect)                        │     │
 │   │   4. Dispatch the new effect (back to top)                       │     │
 │   │   5. Render UI from current Model                                │     │
@@ -107,8 +110,9 @@ ser1 → …`, **not** `gen0 → gen1 → … → ser0 → ser1 → …`.
 
 ## Why a single FIFO?
 
-It is a deliberate design choice — see `background.rs:888-952`. The frontend may
-dispatch via `Effect::Batch` or one-by-one; either way the runtime flattens to
-individual commands and the background task consumes them sequentially. There is
-no batched response message; each command yields one `Msg::*Finished` keyed by
-`artifact_index`.
+It is a deliberate design choice — see
+`tui/background.rs::spawn_background_task`. The frontend may dispatch via
+`Effect::Batch` or one-by-one; either way the runtime flattens to individual
+commands (in `runtime::effect_to_command`) and the background task consumes them
+sequentially. There is no batched response message; each command yields one
+`Message` keyed by `artifact_index`.
