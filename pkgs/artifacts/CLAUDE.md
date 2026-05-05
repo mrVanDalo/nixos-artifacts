@@ -628,7 +628,8 @@ introduced.
 
 **Chronological log** (`Screen::ChronologicalLog`)
 
-- `j`/`k` or arrows, plus `Tab`: Focus next / previous section
+- `j` / `Down` / `Tab`: Focus next section
+- `k` / `Up`: Focus previous section
 - `PageDown` / `PageUp`: Scroll the log content
 - `Enter` / `Space`: Toggle the focused section
 - `+` / `=` / `e`: Expand all sections

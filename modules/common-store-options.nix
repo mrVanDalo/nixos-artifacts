@@ -78,7 +78,7 @@ let
         generators must produce identical output regardless of target.
       '';
       example = literalExpression ''
-        pkgs.write.writeBash "random" ${"''"}
+        pkgs.writers.writeBash "random" ${"''"}
           ''${pkgs.xkcdpass}/bin/xkcdpass --numwords 10 > $out/random_password
         ${"''"};
       '';

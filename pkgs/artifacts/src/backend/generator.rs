@@ -447,21 +447,26 @@ pub fn verify_generated_files(artifact: &ArtifactDef, out_path: &Path) -> Result
     Ok(())
 }
 
-/// Run a generator script for an artifact in an isolated bubblewrap container.
+/// Run a per-target generator script for an artifact in an isolated bubblewrap container.
 ///
 /// This function executes the artifact's generator script inside a nix-shell environment
 /// with bubblewrap containerization for security. The generator script is expected to
 /// create files in the `$out` directory based on values from the `$prompts` directory.
 ///
+/// Shared generators (`shared = true`) are dispatched through
+/// [`run_generator_script_with_path`] with `GeneratorContext::Shared` and receive a
+/// reduced environment — see that function's docs.
+///
 /// # Environment Variables
 ///
-/// The generator script receives these environment variables:
+/// The per-target generator script receives these environment variables:
 /// * `$out` - Path to the output directory where files should be created
 /// * `$prompts` - Path to directory containing prompt values as files
-/// * `$artifact_context` - Context string: "nixos", "homemanager", or "shared"
-/// * `$machine` - Machine name (for nixos context) or `$username` (for homemanager context)
 /// * `$artifact` - Name of the artifact being generated
-/// * `$LOG_LEVEL` - Log level for script verbosity ("debug", "info", "warn", "error")
+/// * `$artifact_context` - Context string: `"nixos"` or `"homemanager"`
+/// * `$machine` - Machine name (only for `nixos` context)
+/// * `$username` - User name (only for `homemanager` context)
+/// * `$LOG_LEVEL` - Log level for script verbosity (`"debug"`, `"info"`, `"warn"`, `"error"`)
 ///
 /// # Arguments
 ///

@@ -192,7 +192,7 @@ __Example:__
 
 [source,nix]
 ----
-pkgs.write.writeBash "random" ''
+pkgs.writers.writeBash "random" ''
   ${pkgs.xkcdpass}/bin/xkcdpass --numwords 10 > $out/random_password
 '';
 
