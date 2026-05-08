@@ -5,6 +5,11 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     antora-flake.url = "github:mrvandalo/antora-flake";
     antora-flake.inputs.nixpkgs.follows = "nixpkgs";
+    devshell.url = "github:numtide/devshell";
+    treefmt-nix.url = "github:numtide/treefmt-nix";
+    treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
+    home-manager.url = "github:nix-community/home-manager";
+    home-manager.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   outputs = { ... }: { };

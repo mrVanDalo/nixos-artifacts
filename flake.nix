@@ -2,24 +2,16 @@
   description = "Description for the project";
 
   inputs = {
-    devshell.url = "github:numtide/devshell";
     flake-parts.url = "github:hercules-ci/flake-parts";
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
-    treefmt-nix.url = "github:numtide/treefmt-nix";
-    home-manager.inputs.nixpkgs.follows = "nixpkgs";
-    home-manager.url = "github:nix-community/home-manager";
   };
 
   outputs =
     inputs@{ flake-parts, self, ... }:
     flake-parts.lib.mkFlake { inherit inputs; } {
       imports = [
-        inputs.devshell.flakeModule
         inputs.flake-parts.flakeModules.partitions
         ./backends
-        ./nix/devshells.nix
-        ./nix/formatter.nix
         ./nix/options.nix
         ./nix/rust-docs.nix
         ./pkgs/artifacts
@@ -27,12 +19,36 @@
 
       partitionedAttrs = {
         apps = "dev";
+        devShells = "dev";
+        formatter = "dev";
+        homeConfigurations = "dev";
       };
 
       partitions.dev.extraInputsFlake = ./dev;
-      partitions.dev.module = {
-        imports = [ ./nix/docs.nix ];
-      };
+      partitions.dev.module =
+        { inputs, ... }:
+        {
+          imports = [
+            inputs.devshell.flakeModule
+            ./nix/devshells.nix
+            ./nix/docs.nix
+            ./nix/formatter.nix
+          ];
+
+          flake.homeConfigurations.test = inputs.home-manager.lib.homeManagerConfiguration {
+            pkgs = inputs.nixpkgs.legacyPackages."x86_64-linux".pkgs;
+            modules = [
+              ./modules/hm
+              ./examples/hm
+              { artifacts.default.backend = "test"; }
+              {
+                home.stateVersion = "25.05";
+                home.username = "test";
+                home.homeDirectory = "/home/test";
+              }
+            ];
+          };
+        };
       perSystem =
         {
           self',
@@ -83,20 +99,6 @@
             machine-one = machineConfiguration "machine-one";
             machine-two = machineConfiguration "machine-two";
           };
-
-        homeConfigurations.test = inputs.home-manager.lib.homeManagerConfiguration {
-          pkgs = inputs.nixpkgs.legacyPackages."x86_64-linux".pkgs;
-          modules = [
-            self.homeModules.default
-            self.homeModules.examples
-            { artifacts.default.backend = "test"; }
-            {
-              home.stateVersion = "25.05";
-              home.username = "test";
-              home.homeDirectory = "/home/test";
-            }
-          ];
-        };
 
         homeModules.default = {
           imports = [ ./modules/hm ];
