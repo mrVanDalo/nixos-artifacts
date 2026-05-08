@@ -12,3 +12,4 @@ plans
 .dolt/
 *.db
 .beads-credential-key
+/to_publish/

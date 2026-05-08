@@ -32,9 +32,15 @@ pub fn render_artifact_list(frame: &mut Frame, model: &Model, area: Rect) {
 }
 
 fn render_artifact_list_panel(frame: &mut Frame, model: &Model, area: Rect) {
-    let chunks = Layout::vertical([Constraint::Min(3), Constraint::Length(1)]).split(area);
+    let chunks = Layout::vertical([
+        Constraint::Min(3),
+        Constraint::Length(1),
+        Constraint::Length(1),
+    ])
+    .split(area);
     let list_area = chunks[0];
-    let legend_area = chunks[1];
+    let keys_legend_area = chunks[1];
+    let icons_legend_area = chunks[2];
 
     let prompt_index = model.active_prompt.as_ref().map(|p| p.artifact_index);
 
@@ -100,10 +106,7 @@ fn render_artifact_list_panel(frame: &mut Frame, model: &Model, area: Rect) {
         })
         .collect();
 
-    let title = format!(
-        "Artifacts ({}) - j/k: move, Enter: gen, l: logs, q: quit",
-        model.entries.len()
-    );
+    let title = format!("Artifacts ({})", model.entries.len());
 
     let list = List::new(items)
         .block(Block::default().borders(Borders::ALL).title(title))
@@ -115,7 +118,24 @@ fn render_artifact_list_panel(frame: &mut Frame, model: &Model, area: Rect) {
 
     frame.render_stateful_widget(list, list_area, &mut state);
 
-    let legend = Line::from(vec![
+    let bold = Style::default().add_modifier(Modifier::BOLD);
+    let keys_legend = Line::from(vec![
+        Span::styled("j/k", bold),
+        Span::raw(":nav  "),
+        Span::styled("Enter", bold),
+        Span::raw(":gen  "),
+        Span::styled("a", bold),
+        Span::raw(":all  "),
+        Span::styled("l", bold),
+        Span::raw(":log  "),
+        Span::styled("Esc Esc", bold),
+        Span::raw(":cancel  "),
+        Span::styled("q", bold),
+        Span::raw(":quit"),
+    ]);
+    frame.render_widget(Paragraph::new(keys_legend), keys_legend_area);
+
+    let icons_legend = Line::from(vec![
         Span::raw("○ Pend "),
         Span::raw("◐ Need "),
         Span::raw("✎ Input "),
@@ -123,7 +143,7 @@ fn render_artifact_list_panel(frame: &mut Frame, model: &Model, area: Rect) {
         Span::raw("✗ Fail "),
         Span::raw("⊘ Cancel"),
     ]);
-    frame.render_widget(Paragraph::new(legend), legend_area);
+    frame.render_widget(Paragraph::new(icons_legend), icons_legend_area);
 }
 
 fn render_log_panel(frame: &mut Frame, model: &Model, area: Rect) {

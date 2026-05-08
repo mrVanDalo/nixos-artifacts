@@ -70,7 +70,7 @@ ModelState {
 }
 
 Rendered:
-"┌Artifacts (3) - j/k: move, Enter: gen,┐Prompt: ssh-key [1/1]                   "
+"┌Artifacts (3)─────────────────────────┐Prompt: ssh-key [1/1]                   "
 "│> ✎ [N] machine-one/ssh-key Awaiting i│                                        "
 "│  ✓ [N] machine-two/api-token         │────────────────────────────────────────"
 "│  ◐ [H] user@host/gpg-key             │Field: passphrase                       "
@@ -81,6 +81,6 @@ Rendered:
 "│                                      ││> my-secret█                          │"
 "│                                      │└──────────────────────────────────────┘"
 "│                                      │Enter: submit | Esc: cancel             "
-"│                                      │                                        "
 "└──────────────────────────────────────┘                                        "
+"j/k:nav  Enter:gen  a:all  l:log  Esc Es                                        "
 "○ Pend ◐ Need ✎ Input ✓ OK ✗ Fail ⊘ Canc                                        "

@@ -36,7 +36,7 @@ ModelState {
 }
 
 Rendered:
-"┌Artifacts (3) - j/k: move, Enter: gen,┐┌Logs: machine-two/api-token───────────┐"
+"┌Artifacts (3)─────────────────────────┐┌Logs: machine-two/api-token───────────┐"
 "│  ○ [N] machine-one/ssh-key           ││No logs yet. Generate this artifact to│"
 "│> ✓ [N] machine-two/api-token         ││see output.                           │"
 "│  ◐ [H] user@host/gpg-key             ││                                      │"
@@ -57,8 +57,8 @@ Rendered:
 "│                                      ││                                      │"
 "│                                      ││                                      │"
 "│                                      ││                                      │"
-"│                                      ││                                      │"
 "└──────────────────────────────────────┘│                                      │"
+"j/k:nav  Enter:gen  a:all  l:log  Esc Es│                                      │"
 "○ Pend ◐ Need ✎ Input ✓ OK ✗ Fail ⊘ Canc└──────────────────────────────────────┘"
 
 Step 1:
@@ -95,7 +95,7 @@ ModelState {
 }
 
 Rendered:
-"┌Artifacts (3) - j/k: move, Enter: gen,┐┌Logs: user@host/gpg-key───────────────┐"
+"┌Artifacts (3)─────────────────────────┐┌Logs: user@host/gpg-key───────────────┐"
 "│  ○ [N] machine-one/ssh-key           ││No logs yet. Generate this artifact to│"
 "│  ✓ [N] machine-two/api-token         ││see output.                           │"
 "│> ◐ [H] user@host/gpg-key             ││                                      │"
@@ -116,8 +116,8 @@ Rendered:
 "│                                      ││                                      │"
 "│                                      ││                                      │"
 "│                                      ││                                      │"
-"│                                      ││                                      │"
 "└──────────────────────────────────────┘│                                      │"
+"j/k:nav  Enter:gen  a:all  l:log  Esc Es│                                      │"
 "○ Pend ◐ Need ✎ Input ✓ OK ✗ Fail ⊘ Canc└──────────────────────────────────────┘"
 
 Step 2:
@@ -154,7 +154,7 @@ ModelState {
 }
 
 Rendered:
-"┌Artifacts (3) - j/k: move, Enter: gen,┐┌Logs: machine-two/api-token───────────┐"
+"┌Artifacts (3)─────────────────────────┐┌Logs: machine-two/api-token───────────┐"
 "│  ○ [N] machine-one/ssh-key           ││No logs yet. Generate this artifact to│"
 "│> ✓ [N] machine-two/api-token         ││see output.                           │"
 "│  ◐ [H] user@host/gpg-key             ││                                      │"
@@ -175,6 +175,6 @@ Rendered:
 "│                                      ││                                      │"
 "│                                      ││                                      │"
 "│                                      ││                                      │"
-"│                                      ││                                      │"
 "└──────────────────────────────────────┘│                                      │"
+"j/k:nav  Enter:gen  a:all  l:log  Esc Es│                                      │"
 "○ Pend ◐ Need ✎ Input ✓ OK ✗ Fail ⊘ Canc└──────────────────────────────────────┘"
