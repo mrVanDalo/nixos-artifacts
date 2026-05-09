@@ -74,13 +74,36 @@ Enter
 Sleep 20.0s
 Show
 
-Sleep 6.0s
+Sleep 2s
+Down
+Sleep 2s
+Down
+Sleep 2s
 Enter
-Sleep 7.0s
+Sleep 1s
+Type "secret"
+Sleep 1s
+Enter
+Sleep 3s
 Tab
-Sleep 1.5s
+Sleep 3s
 Tab
-Sleep 1.5s
+Sleep 3s
+Type "a"
+Sleep 3s
+Type "don't tell"
+Sleep 1s
+Enter
+Sleep 3s
+Type "my secret API key"
+Sleep 1s
+Enter
+Sleep 5s
+Enter
+Sleep 3s
 Tab
-Sleep 1.5s
-
+Sleep 2s
+Type "my other secret API key"
+Sleep 2s
+Enter
+Sleep 10s
