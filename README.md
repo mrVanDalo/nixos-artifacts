@@ -1,6 +1,7 @@
 # NixOS Artifacts Store
 
-[Documentation](https://mrvandalo.github.io/nixos-artifacts/)
+- [Documentation](https://mrvandalo.github.io/nixos-artifacts/)
+- [Discourse](https://discourse.nixos.org/t/nixos-artifacts-one-interface-for-secrets-across-agenix-sops-nix-and-more/77535)
 
 ## Overview
 
