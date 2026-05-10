@@ -9,7 +9,7 @@ Your backend handles three artifact types:
 
 NixOS machines:: Per-machine secrets for NixOS configurations
 Home Manager users:: Per-user secrets for home-manager configurations
-Shared artifacts:: Secrets shared across multiple machines/users (set `shared = true`)
+Shared artifacts:: Secrets shared across multiple NixOS machines (set `shared = true` on each NixOS target). The Home Manager module does not expose `shared`.
 
 == Backend Architecture
 

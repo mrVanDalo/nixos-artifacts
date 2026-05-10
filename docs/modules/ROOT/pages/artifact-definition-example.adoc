@@ -1,5 +1,12 @@
 = Artifact definition example
 
+This page uses NixOS examples (`artifacts.store.<name>` under
+`nixosConfigurations`). The same `files`, `prompts`, `generator`, and
+`backend` options exist on the Home Manager module — except where noted
+below — and apply identically. The full option set is in
+xref:options-nixos.adoc[NixOS options] and
+xref:options-homemanager.adoc[Home Manager options].
+
 This defines an artifact that creates a Gitea runner token, demonstrating `files`, `prompts`, and `generator` options.
 
 [source,nix]
@@ -93,14 +100,26 @@ The generator must:
 
 The backend will then handle serialization of $out.
 
-The generator script also receives `$artifact_context` (`"nixos"`, `"homemanager"`, or `"shared"`) and `$LOG_LEVEL`. Per-target generators additionally get `$artifact` plus `$machine` (NixOS) or `$username` (Home Manager); shared generators do not. See xref:getting-started.adoc[Getting Started] for the full list.
+The generator script also receives `$artifact_context` and `$LOG_LEVEL`.
+
+* On NixOS per-target generators: `$artifact_context = "nixos"`, plus `$artifact` and `$machine`.
+* On Home Manager generators: `$artifact_context = "homemanager"`, plus `$artifact` and `$username`. Home Manager does not support shared artifacts.
+* On NixOS shared generators (`shared = true`): `$artifact_context = "shared"` only — `$artifact`, `$machine`, and `$username` are not exported.
+
+See xref:getting-started.adoc[Getting Started] for the full list.
 
 See also xref:backend-concepts.adoc[Backend Concepts] for how serialization/deserialization is provided.
 
 [#shared-artifacts]
-== Shared artifact example
+== Shared artifact example (NixOS only)
 
-Shared artifacts are generated once and distributed to multiple machines. Set `shared = true` on each target that should receive the artifact.
+WARNING: Shared artifacts are a *NixOS-only* feature. The Home Manager
+module does not expose
+xref:options-nixos.adoc#_artifacts_store_name_shared[`shared`] — the
+option simply does not exist on `homeConfigurations`. HM artifacts are
+per-user and never aggregated across multiple targets.
+
+Shared artifacts are generated once and distributed to multiple NixOS machines. Set `shared = true` on each NixOS target that should receive the artifact.
 
 [source,nix]
 ----

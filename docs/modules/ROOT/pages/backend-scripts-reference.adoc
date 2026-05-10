@@ -37,7 +37,9 @@ The `$targets` file is a JSON document containing:
 }
 ----
 
-For single targets (NixOS or HomeManager), there's exactly one entry in the targets array. For shared artifacts, all machines and users are listed.
+For single targets (NixOS or HomeManager), there's exactly one entry in the targets array. For shared artifacts, all NixOS machines that opted in are listed.
+
+NOTE: Shared artifacts are a NixOS-only feature. The Home Manager module does not expose `shared`, so HomeManager targets never appear in `"context": "shared"` payloads.
 
 === Single NixOS Target Example
 
@@ -73,6 +75,8 @@ For single targets (NixOS or HomeManager), there's exactly one entry in the targ
 
 === Shared Artifact Example
 
+Shared artifacts only contain NixOS targets. Home Manager configurations cannot mark themselves as shared.
+
 [source,json]
 ----
 {
@@ -87,11 +91,6 @@ For single targets (NixOS or HomeManager), there's exactly one entry in the targ
       "name": "server-two",
       "type": "nixos",
       "config": {"storage_path": "/var/lib/secrets", "public_key": "age1def..."}
-    },
-    {
-      "name": "alice@workstation",
-      "type": "homemanager",
-      "config": {"storage_path": "~/.secrets"}
     }
   ]
 }
@@ -303,5 +302,5 @@ NOTE: This migration applies to backend `check` and `serialize` scripts only. Pe
 | `$machine` | `jq -r '.targets[0].name' "$targets"`
 | `$username` | `jq -r '.targets[0].name' "$targets"`
 | `$machines` | Iterate `jq -c '.targets[] \| select(.type == "nixos")' "$targets"`
-| `$users` | Iterate `jq -c '.targets[] \| select(.type == "homemanager")' "$targets"`
+| `$users` | Iterate `jq -c '.targets[] \| select(.type == "homemanager")' "$targets"` (only present in `homemanager` context — HM targets are never aggregated under `shared`)
 |===

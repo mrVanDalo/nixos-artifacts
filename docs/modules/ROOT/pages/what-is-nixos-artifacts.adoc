@@ -58,13 +58,15 @@ Use the TUI to drive the main loop for generation and rotation. See xref:configu
 
 == Shared artifacts
 
-Shared artifacts allow you to generate a secret once and distribute it to multiple machines and/or home-manager configurations. This is useful for secrets that must be identical across systems, such as:
+Shared artifacts allow you to generate a secret once and distribute it to multiple NixOS machines. This is useful for secrets that must be identical across systems, such as:
 
 - Cluster authentication tokens
 - Shared encryption keys
 - OIDC client secrets used by multiple services
 
-To create a shared artifact, set `shared = true` in the artifact definition on each target that should receive it:
+NOTE: Shared artifacts are a NixOS-only feature. The Home Manager module does not expose the `shared` option — HM artifacts are per-user and are never aggregated across multiple targets.
+
+To create a shared artifact, set `shared = true` in the artifact definition on each NixOS machine that should receive it:
 
 [source,nix]
 ----

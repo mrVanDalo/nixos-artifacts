@@ -36,10 +36,11 @@ in
               type = bool;
               default = false;
               description = ''
-                Whether this artifact is shared across multiple machines and/or home-manager configurations.
+                Whether this artifact is shared across multiple NixOS machines.
 
-                When `true`, the artifact is generated once and distributed to all targets that define it.
-                All definitions with the same artifact name and `shared = true` are aggregated together.
+                When `true`, the artifact is generated once and distributed to all NixOS targets
+                that define it. All definitions with the same artifact name and `shared = true`
+                are aggregated together.
 
                 The backend must provide a `shared.check` and `shared.serialize` scripts to handle shared artifacts.
                 The scripts receive a unified `$targets` environment variable pointing to a JSON file containing
@@ -90,7 +91,7 @@ in
             };
 
           }
-          // common.artifactOptions;
+          // common.mkArtifactOptions { context = "nixos"; };
         }
       )
     );

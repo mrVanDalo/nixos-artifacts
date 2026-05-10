@@ -1,3 +1,20 @@
+= Home Manager options
+:description: Options exposed by the Home Manager module (modules/hm/store.nix)
+
+These options are exposed by `nixos-artifacts.homeModules.default`
+and apply to `artifacts.store.<name>` declarations inside
+`homeConfigurations`.
+
+The Home Manager module intentionally does *not* expose:
+
+* `shared` — shared artifacts are a NixOS-only feature. HM
+  artifacts are per-user and never aggregated across multiple
+  targets.
+* `files.<name>.owner` / `files.<name>.group` — Home Manager
+  cannot set system-level file ownership.
+
+For NixOS, see xref:options-nixos.adoc[NixOS options].
+
 == artifacts{zwsp}.default{zwsp}.backend
 
 Name of the default backend used to (de)serialize artifacts{zwsp}.
@@ -153,7 +170,7 @@ ${XDG_CONFIG_DIR}/artifacts/‹name›/‹name›
 
 Generator Script{zwsp}.
 
-Per-target generators (the artifact is not ``shared``) receive:
+The generator receives:
 
 [options="compact"]
 * {empty}``$out`` a folder the generator script must create a file for each file definition of the artifact{zwsp}.
@@ -162,16 +179,12 @@ Per-target generators (the artifact is not ``shared``) receive:
 
 * {empty}``$artifact`` artifact name{zwsp}.
 
-* {empty}``$artifact_context`` context type: ``{quot}nixos{quot}`` or ``{quot}homemanager{quot}``{zwsp}.
+* {empty}``$artifact_context`` context type: ``{quot}homemanager{quot}``{zwsp}.
 
-* {empty}``$machine`` machine name (only for NixOS targets){zwsp}.
-
-* {empty}``$username`` username (only for Home Manager targets){zwsp}.
+* {empty}``$username`` username{zwsp}.
 
 * {empty}``$LOG_LEVEL`` log level{zwsp}.
 
-
-Shared generators (``shared = true``) only receive ``$out``, ``$prompts``, ``$artifact_context = {quot}shared{quot}``, and ``$LOG_LEVEL``{zwsp}. The artifact name and target identifiers are intentionally not exported because shared generators must produce identical output regardless of target{zwsp}.
 
 
 

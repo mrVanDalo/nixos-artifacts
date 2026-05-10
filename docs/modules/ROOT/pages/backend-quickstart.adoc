@@ -160,15 +160,14 @@ For single HomeManager target:
 }
 ----
 
-For shared artifacts:
+For shared artifacts (NixOS-only — Home Manager configurations cannot be shared):
 [source,json]
 ----
 {
   "context": "shared",
   "targets": [
     {"name": "server-one", "type": "nixos", "config": {...}},
-    {"name": "server-two", "type": "nixos", "config": {...}},
-    {"name": "alice@host", "type": "homemanager", "config": {...}}
+    {"name": "server-two", "type": "nixos", "config": {...}}
   ]
 }
 ----

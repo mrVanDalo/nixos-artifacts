@@ -64,7 +64,7 @@ in
             };
 
           }
-          // common.artifactOptions;
+          // common.mkArtifactOptions { context = "homemanager"; };
         }
       )
     );

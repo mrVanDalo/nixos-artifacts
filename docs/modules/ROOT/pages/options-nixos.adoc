@@ -1,3 +1,22 @@
+= NixOS options
+:description: Options exposed by the NixOS module (modules/store.nix)
+
+These options are exposed by `nixos-artifacts.nixosModules.default`
+and apply to `artifacts.store.<name>` declarations inside
+`nixosConfigurations`.
+
+NixOS-only options on this page that the Home Manager module does
+not expose:
+
+* xref:#_artifacts_store_name_shared[`shared`] — declare an
+  artifact as shared across multiple NixOS machines.
+* `files.<name>.owner` / `files.<name>.group` — file ownership on
+  the target system (Home Manager cannot set system-level
+  ownership).
+
+For Home Manager, see
+xref:options-homemanager.adoc[Home Manager options].
+
 == artifacts{zwsp}.default{zwsp}.backend
 
 Name of the default backend used to (de)serialize artifacts{zwsp}.
@@ -204,11 +223,9 @@ Per-target generators (the artifact is not ``shared``) receive:
 
 * {empty}``$artifact`` artifact name{zwsp}.
 
-* {empty}``$artifact_context`` context type: ``{quot}nixos{quot}`` or ``{quot}homemanager{quot}``{zwsp}.
+* {empty}``$artifact_context`` context type: ``{quot}nixos{quot}``{zwsp}.
 
-* {empty}``$machine`` machine name (only for NixOS targets){zwsp}.
-
-* {empty}``$username`` username (only for Home Manager targets){zwsp}.
+* {empty}``$machine`` machine name{zwsp}.
 
 * {empty}``$LOG_LEVEL`` log level{zwsp}.
 
@@ -288,9 +305,9 @@ __Default:__
 
 
 
-Whether this artifact is shared across multiple machines and/or home-manager configurations{zwsp}.
+Whether this artifact is shared across multiple NixOS machines{zwsp}.
 
-When ``true``, the artifact is generated once and distributed to all targets that define it{zwsp}. All definitions with the same artifact name and ``shared = true`` are aggregated together{zwsp}.
+When ``true``, the artifact is generated once and distributed to all NixOS targets that define it{zwsp}. All definitions with the same artifact name and ``shared = true`` are aggregated together{zwsp}.
 
 The backend must provide a ``shared{zwsp}.check`` and ``shared{zwsp}.serialize`` scripts to handle shared artifacts{zwsp}. The scripts receive a unified ``$targets`` environment variable pointing to a JSON file containing all target names, types, and their respective backend configurations{zwsp}.
 

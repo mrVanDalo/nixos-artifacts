@@ -121,16 +121,21 @@ The generator script receives these environment variables:
 
 * `$out` — Directory where you write generated files (keys must match `files` names)
 * `$prompts` — Directory containing prompt inputs (if `prompts` is defined)
-* `$artifact_context` — `"nixos"`, `"homemanager"`, or `"shared"`
+* `$artifact_context` — `"nixos"` or `"homemanager"` (or `"shared"` for shared NixOS artifacts)
 * `$LOG_LEVEL` — Current log level (`error`, `warn`, `info`, `debug`)
 * `$artifact` — Artifact name (per-target generators only; not set for shared)
 * `$machine` — Machine name (NixOS per-target generators only)
 * `$username` — Username (Home Manager per-target generators only)
 
-NOTE: Shared artifact generators (`shared = true`) only receive `$out`,
-`$prompts`, `$artifact_context`, and `$LOG_LEVEL`. The artifact name and
-target identifiers are not exported because shared generators must produce
-identical output regardless of target.
+NOTE: Shared artifact generators (`shared = true`) are a *NixOS-only* feature.
+The Home Manager module does not expose `shared`. Shared generators only
+receive `$out`, `$prompts`, `$artifact_context = "shared"`, and `$LOG_LEVEL`.
+The artifact name and target identifiers are not exported because shared
+generators must produce identical output regardless of target.
+
+For the full per-module option list, see
+xref:options-nixos.adoc[NixOS options reference] or
+xref:options-homemanager.adoc[Home Manager options reference].
 
 == Step 4: Generate Artifacts
 
@@ -155,6 +160,7 @@ The TUI will:
 == Next Steps
 
 * xref:artifact-definition-example.adoc[Artifact definition examples] — More artifact configurations
-* xref:options-nixos.adoc[NixOS options reference] — All available options
+* xref:options-nixos.adoc[NixOS options reference] — Options available on `nixosConfigurations` (includes `shared`, `owner`, `group`)
+* xref:options-homemanager.adoc[Home Manager options reference] — Options available on `homeConfigurations` (no `shared` / `owner` / `group`)
 * xref:backend-quickstart.adoc[Backend Quickstart] — Creating custom backends
 * xref:latest@nixos-artifacts-agenix:ROOT:index.adoc[agenix backend docs] — Agenix-specific configuration

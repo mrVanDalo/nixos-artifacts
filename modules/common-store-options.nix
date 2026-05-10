@@ -9,82 +9,113 @@ let
   # prompts it asks for, the backend that serializes it, and the generator
   # script that creates its files. They apply uniformly regardless of
   # whether the artifact ends up under /run/artifacts or $XDG_RUNTIME_DIR.
-  artifactOptions = {
-
-    prompts = mkOption {
-      type = attrsOf (
-        submodule (
-          { name, ... }:
-          let
-            promptName = name;
-          in
-          {
-            options = {
-
-              name = mkOption {
-                type = str;
-                default = promptName;
-                readOnly = true;
-                internal = true;
-                description = "The name of the prompt";
-              };
-
-              description = mkOption {
-                type = str;
-                default = "input for ${promptName}";
-                description = "Description shown during prompt entry";
-              };
-
-            };
-          }
-        )
-      );
-      default = { };
-      description = "Prompts end up in $prompts/<name> in the generator script";
-    };
-
-    backend = mkOption {
-      type = str;
-      default = config.artifacts.default.backend;
-      defaultText = literalExpression "config.artifacts.default.backend";
-      description = ''
-        Name of the backend used to (de)serialize this artifact.
-
-        Defaults to `artifacts.default.backend`. Set this to select a
-        different backend for this specific artifact, while other artifacts
-        continue to use the default. Backends are configured via
-        `mkArtifactCli` and referenced here by the `name` passed to `mkBackend`.
-      '';
-    };
-
-    generator = mkOption {
-      type = nullOr package;
-      default = null;
-      description = ''
-        Generator Script.
-
-        Per-target generators (the artifact is not `shared`) receive:
-        - `$out` a folder the generator script must create a file for each file definition of the artifact.
-        - `$prompts` a folder containing files containing the prompt inputs (defined by the prompts option).
-        - `$artifact` artifact name.
-        - `$artifact_context` context type: `"nixos"` or `"homemanager"`.
-        - `$machine` machine name (only for NixOS targets).
-        - `$username` username (only for Home Manager targets).
-        - `$LOG_LEVEL` log level.
+  #
+  # `context` selects which environment variables are documented for the
+  # generator. NixOS stores expose per-target NixOS env vars (and, for the
+  # NixOS module only, the additional shared-generator note); Home Manager
+  # stores expose per-user env vars and never mention `shared` because HM
+  # artifacts cannot be declared as shared.
+  mkArtifactOptions =
+    { context }:
+    let
+      isNixos = context == "nixos";
+      perTargetEnv =
+        if isNixos then
+          ''
+            - `$out` a folder the generator script must create a file for each file definition of the artifact.
+            - `$prompts` a folder containing files containing the prompt inputs (defined by the prompts option).
+            - `$artifact` artifact name.
+            - `$artifact_context` context type: `"nixos"`.
+            - `$machine` machine name.
+            - `$LOG_LEVEL` log level.
+          ''
+        else
+          ''
+            - `$out` a folder the generator script must create a file for each file definition of the artifact.
+            - `$prompts` a folder containing files containing the prompt inputs (defined by the prompts option).
+            - `$artifact` artifact name.
+            - `$artifact_context` context type: `"homemanager"`.
+            - `$username` username.
+            - `$LOG_LEVEL` log level.
+          '';
+      sharedNote = ''
 
         Shared generators (`shared = true`) only receive `$out`, `$prompts`,
         `$artifact_context = "shared"`, and `$LOG_LEVEL`. The artifact name
         and target identifiers are intentionally not exported because shared
         generators must produce identical output regardless of target.
       '';
-      example = literalExpression ''
-        pkgs.writers.writeBash "random" ${"''"}
-          ''${pkgs.xkcdpass}/bin/xkcdpass --numwords 10 > $out/random_password
-        ${"''"};
-      '';
-    };
+      generatorPreamble =
+        if isNixos then
+          "Per-target generators (the artifact is not `shared`) receive:"
+        else
+          "The generator receives:";
+    in
+    {
 
-  };
+      prompts = mkOption {
+        type = attrsOf (
+          submodule (
+            { name, ... }:
+            let
+              promptName = name;
+            in
+            {
+              options = {
+
+                name = mkOption {
+                  type = str;
+                  default = promptName;
+                  readOnly = true;
+                  internal = true;
+                  description = "The name of the prompt";
+                };
+
+                description = mkOption {
+                  type = str;
+                  default = "input for ${promptName}";
+                  description = "Description shown during prompt entry";
+                };
+
+              };
+            }
+          )
+        );
+        default = { };
+        description = "Prompts end up in $prompts/<name> in the generator script";
+      };
+
+      backend = mkOption {
+        type = str;
+        default = config.artifacts.default.backend;
+        defaultText = literalExpression "config.artifacts.default.backend";
+        description = ''
+          Name of the backend used to (de)serialize this artifact.
+
+          Defaults to `artifacts.default.backend`. Set this to select a
+          different backend for this specific artifact, while other artifacts
+          continue to use the default. Backends are configured via
+          `mkArtifactCli` and referenced here by the `name` passed to `mkBackend`.
+        '';
+      };
+
+      generator = mkOption {
+        type = nullOr package;
+        default = null;
+        description = ''
+          Generator Script.
+
+          ${generatorPreamble}
+          ${perTargetEnv}${optionalString isNixos sharedNote}
+        '';
+        example = literalExpression ''
+          pkgs.writers.writeBash "random" ${"''"}
+            ''${pkgs.xkcdpass}/bin/xkcdpass --numwords 10 > $out/random_password
+          ${"''"};
+        '';
+      };
+
+    };
 
   # Per-file options shared between NixOS and Home Manager stores.
   #
@@ -117,5 +148,5 @@ let
 
 in
 {
-  inherit artifactOptions mkCommonFileOptions;
+  inherit mkArtifactOptions mkCommonFileOptions;
 }
